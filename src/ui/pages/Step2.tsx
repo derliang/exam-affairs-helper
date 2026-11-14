@@ -93,7 +93,9 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
       next = added.doc;
     }
     setApplyErr('');
-    setLost(diffs.filter((d) => d.choice === 'use-roster' && (d.kind === 'only-in-exam' || d.kind === 'only-in-roster' || d.kind === 'group-diff'))
+    // 組別不同：這位若有記下個別 X／＋（C-9），套用時已疊回新組別預設，沒有被清掉，不列入警示
+    const keepsMarks = (d: RosterDiff) => d.kind === 'group-diff' && !!d.exam && entries.some((e) => e.classNo === d.exam!.classNo && e.seatNo === d.exam!.seatNo && ((e.absentSubjectIds?.length ?? 0) > 0 || (e.extraSubjectIds?.length ?? 0) > 0));
+    setLost(diffs.filter((d) => d.choice === 'use-roster' && (d.kind === 'only-in-exam' || d.kind === 'only-in-roster' || d.kind === 'group-diff') && !keepsMarks(d))
       .map((d) => who(d.exam ?? d.roster)));
     p.onChange({ ...next, examFiles: { ...doc.examFiles, [exam.id]: { ...files, entries: r.entries, diffs: [] } } });
     return true;

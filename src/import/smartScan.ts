@@ -226,13 +226,18 @@ export function buildEntries(scan: ExamScan, opts: ScanOptions, dec: Decisions):
       return m.role === 'taking' && m.present && !!t && t !== IGNORE;
     });
     let subjects = [...(gk ? (table ?? []) : opts.groupAsSubjects ? (explicit ? [] : (opts.defaultByClass?.(r.classNo) ?? [])) : (opts.defaultSubjectIds ?? []))];
+    const absentIds: string[] = [];
+    const extraIds: string[] = [];
     for (const m of r.marks) {
       const target = dec.mapping[groupOf.get(m.key) ?? ''];
       if (!m.present || !target || target === IGNORE) continue;
-      if (m.role === 'absent') subjects = subjects.filter((s) => s !== target);
+      if (m.role === 'absent') { subjects = subjects.filter((s) => s !== target); if (!absentIds.includes(target)) absentIds.push(target); }
+      else if (m.role === 'extra') { if (!subjects.includes(target)) subjects.push(target); if (!extraIds.includes(target)) extraIds.push(target); }
       else if (!subjects.includes(target)) subjects.push(target);
     }
     const e: ExamEntry = { classNo: r.classNo, seatNo: r.seatNo, name: r.name, subjectIds: subjects };
+    if (gk && absentIds.length) e.absentSubjectIds = absentIds;
+    if (gk && extraIds.length) e.extraSubjectIds = extraIds;
     const tr = opts.trackOfSubjects?.(subjects);
     if (tr) e.track = tr;
     if (r.groupCode) e.groupCode = r.groupCode;
