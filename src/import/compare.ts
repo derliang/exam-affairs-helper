@@ -107,6 +107,13 @@ export interface ResolveResult {
   addedClasses: number[];
 }
 
+/** 新組別預設考科，疊上這位個別的 X（不考）與＋（加考）（C-9）；沒有個別標示就是預設本身 */
+export function withMarks(base: readonly string[], e: Pick<ExamEntry, 'absentSubjectIds' | 'extraSubjectIds'>): string[] {
+  const out = base.filter((s) => !e.absentSubjectIds?.includes(s));
+  for (const s of e.extraSubjectIds ?? []) if (!out.includes(s)) out.push(s);
+  return out;
+}
+
 export interface ApplyOptions {
   /** 組別首字 → 該組別考的科目 id；「組別不同」選以學生名單為準時，用它重算這位考生的考科 */
   subjectsOfGroup?: (groupKey: string) => readonly string[] | undefined;
@@ -117,7 +124,7 @@ export interface ApplyOptions {
  * - only-in-exam：use-exam→學生名單新增此人；use-roster→從考試名單移除；manual→以 edited 新增並修正考試名單
  * - only-in-roster：use-exam→從學生名單移除；use-roster→保留，並補一筆沒有科目的考試名單（subjectIds 空，需另行設定）；manual→以 edited 修正學生
  * - mismatch：use-exam→學生名單改成考試名單的值；use-roster→考試名單改成學生名單的值；manual→兩邊都改成 edited
- * - group-diff：use-exam→學生名單的組別改成考試名單的；use-roster→考試名單的組別（與考科，查得到才改）改成學生名單的
+ * - group-diff：use-exam→學生名單的組別改成考試名單的；use-roster→考試名單的組別（與考科，查得到才改；個別 X／＋ 疊在新組別預設上保留）改成學生名單的
  * - new-class：add-class→這班的人加進學生名單（班級由呼叫端新增，見 addedClasses）；remap-class→這班的人改到 targetClassNo（學生名單沒有該編號的人就補上）；skip-class→這班的人從考試名單移除
  */
 export function applyDiffs(
@@ -173,7 +180,7 @@ export function applyDiffs(
         students = students.map((s) => (s.classNo === at.classNo && s.seatNo === at.seatNo ? { ...s, groupCode: d.groups?.exam } : s));
       } else if (choice === 'use-roster') {
         const subj = opts.subjectsOfGroup?.(d.groups.roster);
-        list = list.map((e) => (e.classNo === at.classNo && e.seatNo === at.seatNo ? { ...e, groupCode: d.groups?.roster, ...(subj ? { subjectIds: [...subj] } : {}) } : e));
+        list = list.map((e) => (e.classNo === at.classNo && e.seatNo === at.seatNo ? { ...e, groupCode: d.groups?.roster, ...(subj ? { subjectIds: withMarks(subj, e) } : {}) } : e));
       }
       continue;
     }
