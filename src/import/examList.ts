@@ -121,6 +121,8 @@ export function parseExamList(rows: readonly (readonly string[])[], opts: ExamLi
     subjects = subjects.filter((s) => !absent.includes(s as SubjectId));
     for (const s of extra) if (!subjects.includes(s)) subjects.push(s);
     const e: ExamEntry = { classNo, seatNo, name, subjectIds: subjects };
+    if (absent.length) e.absentSubjectIds = [...absent];
+    if (extra.length) e.extraSubjectIds = [...extra];
     if (gk) e.groupCode = get(r, 'group').trim();
     const note = get(r, 'note').trim();
     if (note) e.note = note;
