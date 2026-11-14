@@ -93,3 +93,46 @@ describe('H-6 考試名單有這個班級、班級資料沒有', () => {
     expect(compareRosters(roster, entries, 'all', { classNos: new Set([1, 7]) }).diffs.map((d) => d.kind)).toEqual(['only-in-exam', 'only-in-exam']);
   });
 });
+
+describe('C-9 以學生名單為準時保留個別 X／＋', () => {
+  const roster = [S(1, 1, '甲', 'D'), S(1, 2, '乙', 'D')];
+  const table: Record<string, string[]> = { D: ['chi', 'eng', 'sci'], E: ['chi', 'eng'] };
+  const opts = { subjectsOfGroup: (k: string) => table[k] };
+  const useRoster = (entries: ExamEntry[]) =>
+    compareRosters(roster, entries, 'partial', { groups: true }).diffs.map((d): RosterDiff => ({ ...d, choice: 'use-roster' }));
+
+  it('套用前後：個別缺考與加考疊在新組別預設上，標示欄位也保留', () => {
+    const entries: ExamEntry[] = [
+      { classNo: 1, seatNo: 1, name: '甲', groupCode: 'E', subjectIds: ['chi', 'soc'], absentSubjectIds: ['eng'], extraSubjectIds: ['soc'] },
+      { classNo: 1, seatNo: 2, name: '乙', groupCode: 'D', subjectIds: ['chi', 'eng', 'sci'] },
+    ];
+    const r = applyDiffs(roster, entries, useRoster(entries), opts);
+    const a = r.entries.find((e) => e.seatNo === 1)!;
+    expect(a.groupCode).toBe('D');
+    expect(a.subjectIds).toEqual(['chi', 'sci', 'soc']); // D 預設去掉缺考的英文、加上社會
+    expect(a.absentSubjectIds).toEqual(['eng']);
+    expect(a.extraSubjectIds).toEqual(['soc']);
+  });
+  it('舊存檔（沒有這兩個欄位）：行為不變，直接用新組別預設', () => {
+    const entries: ExamEntry[] = [{ classNo: 1, seatNo: 1, name: '甲', groupCode: 'E', subjectIds: ['chi'] }];
+    const r = applyDiffs(roster, entries, useRoster(entries), opts);
+    expect(r.entries[0]!.subjectIds).toEqual(['chi', 'eng', 'sci']);
+    expect(r.entries[0]).not.toHaveProperty('absentSubjectIds');
+  });
+  it('查不到新組別的考科：考科不動（與原行為相同）', () => {
+    const entries: ExamEntry[] = [{ classNo: 1, seatNo: 1, name: '甲', groupCode: 'E', subjectIds: ['chi'], absentSubjectIds: ['eng'] }];
+    const r = applyDiffs(roster, entries, useRoster(entries), { subjectsOfGroup: () => undefined });
+    expect(r.entries[0]!.subjectIds).toEqual(['chi']);
+  });
+});
+
+describe('C-9 匯入時記下個別 X／＋', () => {
+  it('parseExamList 把個別缺考與加考記在 entry', async () => {
+    const { parseExamList } = await import('./examList');
+    const rows = [['班級', '座號', '姓名', '組別', '備註', '加考'], ['1', '1', '甲', 'D', '缺英', '社'], ['1', '2', '乙', 'D', '', '']];
+    const { entries } = parseExamList(rows, { round: 1 });
+    expect(entries[0]!.absentSubjectIds?.length).toBeGreaterThan(0);
+    expect(entries[0]!.extraSubjectIds?.length).toBeGreaterThan(0);
+    expect(entries[1]).not.toHaveProperty('absentSubjectIds');
+  });
+});

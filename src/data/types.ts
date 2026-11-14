@@ -212,6 +212,12 @@ export interface ExamEntry {
   groupCode?: string;
   /** 實際考的科目 id */
   subjectIds: string[];
+  /**
+   * 匯入時記下的個別差異（C-9，選填、舊存檔沒有）：相對於組別預設，這位個別「不考」（X）與「加考」（＋）的科目 id。
+   * 名單比對選「以學生名單為準」換組別時，用它在新組別預設上重套，避免丟掉個別標示。
+   */
+  absentSubjectIds?: string[];
+  extraSubjectIds?: string[];
   /** 特殊生需求等備註（D15） */
   note?: string;
   /** 應試編號（分科輸出用，選填；名單有匯入才印，AST-2）。不等於學號 */
