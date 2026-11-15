@@ -24,7 +24,7 @@ import {
 } from '../core';
 import { examSubjectPeriods } from '../core/periods';
 import { examYear, type Doc, type Result } from './store';
-import { viewForYear } from './rosterYears';
+import { rosterFor, viewForYear } from './rosterYears';
 import { roomsMissingTrack } from './rooms';
 
 export type StepNo = 1 | 2 | 3 | 4 | 5 | 6;
@@ -58,7 +58,8 @@ export const examEntries = (doc: Doc, exam: ExamConfig): ExamEntry[] => {
   const imported = filesOf(doc, exam.id).entries;
   if (imported?.length || exam.kind !== 'bcct') return imported ?? [];
   const subjectIds = exam.subjects.map((x) => x.id);
-  return (doc.rosters[exam.division] ?? []).map((s) => ({
+  // #264：會考沒匯入名單時用「該考試學年度」的名單，不是目前作用中的學年度
+  return (rosterFor(doc, exam)[exam.division] ?? []).map((s) => ({
     classNo: s.classNo, seatNo: s.seatNo, name: s.name, subjectIds: [...subjectIds],
     ...(s.special ? { note: s.special } : {}),
   }));
@@ -143,7 +144,7 @@ export function markRows(doc: Doc, exam: ExamConfig): MarkRow[] {
 /** 輸出用的姓名：共用學生名單優先，查無才用考試名單（與 export/model 同一規則，⑤預覽、⑥預覽、下載一致） */
 export function nameMapOf(doc: Doc, exam: ExamConfig): Map<string, string> {
   const m = new Map(examEntries(doc, exam).map((e) => [studentCode(e.classNo, e.seatNo), e.name]));
-  for (const s of doc.rosters[exam.division] ?? []) { const c = studentCode(s.classNo, s.seatNo); if (m.has(c)) m.set(c, s.name); }
+  for (const s of rosterFor(doc, exam)[exam.division] ?? []) { const c = studentCode(s.classNo, s.seatNo); if (m.has(c)) m.set(c, s.name); }
   return m;
 }
 
@@ -151,7 +152,7 @@ export function nameMapOf(doc: Doc, exam: ExamConfig): Map<string, string> {
 export function rosterNameDiffs(doc: Doc, exam: ExamConfig): { code: string; name: string }[] {
   const entry = new Map(examEntries(doc, exam).map((e) => [studentCode(e.classNo, e.seatNo), e.name]));
   const out: { code: string; name: string }[] = [];
-  for (const s of doc.rosters[exam.division] ?? []) {
+  for (const s of rosterFor(doc, exam)[exam.division] ?? []) {
     const c = studentCode(s.classNo, s.seatNo);
     if (entry.has(c) && entry.get(c) !== s.name) out.push({ code: c, name: s.name });
   }
