@@ -42,6 +42,8 @@ export function AstStep4(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
   const plans = { 'fewest-rooms': astPlan(doc, exam, 'fewest-rooms'), 'least-movement': astPlan(doc, exam, 'least-movement') };
   const met = (m: PlanMode): PlanMetrics | undefined => plans[m]?.out.metrics;
   const choose = (m: PlanMode) => { const r = updateExam(doc, exam.id, { astMode: m }); if (r.ok) p.onChange(r.doc); };
+  const layout = exam.astReserveLayout ?? 'min-depth';
+  const chooseLayout = (l: 'min-depth' | 'min-rows') => { const r = updateExam(doc, exam.id, { astReserveLayout: l }); if (r.ok) p.onChange(r.doc); };
   const a = met('fewest-rooms');
   const b = met('least-movement');
   const slots = astSlots(doc, exam);
@@ -106,6 +108,13 @@ export function AstStep4(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
               </div>
             );
           })}
+        </div>
+        <div class="stack">
+          <div><h4>綜合教室的座位排法</h4><p class="small muted">只影響綜合教室：<b>最少深位（預設）</b>＝在教室排數上限內把人平均分到各排，每排只坐前幾個深位（例如 17 人排成 7 排、每排 2～3 人、3 個深位）；<b>最少排數</b>＝一排坐滿再坐下一排，用的排數最少。班級教室不受影響。</p></div>
+          <div class="row" role="group" aria-label="綜合教室的座位排法">
+            <button type="button" class={`btn${layout === 'min-depth' ? ' btn-primary' : ''}`} aria-pressed={layout === 'min-depth'} onClick={() => chooseLayout('min-depth')}>最少深位（預設）</button>
+            <button type="button" class={`btn${layout === 'min-rows' ? ' btn-primary' : ''}`} aria-pressed={layout === 'min-rows'} onClick={() => chooseLayout('min-rows')}>最少排數</button>
+          </div>
         </div>
         <Alert tone="info"><b>兩個方案完全同分時：</b>固定規則決勝，同樣的資料永遠得到同樣的結果。①用到的教室裡，班級教室依班序靠前者優先，綜合教室排後；②同一時段裡，考場的編號小者先排；③仍相同才比學號小者先排座。</Alert>
       </div>
