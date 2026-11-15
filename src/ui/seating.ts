@@ -69,6 +69,12 @@ export const seatableEntries = (doc: Doc, exam: ExamConfig): ExamEntry[] => {
   const skip = new Set(fullyAbsentCodes({ entries, seatFullyAbsent: !!exam.seatFullyAbsent }));
   return skip.size ? entries.filter((e) => !skip.has(studentCode(e.classNo, e.seatNo))) : entries;
 };
+/** 全科缺考、因 D79 沒有排座的考生（設「仍排座」時為空）；給 ②⑤ 說明人數差（#233） */
+export const unseatedFullyAbsent = (doc: Doc, exam: ExamConfig): ExamEntry[] => {
+  const entries = examEntries(doc, exam);
+  const skip = new Set(fullyAbsentCodes({ entries, seatFullyAbsent: !!exam.seatFullyAbsent }));
+  return entries.filter((e) => skip.has(studentCode(e.classNo, e.seatNo)));
+};
 export const examOverrides = (doc: Doc, exam: ExamConfig): Override[] => filesOf(doc, exam.id).overrides ?? [];
 export const examResult = (doc: Doc, exam: ExamConfig): SeatingResult | undefined => filesOf(doc, exam.id).result;
 

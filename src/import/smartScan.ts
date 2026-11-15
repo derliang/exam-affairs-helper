@@ -222,6 +222,8 @@ export interface BuildResult {
   /** 使用者明確選擇略過的列數 */
   skippedByUser: number;
   markStats: MarkStats;
+  /** 標示涵蓋全部考科、結果全科缺考的考生（D79 預設不排座，匯入檢查要警示，#233） */
+  allAbsent: { classNo: number; seatNo: number }[];
   /** 看不懂的標示還沒被使用者確認 */
   pendingUnreadable: boolean;
   ready: boolean;
@@ -295,7 +297,8 @@ export function buildEntries(scan: ExamScan, opts: ScanOptions, dec: Decisions):
   const total = nMarks + scan.unreadable.length;
   const markStats: MarkStats = { total, applied, skipped: total - applied, unreadable: scan.unreadable.length };
   const pendingUnreadable = scan.unreadable.length > 0 && !dec.ackUnreadable;
-  return { entries, pendingGroups, pendingReview, skippedByUser, markStats, pendingUnreadable, ready: pendingGroups.length === 0 && pendingReview.length === 0 && scan.problems.length === 0 && !pendingUnreadable };
+  const allAbsent = entries.filter((e) => e.subjectIds.length === 0 && (e.absentSubjectIds?.length ?? 0) > 0).map((e) => ({ classNo: e.classNo, seatNo: e.seatNo }));
+  return { entries, pendingGroups, pendingReview, skippedByUser, markStats, allAbsent, pendingUnreadable, ready: pendingGroups.length === 0 && pendingReview.length === 0 && scan.problems.length === 0 && !pendingUnreadable };
 }
 
 export interface EntryChange {
