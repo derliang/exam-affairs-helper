@@ -8,17 +8,18 @@
 import type { ExamConfig, LabelPaper } from '../../data';
 import { subjectShort } from '../../core/subjectShort';
 import { dataVersion } from '../../core/version';
-import { defaultLabelLayout, textEm, type LabelPageModel, type TablePageModel, type CellModel, type PersonModel } from '../../export/model';
+import { defaultLabelLayout, textEm, type LabelPageModel, type TablePageModel, type CellModel, type PersonModel, type SeatPageModel } from '../../export/model';
 import { examEntries } from '../seating';
 import type { Doc } from '../store';
 import { astSlots, awayStudy, usageCell, type AstPlan, type AstSlot } from './model';
 import { codeOf, homeRoomIds } from '../../core/astD99/contract';
 
-export type AstOutputKey = 'label' | 'ann' | 'use' | 'reg' | 'study';
+export type AstOutputKey = 'label' | 'seat' | 'ann' | 'use' | 'reg' | 'study';
 
 export interface AstOutputItem { key: AstOutputKey; title: string; sub: string }
 export const AST_OUTPUT_ITEMS: AstOutputItem[] = [
   { key: 'label', title: '整合標籤（合併標籤）', sub: '每個座位一張、各時段一行；班座號＋姓名，名單有應試編號才印；每間考場一張紙' },
+  { key: 'seat', title: '綜合教室座位表', sub: '每間綜合教室一頁（A4）：座位圖格內每人一區，下方各時段各班人數統計（每時段一列＋不重複人數）；3 人以上輪流的座位多一頁清單' },
   { key: 'ann', title: '班級公告', sub: 'A4 橫式、一班一頁貼在班上；考試＝粗體座位（教室同本班就省略），自習＝灰底＋教室' },
   { key: 'use', title: '每節教室用途表', sub: '哪間教室哪個時段是考場或自習，附方案指標' },
   { key: 'reg', title: '每科試務清冊', sub: '每科：考場總表，加每間考場一頁簽到名冊' },
@@ -27,6 +28,8 @@ export const AST_OUTPUT_ITEMS: AstOutputItem[] = [
 
 export interface AstOutputs {
   label: LabelPageModel[];
+  /** 綜合教室座位表（#220）：沒有用綜合教室考試就是空陣列 */
+  seat: SeatPageModel[];
   ann: TablePageModel[];
   use: TablePageModel[];
   reg: TablePageModel[];
@@ -118,6 +121,58 @@ function labelPages(c: Ctx, paper: LabelPaper): LabelPageModel[] {
     });
     return { kind: 'label', title: `${c.exam.name}　${rn(c, id)}　整合標籤`, examName: c.exam.name, heading: `${c.exam.name}　整合標籤`, roomName: `${rn(c, id)}　整合標籤`, layout, notes: [], cells };
   });
+}
+
+// ───── 綜合教室座位表（#220）─────
+
+/** 綜合教室座位表：每間「有人在那裡考試」的綜合教室一頁，格內每人一區（同整合標籤），下方每時段一列的各班人數統計＋不重複人數 */
+function seatPages(c: Ctx): SeatPageModel[] {
+  const slotIdx = new Map(c.slots.map((s, i) => [s.id, i]));
+  const byRoom = new Map<string, Map<string, { slot: number; slotId: string; code: string; subjectId: string; row: number; depth: number }[]>>();
+  for (const e of c.plan.out.exams) {
+    const rm = byRoom.get(e.roomId) ?? new Map();
+    const k = `${e.row}-${e.depth}`;
+    rm.set(k, [...(rm.get(k) ?? []), { slot: slotIdx.get(e.slotId) ?? 0, slotId: e.slotId, code: e.code, subjectId: e.subjectId, row: e.row, depth: e.depth }]);
+    byRoom.set(e.roomId, rm);
+  }
+  const pages: SeatPageModel[] = [];
+  for (const room of c.plan.input.rooms) {
+    const seats = byRoom.get(room.id);
+    if (room.kind !== 'reserve' || !seats) continue;
+    const cells = new Map<string, CellModel>();
+    const rotation: string[][] = [];
+    const everyone = new Set<string>();
+    for (const [k, list] of [...seats].sort((a, b) => a[1][0]!.row - b[1][0]!.row || a[1][0]!.depth - b[1][0]!.depth)) {
+      const first = list[0]!;
+      const persons = personsOfSeat(c, list);
+      persons.forEach((p) => everyone.add(p.code));
+      cells.set(k, {
+        coord: seatText(first.row, first.depth), seat: { row: first.row, depth: first.depth },
+        code: '', classLabel: '', name: '', colorBg: 'FFFFFF', colorLine: '222222', colorFg: '22201B', tags: [], marks: [],
+        periodLines: [...list].sort((a, b) => a.slot - b.slot).map((x) => ({ head: slotShort(c.slots[x.slot]!), text: `${sub(c, x.subjectId)} ${x.code} ${c.nameOf.get(x.code) ?? ''}`.trim() })),
+        persons,
+      });
+      if (persons.length >= 3) for (const p of persons) for (const s of p.sched) rotation.push([seatText(first.row, first.depth), s, p.classLabel, p.code.slice(2), p.name]);
+    }
+    // 統計：每個時段一列（各班人數＋合計），最後「不重複人數」
+    const classNos = [...new Set([...seats.values()].flat().map((x) => Number(x.code.slice(0, 2))))].sort((a, b) => a - b);
+    const per = (codes: Iterable<string>) => { const a = [...codes]; return classNos.map((n) => a.filter((x) => Number(x.slice(0, 2)) === n).length); };
+    const rows = c.slots.flatMap((s) => {
+      const codes = new Set([...seats.values()].flat().filter((x) => x.slotId === s.id).map((x) => x.code));
+      return codes.size ? [{ label: slotHead(c, s), per: per(codes), total: codes.size }] : [];
+    });
+    rows.push({ label: '不重複人數', per: per(everyone), total: everyone.size });
+    pages.push({
+      kind: 'seat', title: `${c.exam.name}　${rn(c, room.id)}　座位表`, examName: c.exam.name, roomName: rn(c, room.id),
+      chips: [`共 ${everyone.size} 人`, `${rows.length - 1} 個時段`, '綜合教室'],
+      detachStyle: false, slotMode: true,
+      rows: Math.max(...room.seats.map((s) => s.row)), depth: Math.max(...room.seats.map((s) => s.depth)),
+      cells, usable: new Set(room.seats.map((s) => `${s.row}-${s.depth}`)),
+      stats: { perClass: [], total: everyone.size, perSubject: [], table: { headLabel: '時段', classes: classNos.map((n) => c.className(n)), rows } },
+      ...(rotation.length ? { rotation: { heads: ['座位', '天與科目', '班級', '座號', '姓名'], rows: rotation } } : {}),
+    });
+  }
+  return pages;
 }
 
 // ───── ② 班級公告 ─────
@@ -269,7 +324,7 @@ function studyPages(c: Ctx): TablePageModel[] {
 export function astOutputs(doc: Doc, exam: ExamConfig, plan: AstPlan, paper: LabelPaper = 'B4'): AstOutputs {
   const c = ctxOf(doc, exam, plan);
   return {
-    label: labelPages(c, paper), ann: announcePages(c), use: usagePages(c), reg: registerPages(c), study: studyPages(c),
+    label: labelPages(c, paper), seat: seatPages(c), ann: announcePages(c), use: usagePages(c), reg: registerPages(c), study: studyPages(c),
     version: dataVersion({ i: plan.input, o: plan.out, n: [...c.examNoOf] }),
   };
 }
