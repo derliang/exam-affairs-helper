@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ExamEntry, RosterDiff, Student } from '../data';
 import { applyDiffs, compareRosters, diffsStale, refreshDiffs, validateResolved } from '../import';
 import { emptyDoc, withDefaults } from './repository';
-import { applyImport, importOutcome, planImport } from './rosterIO';
+import { applyImport, examsMadeStale, importOutcome, planImport, rosterChanged } from './rosterIO';
 import { newExam, nextRound, suggestExamName, syncDiffs, updateExam, type Doc } from './store';
 
 const S = (classNo: number, seatNo: number, name: string, extra: Partial<Student> = {}): Student => ({ classNo, seatNo, name, ...extra });
@@ -138,5 +138,22 @@ describe('#68 學測次別依學年度與學期推算', () => {
     const r = newExam(d, 'gsat', 'x', new Date(2026, 8, 1), { round: 3 });
     expect(r.ok && r.doc.exams[0]!.round).toBe(3);
     expect(newExam(d, 'gsat', 'y', new Date(2026, 8, 1), { round: 0 }).ok).toBe(false);
+  });
+});
+
+describe('#206 取代共用名單的影響', () => {
+  const e = { id: 'e1', name: '學測第一次', kind: 'gsat', division: 'senior', semester: 'first', round: 1, participation: 'all', subjects: [{ id: 'chinese', name: '國文' }], markRules: [], classroomIds: [], labelLayout: { paper: 'B4', cols: 6, rows: 8 }, createdAt: '2026-11-01T00:00:00.000Z' } as const;
+  const mk = (roster: Student[], entries: ExamEntry[]): Doc => ({ ...emptyDoc(), rosters: { senior: roster, junior: [] }, exams: [e as never], examFiles: { e1: { entries } } });
+  it('名單一致：不標；共用名單換人：標「名單已更動」', () => {
+    const d = mk([S(1, 1, '甲'), S(1, 2, '乙')], [E(1, 1, '甲'), E(1, 2, '乙')]);
+    expect(rosterChanged(d, e as never)).toBe(false);
+    expect(rosterChanged({ ...d, rosters: { senior: [S(1, 1, '甲')], junior: [] } }, e as never)).toBe(true);
+    expect(rosterChanged({ ...d, rosters: { senior: [S(1, 1, '丙'), S(1, 2, '乙')], junior: [] } }, e as never)).toBe(true);
+  });
+  it('沒有考試名單、沒排過座：不預警', () => {
+    const d = mk([S(1, 1, '甲')], []);
+    expect(rosterChanged(d, e as never)).toBe(false);
+    const plan = planImport(d, 'senior', [S(1, 1, '乙')]);
+    expect(examsMadeStale(d, 'senior', plan)).toEqual([]);
   });
 });
