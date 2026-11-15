@@ -36,3 +36,18 @@ describe('#199 原班教室對應', () => {
     expect(homeIssues(small)[0]).toMatchObject({ classNo: 1, kind: 'small', cap: 10 });
   });
 });
+
+describe('#199 驗收員情境：只徵用 1 間理組教室，未徵用班級的參加者留原班', () => {
+  const sl = [{ id: 's1', subjectIds: ['phy'] }];
+  const st = [1, 2, 3, 4, 5, 6].flatMap((c) => makeClass(c, 22, (n) => (c === 1 && n <= 15 ? { s1: 'phy' } : {})));
+  const rooms = [1, 2, 3, 4, 5, 6].map((c) => classRoom(c)).concat([reserveRoom('R1', grid(7, 7))]);
+  for (const mode of ['fewest-rooms', 'least-movement'] as PlanMode[]) {
+    it(mode, () => {
+      const inp: PlanInput = { mode, slots: sl, students: st, rooms };
+      const out = planD99(inp);
+      // 班 2～6 的 110 人全留自己班教室，沒人離開原班
+      const away = out.study.filter((s) => Number(s.code.slice(0, 2)) >= 2 && s.roomId !== `C${Number(s.code.slice(0, 2))}`);
+      expect(away).toEqual([]);
+    });
+  }
+});
