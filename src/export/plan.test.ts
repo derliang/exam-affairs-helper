@@ -70,6 +70,20 @@ describe('匯出前檢查', () => {
     expect(i[1]!.text).toContain('3 筆');
   });
 
+  it('#242：差異選好但還沒按「套用」要擋下並說要先套用；套用後（0 筆）與無差異可下載', () => {
+    const pending = preflight(makeFixture(), defaultOptions(), { stale: false, unresolvedDiffs: 0, unappliedDiffs: 134 }, has);
+    expect(pending).toHaveLength(1);
+    expect(pending[0]!.level).toBe('block');
+    expect(pending[0]!.text).toContain('套用 134 筆核對結果');
+    expect(pending[0]!.text).toContain('② ');
+    expect(preflight(makeFixture(), defaultOptions(), { stale: false, unresolvedDiffs: 0, unappliedDiffs: 0 }, has)).toEqual([]);
+    expect(preflight(makeFixture(), defaultOptions(), ok, has)).toEqual([]);
+    // 還有沒選的：只顯示沒選的那句，不疊兩句
+    const mixed = preflight(makeFixture(), defaultOptions(), { stale: false, unresolvedDiffs: 2, unappliedDiffs: 5 }, has);
+    expect(mixed).toHaveLength(1);
+    expect(mixed[0]!.text).toContain('2 筆');
+  });
+
   it('什麼都沒勾會擋下', () => {
     const i = preflight(makeFixture(), { ...defaultOptions(), seat: false, label: false, study: false, reserve: false }, ok, has);
     expect(i[0]!.text).toContain('至少勾選');
