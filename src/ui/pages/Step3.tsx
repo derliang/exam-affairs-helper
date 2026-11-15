@@ -8,7 +8,7 @@ import { examEntries, examRooms, seatableEntries } from '../seating';
 import { setClassTrack, updateExam, type Doc } from '../store';
 
 /** ③ 教室設定：標題卡、狀態檢核卡（理組／文組分列＋預備教室）、班級（文理組）卡、教室與座位卡（原型 v3） */
-export function Step3(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => void; onToRooms?: () => void }) {
+export function Step3(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => void; onToRooms?: () => void; onToSchool?: () => void }) {
   const { doc, exam } = p;
   const rooms = doc.settings.classrooms;
   const senior = exam.division === 'senior';
@@ -74,7 +74,7 @@ export function Step3(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
         <div class="stack" style="gap:6px">
           {lines.map((l) => <p key={l.label} class={`small${l.ok ? ' muted' : ' errnote'}`}>{l.ok ? <><b>{l.label}：</b>{l.detail}</> : l.message}</p>)}
           {senior && hasList && (prepBad
-            ? <p class="small errnote"><b>預備教室座位不足：</b>{need.on === 0 ? '還沒有把任何預備教室「列為預備」。' : ''}{need.need > need.avail ? `最多的一節「${need.who}」要 ${need.need} 個座位（抽離考試 ${need.exam} 人要排座位、抽離自習 ${need.study} 人不用排座位但座位要夠），已列為預備的教室只有 ${need.avail} 個，還缺 ${need.need - need.avail} 個。請打開預備教室的「列為預備」或增加座位。` : reserve.message}</p>
+            ? <p class="small errnote"><b>預備教室座位不足：</b>{need.on === 0 ? '還沒有把任何預備教室「列為預備」。' : ''}{need.need > need.avail ? `最多的一節「${need.who}」要 ${need.need} 個座位（抽離考試 ${need.exam} 人要排座位、抽離自習 ${need.study} 人不用排座位但座位要夠），已列為預備的教室只有 ${need.avail} 個，還缺 ${need.need - need.avail} 個。請打開預備教室的「列為預備」或增加座位。` : `上方「需要 ${need.need}」是各節加總的估算；實際逐科分配時，${reserve.detail ?? reserve.message}`}</p>
             : need.need === 0
               ? <p class="small muted">目前沒有抽離考試或抽離自習，不需要預備教室。</p>
               : <p class="small muted">預備教室容量夠用（同一節各科的抽離人數加總再比容量）：最多的一節「{need.who}」要 {need.need} 個（抽離考試 {need.exam}、抽離自習 {need.study}），已列為預備的教室有 {need.avail} 個座位。</p>)}
@@ -111,7 +111,7 @@ export function Step3(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
             </div>
             {p.onToRooms && <Button onClick={p.onToRooms}>到共用設定看教室清單</Button>}
           </div>
-          <RoomList junior={!senior} division={exam.division} exams={doc.exams} classes={doc.settings.classes} rooms={rooms} paper={doc.settings.defaultLabelPaper} onChange={setRooms} selected={exam.classroomIds} onSelect={setIds} />
+          <RoomList {...(p.onToSchool ? { onGoSchool: p.onToSchool } : {})} junior={!senior} division={exam.division} exams={doc.exams} classes={doc.settings.classes} rooms={rooms} paper={doc.settings.defaultLabelPaper} onChange={setRooms} selected={exam.classroomIds} onSelect={setIds} />
         </div>
       </div>
 

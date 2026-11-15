@@ -27,6 +27,21 @@ export function download(f: OutputFile): void {
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
+/** 多檔下載：Chrome 會擋短時間內連續觸發的下載，所以逐檔間隔一下；實際有沒有存下來程式無從得知（#203） */
+export async function downloadMany(files: OutputFile[], gapMs = 600): Promise<void> {
+  for (let i = 0; i < files.length; i++) {
+    if (i > 0 && gapMs > 0) await new Promise((r) => setTimeout(r, gapMs));
+    download(files[i]!);
+  }
+}
+
+/** 下載後的提示文字：只說「已送出」，不宣稱檔案已存好（#203） */
+export function wordNoticeText(n: number): string {
+  return n > 1
+    ? `已送出 ${n} 個下載要求。瀏覽器可能會詢問「是否允許下載多個檔案」，請按「允許」，再到下載資料夾確認 ${n} 個檔案都在；缺的檔可在下表按該檔的「再下載」。`
+    : '已送出 1 個下載要求，請到瀏覽器的下載資料夾確認。';
+}
+
 /** PDF：開新視窗顯示列印用頁面，使用者選「另存為 PDF」（D29，不直接列印 D69） */
 export function openPrintPage(f: OutputFile): boolean {
   const w = window.open('', '_blank');
@@ -150,11 +165,10 @@ export function Step6(p: {
       if (hit.length) { setErr(`無法下載：${hit.map((i) => i.text).join('；')}`); return; }
       const out = mainNone ? [] : await runExport(prepared.input, o, { fonts: env.fonts });
       for (const x of chosenExtras) out.push(...(await x.run({ doc: p.doc, exam, format: o.format })));
-      for (const f of out) {
-        if (f.mime === 'text/html') {
-          if (!openPrintPage(f)) throw new Error('瀏覽器擋住了新視窗，請允許本網站開啟彈出視窗後再按一次。');
-        } else download(f);
+      for (const f of out.filter((x) => x.mime === 'text/html')) {
+        if (!openPrintPage(f)) throw new Error('瀏覽器擋住了新視窗，請允許本網站開啟彈出視窗後再按一次。');
       }
+      await downloadMany(out.filter((x) => x.mime !== 'text/html'));
       setResults(out);
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
@@ -237,13 +251,13 @@ export function Step6(p: {
       {results && (
         <div class="psec">
           <Alert tone="ok">
-            <b>{o.format === 'word' ? `已下載 ${results.length} 個檔案` : '已開啟列印用頁面'}</b>
-            {o.format === 'word' ? '，請看瀏覽器的下載資料夾。' : '，請在新視窗選「列印」→ 目的地選「另存為 PDF」。'}
+            <b>{o.format === 'word' ? '下載已送出' : '已開啟列印用頁面'}</b>
+            {o.format === 'word' ? wordNoticeText(results.length) : '，請在新視窗選「列印」→ 目的地選「另存為 PDF」。'}
           </Alert>
           <div style="overflow-x:auto"><table class="t compact">
-            <thead><tr><th>檔案</th><th>內容</th><th>大小</th></tr></thead>
+            <thead><tr><th>檔案</th><th>內容</th><th>大小</th>{o.format === 'word' && <th></th>}</tr></thead>
             <tbody>{results.map((f) => (
-              <tr key={f.name}><td><b>{f.name}</b></td><td class="muted">{f.desc}</td><td>{kb(typeof f.data === 'string' ? f.data.length : f.data.byteLength)}</td></tr>
+              <tr key={f.name}><td><b>{f.name}</b></td><td class="muted">{f.desc}</td><td>{kb(typeof f.data === 'string' ? f.data.length : f.data.byteLength)}</td>{o.format === 'word' && <td><Button small onClick={() => download(f)}>再下載</Button></td>}</tr>
             ))}</tbody>
           </table></div>
           <p class="small muted">本次文件版本：<Badge>{prepared.ok ? prepared.input.result.dataVersion : ''}</Badge>（頁尾相同）</p>

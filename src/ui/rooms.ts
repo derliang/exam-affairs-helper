@@ -119,6 +119,28 @@ export function addRoom(rooms: Classroom[], kind: Classroom['kind'], division: D
   return [...rooms, { id: `room-${n}`, name: `${base}${same}`, kind, rows: 5, depth: 6, seatCount: 30, division }];
 }
 
+/** 複製一間教室（#205）：排數、深位、不排座位、組別、部別全帶過去；名稱尾數遞增（試場3→試場4），沒有尾數就加 2；插在原教室後面 */
+export function duplicateRoom(rooms: Classroom[], id: string): Classroom[] {
+  const i = rooms.findIndex((r) => r.id === id);
+  if (i < 0) return rooms;
+  const src = rooms[i]!;
+  let n = rooms.length + 1;
+  while (rooms.some((r) => r.id === `room-${n}`)) n++;
+  const m = /^(.*?)(\d+)$/.exec(src.name);
+  const base = m ? m[1]! : src.name;
+  let k = m ? Number(m[2]) + 1 : 2;
+  while (rooms.some((r) => r.name === `${base}${k}`)) k++;
+  const copy: Classroom = { ...src, id: `room-${n}`, name: `${base}${k}`, ...(src.disabled ? { disabled: [...src.disabled] } : {}) };
+  return [...rooms.slice(0, i + 1), copy, ...rooms.slice(i + 1)];
+}
+
+/** 到了 B4 上限、而 A3 還能再多（#205）：要提示改紙張 */
+export function atB4Ceiling(rooms: readonly Classroom[], paper: LabelPaper): boolean {
+  if (paper !== 'B4') return false;
+  const lim = seatLimits('B4');
+  return rooms.some((r) => r.rows >= lim.rows || r.depth >= lim.depth);
+}
+
 /** 屬於某部別的教室（保留原順序）；沒給推斷資料時，沒標部別的教室當高中部 */
 export const roomsOfDivision = (rooms: Classroom[], division: Division, ctx: RoomDivisionContext = { classes: [], exams: [] }): Classroom[] =>
   rooms.filter((r) => roomDivision(r, ctx) === division);
