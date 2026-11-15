@@ -8,7 +8,7 @@ import { defaultOptions, planFiles, preflight, runExport, type ExportFormat, typ
 import type { FontData } from '../../export/docxRender';
 import { Alert, Badge, Button, FormatPick, More, Seg, StepHead } from '../components';
 import { enabledExportItems, useIsEnabled } from '../features';
-import { prepareExport, relevantIssues, unresolvedDiffsOf } from '../exportInput';
+import { prepareExport, relevantIssues, unappliedDiffsOf, unresolvedDiffsOf } from '../exportInput';
 import { afterExport } from '../flow';
 import { labelSplitNote } from '../rooms';
 import type { Doc } from '../store';
@@ -115,6 +115,7 @@ export function Step6(p: {
   stale?: boolean;
   /** 考試名單差異未處理數（② 提供） */
   unresolvedDiffs?: number;
+  unappliedDiffs?: number;
   onGoStep: (n: 2 | 3 | 5) => void;
   /** 完成後「回模擬考列表」 */
   onExams?: () => void;
@@ -140,6 +141,7 @@ export function Step6(p: {
   const orderedExtras = [...extras].sort((a, b) => extraRank(a.featureId) - extraRank(b.featureId));
   const mainNone = !o.seat && !o.label && !o.study && !o.reserve;
   const diffs = p.unresolvedDiffs ?? unresolvedDiffsOf(p.doc, exam);
+  const unapplied = p.unappliedDiffs ?? unappliedDiffsOf(p.doc, exam);
   const prepared = useMemo(() => prepareExport(p.doc, exam), [p.doc, exam]);
   // 校-64：名單或設定在排座後改過＝過期；⑤ 沒傳進來就自己算（排座簽章＝result.dataVersion，舊資料沒有簽章視為未過期）
   const stale = p.stale ?? isStale(p.doc, exam);
@@ -150,7 +152,7 @@ export function Step6(p: {
   const has = fontState?.has ?? (() => true);
   // 「至少選一項」：核心項目全不選但有勾選用文件時算有選；畫面與按下去用同一條件
   const relevant = (list: ReturnType<typeof preflight>) => relevantIssues(list, mainNone, chosenExtras.length);
-  const issues = relevant(prepared.ok ? preflight(prepared.input, o, { stale, unresolvedDiffs: diffs }, has) : []);
+  const issues = relevant(prepared.ok ? preflight(prepared.input, o, { stale, unresolvedDiffs: diffs, unappliedDiffs: unapplied }, has) : []);
   const blocked = !prepared.ok || issues.some((i) => i.level === 'block');
   const files = prepared.ok && !blocked && !mainNone ? planFiles(prepared.input, o) : [];
 
@@ -162,7 +164,7 @@ export function Step6(p: {
       const env = fontState ?? (await loader());
       setFontState(env);
       // 載入字型後字集檢查可能出現新警告：有新的擋下項目就停
-      const again = relevant(preflight(prepared.input, o, { stale, unresolvedDiffs: diffs }, env.has));
+      const again = relevant(preflight(prepared.input, o, { stale, unresolvedDiffs: diffs, unappliedDiffs: unapplied }, env.has));
       const hit = again.filter((i) => i.level === 'block');
       if (hit.length) { setErr(`無法下載：${hit.map((i) => i.text).join('；')}`); return; }
       const out = mainNone ? [] : await runExport(prepared.input, o, { fonts: env.fonts });

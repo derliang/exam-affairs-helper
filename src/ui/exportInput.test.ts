@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { makeFixture } from '../export/fixtures';
-import { prepareExport, unresolvedDiffsOf } from './exportInput';
+import { prepareExport, unappliedDiffsOf, unresolvedDiffsOf } from './exportInput';
 import { examResult, reseat } from './seating';
 import { emptyDoc } from './repository';
 import type { Doc } from './store';
@@ -20,6 +20,9 @@ describe('#242：⑥ 的差異檢核只算「未處理」的', () => {
     expect(unresolvedDiffsOf(all, d.exams[0]!)).toBe(0);
     const half = { ...d, examFiles: { [id]: { ...d.examFiles![id]!, diffs: [diff(1, 'use-roster'), diff(2)] } } };
     expect(unresolvedDiffsOf(half, d.exams[0]!)).toBe(1);
+    expect(unappliedDiffsOf(all, d.exams[0]!)).toBe(2);
+    expect(unappliedDiffsOf(half, d.exams[0]!)).toBe(1);
+    expect(unappliedDiffsOf(d, d.exams[0]!)).toBe(0);
   });
 });
 
