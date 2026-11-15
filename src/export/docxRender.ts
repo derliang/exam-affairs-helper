@@ -40,6 +40,8 @@ import {
   statLayout,
   namePtFit,
   personLayout,
+  wideLayout,
+  type PersonLine,
   fitSeatCell,
   isSpecial,
   SLOT_TIP,
@@ -313,6 +315,44 @@ function personParas(c: CellModel, w: number, h: number, g: { topPad: number; co
   ];
 }
 
+/** 一側（半張）的行排版：上方一行座標（有才寫）、其餘行垂直置中（兩倍寬整合標籤用，同 personParas 的算法） */
+function sideParas(lines: PersonLine[], h: number, topPad: number, coord: string | undefined, mode: BoldMode, align: Align = AlignmentType.CENTER, left = 0): Paragraph[] {
+  const total = lines.reduce((a, l) => a + l.pt * 0.3528 * 1.15 + l.gapBefore, 0);
+  const first = Math.max(0, (h - total) / 2 - topPad);
+  return [
+    line(coord ? [run2(coord, { size: 9, bold: true, color: '4A463A' }, mode)] : [], { h: topPad, align: AlignmentType.RIGHT, right: 0.6 }),
+    ...lines.map((l, i) => line(l.runs.map((r) => run2(r.text, { size: l.pt, bold: r.bold, color: INK }, mode)), { h: l.pt * 0.3528 * 1.15, before: l.gapBefore + (i === 0 ? first : 0), align, left })),
+  ];
+}
+
+/** 兩倍寬整合標籤（稿 v2.37／D107）：一張佔兩個實體格；單人左半編號姓名、右半科目；2 人左右各一人；3 人以上合併成一格 */
+function wideUnit(m: CellModel | undefined, o: { w: number; h: number; cellTw: number; isB4: boolean; mode: BoldMode }): TableCell[] {
+  const tw = (mm: number) => mmToTwip(mm);
+  const b = bd(CUT, 8);
+  const faint = bd('C8C2AE', 4);
+  const mk = (children: Paragraph[], borders: object, span = 1) =>
+    new TableCell({
+      width: { size: o.cellTw * span, type: WidthType.DXA },
+      columnSpan: span > 1 ? span : undefined,
+      verticalAlign: VerticalAlign.TOP,
+      margins: { top: 0, bottom: 0, left: tw(1), right: tw(1) },
+      shading: { type: ShadingType.CLEAR, fill: 'FFFFFF', color: 'auto' },
+      borders: borders as never,
+      children,
+    });
+  if (!m) {
+    return [0, 1].map((i) => new TableCell({ width: { size: o.cellTw, type: WidthType.DXA }, verticalAlign: VerticalAlign.TOP, margins: { top: 0, bottom: 0, left: tw(1), right: tw(1) }, shading: HATCH_FILL, borders: { top: b, bottom: b, left: i === 0 ? b : none, right: i === 1 ? b : none }, children: hatchParas(o.w - 2.1, o.h - 1.4) }));
+  }
+  const g = { topPad: 5, codePt: o.isB4 ? 33 : 31, nameMax: 18, subjMax: o.isB4 ? 20 : 16 };
+  const lay = wideLayout(m, o.w - 2, o.h, g);
+  if (lay.span) return [mk(sideParas(lay.span, o.h, g.topPad, m.coord, o.mode), { top: b, bottom: b, left: b, right: b }, 2)];
+  const two = (m.persons?.length ?? 0) === 2;
+  return [
+    mk(sideParas(lay.left, o.h, g.topPad, undefined, o.mode), { top: b, bottom: b, left: b, right: two ? faint : none }),
+    mk(sideParas(lay.right, o.h, g.topPad, m.coord, o.mode, two ? AlignmentType.CENTER : AlignmentType.LEFT, two ? 0 : 1.5), { top: b, bottom: b, right: b, left: two ? faint : none }),
+  ];
+}
+
 /** 預備教室合併標籤格（D94-5）：右上座標，下面每節一行、同字級（節次＋科目＋班座號） */
 function periodParas(c: CellModel, w: number, h: number, coordPt: number, mode: BoldMode): Paragraph[] {
   const lines = c.periodLines ?? [];
@@ -527,10 +567,12 @@ function labelSection(page: LabelPageModel, opts: DocxOptions): ISectionOptions 
   const g = { h: box.h, innerW: box.w - 2.2, topPad: 5, codePt: isB4 ? 33 : 31, namePt: 15, nameMax: 18, coordPt: 9, markPt: 11, markArea: 9, bottomPad: 0.8, codeAtBottom: true, codeGap: 2.6 };
   const grid = labelGrid(page);
   const rows: TableRow[] = [];
+  const ucols = layout.wide ? layout.cols / 2 : layout.cols; // 兩倍寬：以「張」為單位
   for (let r = 0; r < layout.rows; r++) {
     const cells: TableCell[] = [];
-    for (let c = 0; c < layout.cols; c++) {
-      const m = grid[r * layout.cols + c];
+    for (let c = 0; c < ucols; c++) {
+      const m = grid[r * ucols + c];
+      if (layout.wide) { cells.push(...wideUnit(m, { w: box.w, h: box.h, cellTw, isB4, mode })); continue; }
       const marked = !!m && isSpecial(m);
       const b = bd(CUT, 8);
       cells.push(

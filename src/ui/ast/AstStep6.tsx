@@ -40,7 +40,7 @@ export async function runAstExport(o: AstOutputs, keys: AstOutputKey[], format: 
     // 每個檔之間讓出主執行緒，畫面才不會整個卡住（大班數時每個檔要數秒）
     await new Promise<void>((r) => setTimeout(r, 0));
     const data = await renderDocx(k === 'label' ? { label: o.label } : k === 'seat' ? { seat: o.seat } : { table: o[k] }, opts);
-    out.push({ name: `${base}-${FILE_LABEL[k]}${k === 'label' ? `（${paper}）` : ''}.docx`, mime: DOCX_MIME, data, desc: k === 'label' ? `${o.label.length} 張紙（每間考場一張，${paper}）` : `${pagesOf(o, k)} 頁（A4）`, pages: pagesOf(o, k) });
+    out.push({ name: `${base}-${FILE_LABEL[k]}${k === 'label' ? `（${paper}）` : ''}.docx`, mime: DOCX_MIME, data, desc: k === 'label' ? `${o.label.length} 張紙（每張標籤兩格寬，${paper}）` : `${pagesOf(o, k)} 頁（A4）`, pages: pagesOf(o, k) });
   }
   return out;
 }
@@ -142,7 +142,7 @@ export function AstStep6(p: { doc: Doc; exam: ExamConfig; onGoStep: (n: 2 | 3 | 
       {outs && (
         <div class="card stack">
           <div class="row" style="justify-content:space-between">
-            <div><h3>預覽</h3><p class="small muted">與下載用同一份頁面；{tab === 'label' ? `標籤：每間考場一張紙，這間共 ${(pages[idx] as { cells?: unknown[] } | undefined)?.cells?.length ?? 0} 張（${paper === 'A3' ? 'A3 一頁 7×7＝49' : 'B4 一頁 6×8＝48'} 張）。` : `共 ${pages.length} 頁。`}</p></div>
+            <div><h3>預覽</h3><p class="small muted">與下載用同一份頁面；{tab === 'label' ? `標籤：每張兩格寬，這頁共 ${(pages[idx] as { cells?: unknown[] } | undefined)?.cells?.length ?? 0} 張（${paper === 'A3' ? 'A3 一頁 4×7＝28' : 'B4 一頁 3×8＝24'} 張）；考場比一張紙大會分成多張紙。` : `共 ${pages.length} 頁。`}</p></div>
             <Seg<Tab> label="預覽哪一份" value={tab} onChange={(v) => { setTab(v); setPi(0); }} options={tabs} />
           </div>
           {pages.length > 1 && <div class="row" style="flex-wrap:wrap"><Seg<string> label="預覽頁" value={String(idx)} onChange={(v) => setPi(Number(v))} options={pages.map((_, i) => ({ value: String(i), label: pageName(i) }))} /></div>}
