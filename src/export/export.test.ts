@@ -436,3 +436,16 @@ describe('座位表頁首標籤換行與兩時段格（#247、#212）', () => {
     expect(nameLine.pt).toBeGreaterThanOrEqual(10); // 放寬高度後接近姓名上限 10.5pt
   });
 });
+
+describe('#223 座位格太矮時角標不被切', () => {
+  it('fitSeatCell：夠高不縮、太矮時整體等比縮小到放得進格高', async () => {
+    const { fitSeatCell } = await import('./index');
+    const g = { topPad: 4.5, codePt: 19, markArea: 5.2, bottomPad: 0.8 };
+    expect(fitSeatCell({ ...g, h: 23 }, 12).k).toBe(1);
+    const k = fitSeatCell({ ...g, h: 16 }, 12).k;
+    expect(k).toBeLessThan(1);
+    const total = g.topPad + g.bottomPad + k * (19 * 0.3528 + 12 * 0.3528 * 1.15 + g.markArea);
+    expect(total).toBeLessThanOrEqual(16 + 1e-6);
+    expect(fitSeatCell({ ...g, h: 8 }, 12).k).toBe(0.5); // 再矮也不縮到看不見
+  });
+});
