@@ -2,7 +2,7 @@ import { renderToString } from 'preact-render-to-string';
 import { describe, expect, it } from 'vitest';
 import type { Classroom } from '../data';
 import { RoomList } from './components/RoomList';
-import { atB4Ceiling, duplicateRoom } from './rooms';
+import { duplicateRoom } from './rooms';
 
 const room = (o: Partial<Classroom> = {}): Classroom => ({ id: 'room-1', name: '試場3', kind: 'class', rows: 7, depth: 7, seatCount: 48, disabled: ['7-7'], track: 'science', division: 'senior', ...o });
 
@@ -22,19 +22,10 @@ describe('教室複製與 B4 上限提示（#205）', () => {
     const rooms = [room()];
     expect(duplicateRoom(rooms, 'nope')).toBe(rooms);
   });
-  it('B4 到上限才提示；A3 不提示；沒到上限不提示', () => {
-    expect(atB4Ceiling([room({ rows: 6, depth: 8 })], 'B4')).toBe(true);
-    expect(atB4Ceiling([room({ rows: 6, depth: 5 })], 'B4')).toBe(true);
-    expect(atB4Ceiling([room({ rows: 5, depth: 6 })], 'B4')).toBe(false);
-    expect(atB4Ceiling([room({ rows: 7, depth: 7 })], 'A3')).toBe(false);
-  });
-  it('畫面：到 B4 上限顯示說明與連結按鈕，每間教室有「複製這間教室」', () => {
+  it('畫面（#210 方案 A）：不再有「改 A3」的上限提示，每間教室有「複製這間教室」', () => {
     const html = renderToString(<RoomList rooms={[room({ rows: 6, depth: 8 })]} paper="B4" onChange={() => {}} onGoSchool={() => {}} />);
-    expect(html).toContain('目前標籤紙張是 B4，上限 48');
-    expect(html).toContain('請改為 A3');
-    expect(html).toContain('學校與表頭');
+    expect(html).not.toContain('請改為 A3');
     expect(html).toContain('複製這間教室');
-    const none = renderToString(<RoomList rooms={[room({ rows: 5, depth: 6 })]} paper="B4" onChange={() => {}} />);
-    expect(none).not.toContain('請改為 A3');
   });
+});
 });

@@ -4,17 +4,7 @@ import { roomDivision, seatLabel } from '../../data';
 import { Alert, Button, ConfirmButton, Seg, Stepper, Switch } from './index';
 import { confirmCopy } from '../flow';
 import { classColorVars } from '../colors';
-import { addRoom, atB4Ceiling, clickSeat, duplicateRoom, fillDefaultTracks, isSeatActive, patchRoom, removeRoom, resize, roomCapacity, seatCap, seatLimits, setRoomDivision, setRoomTrack } from '../rooms';
-
-/** 到 B4 上限時的提示（#205）：說明為什麼停住、怎麼改 */
-export function PaperLimitNote(p: { rooms: Classroom[]; paper: LabelPaper; onGoSchool?: (() => void) | undefined }) {
-  if (!atB4Ceiling(p.rooms, p.paper)) return null;
-  return (
-    <Alert tone="info" action={p.onGoSchool ? <Button small onClick={p.onGoSchool}>到「學校與表頭」改紙張</Button> : undefined}>
-      目前標籤紙張是 B4，上限 48 座（6 排×8 深位）；要 49 座（7 排×7 深位）請改為 A3。
-    </Alert>
-  );
-}
+import { addRoom, clickSeat, duplicateRoom, fillDefaultTracks, isSeatActive, patchRoom, removeRoom, resize, roomCapacity, seatCap, seatLimits, setRoomDivision, setRoomTrack } from '../rooms';
 
 /**
  * 教室清單與座位表編輯（步驟③與設定頁共用，D69②）：每間一列，點該列或「編輯座位表」就在列下展開，可收合。
@@ -60,8 +50,7 @@ export function RoomList(p: {
   );
   return (
     <div class="rw">
-      <p class="muted small">座位上限依標籤紙張：A3 49 座（7 排×7 深位）、B4 48 座（6 排×8 深位）（目前標籤預設紙張 {p.paper}，每間最多 {cap} 個：{lim.rows} 排、{lim.depth} 深位）。點「▸ 編輯座位」調整座位排列。</p>
-      <PaperLimitNote rooms={shown} paper={p.paper} onGoSchool={p.onGoSchool} />
+      <p class="muted small">座位上限：每間最多 {lim.rows} 排×{lim.depth} 深位、{cap} 座；比標籤紙大時，標籤會自動分張。點「▸ 編輯座位」調整座位排列。</p>
       {addRow}
       {shown.map((r) => {
         const isOpen = open === r.id;
@@ -119,8 +108,7 @@ export function RoomTable(p: {
   const upd = (id: string, f: (r: Classroom) => Classroom) => p.onChange(patchRoom(p.rooms, id, (r) => { const x = f(r); return x.division ? x : { ...x, division: p.division }; }));
   return (
     <div class="stack">
-      <p class="muted small">座位上限依標籤紙張：A3 49 座（7 排×7 深位）、B4 48 座（6 排×8 深位）（目前標籤預設紙張 {p.paper}，每間最多 {cap} 個：{lim.rows} 排、{lim.depth} 深位）。點「編輯座位」調整座位排列。</p>
-      <PaperLimitNote rooms={shown} paper={p.paper} onGoSchool={p.onGoSchool} />
+      <p class="muted small">座位上限：每間最多 {lim.rows} 排×{lim.depth} 深位、{cap} 座；比標籤紙大時，標籤會自動分張。點「編輯座位」調整座位排列。</p>
       <Alert tone="info"><b>所屬部別</b>決定這間教室在高中部或國中部的清單出現。舊資料讀進來時程式會依內容推斷；推斷錯了，直接在這一欄改，改完馬上換到另一個部別的清單。</Alert>
       <div class="scroll">
         <table class="t compact nw">
