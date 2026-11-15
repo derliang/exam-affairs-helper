@@ -40,6 +40,7 @@ import {
   statLayout,
   namePtFit,
   personLayout,
+  fitSeatCell,
   isSpecial,
   SLOT_TIP,
   type CellModel,
@@ -254,12 +255,15 @@ function cornerRuns(c: CellModel, pt: number, mode: BoldMode): TextRun[] {
 /** 一格（座位表或標籤）的段落：座標在右上、編號、班｜姓名；特殊考生在右下角印單字角標（v2.36） */
 function cellParas(
   c: CellModel,
-  g: { h: number; innerW: number; topPad: number; codePt: number; namePt: number; nameMax?: number; coordPt: number; markPt: number; markArea: number; bottomPad: number; codeAtBottom: boolean; codeGap: number },
+  g0: { h: number; innerW: number; topPad: number; codePt: number; namePt: number; nameMax?: number; coordPt: number; markPt: number; markArea: number; bottomPad: number; codeAtBottom: boolean; codeGap: number },
   fg: string,
   mode: BoldMode,
 ): Paragraph[] {
+  // #223：座位表格高很小時（深位多、統計表長），編號、姓名、角標區整體等比縮小，才不會把右下角的角標擠出格子下緣被切掉
+  const fit = g0.codeAtBottom ? { k: 1 } : fitSeatCell(g0, namePtFit(c.classLabel, c.name, g0.innerW, g0.nameMax ?? g0.namePt));
+  const g = fit.k < 1 ? { ...g0, codePt: g0.codePt * fit.k, markPt: Math.max(5.5, g0.markPt * fit.k), markArea: g0.markArea * fit.k } : g0;
   const codeH = g.codePt * 0.3528;
-  const npt = namePtFit(c.classLabel, c.name, g.innerW, g.nameMax ?? g.namePt);
+  const npt = namePtFit(c.classLabel, c.name, g.innerW, g.nameMax ?? g.namePt) * (fit.k < 1 ? fit.k : 1);
   const nameH = npt * 0.3528 * 1.15;
   const nameLine = line(
     [
