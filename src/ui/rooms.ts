@@ -130,6 +130,20 @@ export function duplicateRoom(rooms: Classroom[], id: string): Classroom[] {
   return [...rooms.slice(0, i + 1), copy, ...rooms.slice(i + 1)];
 }
 
+/** 教室比標籤紙一張大時的說明（稿 v2.36 #210）；不超過回 null */
+export function labelSplitNote(r: Classroom, paper: LabelPaper): string | null {
+  const l = defaultLabelLayout(paper);
+  if (r.rows <= l.cols && r.depth <= l.rows) return null;
+  const tiles = Math.ceil(r.rows / l.cols) * Math.ceil(r.depth / l.rows);
+  return `這間教室 ${r.seatCount} 個座位超過標籤紙 ${paper}（${l.cols * l.rows} 格）。輸出標籤時會自動分成 ${tiles} 張貼${paper === 'B4' ? '，或改用 A3' : ''}。`;
+}
+
+/** 到達編輯上限時的提示（稿 v2.36 #210）；沒到回 null */
+export function seatLimitNote(r: Classroom): string | null {
+  return r.rows >= MAX_ROOM_ROWS || r.depth >= MAX_ROOM_DEPTH || roomCapacity(r) >= MAX_ROOM_SEATS
+    ? `排最多 ${MAX_ROOM_ROWS}、深位最多 ${MAX_ROOM_DEPTH}，座位總數最多 ${MAX_ROOM_SEATS}。` : null;
+}
+
 /** 屬於某部別的教室（保留原順序）；沒給推斷資料時，沒標部別的教室當高中部 */
 export const roomsOfDivision = (rooms: Classroom[], division: Division, ctx: RoomDivisionContext = { classes: [], exams: [] }): Classroom[] =>
   rooms.filter((r) => roomDivision(r, ctx) === division);

@@ -1,9 +1,11 @@
 import { useState } from 'preact/hooks';
-import type { Classroom, ExamConfig, Track } from '../../data';
-import { rowDepthOf, roomDivision, studyCapacityOf } from '../../data';
-import { Alert, Badge, Button, More, Seg, StepHead } from '../components';
+import type { Classroom, ExamConfig, LabelPaper, RoomSeatLayout, Track } from '../../data';
+import { effectiveRoom, rowDepthOf, roomDivision, studyCapacityOf } from '../../data';
+import { Alert, Badge, Button, ConfirmButton, More, Seg, StepHead } from '../components';
+import { confirmCopy } from '../flow';
+import { layoutOf } from '../components/RoomList';
 import { AST_STEP_BLURBS } from '../nav';
-import { addRoom, newClassRoomIds, patchRoom, seatCap, seatLimits } from '../rooms';
+import { addRoom, labelSplitNote, newClassRoomIds, patchRoom, seatCap, seatLimitNote, seatLimits } from '../rooms';
 import { setClassTrack, updateExam, type Doc } from '../store';
 import { classColorVars } from '../colors';
 import { PhaseGuard } from './AstRelease';
@@ -12,7 +14,7 @@ import { astCapacity, astModeOf, astPlan, MODE_LABEL } from './model';
 import { isSeatOff, resetStudyCapacity, rowDepthsOf, stepRowDepth, stepStudyCapacity, studyAdjust, toggleSeat } from './roomEdit';
 
 /** 座位圖編輯器：每排一個 −／＋（深位數可不同）、點座位停用／恢復（稿 v2.34 ③） */
-function SeatEditor(p: { room: Classroom; cap: number; maxDepth: number; onChange: (r: Classroom) => void }) {
+function SeatEditor(p: { room: Classroom; cap: number; maxDepth: number; onChange: (r: Classroom) => void; paper: LabelPaper; examOnly?: boolean }) {
   const { room } = p;
   const depths = rowDepthsOf(room);
   const mx = Math.max(...depths);
@@ -30,7 +32,9 @@ function SeatEditor(p: { room: Classroom; cap: number; maxDepth: number; onChang
   }
   return (
     <div class="aed">
-      <div class="small muted">每一排的深位數可以不同（用 − ＋ 調整）；點座位可停用或恢復，停用的座位不排人。沒有座位的地方（該排深位比較少）也畫成斜線。座位上限：最多 {p.cap} 個座位、每排最多 {p.maxDepth} 個深位；比標籤紙大時，標籤會自動分張。</div>
+      {p.examOnly && <div><Badge tone="info">本次專用</Badge> <span class="small muted">編輯本次座位圖：這裡的調整只用在這次考試，不會改動共用教室清單。</span></div>}
+      <div class="small muted">每一排的深位數可以不同（用 − ＋ 調整）；點座位可停用或恢復，停用的座位不排人。沒有座位的地方（該排深位比較少）也畫成斜線。座位上限：最多 {p.cap} 個座位、每排最多 {p.maxDepth} 個深位；比標籤紙大時，標籤會自動分張。{seatLimitNote(room) ? seatLimitNote(room) : ''}</div>
+      {labelSplitNote(room, p.paper) && <div class="small hint">{labelSplitNote(room, p.paper)}</div>}
       <div class="aedgrid" style={{ gridTemplateColumns: cols }}>
         {depths.map((d, i) => (
           <div class="aedcol" key={i}>
@@ -52,6 +56,10 @@ function SeatEditor(p: { room: Classroom; cap: number; maxDepth: number; onChang
 function RoomRow(p: {
   room: Classroom; badge: preact.JSX.Element; open: boolean; onToggleOpen: () => void; onChange: (r: Classroom) => void; cap: number; maxDepth: number;
   on: boolean; onSwitch: (v: boolean) => void; switchLabel: string; trackBadge?: string;
+  paper: LabelPaper;
+  /** 本次考試專用座位配置（#210）：room＝本次實際生效的教室；shared＝共用教室清單裡的原樣；ov 沒傳＝不提供本次調整 */
+  shared: Classroom;
+  ov?: { has: boolean; open: boolean; onToggle: () => void; onChange: (l: RoomSeatLayout) => void; onRestore: () => void };
 }) {
   const { room: r } = p;
   const depths = rowDepthsOf(r);
@@ -62,7 +70,7 @@ function RoomRow(p: {
   return (
     <div class="rw">
       <div class={`roomrow astrow${p.on ? '' : ' off'}`}>
-        <div class="row" style="flex-wrap:nowrap;gap:8px">{p.badge}<b>{r.name}</b></div>
+        <div class="row" style="flex-wrap:nowrap;gap:8px">{p.badge}<b>{r.name}</b>{p.ov?.has && <Badge tone="info">本次專用</Badge>}</div>
         <div>
           <button type="button" class="btn btn-sm" aria-pressed={p.on} aria-label={`${p.switchLabel}：${r.name}`} onClick={() => p.onSwitch(!p.on)}>{p.on ? `${p.switchLabel} ✓` : `${p.switchLabel.replace('可用', '不用').replace('列入', '不列入')}`}</button>
           {p.trackBadge && <span class="badge" style="margin-left:6px">{p.trackBadge}</span>}
@@ -71,18 +79,21 @@ function RoomRow(p: {
           <span class="small muted">{depths.length} 排，深位 {same ? `每排 ${depths[0]}` : `每排不同（${depths.join('、')}）`}</span></div>
         <div class="field" style="gap:2px"><span class="small muted">自習容量（預設＝可排座位）</span>
           <div class="stepper">
-            <button type="button" class="icon-btn" aria-label="自習容量減一" disabled={sc <= 0} onClick={() => p.onChange(stepStudyCapacity(r, -1))}>−</button>
+            <button type="button" class="icon-btn" aria-label="自習容量減一" disabled={sc <= 0} onClick={() => p.onChange(stepStudyCapacity(p.shared, -1))}>−</button>
             <output>{sc}</output>
-            <button type="button" class="icon-btn" aria-label="自習容量加一" onClick={() => p.onChange(stepStudyCapacity(r, 1))}>＋</button>
+            <button type="button" class="icon-btn" aria-label="自習容量加一" onClick={() => p.onChange(stepStudyCapacity(p.shared, 1))}>＋</button>
           </div>
           {adj.kind === 'raised' ? <span class="badge b-warn">已手動調高 +{adj.diff}</span> : adj.kind === 'lowered' ? <span class="badge">已調低 {adj.diff}</span> : <span class="small muted">＝可排座位</span>}
         </div>
         <div class="row" style="flex-wrap:nowrap">
           <Button small {...(p.open ? { kind: 'primary' as const } : {})} onClick={p.onToggleOpen}>{p.open ? '收合座位圖' : '編輯座位圖'}</Button>
-          {adj.kind !== 'default' && <Button small kind="ghost" onClick={() => p.onChange(resetStudyCapacity(r))}>自習容量還原</Button>}
+          {p.ov && p.on && <Button small onClick={p.ov.onToggle}>{p.ov.open ? '收合本次座位' : p.ov.has ? '編輯本次座位' : '本次調整座位'}</Button>}
+          {p.ov?.has && p.on && <ConfirmButton small kind="default" copy={confirmCopy.restoreRoomOverride(r.name)} onConfirm={p.ov.onRestore}>還原成共用設定</ConfirmButton>}
+          {adj.kind !== 'default' && <Button small kind="ghost" onClick={() => p.onChange(resetStudyCapacity(p.shared))}>自習容量還原</Button>}
         </div>
       </div>
-      {p.open && <SeatEditor room={r} cap={p.cap} maxDepth={p.maxDepth} onChange={p.onChange} />}
+      {p.open && <SeatEditor room={p.shared} paper={p.paper} cap={p.cap} maxDepth={p.maxDepth} onChange={p.onChange} />}
+      {p.ov?.open && p.on && <SeatEditor room={r} paper={p.paper} examOnly cap={p.cap} maxDepth={p.maxDepth} onChange={(x) => p.ov!.onChange(layoutOf(x))} />}
     </div>
   );
 }
@@ -113,6 +124,17 @@ export function AstStep3(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
     p.onChange(r.ok ? r.doc : next);
   };
   const setIds = (ids: string[]) => { const r = updateExam(doc, exam.id, { classroomIds: ids }); if (r.ok) p.onChange(r.doc); };
+  const setOv = (id: string, l: RoomSeatLayout | null) => {
+    const cur = { ...(exam.roomOverrides ?? {}) };
+    if (l) cur[id] = l; else delete cur[id];
+    patchExam({ roomOverrides: cur });
+  };
+  const ovOf = (r: Classroom) => ({
+    has: !!exam.roomOverrides?.[r.id], open: open === `${r.id}#exam`,
+    onToggle: () => setOpen(open === `${r.id}#exam` ? null : `${r.id}#exam`),
+    onChange: (l: RoomSeatLayout) => setOv(r.id, l),
+    onRestore: () => { setOv(r.id, null); if (open === `${r.id}#exam`) setOpen(null); },
+  });
   const upd = (id: string, r: Classroom) => setRooms(patchRoom(all, id, () => r));
   const toggleId = (id: string, v: boolean) => setIds(v ? [...exam.classroomIds, id] : exam.classroomIds.filter((x) => x !== id));
   const patchExam = (patch: Partial<ExamConfig>) => { const r = updateExam(doc, exam.id, patch); if (r.ok) p.onChange(r.doc); };
@@ -179,7 +201,7 @@ export function AstStep3(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
         </div>
         <div class="roomlist stack" style="gap:8px">
           {reserves.map((r) => (
-            <RoomRow key={r.id} room={r} badge={<span class="no rbadge" aria-hidden="true">綜</span>} open={open === r.id} onToggleOpen={() => setOpen(open === r.id ? null : r.id)}
+            <RoomRow key={r.id} room={effectiveRoom(exam, r)} shared={r} paper={paper} ov={ovOf(r)} badge={<span class="no rbadge" aria-hidden="true">綜</span>} open={open === r.id} onToggleOpen={() => setOpen(open === r.id ? null : r.id)}
               onChange={(x) => upd(r.id, x)} cap={cap} maxDepth={lim.depth} on={selected.has(r.id)} onSwitch={(v) => toggleId(r.id, v)} switchLabel="本次可用" />
           ))}
           {reserves.length === 0 && <p class="small muted">還沒有綜合教室。分科有人被徵用原班、不考的人要有地方自習時，請新增並勾選。</p>}
@@ -197,7 +219,7 @@ export function AstStep3(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
         <div class="row" style="justify-content:space-between">
           <div>
             <h3>班級教室與座位圖</h3>
-            <p class="small muted">座位圖可以每排深位數不同、可停用個別座位；要留空就停用座位，不另做「隔排、隔位」規則。<b>自習容量預設等於可排座位</b>，可以手動調高，程式不會自己調大。座位上限仍依標籤紙張（A3 49、B4 48）。</p>
+            <p class="small muted">座位圖可以每排深位數不同、可停用個別座位；要留空就停用座位，不另做「隔排、隔位」規則。<b>自習容量預設等於可排座位</b>，可以手動調高，程式不會自己調大。座位上限：每間最多 8 排×8 深位、56 座（與標籤紙脫鉤；比標籤紙大時標籤自動分張）。</p>
             <More title="說明：教室清單與勾選">教室清單是所有模擬考共用的：修改座位圖與自習容量會影響其他使用這間教室的模擬考。「列入本次」沿用原有的勾選，沒列入的教室不會被排考試或自習。</More>
           </div>
           {p.onToRooms && <Button onClick={p.onToRooms}>到共用設定看教室清單</Button>}
@@ -207,7 +229,7 @@ export function AstStep3(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
             const c = byName.get(r.name);
             const track = r.track ?? c?.track;
             return (
-              <RoomRow key={r.id} room={r}
+              <RoomRow key={r.id} room={effectiveRoom(exam, r)} shared={r} paper={paper} ov={ovOf(r)}
                 badge={c ? <span class="no rbadge" aria-hidden="true" style={classColorVars(c.colorIndex)}>{[...c.name][0]}</span> : <span class="no rbadge" aria-hidden="true">班</span>}
                 open={open === r.id} onToggleOpen={() => setOpen(open === r.id ? null : r.id)} onChange={(x) => upd(r.id, x)} cap={cap} maxDepth={lim.depth}
                 on={selected.has(r.id)} onSwitch={(v) => toggleId(r.id, v)} switchLabel="列入本次" {...(track ? { trackBadge: track === 'science' ? '理組教室' : '文組教室' } : {})} />

@@ -193,6 +193,9 @@ export const confirmCopy = {
   deleteClass: (name: string): ConfirmCopy => ({
     title: '刪除這個班級？', body: `將刪除班級「${name}」。這個班目前沒有學生，刪除後可用「↶ 復原」還原。`, confirm: '刪除',
   }),
+  restoreRoomOverride: (name: string): ConfirmCopy => ({
+    title: '還原成共用設定？', body: `「${name}」這次考試調整過的座位配置會被丟掉，改用共用教室清單的設定。排座結果可能因此過期。`, confirm: '還原成共用設定',
+  }),
   deleteRoom: (name: string, inUse: boolean): ConfirmCopy => ({
     title: '刪除這間教室？', body: `將刪除「${name}」。教室清單是所有模擬考共用的，${inUse ? '已選用它的模擬考會少一間教室，排座結果可能因此過期。' : '其他模擬考若選用了它，也會少一間教室。'}`, confirm: '刪除',
   }),
