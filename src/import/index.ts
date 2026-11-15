@@ -3,6 +3,7 @@ export * from './columns';
 export * from './examList';
 export * from './roster';
 export * from './compare';
+export * from './diffGroups';
 export * from './xlsxWrite';
 export * from './smartHeader';
 export * from './marks';
