@@ -211,8 +211,8 @@ function studyPages(c: Ctx): TablePageModel[] {
     const rooms = [...new Set(away.map((a) => a.roomId))];
     out.push({
       kind: 'table', title: `${c.exam.name}　自習教室名單`, subtitle: `${s.label}${s.subjectIds.map((i) => sub(c, i)).join('、')}　自習 ${away.length} 人、${rooms.length} 間教室`,
-      heads: ['自習教室', '班座號', '原班', '姓名', ...(c.hasExamNo ? ['應試編號'] : [])], widths: [1.8, 1.1, 1.1, 1.6, ...(c.hasExamNo ? [1.4] : [])],
-      rows: [...away].sort((a, b) => rooms.indexOf(a.roomId) - rooms.indexOf(b.roomId) || a.code.localeCompare(b.code)).map((a) => [rn(c, a.roomId), a.code, c.className(Number(a.code.slice(0, 2))), c.nameOf.get(a.code) ?? '', ...(c.hasExamNo ? [c.examNoOf.get(a.code) ?? ''] : [])]),
+      heads: ['地點', '班級', '座號', '姓名', ...(c.hasExamNo ? ['應試編號'] : [])], widths: [1.8, 1.1, 0.9, 1.6, ...(c.hasExamNo ? [1.4] : [])],
+      rows: [...away].sort((a, b) => rooms.indexOf(a.roomId) - rooms.indexOf(b.roomId) || a.code.localeCompare(b.code)).map((a) => [rn(c, a.roomId), c.className(Number(a.code.slice(0, 2))), a.code.slice(2), c.nameOf.get(a.code) ?? '', ...(c.hasExamNo ? [c.examNoOf.get(a.code) ?? ''] : [])]),
     });
     for (const id of rooms) work.push([`${slotShort(s)} ${s.subjectIds.map((i) => sub(c, i)).join('、')}`, rn(c, id), `${away.filter((a) => a.roomId === id).length}／${cap.get(id) ?? 0}`, '□ 已貼', '□ 已布置', '']);
   }

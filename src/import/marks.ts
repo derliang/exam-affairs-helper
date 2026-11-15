@@ -39,7 +39,8 @@ export function markCore(raw: string): { key: string; prefixRole: MarkRole | nul
 export function tokenizeMarks(cell: string): { marks: RawMark[]; prose: string[] } {
   const marks: RawMark[] = [];
   const prose: string[] = [];
-  const parts = cell.split(/[、，,;；/／+＋\s]+/).map((x) => x.trim()).filter(Boolean);
+  // 複合標示「x英文x自然x國綜」：在「中途出現的 x／×」前切開，每科各自帶缺考前綴（#200）
+  const parts = cell.split(/[、，,;；/／+＋\s]+/).flatMap((x) => x.trim().split(/(?<=.)(?=[XxＸ×✗✘][一-鿿])/)).map((x) => x.trim()).filter(Boolean);
   for (const p of parts) {
     const { key, prefixRole } = markCore(p);
     if (!key) continue;
@@ -151,7 +152,8 @@ export function groupMarks(marks: readonly RawMark[], subjects: readonly { id: s
 
 /** 常見別名（以科目「名稱」的特徵字辨識） */
 const ALIASES: [RegExp, string[]][] = [
-  [/國/, ['國', 'CH', 'CHI', 'CHINESE', 'C']],
+  // 作文、國綜都是國文的一部分，標示時視為國文整科（#200）
+  [/國/, ['國', 'CH', 'CHI', 'CHINESE', 'C', '作文', '國綜']],
   [/英(?!聽)/, ['英', 'ENG', 'EN', 'ENGLISH', 'E']],
   [/數學?甲|數.*A/, ['數A', '數甲', 'MA', 'MATHA']],
   [/數學?乙|數.*B/, ['數B', '數乙', 'MB', 'MATHB']],
