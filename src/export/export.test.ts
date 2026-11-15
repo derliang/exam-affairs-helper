@@ -435,6 +435,27 @@ describe('座位表頁首標籤換行與兩時段格（#247、#212）', () => {
     expect(nameLine.runs.map((r) => r.text).join('')).toBe('溫 | 甲生105');
     expect(nameLine.pt).toBeGreaterThanOrEqual(10); // 放寬高度後接近姓名上限 10.5pt
   });
+
+  it('#212（1.17.8 複驗仍小）：格子矮到放不下時，先縮編號與時程行，姓名字級不被一起縮；姓名永遠比編號與時程大', async () => {
+    const { personLayout } = await import('./index');
+    const c = {
+      coord: '1-1', seat: { row: 1, depth: 1 }, code: '', classLabel: '', name: '', colorBg: 'FFFFFF', colorLine: '222222', colorFg: '22201B', tags: [], marks: [],
+      persons: [
+        { code: '0105', classLabel: '溫', name: '王小明', sched: ['第一天 國綜'] },
+        { code: '0206', classLabel: '良', name: '李大華', sched: ['第一天 英文'] },
+      ],
+    };
+    const o = { topPad: 4.5, codePt: 19, nameMax: 10.5, schedMax: 7 };
+    for (const h of [30, 26]) {
+      const { lines, total } = personLayout(c, 24, h, o);
+      const names = lines.filter((l) => l.pri);
+      const others = lines.filter((l) => !l.pri);
+      expect(names).toHaveLength(2);
+      expect(Math.min(...names.map((l) => l.pt))).toBeGreaterThanOrEqual(10); // 此寬度（24mm）下姓名受寬度限制約 10pt，矮格不再被一起縮
+      expect(Math.min(...names.map((l) => l.pt))).toBeGreaterThan(Math.max(...others.map((l) => l.pt)));
+      expect(total).toBeLessThanOrEqual(h - 4.5 + 0.5); // 仍放得進格高
+    }
+  });
 });
 
 describe('#223 座位格太矮時角標不被切', () => {
