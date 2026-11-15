@@ -3,30 +3,26 @@ import type { Classroom, Division, LabelPaper, SeatPos, Track } from '../data';
 import { classroomSeats, roomDivision, seatLabel, type RoomDivisionContext } from '../data';
 import { defaultLabelLayout } from '../export/model';
 
-/** 一間教室的座位上限＝一張標籤紙的格數（B4 6×8＝48、A3 7×7＝49，D74） */
-export function seatCap(paper: LabelPaper): number {
-  const l = defaultLabelLayout(paper);
-  return l.cols * l.rows;
-}
-
 /**
- * 一張標籤紙每個方向的上限（#147）：標籤欄＝橫排、列＝深位。B4 6 排×8 深位、A3 7 排×7 深位；
- * 只比總格數（48）會讓 8 排×6 深位通過、到 ⑥ 才排不進標籤。
+ * 教室編輯上限（#210，使用者 2026-11-15 裁示方案 A）：排≤8、深位≤8、總座位≤56，與標籤紙脫鉤。
+ * 教室比一張標籤紙大時，⑥ 標籤輸出自動分張（見 export/model.ts splitLabelTiles）。
  */
-export function seatLimits(paper: LabelPaper): { rows: number; depth: number } {
-  const l = defaultLabelLayout(paper);
-  return { rows: l.cols, depth: l.rows };
+export const MAX_ROOM_ROWS = 8;
+export const MAX_ROOM_DEPTH = 8;
+export const MAX_ROOM_SEATS = 56;
+
+export function seatCap(_paper?: LabelPaper): number {
+  return MAX_ROOM_SEATS;
 }
 
-/** 橫排或深位超過標籤上限的教室（舊資料、換紙張時可能有） */
-export const roomsOverLabel = (rooms: readonly Classroom[], paper: LabelPaper): Classroom[] => {
-  const lim = seatLimits(paper);
-  return rooms.filter((r) => r.rows > lim.rows || r.depth > lim.depth);
-};
+export function seatLimits(_paper?: LabelPaper): { rows: number; depth: number } {
+  return { rows: MAX_ROOM_ROWS, depth: MAX_ROOM_DEPTH };
+}
 
-export const roomOverLabelText = (r: Classroom, paper: LabelPaper): string => {
-  const lim = seatLimits(paper);
-  return `「${r.name}」是 ${r.rows} 排×${r.depth} 深位，標籤紙 ${paper} 最多 ${lim.rows} 排×${lim.depth} 深位`;
+/** 超過標籤紙一張格數、輸出時會分張的教室（僅提示，不擋） */
+export const roomsOverLabel = (rooms: readonly Classroom[], paper: LabelPaper): Classroom[] => {
+  const l = defaultLabelLayout(paper);
+  return rooms.filter((r) => r.rows > l.cols || r.depth > l.rows);
 };
 
 export const roomCapacity = (r: Classroom): number => r.rows * r.depth;
@@ -134,11 +130,18 @@ export function duplicateRoom(rooms: Classroom[], id: string): Classroom[] {
   return [...rooms.slice(0, i + 1), copy, ...rooms.slice(i + 1)];
 }
 
-/** 到了 B4 上限、而 A3 還能再多（#205）：要提示改紙張 */
-export function atB4Ceiling(rooms: readonly Classroom[], paper: LabelPaper): boolean {
-  if (paper !== 'B4') return false;
-  const lim = seatLimits('B4');
-  return rooms.some((r) => r.rows >= lim.rows || r.depth >= lim.depth);
+/** 教室比標籤紙一張大時的說明（稿 v2.36 #210）；不超過回 null */
+export function labelSplitNote(r: Classroom, paper: LabelPaper): string | null {
+  const l = defaultLabelLayout(paper);
+  if (r.rows <= l.cols && r.depth <= l.rows) return null;
+  const tiles = Math.ceil(r.rows / l.cols) * Math.ceil(r.depth / l.rows);
+  return `這間教室 ${r.seatCount} 個座位超過標籤紙 ${paper}（${l.cols * l.rows} 格）。輸出標籤時會自動分成 ${tiles} 張貼${paper === 'B4' ? '，或改用 A3' : ''}。`;
+}
+
+/** 到達編輯上限時的提示（稿 v2.36 #210）；沒到回 null */
+export function seatLimitNote(r: Classroom): string | null {
+  return r.rows >= MAX_ROOM_ROWS || r.depth >= MAX_ROOM_DEPTH || roomCapacity(r) >= MAX_ROOM_SEATS
+    ? `排最多 ${MAX_ROOM_ROWS}、深位最多 ${MAX_ROOM_DEPTH}，座位總數最多 ${MAX_ROOM_SEATS}。` : null;
 }
 
 /** 屬於某部別的教室（保留原順序）；沒給推斷資料時，沒標部別的教室當高中部 */
