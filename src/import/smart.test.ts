@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { groupMarks, markCore, prefillMapping, rememberMapping, tokenizeMarks, similarMarks } from './marks';
+import { groupMarks, markCore, prefillMapping, rememberMapping, tokenizeMarks, similarMarks, suggestSubject } from './marks';
+import { isLegacyXls, readXlsx } from './xlsx';
 import { buildEntries, diffEntries, scanExamSheet, smartSeat, type ScanOptions } from './smartScan';
 import { smartField, smartFindHeader } from './smartHeader';
 
@@ -175,5 +176,50 @@ describe('匯入預覽差異', () => {
     expect(d.added).toHaveLength(1);
     expect(diffEntries([a], []).removed).toHaveLength(1);
     expect(diffEntries(undefined, [a]).added).toHaveLength(1);
+  });
+});
+
+describe('#200 複合標示與 #202 舊版 xls', () => {
+  const subj = [{ id: 'chi', name: '國文' }, { id: 'eng', name: '英文' }, { id: 'mathA', name: '數A' }, { id: 'mathB', name: '數B' }, { id: 'sci', name: '自然' }, { id: 'soc', name: '社會' }];
+  it('x英文x自然x國綜 拆成三科缺考', () => {
+    const m = tokenizeMarks('x英文x自然x國綜').marks;
+    expect(m.map((x) => x.key)).toEqual(['英文', '自然', '國綜']);
+    expect(m.every((x) => x.prefixRole === 'absent')).toBe(true);
+  });
+  it('x自然x數B 不併進數B；x數Bx數Ax社會 拆三科', () => {
+    expect(tokenizeMarks('x自然x數B').marks.map((x) => x.key)).toEqual(['自然', '數B']);
+    expect(tokenizeMarks('x數Bx數Ax社會').marks.map((x) => x.key)).toEqual(['數B', '數A', '社會']);
+    expect(tokenizeMarks('x英文x國綜x數Bx社會x作文').marks).toHaveLength(5);
+  });
+  it('作文、國綜建議對應國文', () => {
+    expect(suggestSubject(['作文'], subj)).toBe('chi');
+    expect(suggestSubject(['國綜'], subj)).toBe('chi');
+  });
+  const rows = [['班級', '座號', '姓名', '組別', '特殊生需求註明'], ['01', '1', '甲', '0', 'x英文x自然x國綜'], ['01', '2', '乙', '0', '需要放大試卷並使用電腦作答'], ['01', '3', '丙', '0', '']];
+  const opts = { subjects: subj, groupTable: { '0': ['chi', 'eng', 'mathA', 'mathB', 'sci', 'soc'] } };
+  it('複合標示套用成多科缺考，統計正確', () => {
+    const s = scanExamSheet(rows, opts);
+    const mapping: Record<string, string> = {};
+    for (const g of s.groups) if (g.suggestion) mapping[g.id] = g.suggestion;
+    const r = buildEntries(s, opts, { mapping, rows: {} });
+    const a = r.entries.find((e) => e.seatNo === 1)!;
+    expect(a.absentSubjectIds?.sort()).toEqual(['chi', 'eng', 'sci']);
+    expect(a.subjectIds.sort()).toEqual(['mathA', 'mathB', 'soc']);
+  });
+  it('看不懂的標示列出、不靜默略過，確認前不可匯入', () => {
+    const s = scanExamSheet(rows, opts);
+    expect(s.unreadable).toEqual([{ row: 3, text: '需要放大試卷並使用電腦作答' }]);
+    const mapping: Record<string, string> = {};
+    for (const g of s.groups) mapping[g.id] = g.suggestion ?? 'ignore';
+    const r = buildEntries(s, opts, { mapping, rows: {} });
+    expect(r.pendingUnreadable).toBe(true);
+    expect(r.ready).toBe(false);
+    expect(r.markStats).toEqual({ total: 4, applied: 3, skipped: 1, unreadable: 1 });
+    expect(buildEntries(s, opts, { mapping, rows: {}, ackUnreadable: true }).ready).toBe(true);
+  });
+  it('偵測 .xls 檔頭並給白話訊息', async () => {
+    const xls = new Uint8Array([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1]);
+    expect(isLegacyXls(xls)).toBe(true);
+    await expect(readXlsx(xls)).rejects.toThrow('舊版 Excel（.xls）');
   });
 });

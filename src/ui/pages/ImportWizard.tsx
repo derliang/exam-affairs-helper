@@ -45,17 +45,19 @@ export function ImportWizard(p: {
   const [rowDec, setRowDec] = useState<Record<number, RowDecision>>({});
   const [remember, setRemember] = useState(true);
   const [showSkipped, setShowSkipped] = useState(false);
+  const [ack, setAck] = useState(false);
 
   // 已存的對應當預設；使用者本次的選擇優先
   const mapping = useMemo(() => ({ ...prefillMapping(scan.groups, p.saved, subjectIds), ...chosen }), [scan, p.saved, chosen]);
-  const res = useMemo(() => buildEntries(scan, opts, { mapping, rows: rowDec }), [scan, opts, mapping, rowDec]);
+  const res = useMemo(() => buildEntries(scan, opts, { mapping, rows: rowDec, ackUnreadable: ack }), [scan, opts, mapping, rowDec, ack]);
   const diff = useMemo(() => diffEntries(p.previous, res.entries), [p.previous, res.entries]);
   const name = (id: string) => p.exam.subjects.find((s) => s.id === id)?.name ?? id;
-  const switchSheet = (i: number) => { setSheetIx(i); setChosen({}); setRowDec({}); };
+  const switchSheet = (i: number) => { setSheetIx(i); setChosen({}); setRowDec({}); setAck(false); };
 
   const reasons = [
     ...scan.problems,
     ...(res.pendingGroups.length ? [`還有 ${res.pendingGroups.length} 組標示寫法沒有對應`] : []),
+    ...(res.pendingUnreadable ? ['「看不懂的標示」還沒確認'] : []),
     ...(res.pendingReview.length ? [`還有 ${res.pendingReview.length} 列待確認沒處理`] : []),
     ...(res.entries.length === 0 && scan.problems.length === 0 ? ['目前沒有任何考生可以匯入'] : []),
   ];
@@ -116,6 +118,15 @@ export function ImportWizard(p: {
         </Alert></div>
       )}
 
+      {scan.unreadable.length > 0 && (
+        <div style="margin-top:16px"><Alert tone="warn">
+          <b>看不懂的標示（{scan.unreadable.length} 筆）</b>
+          <p class="small">下面這些文字出現在特殊生需求註明，但程式無法判斷是哪一科，<b>不會套用到考科</b>，座位表仍會照原本考科排。請你看過，必要時回名單改成「x數A、x英文」這類寫法，或到座位表手動處理。</p>
+          <ul>{scan.unreadable.map((u, i) => <li key={`${u.row}-${i}`}>第 {u.row} 列：「{u.text}」</li>)}</ul>
+          <label class="small"><input type="checkbox" checked={ack} onChange={(e) => setAck(e.currentTarget.checked)} /> 我已看過，會自行處理這些標示</label>
+        </Alert></div>
+      )}
+
       {scan.review.length > 0 && (
         <>
           <h4 style="margin-top:16px">③ 待確認資料（{res.pendingReview.length} 筆待處理／共 {scan.review.length} 筆）</h4>
@@ -151,6 +162,7 @@ export function ImportWizard(p: {
             <td>{c.fields.includes('subjects') ? `${c.before.subjectIds.map(name).join('、') || '無'} → ${c.after.subjectIds.map(name).join('、') || '無'}` : '—'}</td></tr>)}
         </tbody></table></details>}
       {diff.removed.length > 0 && <div style="margin-top:8px"><Alert tone="warn">本次名單將移除 {diff.removed.length} 人。請先確認是否漏列考生。</Alert></div>}
+      <p class="muted small" style="margin-top:8px">標示統計：有 {res.markStats.total} 筆標示、已套用 {res.markStats.applied} 筆、略過 {res.markStats.skipped} 筆{res.markStats.unreadable > 0 ? `（其中 ${res.markStats.unreadable} 筆看不懂）` : ''}。</p>
       {res.skippedByUser > 0 && <p class="muted small">已略過 {res.skippedByUser} 筆，不會匯入。</p>}
 
       <div class="btnrow" style="margin-top:12px">
