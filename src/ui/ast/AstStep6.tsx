@@ -12,14 +12,14 @@ import { download, downloadMany, kb, openPrintPage, wordNoticeText } from '../pa
 import { phaseOf } from '../../core/astD99/release';
 import { PhaseCard, VersionCard } from './AstRelease';
 import { astPlan } from './model';
-import { AST_OUTPUT_ITEMS, astOutputBlockers, astOutputs, type AstOutputKey, type AstOutputs } from './output';
+import { AST_OUTPUT_ITEMS, astOutputBlockers, astOutputs, estimatePages, type AstOutputKey, type AstOutputs } from './output';
 
 type Loaded = { fonts: FontData; has: (ch: string) => boolean };
 type Tab = 'label' | 'ann' | 'reg' | 'study';
 const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
 const FILE_LABEL: Record<AstOutputKey, string> = { label: '整合標籤', seat: '綜合教室座位表', ann: '班級公告', use: '每節教室用途表', reg: '每科試務清冊', study: '自習教室名單與布置標籤工作表' };
-const pagesOf = (o: AstOutputs, k: AstOutputKey): number => o[k].length;
+const pagesOf = (o: AstOutputs, k: AstOutputKey): number => estimatePages(o, k);
 
 /** 把勾選的項目轉成輸出檔（Word 每項一個檔；PDF 合併成一個列印頁） */
 export async function runAstExport(o: AstOutputs, keys: AstOutputKey[], format: ExportFormat, paper: LabelPaper, examName: string, fonts: () => Promise<Loaded>): Promise<OutputFile[]> {
@@ -40,7 +40,7 @@ export async function runAstExport(o: AstOutputs, keys: AstOutputKey[], format: 
     // 每個檔之間讓出主執行緒，畫面才不會整個卡住（大班數時每個檔要數秒）
     await new Promise<void>((r) => setTimeout(r, 0));
     const data = await renderDocx(k === 'label' ? { label: o.label } : k === 'seat' ? { seat: o.seat } : { table: o[k] }, opts);
-    out.push({ name: `${base}-${FILE_LABEL[k]}${k === 'label' ? `（${paper}）` : ''}.docx`, mime: DOCX_MIME, data, desc: k === 'label' ? `${o.label.length} 張紙（每間考場一張，${paper}）` : `${o[k].length} 頁（A4）`, pages: pagesOf(o, k) });
+    out.push({ name: `${base}-${FILE_LABEL[k]}${k === 'label' ? `（${paper}）` : ''}.docx`, mime: DOCX_MIME, data, desc: k === 'label' ? `${o.label.length} 張紙（每間考場一張，${paper}）` : `${pagesOf(o, k)} 頁（A4）`, pages: pagesOf(o, k) });
   }
   return out;
 }
