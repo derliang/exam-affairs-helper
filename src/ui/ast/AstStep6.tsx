@@ -37,6 +37,8 @@ export async function runAstExport(o: AstOutputs, keys: AstOutputKey[], format: 
   const opts = { fonts: env.fonts, ...meta };
   const out: OutputFile[] = [];
   for (const k of chosen) {
+    // 每個檔之間讓出主執行緒，畫面才不會整個卡住（大班數時每個檔要數秒）
+    await new Promise<void>((r) => setTimeout(r, 0));
     const data = await renderDocx(k === 'label' ? { label: o.label } : { table: o[k] }, opts);
     out.push({ name: `${base}-${FILE_LABEL[k]}${k === 'label' ? `（${paper}）` : ''}.docx`, mime: DOCX_MIME, data, desc: k === 'label' ? `${o.label.length} 張紙（每間考場一張，${paper}）` : `${o[k].length} 頁（A4）`, pages: pagesOf(o, k) });
   }
