@@ -1,5 +1,6 @@
 import { DEFAULT_LABEL_HEADER, DEFAULT_SEAT_HEADER, headerTemplates } from '../header';
 import { syncDiffs } from '../store';
+import { rosterYearOf, rosterYears, switchRosterYear } from '../rosterYears';
 import { useEffect, useState } from 'preact/hooks';
 import type { Division, LabelPaper, Student, Track } from '../../data';
 import { DEFAULT_LABEL_NOTES, LABEL_NOTE_MAX_CHARS, LABEL_NOTE_MAX_LINES, noteLineLength, studentCode } from '../../data';
@@ -30,6 +31,7 @@ export function Settings(p: { doc: Doc; onChange: (d: Doc) => void; tab?: Tab; d
       <div class="utabs" role="group" aria-label="設定項目" style="margin:12px 0">
         {TABS.map((t) => <button type="button" key={t.value} aria-pressed={tab === t.value} onClick={() => setTab(t.value)}>{t.label}</button>)}
       </div>
+      {(tab === 'roster' || tab === 'classes') && <YearBar doc={p.doc} onChange={p.onChange} />}
       {tab !== 'school' && tab !== 'sched' && tab !== 'features' && (
         <div class="row" style="margin-bottom:12px">
           <span class="label" style="margin:0">部別</span>
@@ -58,6 +60,40 @@ function Rooms({ doc, onChange, division, onGoSchool }: Props & { onGoSchool?: (
       <div><h3>教室清單（{division === 'junior' ? '國中部' : '高中部'}）</h3><p class="small muted">維護常用的班級教室與預備教室；每次模擬考從這裡用開關選出並自動帶入上次的選擇，可修改。座位表在這裡也能編輯，和模擬考 ③ 是同一個編輯畫面。</p></div>
       <RoomTable division={division} classes={doc.settings.classes} exams={doc.exams} inUse={(id) => doc.exams.some((e) => e.classroomIds.includes(id))} rooms={doc.settings.classrooms} paper={doc.settings.defaultLabelPaper} {...(onGoSchool ? { onGoSchool } : {})}
         onChange={(classrooms) => onChange({ ...doc, settings: { ...doc.settings, classrooms } })} />
+    </div>
+  );
+}
+
+/** 學年度分段鈕（#208，稿 v2.36）：名單與班級依「學年度 × 部別」分存，這裡切換目前看的學年度；可新增學年度 */
+function YearBar({ doc, onChange }: { doc: Doc; onChange: (d: Doc) => void }) {
+  const [adding, setAdding] = useState(false);
+  const [text, setText] = useState('');
+  const [err, setErr] = useState('');
+  const cur = rosterYearOf(doc);
+  const years = rosterYears(doc);
+  const go = (y: number) => {
+    const r = switchRosterYear(doc, y);
+    if (!r.ok) { setErr(r.error); return; }
+    setErr(''); setAdding(false); setText(''); onChange(syncDiffs(r.doc));
+  };
+  return (
+    <div class="stack" style="margin-bottom:12px;gap:6px">
+      <div class="row">
+        <span class="label" style="margin:0">學年度</span>
+        <div class="seg seg-soft" role="group" aria-label="學年度">
+          {years.map((y) => <button type="button" key={y} aria-pressed={cur === y} onClick={() => go(y)}>{y} 學年</button>)}
+        </div>
+        {!adding && <Button small onClick={() => setAdding(true)}>新增學年度</Button>}
+        {adding && (
+          <>
+            <input class="input" style="max-width:110px" inputMode="numeric" aria-label="新學年度（民國年）" placeholder="例如 116" value={text} onInput={(e) => setText(e.currentTarget.value)} />
+            <Button small kind="primary" onClick={() => go(Number(text))}>新增並切換</Button>
+            <Button small onClick={() => { setAdding(false); setErr(''); }}>取消</Button>
+          </>
+        )}
+      </div>
+      <span class="small muted">學生名單與班級資料依學年度分開存放，各次模擬考用自己學年度的那一份；新學年度的名單從空白開始、班級先沿用目前這份。</span>
+      {err && <Alert tone="danger">{err}</Alert>}
     </div>
   );
 }
