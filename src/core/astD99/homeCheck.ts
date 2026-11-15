@@ -13,9 +13,11 @@ export interface HomeIssue {
   kind: 'none' | 'small';
   /** 原班教室自習容量（none 時為 0） */
   cap: number;
+  /** 給人看的說明（含具體名稱差異；有傳班級名稱才寫得出來） */
+  detail: string;
 }
 
-export function homeIssues(input: Pick<PlanInput, 'rooms' | 'students'>): HomeIssue[] {
+export function homeIssues(input: Pick<PlanInput, 'rooms' | 'students'>, opt: { classNames?: ReadonlyMap<number, string> } = {}): HomeIssue[] {
   const home = new Map<number, number>();
   for (const r of input.rooms) if (r.kind === 'class' && r.classNo !== undefined && !home.has(r.classNo)) home.set(r.classNo, r.studyCapacity);
   const count = new Map<number, number>();
@@ -23,8 +25,13 @@ export function homeIssues(input: Pick<PlanInput, 'rooms' | 'students'>): HomeIs
   const out: HomeIssue[] = [];
   for (const [classNo, students] of [...count].sort((a, b) => a[0] - b[0])) {
     const cap = home.get(classNo);
-    if (cap === undefined) out.push({ classNo, students, kind: 'none', cap: 0 });
-    else if (cap < students) out.push({ classNo, students, kind: 'small', cap });
+    const cn = opt.classNames?.get(classNo);
+    const label = cn ? `班級「${cn}」` : `班 ${classNo}`;
+    if (cap === undefined) {
+      const loose = input.rooms.filter((r) => r.kind === 'class' && r.classNo === undefined && r.name);
+      const diff = loose.length ? `；${cn ? loose.map((r) => `教室「${r.name}」與班級「${cn}」名稱不同`).join('、') : `教室${loose.map((r) => `「${r.name}」`).join('、')}沒對上任何班級`}` : '；已勾選的教室裡沒有對應的班級教室';
+      out.push({ classNo, students, kind: 'none', cap: 0, detail: `${label}（${students} 人）找不到原班教室${diff}` });
+    } else if (cap < students) out.push({ classNo, students, kind: 'small', cap, detail: `${label}（${students} 人）原班教室自習容量只有 ${cap}` });
   }
   return out;
 }
