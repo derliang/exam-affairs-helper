@@ -72,3 +72,19 @@ describe('設定頁部別預設（項目 8）', () => {
     expect(pressed(s, '高中部')).toBe(true);
   });
 });
+
+describe('#250 列表人數口徑', () => {
+  it('名單含全科缺考者：列表人數註明「含全科缺考 N 人，不排座」；選仍排座就不註明', () => {
+    const d = docWith();
+    const e = d.exams.find((x) => x.kind === 'gsat')!;
+    const entries = [
+      { classNo: 1, seatNo: 1, name: '甲', subjectIds: ['chi'] },
+      { classNo: 1, seatNo: 2, name: '乙', subjectIds: [] },
+    ];
+    const doc = { ...d, examFiles: { [e.id]: { entries, diffs: [] } } };
+    const html = renderToString(<Exams doc={doc} onOpen={noop} onNew={noop} onSettings={noop} onChangeFolder={noop} />);
+    expect(html).toContain('2 人（含全科缺考 1 人，不排座）');
+    const on = { ...doc, exams: doc.exams.map((x) => (x.id === e.id ? { ...x, seatFullyAbsent: true } : x)) };
+    expect(renderToString(<Exams doc={on} onOpen={noop} onNew={noop} onSettings={noop} onChangeFolder={noop} />)).not.toContain('含全科缺考');
+  });
+});

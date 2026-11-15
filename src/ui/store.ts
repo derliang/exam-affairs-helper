@@ -142,9 +142,18 @@ export function newExam(doc: Doc, kind: ExamKind, name: string, now: Date, opts:
   return { ok: true, doc: { ...doc, exams: [...doc.exams, exam] } };
 }
 
-/** 同一學年度、同類型已有幾次，下一次就是第幾次（新學年從第 1 次重新開始，#68） */
+/**
+ * 預設次別（新學年從第 1 次重新開始，#68）。學測有次別（E1～E4 對應第 1～4 次，D36）：同學年度同類型「還沒用過的最小次別」，
+ * 沒有考試就第 1 次；補登缺的次別（已有 E3、E4，再建 E1）就補回第 1 次，不再依筆數亂數成第五、六次（#248）。
+ * 分科、會考沒有次別欄位，只用來取名，維持「同學年度同類型筆數 + 1」。
+ */
 export function nextRound(doc: Doc, kind: ExamKind, now: Date, year: number = schoolYear(now)): number {
-  return doc.exams.filter((e) => e.kind === kind && examYear(e) === year).length + 1;
+  const same = doc.exams.filter((e) => e.kind === kind && examYear(e) === year);
+  if (kind !== 'gsat') return same.length + 1;
+  const used = new Set(same.map((e) => e.round).filter((r): r is number => r !== undefined));
+  let n = 1;
+  while (used.has(n)) n++;
+  return n;
 }
 
 /** 新增頁預設的名稱：「學測第三次」「會考第一次」，已被用掉就往後找（資料夾名稱會用它） */
