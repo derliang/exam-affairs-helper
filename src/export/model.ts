@@ -65,7 +65,7 @@ export interface CellModel {
 /** 角標：x＝不考（黑底白字）、add＝加考／抽離考試（白底黑框）、take＝「有考」（該科不考超過一半時反標，白底黑框） */
 export interface CornerTag { kind: 'x' | 'add' | 'take'; text: string }
 /** 坐這格的一個人。sched 每個元素是一行時程，例「第一天 自然、數A」「第1天 時段二 物理」 */
-export interface PersonModel { code: string; classLabel: string; name: string; sched: string[] }
+export interface PersonModel { code: string; classLabel: string; name: string; sched: string[]; /** 只列科目的精簡版（#216：整合標籤格內放不下完整「第N天 時段X 科目」時改用，依時間順序） */ schedShort?: string[] }
 export interface StatsModel {
   perClass: { className: string; count: number }[];
   total: number;
@@ -325,7 +325,7 @@ export function personLayout(
   c: CellModel,
   w: number,
   h: number,
-  o: { topPad: number; codePt: number; nameMax: number; schedMax: number },
+  o: { topPad: number; codePt: number; nameMax: number; schedMax: number; /** 整合標籤（#216）：單人多行時，科目行優先放大到這個字級上限 */ schedBig?: number },
 ): { lines: PersonLine[]; total: number } {
   const ps = c.persons ?? [];
   const PT = 0.3528;
@@ -342,14 +342,41 @@ export function personLayout(
       // 每人兩行：姓名字級上限放寬 15%（#212：兩人格的班級姓名要比一人格更不能縮）；編號一行、「班級｜姓名」一行（#212：原本擠成一行，字只剩約 6.5pt），時程行接在後面
       lines.push({ runs: [{ text: p.code, bold: true }], pt: fitW(p.code, true, o.codePt * 0.5), gapBefore: i === 0 ? 0 : 1.5 });
       lines.push({ runs: [{ text: p.classLabel, bold: true }, { text: ' | ' }, { text: p.name }], pt: namePtFit(p.classLabel, p.name, w, o.nameMax * 1.15), gapBefore: 0.2, pri: true });
-      for (const s of p.sched) lines.push({ runs: [{ text: s, bold: true }], pt: fitW(s, true, o.schedMax), gapBefore: 0.3 });
+      // 整合標籤（#216）：兩人共用一格已經很擠，直接只列科目（依時間順序），字級上限放寬
+      const sch = o.schedBig && p.schedShort?.length === p.sched.length ? p.schedShort : p.sched;
+      for (const s of sch) lines.push({ runs: [{ text: s, bold: true }], pt: fitW(s, true, o.schedBig ?? o.schedMax), gapBefore: 0.3 });
     });
   } else if (ps.length === 1) {
     const p = ps[0]!;
-    lines.push({ runs: [{ text: p.code, bold: true }], pt: o.codePt, gapBefore: 0 });
     const npt = namePtFit(p.classLabel, p.name, w, o.nameMax);
-    lines.push({ runs: [{ text: p.classLabel, bold: true }, { text: ' | ' }, { text: p.name }], pt: npt, gapBefore: 1.5 });
-    for (const s of p.sched) lines.push({ runs: [{ text: s, bold: true }], pt: fitW(s, true, o.schedMax), gapBefore: 1 });
+    if (o.schedBig && p.sched.length >= 2) {
+      // #216：科目行優先。編號與姓名先縮到下限（編號 16pt、姓名 9pt），把剩下的高度全給科目行；
+      // 完整「第N天 時段X 科目」放大後不到 10.5pt 就改只列科目（依時間順序），再用剩下的空間把編號與姓名放回去
+      const PTH = PT * 1.15;
+      const availH = h - o.topPad - 1;
+      const codeMin = Math.min(o.codePt, 16);
+      const nameMin = Math.min(npt, 9);
+      const fit = (txts: string[]): number => {
+        const gapsS = 1.5 + txts.length;
+        const byH = (availH - gapsS - (codeMin + nameMin) * PTH) / (txts.length * PTH);
+        const byW = Math.min(...txts.map((t) => fitW(t, true, o.schedBig!))) * 0.95; // 留 5% 餘裕，避免下面的折行估計誤判成兩行
+        return Math.max(4, Math.floor(Math.min(byH, byW, o.schedBig!) * 2) / 2);
+      };
+      const full = p.sched;
+      const short = p.schedShort && p.schedShort.length === full.length ? p.schedShort : undefined;
+      const useShort = !!short && fit(full) < 10.5;
+      const txts = useShort ? short! : full;
+      const spt = fit(txts);
+      const rem = availH - (1.5 + txts.length) - txts.length * spt * PTH;
+      const kCN = Math.min(1, Math.max(0, rem / ((o.codePt + npt) * PTH)));
+      lines.push({ runs: [{ text: p.code, bold: true }], pt: Math.max(codeMin, Math.floor(o.codePt * kCN * 2) / 2), gapBefore: 0 });
+      lines.push({ runs: [{ text: p.classLabel, bold: true }, { text: ' | ' }, { text: p.name }], pt: Math.max(nameMin, Math.floor(npt * kCN * 2) / 2), gapBefore: 1.5 });
+      for (const s of txts) lines.push({ runs: [{ text: s, bold: true }], pt: spt, gapBefore: 1 });
+    } else {
+      lines.push({ runs: [{ text: p.code, bold: true }], pt: o.codePt, gapBefore: 0 });
+      lines.push({ runs: [{ text: p.classLabel, bold: true }, { text: ' | ' }, { text: p.name }], pt: npt, gapBefore: 1.5 });
+      for (const s of p.sched) lines.push({ runs: [{ text: s, bold: true }], pt: fitW(s, true, o.schedMax), gapBefore: 1 });
+    }
   }
   const hOf = (pri: boolean, f: (pt: number) => number) => lines.filter((l) => !!l.pri === pri).reduce((a, l) => a + f(l.pt) * PT * 1.15, 0);
   const dims = () => ({ hN: hOf(true, (pt) => pt), hO: hOf(false, (pt) => pt), avail2: avail - lines.reduce((x, l) => x + l.gapBefore, 0) });

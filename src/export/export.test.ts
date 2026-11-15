@@ -436,6 +436,26 @@ describe('座位表頁首標籤換行與兩時段格（#247、#212）', () => {
     expect(nameLine.pt).toBeGreaterThanOrEqual(10); // 放寬高度後接近姓名上限 10.5pt
   });
 
+  it('#216 整合標籤單人 4 科：科目行優先放大；完整寫法放不下就只列科目（時間順序），不比舊版小、整塊放得進格', async () => {
+    const { personLayout } = await import('./index');
+    const mk = (n: number) => ({
+      coord: '1-1', seat: { row: 1, depth: 1 }, code: '', classLabel: '', name: '', colorBg: 'FFFFFF', colorLine: '222222', colorFg: '22201B', tags: [], marks: [],
+      persons: [{ code: '0101', classLabel: '溫', name: '王小明', sched: ['物理', '化學', '數甲', '生物', '歷史', '地理'].slice(0, n).map((s, i) => `第一天 時段${'一二三四五六'[i]} ${s}`), schedShort: ['物理', '化學', '數甲', '生物', '歷史', '地理'].slice(0, n) }],
+    });
+    const base = { topPad: 5, codePt: 33, nameMax: 18, schedMax: 11 };
+    for (const n of [2, 3, 4]) {
+      const old = personLayout(mk(n), 38, 37, base);
+      const big = personLayout(mk(n), 38, 37, { ...base, schedBig: 16 });
+      const pts = (r: typeof old) => r.lines.slice(2).map((l) => l.pt);
+      expect(Math.min(...pts(big))).toBeGreaterThanOrEqual(Math.min(...pts(old)));
+      expect(big.total).toBeLessThanOrEqual(37 - 5 - 1 + 0.1);
+      if (n === 4) {
+        expect(Math.min(...pts(big))).toBeGreaterThanOrEqual(8);
+        expect(big.lines.slice(2).map((l) => l.runs[0]!.text)).toEqual(['物理', '化學', '數甲', '生物']); // 完整寫法放大後不到 10.5pt → 只列科目
+      }
+    }
+  });
+
   it('#220 兩人各兩個時段（8 行）＋長科目名：整塊（含折行）放得進格高，最後一行不會被格下緣切掉', async () => {
     const { personLayout } = await import('./index');
     const sched = ['第二天 時段一 數學A', '第三天 時段二 公民與社會'];

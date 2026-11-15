@@ -34,7 +34,7 @@ function cellHtml(c: CellModel | undefined, w: number, h: number, mode: 'seat' |
   if (!c) return `<div class="pp-c pp-e" style="${size}"></div>`;
   if (c.persons) {
     // 預備教室／綜合教室／整合標籤（v2.36）：版式同一般標籤，格內每人一區；排法同 Word（model.personLayout）
-    const g = mode === 'label' ? { topPad: 5, codePt: b4 ? 33 : 31, nameMax: 18, schedMax: 11 } : { topPad: 4.5, codePt: 19, nameMax: 10.5, schedMax: 7 };
+    const g = mode === 'label' ? { topPad: 5, codePt: b4 ? 33 : 31, nameMax: 18, schedMax: 11, schedBig: 16 } : { topPad: 4.5, codePt: 19, nameMax: 10.5, schedMax: 7 };
     const { lines } = personLayout(c, w - (mode === 'label' ? 2 : 1.3), h, g);
     const ls = lines.map((l) => `<span class="pp-pr" style="font-size:${l.pt}pt;margin-top:${mm(l.gapBefore)}">${l.runs.map((r) => (r.bold ? `<b>${esc(r.text)}</b>` : esc(r.text))).join('')}</span>`).join('');
     return `<div class="pp-c pp-pe" style="${size};background:#fff"><i class="pp-co">${esc(c.coord)}</i><span class="pp-prs">${ls}</span></div>`;

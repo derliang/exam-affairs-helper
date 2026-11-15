@@ -88,6 +88,8 @@ function personsOfSeat(c: Ctx, list: { slot: number; code: string; subjectId: st
     classLabel: c.className(Number(code.slice(0, 2))),
     name: c.nameOf.get(code) ?? '',
     sched: [...xs.map((x) => `${c.slots[x.slot]!.label} ${sub(c, x.subjectId)}`), ...(c.examNoOf.get(code) ? [`應試 ${c.examNoOf.get(code)}`] : [])],
+    // #216：放不下完整寫法時只列科目（時間順序），應試編號行照留
+    schedShort: [...xs.map((x) => sub(c, x.subjectId)), ...(c.examNoOf.get(code) ? [`應試 ${c.examNoOf.get(code)}`] : [])],
   }));
 }
 
