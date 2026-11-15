@@ -6,6 +6,7 @@ import { updateExam, type Doc } from '../store';
 import { examEntries } from '../seating';
 import { PhaseGuard } from './AstRelease';
 import { CarryCard, ScheduleCard } from './AstSchedule';
+import { homeIssues } from '../../core/astD99/homeCheck';
 import { astModeOf, astPlan, astSlots, MODE_LABEL } from './model';
 
 const MODES: { id: PlanMode; badge?: string; intro: string; order: string[] }[] = [
@@ -44,6 +45,9 @@ export function AstStep4(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
   const a = met('fewest-rooms');
   const b = met('least-movement');
   const slots = astSlots(doc, exam);
+  const issues = plans[mode] ? homeIssues(plans[mode]!.input) : [];
+  const issueN = issues.reduce((x, i) => x + (i.kind === 'none' ? i.students : Math.max(0, i.students - i.cap)), 0);
+  const same = !!a && !!b && JSON.stringify(a) === JSON.stringify(b);
 
   const row = (r: Row) => {
     const va = a ? r.get(a) : undefined;
@@ -73,6 +77,17 @@ export function AstStep4(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
         <Alert tone="info" action={<Button onClick={() => p.onStep(3)}>前往 ③ 教室與自習空間</Button>}>
           <b>還沒有勾選可用的教室。</b>方案要依教室算，請先到 ③ 勾選班級教室與綜合教室。
         </Alert>
+      )}
+
+      {issues.length > 0 && (
+        <Alert tone="warn" action={<Button onClick={() => p.onStep(3)}>前往 ③ 教室與自習空間</Button>}>
+          <b>有 {issueN} 位參加者沒有可留的原班教室。</b>
+          {issues.map((i) => (i.kind === 'none' ? `班 ${i.classNo}（${i.students} 人）找不到對應的班級教室` : `班 ${i.classNo}（${i.students} 人）原班教室自習容量只有 ${i.cap}`)).join('；')}。
+          這些人不考試時沒地方留在原班，只能去綜合教室自習，「少移動優先」也幫不上忙。請確認班級教室名稱與班級名稱一致，且已在 ③ 勾選、自習容量夠。
+        </Alert>
+      )}
+      {same && (
+        <Alert tone="info"><b>這份名單兩種模式結果相同。</b>用的教室、離開原班人次與換教室次數都一樣，所以選哪個都不影響排座。</Alert>
       )}
 
       <div class="card stack">
