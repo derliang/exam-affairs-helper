@@ -46,6 +46,12 @@ export function examHeadcount(doc: Doc, exam: ExamConfig): number {
   return examEntries(doc, exam).length;
 }
 
+/** 考試名單裡全科缺考（無任何考科）、依 D79 預設不排座的人數；使用者選「仍排座」就算進考生，回 0（#250） */
+export function examFullyAbsent(doc: Doc, exam: ExamConfig): number {
+  if (exam.seatFullyAbsent) return 0;
+  return examEntries(doc, exam).filter((x) => x.subjectIds.length === 0).length;
+}
+
 export const examLevel = (exam: ExamConfig): string => (exam.division === 'senior' ? '高三' : '國三');
 
 /** 依最後修改由新到舊 */
