@@ -190,3 +190,44 @@ describe('分科輸出：擋下與畫面', () => {
     for (const f of res) expect(Object.keys((await JSZip.loadAsync(f.data as Uint8Array)).files)).toContain('word/document.xml');
   }, 30000);
 });
+
+describe('分科輸出：綜合教室座位表（#220）', () => {
+  const squeezed = (rows: number, depth: number) => {
+    const f = fixture(12, 40);
+    const classrooms = f.doc.settings.classrooms.map((r) => (r.kind === 'class' ? { ...r, rows, depth, seatCount: rows * depth } : r));
+    const doc = { ...f.doc, settings: { ...f.doc.settings, classrooms } };
+    return { doc, exam: f.exam };
+  };
+  it('班級教室夠用時沒有人在綜合教室考試：不出座位表', () => {
+    const f = fixture(12, 40);
+    expect(astOutputs(f.doc, f.exam, astPlan(f.doc, f.exam)!).seat).toEqual([]);
+  });
+  it('有人在綜合教室考試：每間一頁、格內每人一區、各時段各班人數統計＋不重複人數、與方案逐筆一致', () => {
+    const { doc, exam } = squeezed(4, 4); // 班級教室縮成 4×4，座位不夠，綜合教室要當考場
+    const plan = astPlan(doc, exam)!;
+    const o = astOutputs(doc, exam, plan);
+    const reserveIds = new Set(plan.input.rooms.filter((r) => r.kind === 'reserve').map((r) => r.id));
+    const inReserve = plan.out.exams.filter((e) => reserveIds.has(e.roomId));
+    expect(inReserve.length).toBeGreaterThan(0);
+    expect(o.seat).toHaveLength(new Set(inReserve.map((e) => e.roomId)).size);
+    const p = o.seat[0]!;
+    expect(p.slotMode).toBe(true);
+    expect(p.stats.table.headLabel).toBe('時段');
+    const rows = p.stats.table.rows;
+    expect(rows[rows.length - 1]!.label).toBe('不重複人數');
+    expect(rows[rows.length - 1]!.total).toBe(p.stats.total);
+    for (const row of rows) expect(row.per.reduce((a, b) => a + b, 0)).toBe(row.total);
+    // 每時段一列的人數加總＝方案中在這間綜合教室的考試筆數
+    expect(rows.slice(0, -1).reduce((a, r) => a + r.total, 0)).toBe(inReserve.length);
+    expect([...p.cells.values()].every((c) => (c.persons?.length ?? 0) > 0)).toBe(true);
+    expect(o.seat.reduce((n, pg) => n + pg.cells.size, 0)).toBe(new Set(inReserve.map((e) => `${e.roomId}:${e.row}-${e.depth}`)).size);
+  });
+  it('下載：Word 多一個「綜合教室座位表」檔，列印頁也含座位表與統計', async () => {
+    const { doc, exam } = squeezed(4, 4);
+    const o = astOutputs(doc, exam, astPlan(doc, exam)!);
+    const res = await runAstExport(o, ['seat'], 'word', 'B4', '分科', async () => ({ fonts: { regular: new Uint8Array(readFileSync(new URL('../../export/fonts/NotoSansTC-Regular-big5.ttf', import.meta.url))), bold: new Uint8Array(readFileSync(new URL('../../export/fonts/NotoSansTC-Bold-core.ttf', import.meta.url))) }, has: () => true }));
+    expect(res.map((f) => f.name)).toEqual(['分科-綜合教室座位表.docx']);
+    const html = await runAstExport(o, ['seat'], 'pdf', 'B4', '分科', async () => { throw new Error('x'); });
+    expect(String(html[0]!.data)).toContain('不重複人數');
+  });
+});
