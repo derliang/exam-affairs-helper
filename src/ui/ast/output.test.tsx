@@ -8,7 +8,9 @@ import { demoDoc } from '../repository';
 import { newExam, updateExam, type Doc } from '../store';
 import { codeOf } from '../../core/astD99/contract';
 import { AstStep6, runAstExport } from './AstStep6';
-import { astPlan } from './model';
+import { astInput, astPlan } from './model';
+import { AstStep4 } from './AstStep4';
+import { landscapeFit, textEm } from '../../export/model';
 import { astOutputBlockers, astOutputs } from './output';
 
 const noop = () => undefined;
@@ -80,6 +82,27 @@ describe('分科輸出：內容', () => {
     expect(cells.filter((_, i) => kinds[i] === 'study').every((c) => c.startsWith('自習 ') && !/\d－\d/.test(c))).toBe(true);
     expect(cells.some((_, i) => kinds[i] === 'study')).toBe(true);
     expect(cells.filter((_, i) => kinds[i] === undefined).every((c) => c === '—')).toBe(true);
+  });
+  it('班級公告（#259）：欄寬以格內最長文字（含教室名稱）估算，一行放得下；字級依整頁寬度縮小', () => {
+    const t = o.ann[0]!;
+    expect(t.emWidths).toBe(true);
+    expect(t.widths).toHaveLength(t.heads.length);
+    t.heads.forEach((h, i) => {
+      const need = Math.max(textEm(h, true), ...t.rows.map((r) => textEm(r[i] ?? '', true)));
+      expect(t.widths[i]!).toBeGreaterThanOrEqual(need);
+    });
+    const fit = landscapeFit(t.rows.length, 2, t.widths.reduce((a, b) => a + b, 0));
+    expect(fit.pt * 0.3528 * t.widths.reduce((a, b) => a + b, 0)).toBeLessThanOrEqual(273.5);
+    // 40 人一頁：列高、字級仍不低於下限
+    const big = landscapeFit(40, 2, 80);
+    expect(big.rowMm).toBeGreaterThanOrEqual(2.8);
+  });
+  it('綜合教室排法（#258）：預設不帶旗標（最少深位）、選最少排數才帶 min-rows，且 ④ 畫面有兩個選項', () => {
+    expect(astInput(doc, exam).reserveLayout).toBeUndefined();
+    expect(astInput(doc, { ...exam, astReserveLayout: 'min-rows' }).reserveLayout).toBe('min-rows');
+    const html = renderToString(<AstStep4 doc={doc} exam={exam} onChange={noop} onStep={noop} />);
+    expect(html).toContain('最少深位（預設）');
+    expect(html).toContain('最少排數');
   });
   it('一致性：標籤、清冊、公告都從同一份方案來，座位逐筆相同（§13.1 第 7 條）', () => {
     const roster = rosterTables(o).flatMap((t) => t.rows.map((r) => `${r[1]}${r[2]}|${r[0]}`));

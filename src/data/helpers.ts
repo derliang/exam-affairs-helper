@@ -66,6 +66,24 @@ export function classroomSeats(c: Classroom): SeatPos[] {
   return seats;
 }
 
+/**
+ * 把 n 人平均分到各排：一次一人，給目前人數最少且還有空位的排（同數量取排序前面的排），
+ * 所以各排人數差不超過 1（排的容量不足才例外），深位數＝ceil(n／排數)。每排只保留前 c 個深位。
+ */
+export function balanceRows(rows: readonly { row: number; depths: number[] }[], n: number): { row: number; depths: number[] }[] {
+  const cnt = rows.map(() => 0);
+  for (let k = 0; k < n; k++) {
+    let best = -1;
+    rows.forEach((r, i) => {
+      if (cnt[i]! < r.depths.length && (best < 0 || cnt[i]! < cnt[best]!)) best = i;
+    });
+    if (best < 0) return rows.map((r) => ({ row: r.row, depths: [...r.depths] })); // 座位不足：維持原樣，由 layoutRoom 回報
+    cnt[best]!++;
+  }
+  return rows.map((r, i) => ({ row: r.row, depths: r.depths.slice(0, cnt[i]!) })).filter((r) => r.depths.length > 0);
+}
+
+
 /** 不排的座位數（座位格裡沒排的；每排深位數不同時，不存在的深位不算） */
 export function emptySeatCount(c: Classroom): number {
   return seatSlotCount(c) - c.seatCount;

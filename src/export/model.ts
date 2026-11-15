@@ -145,6 +145,8 @@ export interface TablePageModel {
   totalRow?: string[];
   /** A4 橫式（班級公告，#215） */
   landscape?: boolean;
+  /** widths 的單位是字寬（em，含左右留白），不是比例；橫式表會據此縮字級（#259） */
+  emWidths?: boolean;
   /** 兩層表頭的上層：每項 {text, span}；span 總和＝欄數時，第一層在 heads 之上 */
   headGroups?: { text: string; span: number }[];
   /** 各格樣式（與 rows 同形）：'exam' 粗體、'study' 灰底；沒給＝一般 */
@@ -849,8 +851,18 @@ export function rotationPage(p: SeatPageModel): TablePageModel | undefined {
 }
 
 /** 橫式公告表的列高與字級：一班一頁，依列數縮放（#215）；45 人也放得進一頁（列高最小 3.4mm、字 6.5pt） */
-export function landscapeFit(nRows: number, nHead: number): { rowMm: number; pt: number } {
+export function landscapeFit(nRows: number, nHead: number, needEm?: number): { rowMm: number; pt: number } {
   const avail = 210 - 17 - 30; // 橫式 A4 高度扣上下邊界、標題、說明與頁尾
   const rowMm = Math.max(2.8, Math.min(8, avail / (nRows + nHead)));
-  return { rowMm, pt: Math.max(6, Math.min(10.5, Math.floor((rowMm / 0.3528 / 1.5) * 2) / 2)) };
+  let pt = Math.max(6, Math.min(10.5, Math.floor((rowMm / 0.3528 / 1.5) * 2) / 2));
+  // 欄寬以字寬（em）給時（#259）：字級再依整頁寬度縮小，確保每格一行放得下
+  if (needEm && needEm > 0) pt = Math.max(5.5, Math.min(pt, Math.floor((273 / needEm / 0.3528) * 2) / 2));
+  return { rowMm, pt };
+}
+
+/** 估字寬（em）：全形 1、半形數字英文約 0.58、空白 0.28；粗體再加寬 */
+export function textEm(s: string, bold = false): number {
+  let em = 0;
+  for (const ch of s) em += ch === ' ' ? 0.28 : /[!-~]/.test(ch) ? (/[ij|l.,:;!']/.test(ch) ? 0.3 : 0.58) : 1;
+  return em * (bold ? 1.05 : 1);
 }

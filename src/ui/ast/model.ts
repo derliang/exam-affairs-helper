@@ -114,6 +114,7 @@ export function astInput(doc: Doc, exam: ExamConfig, mode: PlanMode = astModeOf(
     rooms: astRooms(doc, exam),
     slots: slots.map((s) => ({ id: s.id, subjectIds: s.subjectIds })),
     students: astStudents(doc, exam, slots),
+    ...(exam.astReserveLayout === 'min-rows' ? { reserveLayout: 'min-rows' as const } : {}),
     ...(exam.astAllowOtherStudy ? { allowOtherClassStudy: true } : {}),
     ...(exam.astApprovals?.length ? { approvals: exam.astApprovals } : {}),
     ...(hasLocks ? { locks: L } : {}),

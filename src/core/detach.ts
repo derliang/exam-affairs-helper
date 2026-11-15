@@ -14,7 +14,7 @@
  * - 同一人同一節被標到兩科：報錯（只有使用者把兩科改成同節才會發生）。
  */
 import type { ClassInfo, Classroom, Detach, Mark, Override, SeatPos, StudentCode, Subject } from '../data/types';
-import { classroomSeats, parseStudentCode, seatLabel } from '../data/helpers';
+import { balanceRows, classroomSeats, parseStudentCode, rowDepthOf, seatLabel } from '../data/helpers';
 import type { SubjectPeriod } from './periods';
 import { seatGroup } from './seating';
 import { reserveOrderWarnings, validateSeating } from './validate';
@@ -40,6 +40,8 @@ export interface DetachInput {
   periods?: ReadonlyMap<string, readonly SubjectPeriod[]>;
   /** 預備教室排座方式；沒給＝監考優先（與以前的排法相同）。畫面預設同學優先，由呼叫端傳入 */
   mode?: ReserveMode;
+  /** 預備教室座位排法（#258）；沒給＝最少深位（平均分到各排） */
+  reserveLayout?: ReserveLayout;
 }
 
 export type DetachResult =
@@ -82,6 +84,35 @@ function takeRooms(rooms: readonly Classroom[], start: number, need: number): { 
     cap += r.seatCount;
   }
   return cap >= need ? { rooms: picked, end: i } : null;
+}
+
+/**
+ * 預備教室（綜合教室）座位排法（#258）：min-depth＝最少深位（沒設＝預設），最後一間教室若沒坐滿，
+ * 就把人數平均分到各排、每排只坐前幾個深位（17 人、7 排 → 7 排各 2～3 人）；min-rows＝一排坐滿再下一排（舊排法）。
+ * 做法：把那間教室換成「只留平均後座位」的副本（停用其餘座位、seatCount 縮小），其餘排座與驗證邏輯不用改。
+ */
+export type ReserveLayout = 'min-depth' | 'min-rows';
+function shapeLastRoom(rooms: Classroom[], need: number, layout: ReserveLayout | undefined): Classroom[] {
+  if (layout === 'min-rows' || rooms.length === 0) return rooms;
+  const last = rooms[rooms.length - 1]!;
+  const before = rooms.slice(0, -1).reduce((a, r) => a + r.seatCount, 0);
+  const n = Math.min(need - before, last.seatCount);
+  if (n <= 0 || n >= last.seatCount) return rooms;
+  const rows: { row: number; depths: number[] }[] = [];
+  for (const s of classroomSeats(last)) {
+    const l = rows[rows.length - 1];
+    if (l && l.row === s.row) l.depths.push(s.depth);
+    else rows.push({ row: s.row, depths: [s.depth] });
+  }
+  const keep = new Set(balanceRows(rows, n).flatMap((r) => r.depths.map((d) => `${r.row}-${d}`)));
+  const disabled: string[] = [];
+  for (let row = 1; row <= last.rows; row++) for (let d = 1; d <= rowDepthOf(last, row); d++) if (!keep.has(`${row}-${d}`)) disabled.push(`${row}-${d}`);
+  return [...rooms.slice(0, -1), { ...last, disabled, seatCount: n }];
+}
+/** takeRooms 之後套用排法（只用在抽離「考試」的教室；自習只算容量，不排座位） */
+function takeExamRooms(rooms: readonly Classroom[], start: number, need: number, layout: ReserveLayout | undefined): { rooms: Classroom[]; end: number } | null {
+  const t = takeRooms(rooms, start, need);
+  return t ? { rooms: shapeLastRoom(t.rooms, need, layout), end: t.end } : null;
 }
 
 /** 一組同時進行（或因一科跨兩節而綁在一起）的節次 */
@@ -213,7 +244,7 @@ export function allocateDetaches(input: DetachInput): DetachResult {
       const study = studyCodes[gi]!;
       if (!exam.length && !study.length) return;
       const label = labelOf(gi);
-      const examRooms = takeRooms(input.reserveRooms, 0, exam.length);
+      const examRooms = takeExamRooms(input.reserveRooms, 0, exam.length, input.reserveLayout);
       if (!examRooms) {
         errors.push(`${label}：預備教室座位不足以容納抽離考試 ${exam.length} 人`);
         return;
@@ -305,7 +336,7 @@ function peerSeating(input: DetachInput, groups: PeriodGroup[], examCodes: strin
   };
 
   // A. 每人一格
-  const a = takeRooms(input.reserveRooms, 0, all.length);
+  const a = takeExamRooms(input.reserveRooms, 0, all.length, input.reserveLayout);
   if (a) {
     const r = seatGroup(a.rooms, all);
     if (r.ok) {
@@ -315,7 +346,7 @@ function peerSeating(input: DetachInput, groups: PeriodGroup[], examCodes: strin
   }
   // B. 共用座位
   const maxNeed = Math.max(...examCodes.map((l) => l.length));
-  const b = takeRooms(input.reserveRooms, 0, maxNeed);
+  const b = takeExamRooms(input.reserveRooms, 0, maxNeed, input.reserveLayout);
   if (!b) return { ok: false };
   const slots = b.rooms.flatMap((room) => classroomSeats(room).map((seat) => ({ roomId: room.id, seat, used: new Set<number>() })));
   const idx = new Map(slots.map((s, i) => [`${s.roomId}|${seatLabel(s.seat)}`, i]));
