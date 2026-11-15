@@ -46,6 +46,11 @@ export interface PlanInput {
   students: readonly PlanStudent[];
   /** 管理者是否允許自習者去其他未徵用的原班教室（預設 false） */
   allowOtherClassStudy?: boolean;
+  /**
+   * 綜合教室（reserve）的座位排法（#258）：min-depth＝最少深位（沒設＝預設）：在教室排數上限內，人數平均分到各排、深位數盡量少；
+   * min-rows＝最少排數：沿用舊排法（一排排滿再下一排）。只影響綜合教室，班級教室不受影響。
+   */
+  reserveLayout?: 'min-depth' | 'min-rows';
   /** 管理者已核可的替代方案（某時段改用某班原班教室給抽離者自習）；只有列在這裡的才生效 */
   approvals?: readonly { slotId: string; roomId: string }[];
   /** AST-3：鎖定（引擎之後套用，鎖定值重排時不可改）；算進輸入，所以相同輸入、設定、鎖定得相同結果（T-21） */

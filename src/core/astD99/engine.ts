@@ -491,12 +491,19 @@ class Ctx {
     let mixed = 0;
     const examCount = new Map<number, number>();
     for (const [r, m] of rooms) {
-      const lay = layoutRoom(this.rooms[r]!, this.orderedSubjects(m, order));
+      const lay = layoutRoom(this.shapeRoom(this.rooms[r]!, m), this.orderedSubjects(m, order));
       mixed += lay.mixedRows.length;
       examCount.set(r, [...m.values()].reduce((a, l) => a + l.length, 0));
     }
     const rankKey = [...S].map((r) => this.rooms[r]!.rank).sort((a, b) => a - b);
     return { key: S.join(','), rankKey, examRoom, studyRoom, rooms, unplaced, used, displaced, leave, balance, mixed, examCount, usedApprovals };
+  }
+
+  /** 綜合教室預設「最少深位」（#258）：把各排縮成平均人數（差不超過 1），再交給 layoutRoom 逐排排滿；其他教室、min-rows 原樣 */
+  private shapeRoom(room: Room, m: Map<string, Stu[]>): Pick<Room, 'rows'> {
+    if (room.kind !== 'reserve' || this.input.reserveLayout === 'min-rows') return room;
+    const n = [...m.values()].reduce((a, l) => a + l.length, 0);
+    return { rows: balanceRows(room.rows, n) };
   }
 
   private orderedSubjects(m: Map<string, Stu[]>, order: Map<string, number>): { subject: string; students: Stu[] }[] {
@@ -524,7 +531,7 @@ class Ctx {
       for (const r of [...p.rooms.keys()].sort((a, b) => a - b)) {
         const room = this.rooms[r]!;
         u[room.id] = 'exam';
-        const lay = layoutRoom(room, this.orderedSubjects(p.rooms.get(r)!, order));
+        const lay = layoutRoom(this.shapeRoom(room, p.rooms.get(r)!), this.orderedSubjects(p.rooms.get(r)!, order));
         const placed = alignSeats(lay.placed, room, lastSeat);
         for (const x of placed) {
           exams.push({ slotId: slot.id, code: x.st.code, subjectId: x.subject, roomId: room.id, row: x.row, depth: x.depth });
@@ -586,6 +593,23 @@ class Ctx {
     }
     return out;
   }
+}
+
+/**
+ * 把 n 人平均分到各排：一次一人，給目前人數最少且還有空位的排（同數量取排序前面的排），
+ * 所以各排人數差不超過 1（排的容量不足才例外），深位數＝ceil(n／排數)。每排只保留前 c 個深位。
+ */
+export function balanceRows(rows: Room['rows'], n: number): Room['rows'] {
+  const cnt = rows.map(() => 0);
+  for (let k = 0; k < n; k++) {
+    let best = -1;
+    rows.forEach((r, i) => {
+      if (cnt[i]! < r.depths.length && (best < 0 || cnt[i]! < cnt[best]!)) best = i;
+    });
+    if (best < 0) return rows; // 座位不足：維持原樣，由 layoutRoom 回報
+    cnt[best]!++;
+  }
+  return rows.map((r, i) => ({ row: r.row, depths: r.depths.slice(0, cnt[i]!) })).filter((r) => r.depths.length > 0);
 }
 
 function toRoom(r: PlanRoom, idx: number): Room {
