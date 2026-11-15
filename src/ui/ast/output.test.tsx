@@ -97,7 +97,7 @@ describe('分科輸出：內容', () => {
     expect(o.use[1]!.rows.find((r) => r[0] === '標籤張數')![1]).toBe(String(plan.out.metrics!.labels));
   });
   it('自習名單：只列離開原班的人，人數與引擎一致；另有一份布置工作表', () => {
-    const lists = o.study.filter((t) => t.heads[0] === '自習教室');
+    const lists = o.study.filter((t) => t.heads[0] === '地點');
     const n = lists.reduce((a, t) => a + t.rows.length, 0);
     const homeOf = (cl: number) => plan.input.rooms.find((r) => r.kind === 'class' && r.classNo === cl)?.id;
     const away = plan.out.study.filter((s) => homeOf(Number(s.code.slice(0, 2))) !== s.roomId).length;

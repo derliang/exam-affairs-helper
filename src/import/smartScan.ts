@@ -74,6 +74,8 @@ export interface ExamScan {
   problems: string[];
   /** 不擋匯入、但要讓使用者看見的處理紀錄（例如組別代碼依別名視為另一個） */
   notices: { row: number; message: string }[];
+  /** 看不懂的標示：標示欄裡太長、無法當科目標示的文字（#200）。不會套用到科目，要請使用者看過並人工處理，不得靜默略過 */
+  unreadable: { row: number; text: string }[];
 }
 
 const NEGATIVE = new Set(['', '×', '✗', '✘', 'X', 'N', 'NO', '否', '0', '-', '—', '無', '缺', '不', '不考']);
@@ -100,7 +102,7 @@ const codeKey = (cell: string, opts: ScanOptions): string => {
 };
 
 export function scanExamSheet(rows: readonly (readonly string[])[], opts: ScanOptions): ExamScan {
-  const empty = (problems: string[]): ExamScan => ({ header: null, columns: {}, headers: {}, subjectColumns: {}, rows: [], review: [], skipped: [], blankRows: 0, groups: [], problems, notices: [] });
+  const empty = (problems: string[]): ExamScan => ({ header: null, columns: {}, headers: {}, subjectColumns: {}, rows: [], review: [], skipped: [], blankRows: 0, groups: [], problems, notices: [], unreadable: [] });
   const header = smartFindHeader(rows);
   if (!header) return empty(['找不到表頭。Excel 必須包含「座號」「姓名」欄。']);
   const col = header.map as Partial<Record<Field, number>>;
@@ -119,7 +121,7 @@ export function scanExamSheet(rows: readonly (readonly string[])[], opts: ScanOp
     header,
     columns: Object.fromEntries(Object.entries(col).filter(([, v]) => v !== undefined)) as Record<string, number>,
     headers: Object.fromEntries(Object.entries(col).filter(([, v]) => v !== undefined).map(([f, i]) => [f, (header.headers[i as number] ?? '').trim()])),
-    subjectColumns, rows: [], review: [], skipped: [], blankRows: 0, groups: [], problems, notices: [],
+    subjectColumns, rows: [], review: [], skipped: [], blankRows: 0, groups: [], problems, notices: [], unreadable: [],
   };
   const get = (r: readonly string[], f: Field): string => (col[f] === undefined ? '' : (r[col[f] as number] ?? '').trim());
   const seen = new Set<string>();
@@ -141,11 +143,14 @@ export function scanExamSheet(rows: readonly (readonly string[])[], opts: ScanOp
     for (const [field, role] of [['note', 'absent'], ['extra', 'extra']] as const) {
       const t = tokenizeMarks(get(r, field));
       for (const m of t.marks) marks.push({ ...m, role: m.prefixRole ?? role, present: true });
+      for (const text of t.prose) out.unreadable.push({ row: i + 1, text });
       if (field === 'note' && t.marks.length === 0) note = noteCell; // 純說明文字原樣保留
     }
     // 組別格是代碼（例「2-自然組-理工類」且代碼在對照表）時由代碼表決定科目，不當成科目文字拆
     if (opts.groupAsSubjects && codeKey(get(r, 'group'), opts) === '') {
-      for (const m of tokenizeMarks(get(r, 'group').replace(/[.．。・·]/g, '、')).marks) marks.push({ ...m, role: m.prefixRole ?? 'taking', present: true });
+      const gt = tokenizeMarks(get(r, 'group').replace(/[.．。・·]/g, '、'));
+      for (const m of gt.marks) marks.push({ ...m, role: m.prefixRole ?? 'taking', present: true });
+      for (const text of gt.prose) out.unreadable.push({ row: i + 1, text });
     }
     for (const [ci, h] of Object.entries(subjectColumns)) {
       const v = normalizeCell(r[Number(ci)] ?? '').toUpperCase();
@@ -184,6 +189,9 @@ export function scanExamSheet(rows: readonly (readonly string[])[], opts: ScanOp
   const noCount = new Map<string, number[]>();
   for (const x of out.rows) if (x.examNo) noCount.set(x.examNo, [...(noCount.get(x.examNo) ?? []), x.row]);
   for (const [no, rs] of noCount) if (rs.length > 1) out.notices.push({ row: rs[1]!, message: `應試編號「${no}」在第 ${rs.join('、')} 列重複；標籤與清冊會照名單印，請確認是不是填錯。` });
+  // 說明列、空白列上的長文字不是標示，只留下真正考生列（含待確認列）的
+  const kept = new Set([...out.rows, ...out.review].map((x) => x.row));
+  out.unreadable = out.unreadable.filter((u) => kept.has(u.row));
   const all = [...out.rows, ...out.review].flatMap((x) => x.marks.filter((m) => m.present));
   out.groups = groupMarks(all, opts.subjects);
   return out;
@@ -198,7 +206,12 @@ export interface Decisions {
   mapping: Readonly<Record<string, string>>;
   /** 待確認列號 → 處理方式 */
   rows: Readonly<Record<number, RowDecision>>;
+  /** 使用者已看過「看不懂的標示」清單 */
+  ackUnreadable?: boolean;
 }
+
+/** 匯入預覽的標示統計：有 N 筆標示、已套用 M 筆、略過 K 筆（含看不懂的） */
+export interface MarkStats { total: number; applied: number; skipped: number; unreadable: number }
 
 export interface BuildResult {
   entries: ExamEntry[];
@@ -208,6 +221,9 @@ export interface BuildResult {
   pendingReview: ReviewItem[];
   /** 使用者明確選擇略過的列數 */
   skippedByUser: number;
+  markStats: MarkStats;
+  /** 看不懂的標示還沒被使用者確認 */
+  pendingUnreadable: boolean;
   ready: boolean;
 }
 
@@ -268,7 +284,18 @@ export function buildEntries(scan: ExamScan, opts: ScanOptions, dec: Decisions):
     if (t.badGroup || !add(t.e)) pendingReview.push(it);
   }
   entries.sort((a, b) => a.classNo - b.classNo || a.seatNo - b.seatNo);
-  return { entries, pendingGroups, pendingReview, skippedByUser, ready: pendingGroups.length === 0 && pendingReview.length === 0 && scan.problems.length === 0 };
+  let applied = 0;
+  let nMarks = 0;
+  for (const x of [...scan.rows, ...scan.review]) for (const m of x.marks) {
+    if (!m.present) continue;
+    nMarks++;
+    const t = dec.mapping[groupOf.get(m.key) ?? ''];
+    if (t && t !== IGNORE) applied++;
+  }
+  const total = nMarks + scan.unreadable.length;
+  const markStats: MarkStats = { total, applied, skipped: total - applied, unreadable: scan.unreadable.length };
+  const pendingUnreadable = scan.unreadable.length > 0 && !dec.ackUnreadable;
+  return { entries, pendingGroups, pendingReview, skippedByUser, markStats, pendingUnreadable, ready: pendingGroups.length === 0 && pendingReview.length === 0 && scan.problems.length === 0 && !pendingUnreadable };
 }
 
 export interface EntryChange {
