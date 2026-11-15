@@ -1,4 +1,5 @@
 import { Badge, Button, EmptyState, More, PageHead } from '../components';
+import { rosterChanged } from '../rosterIO';
 import { examHeadcount, examLevel, examProgress, formatModified, sortExams } from '../examList';
 import { examLabel, lastModified, schoolYear, type Doc } from '../store';
 
@@ -27,6 +28,7 @@ export function Exams(p: {
                   <div class="meta">
                     <Badge>{examLabel(e)}</Badge>
                     <span>{schoolYear(new Date(e.createdAt))} 學年・{examLevel(e)}・{examHeadcount(p.doc, e) > 0 ? `${examHeadcount(p.doc, e)} 人` : '尚未匯入名單'}</span>
+                    {rosterChanged(p.doc, e) && <Badge tone="warn">名單已更動</Badge>}
                   </div>
                 </div>
                 <div>
