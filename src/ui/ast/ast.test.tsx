@@ -249,3 +249,15 @@ describe('流程（步驟欄、摘要列）', () => {
     expect(f.issues.some((i) => i.step === 3 && i.level === 'block' && /還差/.test(i.text))).toBe(true);
   });
 });
+
+describe('④ #199 診斷', () => {
+  it('兩模式結果相同時明講；原班教室對不上時列出班級與人數', () => {
+    const { doc, exam } = fixture();
+    const html = renderToString(<AstStep4 doc={doc} exam={exam} onChange={noop} onStep={noop} />);
+    const a = astPlan(doc, exam, 'fewest-rooms')!.out.metrics;
+    const b = astPlan(doc, exam, 'least-movement')!.out.metrics;
+    expect(html.includes('這份名單兩種模式結果相同')).toBe(JSON.stringify(a) === JSON.stringify(b));
+    const noHome = { ...doc, settings: { ...doc.settings, classes: doc.settings.classes.map((c) => ({ ...c, name: `${c.name}-改名` })) } };
+    expect(renderToString(<AstStep4 doc={noHome} exam={exam} onChange={noop} onStep={noop} />)).toContain('沒有可留的原班教室');
+  });
+});
