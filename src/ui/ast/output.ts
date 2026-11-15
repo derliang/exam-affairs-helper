@@ -8,7 +8,7 @@
 import type { ExamConfig, LabelPaper } from '../../data';
 import { subjectShort } from '../../core/subjectShort';
 import { dataVersion } from '../../core/version';
-import { defaultLabelLayout, textEm, type LabelPageModel, type TablePageModel, type CellModel, type PersonModel, type SeatPageModel } from '../../export/model';
+import { splitLabelTiles, textEm, wideLabelLayout, type LabelPageModel, type TablePageModel, type CellModel, type PersonModel, type SeatPageModel } from '../../export/model';
 import { examEntries } from '../seating';
 import type { Doc } from '../store';
 import { astSlots, awayStudy, usageCell, type AstPlan, type AstSlot } from './model';
@@ -18,7 +18,7 @@ export type AstOutputKey = 'label' | 'seat' | 'ann' | 'use' | 'reg' | 'study';
 
 export interface AstOutputItem { key: AstOutputKey; title: string; sub: string }
 export const AST_OUTPUT_ITEMS: AstOutputItem[] = [
-  { key: 'label', title: '整合標籤（合併標籤）', sub: '每個座位一張、各時段一行；班座號＋姓名，名單有應試編號才印；每間考場一張紙' },
+  { key: 'label', title: '整合標籤（合併標籤）', sub: '每個座位一張、每張兩格寬：左半編號與姓名、右半科目（放不下只列科目）；名單有應試編號才印；考場比一張紙大就分張' },
   { key: 'seat', title: '綜合教室座位表', sub: '每間綜合教室一頁（A4）：座位圖格內每人一區，下方各時段各班人數統計（每時段一列＋不重複人數）；3 人以上輪流的座位多一頁清單' },
   { key: 'ann', title: '班級公告', sub: 'A4 橫式、一班一頁貼在班上；考試＝粗體座位（教室同本班就省略），自習＝灰底＋教室' },
   { key: 'use', title: '每節教室用途表', sub: '哪間教室哪個時段是考場或自習，附方案指標' },
@@ -108,7 +108,7 @@ function personsOfSeat(c: Ctx, list: { slot: number; code: string; subjectId: st
 }
 
 function labelPages(c: Ctx, paper: LabelPaper): LabelPageModel[] {
-  const layout = defaultLabelLayout(paper);
+  const layout = wideLabelLayout(paper); // 兩倍寬（稿 v2.37／D107）：一張標籤佔橫向兩格
   const slotIdx = new Map(c.slots.map((s, i) => [s.id, i]));
   const bySeat = new Map<string, Map<string, { slot: number; slotId: string; code: string; subjectId: string; row: number; depth: number }[]>>();
   for (const e of c.plan.out.exams) {
@@ -118,7 +118,7 @@ function labelPages(c: Ctx, paper: LabelPaper): LabelPageModel[] {
     bySeat.set(e.roomId, rm);
   }
   const order = c.plan.input.rooms.map((r) => r.id).filter((id) => bySeat.has(id));
-  return order.map((id): LabelPageModel => {
+  return order.flatMap((id): LabelPageModel[] => {
     const seats = [...bySeat.get(id)!.values()].sort((a, b) => a[0]!.row - b[0]!.row || a[0]!.depth - b[0]!.depth);
     const cells: CellModel[] = seats.map((list) => {
       const first = list[0]!;
@@ -135,7 +135,15 @@ function labelPages(c: Ctx, paper: LabelPaper): LabelPageModel[] {
         })),
       };
     });
-    return { kind: 'label', title: `${c.exam.name}　${rn(c, id)}　整合標籤`, examName: c.exam.name, heading: `${c.exam.name}　整合標籤`, roomName: `${rn(c, id)}　整合標籤`, layout, notes: [], cells };
+    // 兩倍寬後每張紙放得下的座位變少（B4 3×8、A3 4×7），教室比一張紙大就依格數分張（同 #210），每張標「第 N／共 M 張」
+    const tiles = splitLabelTiles(cells, { cols: layout.cols / 2, rows: layout.rows });
+    return tiles.map((t, i): LabelPageModel => {
+      const suffix = tiles.length > 1 ? `（第 ${i + 1}／${tiles.length} 張）` : '';
+      return {
+        kind: 'label', title: `${c.exam.name}　${rn(c, id)}　整合標籤${suffix}`, examName: c.exam.name, heading: `${c.exam.name}　整合標籤`, roomName: `${rn(c, id)}　整合標籤${suffix}`, layout, notes: [], cells: t.cells,
+        ...(tiles.length > 1 ? { origin: t.origin, part: { n: i + 1, of: tiles.length } } : {}),
+      };
+    });
   });
 }
 

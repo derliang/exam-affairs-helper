@@ -4,7 +4,7 @@
  * 座位表與標籤的樣式照設計系統成品頁「座位表與標籤」稿件（docs/design/mockups/設計系統.html #paper）：
  * 改這裡的版面要同步改稿件，反之亦然。
  */
-import { footerText, isSpecial, labelBoxMm, labelGrid, landscapeFit, namePtFit, PAPER_MM, periodLineFontPt, personLayout, rotationPage, SEAT_PAGE, seatGeometry, statLayout, SLOT_TIP, type CellModel, type LabelPageModel, type ListPageModel, type SeatPageModel, type TablePageModel } from './model';
+import { footerText, isSpecial, labelBoxMm, labelGrid, landscapeFit, namePtFit, PAPER_MM, periodLineFontPt, personLayout, rotationPage, wideLayout, type PersonLine, SEAT_PAGE, seatGeometry, statLayout, SLOT_TIP, type CellModel, type LabelPageModel, type ListPageModel, type SeatPageModel, type TablePageModel } from './model';
 
 export interface HtmlOptions {
   generatedAt: string;
@@ -26,6 +26,18 @@ const mm = (n: number): string => `${+n.toFixed(2)}mm`;
 function cornersHtml(c: CellModel): string {
   const t = c.corners ?? [];
   return t.length ? `<span class="pp-cn">${t.map((k) => `<span class="pp-mk ${k.kind === 'x' ? 'x' : 'add'}">${esc(k.text)}</span>`).join('')}</span>` : '';
+}
+
+/** 兩倍寬整合標籤（稿 v2.37／D107）：一張佔兩格；單人左半編號姓名、右半科目；2 人左右各一人；3 人以上合併一格。排法同 Word（model.wideLayout） */
+function wideHtml(c: CellModel | undefined, w: number, h: number, b4: boolean): string {
+  const size = `width:${mm(w * 2)};height:${mm(h)}`;
+  if (!c) return `<div class="pp-c pp-e" style="${size};grid-column:span 2"></div>`;
+  const lay = wideLayout(c, w - 1.5, h, { topPad: 5, codePt: b4 ? 33 : 31, nameMax: 18, subjMax: b4 ? 20 : 16 });
+  const spans = (ls: PersonLine[]): string => ls.map((l) => `<span class="pp-pr" style="font-size:${l.pt}pt;margin-top:${mm(l.gapBefore)}">${l.runs.map((r) => (r.bold ? `<b>${esc(r.text)}</b>` : esc(r.text))).join('')}</span>`).join('');
+  const co = `<i class="pp-co">${esc(c.coord)}</i>`;
+  if (lay.span) return `<div class="pp-c pp-pe" style="${size};grid-column:span 2;background:#fff">${co}<span class="pp-prs">${spans(lay.span)}</span></div>`;
+  const two = (c.persons?.length ?? 0) === 2;
+  return `<div class="pp-c pp-wd" style="${size};grid-column:span 2;background:#fff">${co}<div class="pp-wh">${spans(lay.left)}</div><div class="pp-wh${two ? '' : ' pp-wl'}"${two ? ' style="border-left:.2mm solid #C8C2AE"' : ''}>${spans(lay.right)}</div></div>`;
 }
 
 /** 一格：座位表用班級色（抽離考試用柔和單色），標籤用白底，有標示的標籤格用淺黃 */
@@ -83,7 +95,7 @@ function labelHtml(p: LabelPageModel, o: HtmlOptions): string {
   // 稿件：格高最多 35mm，格子下方才留得出注意事項與頁尾（Word 版待下一步對齊後再共用）
   const cell = labelBoxMm(layout, margin, p.notes.length);
   const cells = labelGrid(p)
-    .map((m) => cellHtml(m, cell.w, cell.h, 'label', layout.paper === 'B4'))
+    .map((m) => (layout.wide ? wideHtml(m, cell.w, cell.h, layout.paper === 'B4') : cellHtml(m, cell.w, cell.h, 'label', layout.paper === 'B4')))
     .join('');
   const padX = cell.padX;
   const noteHtml = p.notes.length
@@ -176,6 +188,9 @@ footer { font-size: 8pt; color: #555; text-align: right; margin-top: 3mm }
 .pp .pp-c.pp-pe,.pp.pp-lab .pp-c.pp-pe,.pp.pp-seat .pp-c.pp-pe{display:flex;flex-direction:column;justify-content:center;padding:0}
 .pp .pp-prs{display:flex;flex-direction:column;align-items:center;width:100%;padding:0 1mm}
 .pp .pp-pr{white-space:nowrap;line-height:1.15}
+.pp.pp-lab .pp-c.pp-wd{display:flex!important;flex-direction:row!important;align-items:stretch;justify-content:flex-start;padding:5mm 0 0;gap:0;overflow:hidden}
+.pp.pp-lab .pp-wd .pp-wh{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}
+.pp.pp-lab .pp-wd .pp-wh.pp-wl{align-items:flex-start;padding-left:1.5mm}
 .pp .pp-pr b{font-weight:700}
 .pp .pp-e{background:repeating-linear-gradient(135deg,#F1EDE0 0 1.2mm,#E2DCC8 1.2mm 2.4mm)}
 .pp.pp-lab .pp-c{display:grid;grid-template-rows:1fr auto 9mm;justify-items:center;align-items:center;gap:0;padding:5mm 1mm .8mm}

@@ -188,10 +188,15 @@ export function defaultLabelLayout(paper: LabelPaper): LabelLayout {
   return paper === 'A3' ? { paper, cols: 7, rows: 7 } : { paper, cols: 6, rows: 8 };
 }
 
+/** 分科整合標籤（稿 v2.37／D107）：每張兩倍寬。B4 6 欄×8 列併成 3×8；A3 8 欄×7 列（35mm 正方）併成 4×7 */
+export function wideLabelLayout(paper: LabelPaper): LabelLayout {
+  return paper === 'A3' ? { paper, cols: 8, rows: 7, wide: true } : { paper, cols: 6, rows: 8, wide: true };
+}
+
 /** A3 的 7×7 是固定 35mm 正方（沿用舊標籤，D74）；其他格數由紙張扣邊界後均分。
  * 均分時高度多扣 3mm：Word 表格後一定要有一個段落，不預留會多出空白頁。 */
 export function labelCellMm(layout: LabelLayout, marginMm: number): { w: number; h: number } {
-  if (layout.paper === 'A3' && layout.cols === 7 && layout.rows === 7) return { w: 35, h: 35 };
+  if (layout.paper === 'A3' && ((layout.cols === 7 && layout.rows === 7) || (layout.wide && layout.cols === 8 && layout.rows === 7))) return { w: 35, h: 35 };
   const p = PAPER_MM[layout.paper];
   return { w: (p.w - 2 * marginMm) / layout.cols, h: (p.h - 2 * marginMm - 3) / layout.rows };
 }
@@ -325,7 +330,7 @@ export function personLayout(
   c: CellModel,
   w: number,
   h: number,
-  o: { topPad: number; codePt: number; nameMax: number; schedMax: number },
+  o: { topPad: number; codePt: number; nameMax: number; schedMax: number; /** 整合標籤（#216）：單人多行時科目行優先放大到這個字級上限 */ schedBig?: number },
 ): { lines: PersonLine[]; total: number } {
   const ps = c.persons ?? [];
   const PT = 0.3528;
@@ -349,10 +354,31 @@ export function personLayout(
     });
   } else if (ps.length === 1) {
     const p = ps[0]!;
-    lines.push({ runs: [{ text: p.code, bold: true }], pt: o.codePt, gapBefore: 0 });
     const npt = namePtFit(p.classLabel, p.name, w, o.nameMax);
-    lines.push({ runs: [{ text: p.classLabel, bold: true }, { text: ' | ' }, { text: p.name }], pt: npt, gapBefore: 1.5 });
-    for (const s of p.sched) lines.push({ runs: [{ text: s, bold: true }], pt: fitW(s, true, o.schedMax), gapBefore: 1 });
+    if (o.schedBig && p.sched.length >= 2) {
+      // #216：科目行優先。編號與姓名先縮到下限（16pt／9pt），剩下的高度給科目行；完整寫法放大後不到 10.5pt 就只列科目，再把編號姓名放回去
+      const PTH = PT * 1.15;
+      const availH = h - o.topPad - 1;
+      const codeMin = Math.min(o.codePt, 16);
+      const nameMin = Math.min(npt, 9);
+      const fit = (txts: string[]): number => {
+        const byH = (availH - (1.5 + txts.length) - (codeMin + nameMin) * PTH) / (txts.length * PTH);
+        const byW = Math.min(...txts.map((t) => fitW(t, true, o.schedBig!))) * 0.95;
+        return Math.max(4, Math.floor(Math.min(byH, byW, o.schedBig!) * 2) / 2);
+      };
+      const short = p.schedShort && p.schedShort.length === p.sched.length ? p.schedShort : undefined;
+      const txts = short && fit(p.sched) < 10.5 ? short : p.sched;
+      const spt = fit(txts);
+      const rem = availH - (1.5 + txts.length) - txts.length * spt * PTH;
+      const kCN = Math.min(1, Math.max(0, rem / ((o.codePt + npt) * PTH)));
+      lines.push({ runs: [{ text: p.code, bold: true }], pt: Math.max(codeMin, Math.floor(o.codePt * kCN * 2) / 2), gapBefore: 0 });
+      lines.push({ runs: [{ text: p.classLabel, bold: true }, { text: ' | ' }, { text: p.name }], pt: Math.max(nameMin, Math.floor(npt * kCN * 2) / 2), gapBefore: 1.5 });
+      for (const s of txts) lines.push({ runs: [{ text: s, bold: true }], pt: spt, gapBefore: 1 });
+    } else {
+      lines.push({ runs: [{ text: p.code, bold: true }], pt: o.codePt, gapBefore: 0 });
+      lines.push({ runs: [{ text: p.classLabel, bold: true }, { text: ' | ' }, { text: p.name }], pt: npt, gapBefore: 1.5 });
+      for (const s of p.sched) lines.push({ runs: [{ text: s, bold: true }], pt: fitW(s, true, o.schedMax), gapBefore: 1 });
+    }
   }
   const hOf = (pri: boolean, f: (pt: number) => number) => lines.filter((l) => !!l.pri === pri).reduce((a, l) => a + f(l.pt) * PT * 1.15, 0);
   const dims = () => ({ hN: hOf(true, (pt) => pt), hO: hOf(false, (pt) => pt), avail2: avail - lines.reduce((x, l) => x + l.gapBefore, 0) });
@@ -383,6 +409,53 @@ export function personLayout(
     lines = lines.map((l) => ({ ...l, pt: Math.max(4, Math.floor(l.pt * f * 2) / 2), gapBefore: l.gapBefore * f }));
   }
   return { lines, total };
+}
+
+/**
+ * 分科整合標籤兩倍寬的格內排法（稿 v2.37／D107）。wHalf＝半張（一個實體格）可用寬、h＝格高（mm）：
+ * 單人：左半＝編號＋「班級｜姓名」，右半＝科目行（完整寫法放大後不到 10.5pt 就只列科目；≥5 科兩科一行）；
+ * 2 人輪流：左右各一人，各自套 personLayout 單人排法；3 人以上：整張一格只印座位與「共 N 人輪流」。
+ */
+export function wideLayout(
+  c: CellModel,
+  wHalf: number,
+  h: number,
+  o: { topPad: number; codePt: number; nameMax: number; subjMax: number },
+): { left: PersonLine[]; right: PersonLine[]; span?: undefined } | { span: PersonLine[]; left?: undefined; right?: undefined } {
+  const ps = c.persons ?? [];
+  const base = { topPad: o.topPad, codePt: o.codePt, nameMax: o.nameMax, schedMax: 11, schedBig: o.subjMax };
+  if (ps.length >= 3) return { span: personLayout(c, wHalf * 2, h, { ...base, schedBig: undefined }).lines };
+  if (ps.length === 2) {
+    // 兩人字級一致（編號 20pt、姓名 14pt 上限），不讓只考一科的人編號特別大
+    const b2 = { ...base, codePt: Math.min(o.codePt, 20), nameMax: Math.min(o.nameMax, 14) };
+    return {
+      left: personLayout({ ...c, persons: [ps[0]!] }, wHalf, h, b2).lines,
+      right: personLayout({ ...c, persons: [ps[1]!] }, wHalf, h, b2).lines,
+    };
+  }
+  const p = ps[0];
+  if (!p) return { left: [], right: [] };
+  const PT = 0.3528;
+  const PTH = PT * 1.15;
+  const availH = h - o.topPad - 1;
+  const w = wHalf * 0.94;
+  const bold = (t: string) => textWidthMm(t, 1, true);
+  const subjPt = (txts: string[]): number => {
+    const byH = (availH - txts.length * 0.8) / (txts.length * PTH);
+    const byW = Math.min(...txts.map((t) => w / Math.max(0.2, bold(t))));
+    return Math.max(4, Math.floor(Math.min(byH, byW, o.subjMax) * 2) / 2);
+  };
+  const short = p.schedShort && p.schedShort.length === p.sched.length ? p.schedShort : undefined;
+  let txts = short && subjPt(p.sched) < 10.5 ? short : p.sched;
+  if (txts === short && txts.length >= 5) txts = txts.reduce<string[]>((a, t, i) => (i % 2 ? (a[a.length - 1] += '　' + t, a) : [...a, t]), []);
+  const spt = subjPt(txts);
+  const right: PersonLine[] = txts.map((t, i) => ({ runs: [{ text: t, bold: true }], pt: spt, gapBefore: i ? 0.8 : 0 }));
+  const fitCode = Math.max(6, Math.min(o.codePt, Math.floor((w / Math.max(0.2, bold(p.code))) * 2) / 2));
+  const left: PersonLine[] = [
+    { runs: [{ text: p.code, bold: true }], pt: fitCode, gapBefore: 0 },
+    { runs: [{ text: p.classLabel, bold: true }, { text: ' | ' }, { text: p.name }], pt: namePtFit(p.classLabel, p.name, wHalf, o.nameMax), gapBefore: 1.5 },
+  ];
+  return { left, right };
 }
 
 export const SLOT_TIP = '格內每個人一區：班級座號、姓名、第幾天考什麼科目；3 人以上輪流的座位列在座位表下一頁。抽離自習不排座位，只出名單。';
@@ -560,7 +633,8 @@ export function splitLabelTiles<T extends { seat: { row: number; depth: number }
 
 /** 標籤頁的格子陣列（由左到右、由上到下，長度 cols×rows）：依座位位置放，沒人的位置是 undefined */
 export function labelGrid(p: LabelPageModel): (CellModel | undefined)[] {
-  const { cols, rows } = p.layout;
+  const rows = p.layout.rows;
+  const cols = p.layout.wide ? p.layout.cols / 2 : p.layout.cols; // 兩倍寬：一張標籤佔兩欄，陣列以「張」為單位
   const g: (CellModel | undefined)[] = Array.from({ length: cols * rows }, () => undefined);
   for (const c of p.cells) {
     const col = c.seat.row - (p.origin?.row ?? 1);
@@ -833,7 +907,9 @@ export function labelBoxMm(layout: LabelLayout, margin: number, noteLines = 3): 
   const w = base.w;
   const fit = Math.floor(((paper.h - margin - labelReserveMm(layout.paper, noteLines)) / layout.rows) * 10) / 10;
   const h = Math.min(35, base.h, fit);
-  return { w, h, padX: Math.max(margin, +((paper.w - layout.cols * w) / 2).toFixed(2)) };
+  // 兩倍寬 A3：8 欄×35mm＝280mm，左右各留約 8.5mm（大於一般印表機不可印邊界）
+  const side = +((paper.w - layout.cols * w) / 2).toFixed(2);
+  return { w, h, padX: layout.wide && layout.paper === 'A3' ? side : Math.max(margin, side) };
 }
 
 /** 估字寬（em）：中日韓全形 1、其他 0.55 */

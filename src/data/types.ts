@@ -152,8 +152,11 @@ export interface MarkRule {
  */
 export interface LabelLayout {
   paper: LabelPaper;
+  /** 實體欄數；wide 時每張標籤佔相鄰兩欄 */
   cols: number;
   rows: number;
+  /** 兩倍寬標籤（分科整合標籤，稿 v2.37／D107）：每張標籤佔橫向兩格 */
+  wide?: boolean;
 }
 
 /** 一次模擬考的設定，隨該次保存（D34） */

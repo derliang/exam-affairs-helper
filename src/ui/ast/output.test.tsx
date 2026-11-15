@@ -54,7 +54,9 @@ describe('分科輸出：內容', () => {
   const o = astOutputs(doc, exam, plan);
   it('標籤：每間有人考試的考場一張紙，一座位一張、各時段一行、印時段＋科目、不印鐘點', () => {
     const rooms = new Set(plan.out.exams.map((e) => e.roomId));
-    expect(o.label).toHaveLength(rooms.size);
+    // #216／D107：兩倍寬後每張紙放得下的座位變少，教室比一張紙大就分張（每間至少一張）
+    expect(new Set(o.label.map((p) => p.roomName.replace(/（第.*張）$/, ''))).size).toBe(rooms.size);
+    expect(o.label.length).toBeGreaterThanOrEqual(rooms.size);
     const seats = new Set(plan.out.exams.map((e) => `${e.roomId}:${e.row}-${e.depth}`));
     expect(o.label.reduce((n, p) => n + p.cells.length, 0)).toBe(seats.size);
     expect(plan.out.metrics!.labels).toBe(seats.size);
@@ -212,6 +214,33 @@ describe('分科輸出：擋下與畫面', () => {
     expect(res.map((f) => f.name.replace(/^.*?-/, ''))).toEqual(['整合標籤（B4）.docx', '班級公告.docx', '每節教室用途表.docx', '每科試務清冊.docx', '自習教室名單與布置標籤工作表.docx']);
     for (const f of res) expect(Object.keys((await JSZip.loadAsync(f.data as Uint8Array)).files)).toContain('word/document.xml');
   }, 30000);
+});
+
+describe('分科輸出：整合標籤兩倍寬（#216／D107）', () => {
+  it('B4 6×8 欄併成 3×8、A3 8×7 併成 4×7；每張紙的標籤數不超過格數；大教室分張標「第 N／共 M 張」', () => {
+    const { doc, exam } = fixture();
+    const plan = astPlan(doc, exam)!;
+    for (const [paper, per] of [['B4', 24], ['A3', 28]] as const) {
+      const o = astOutputs(doc, exam, plan, paper);
+      expect(o.label.every((p) => p.layout.wide === true)).toBe(true);
+      expect(o.label.every((p) => p.layout.cols === (paper === 'B4' ? 6 : 8) && p.layout.rows === (paper === 'B4' ? 8 : 7))).toBe(true);
+      expect(o.label.every((p) => p.cells.length <= per)).toBe(true);
+      const multi = o.label.filter((p) => p.part);
+      expect(multi.length).toBeGreaterThan(0);
+      expect(multi.every((p) => /（第 [0-9]+／[0-9]+ 張）$/.test(p.roomName))).toBe(true);
+      // 一張標籤＝一個座位：總張數與方案的座位數一致
+      expect(o.label.reduce((n, p) => n + p.cells.length, 0)).toBe(new Set(plan.out.exams.map((e) => `${e.roomId}:${e.row}-${e.depth}`)).size);
+    }
+  });
+  it('Word：兩倍寬標籤表格欄數是實體欄數（B4 6、A3 8），A3 左右邊界 8.5mm、每欄 35mm', async () => {
+    const { doc, exam } = fixture();
+    const o = astOutputs(doc, exam, astPlan(doc, exam)!, 'A3');
+    const res = await runAstExport(o, ['label'], 'word', 'A3', '分科', async () => ({ fonts: { regular: new Uint8Array(readFileSync(new URL('../../export/fonts/NotoSansTC-Regular-big5.ttf', import.meta.url))), bold: new Uint8Array(readFileSync(new URL('../../export/fonts/NotoSansTC-Bold-core.ttf', import.meta.url))) }, has: () => true }));
+    const xml = await (await JSZip.loadAsync(res[0]!.data as Uint8Array)).file('word/document.xml')!.async('string');
+    expect(xml).toContain('w:gridCol w:w="1984"'); // 35mm＝1984 twip
+    expect((xml.match(/w:gridCol w:w="1984"/g) ?? []).length).toBeGreaterThanOrEqual(8); // 每頁標籤表 8 欄
+    expect(xml).toMatch(/w:left="482"/); // 8.5mm＝482 twip
+  });
 });
 
 describe('分科輸出：頁數預估（#269）', () => {
