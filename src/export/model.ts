@@ -337,8 +337,9 @@ export function personLayout(
     ];
   } else if (ps.length === 2) {
     ps.forEach((p, i) => {
-      const head = `${p.code}　${p.classLabel} | ${p.name}`;
-      lines.push({ runs: [{ text: p.code, bold: true }, { text: '　' }, { text: p.classLabel, bold: true }, { text: ' | ' }, { text: p.name }], pt: fitW(head, true, o.codePt * 0.5), gapBefore: i === 0 ? 0 : 2 });
+      // 每人兩行：編號一行、「班級｜姓名」一行（#212：原本擠成一行，字只剩約 6.5pt），時程行接在後面
+      lines.push({ runs: [{ text: p.code, bold: true }], pt: fitW(p.code, true, o.codePt * 0.5), gapBefore: i === 0 ? 0 : 1.5 });
+      lines.push({ runs: [{ text: p.classLabel, bold: true }, { text: ' | ' }, { text: p.name }], pt: namePtFit(p.classLabel, p.name, w, o.nameMax), gapBefore: 0.2 });
       for (const s of p.sched) lines.push({ runs: [{ text: s, bold: true }], pt: fitW(s, true, o.schedMax), gapBefore: 0.3 });
     });
   } else if (ps.length === 1) {
@@ -767,13 +768,26 @@ export function statLayout(p: SeatPageModel): { cols: number[]; rowH: number[]; 
 }
 
 /** 座位表的格子尺寸（mm）與統計列。統計表列數隨科目變：先扣掉標題、小標籤、講臺、統計表、頁尾，剩下的才給座位格 */
+/** 頁首小標籤列要幾列（#247）：每個標籤 12pt 粗體加內距，超過頁寬就換列 */
+export function chipRowCount(chips: readonly string[]): number {
+  const innerW = SEAT_PAGE.w - 2 * SEAT_PAGE.padX;
+  let rows = 1;
+  let used = 0;
+  chips.forEach((t) => {
+    const w = Math.min(innerW, textWidthMm(t, 12, true) * 1.06 + 7 + 3);
+    if (used > 0 && used + 2 + w > innerW) { rows++; used = 0; }
+    used += (used > 0 ? 2 : 0) + w;
+  });
+  return rows;
+}
+
 export function seatGeometry(p: SeatPageModel): { cw: number; ch: number; st: ReturnType<typeof statRows> } {
   const innerW = SEAT_PAGE.w - 2 * SEAT_PAGE.padX;
   const cw = Math.min(p.slotMode ? 24.79 : 25, +((innerW - 6.5) / p.rows).toFixed(2));
   const st = statRows(p);
   // 時段版：統計表（每時段一列）加一行格內說明（約 6mm）
-  const fixed = 22 + 12 + 4 + 5 + 11 + (p.slotMode ? 6 + 5 + statLayout(p).total : 5 + statLayout(p).total) + 16;
-  const ch = Math.min(p.slotMode ? 26 : 23, +((SEAT_PAGE.h - 2 * SEAT_PAGE.padY - fixed) / p.depth).toFixed(2));
+  const fixed = 22 + 12 + 4 + 5 + 11 + (p.slotMode ? 6 + 5 + statLayout(p).total : 5 + statLayout(p).total) + 16 + (chipRowCount(p.chips) - 1) * 8.7;
+  const ch = Math.min(p.slotMode ? 32 : 23, +((SEAT_PAGE.h - 2 * SEAT_PAGE.padY - fixed) / p.depth).toFixed(2));
   return { cw, ch, st };
 }
 
