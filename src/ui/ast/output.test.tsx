@@ -214,6 +214,19 @@ describe('分科輸出：擋下與畫面', () => {
   }, 30000);
 });
 
+describe('分科輸出：整合標籤科目行（#216）', () => {
+  it('每位考生附只列科目的精簡寫法，與完整寫法逐行對應、依時間順序', () => {
+    const { doc, exam } = fixture();
+    const o = astOutputs(doc, exam, astPlan(doc, exam)!);
+    const ps = o.label.flatMap((p) => p.cells.flatMap((c) => c.persons ?? []));
+    expect(ps.length).toBeGreaterThan(0);
+    for (const p of ps) {
+      expect(p.schedShort).toHaveLength(p.sched.length);
+      p.sched.forEach((s, i) => expect(s.endsWith(p.schedShort![i]!)).toBe(true));
+    }
+  });
+});
+
 describe('分科輸出：綜合教室座位表（#220）', () => {
   const squeezed = (rows: number, depth: number) => {
     const f = fixture(12, 40);

@@ -302,7 +302,7 @@ function cellParas(
 }
 
 /** 人員格（預備教室／綜合教室／整合標籤，v2.36）：版式同一般標籤，格內每人一區；排法見 model.personLayout */
-function personParas(c: CellModel, w: number, h: number, g: { topPad: number; coordPt: number; codePt: number; nameMax: number; schedMax: number }, mode: BoldMode): Paragraph[] {
+function personParas(c: CellModel, w: number, h: number, g: { topPad: number; coordPt: number; codePt: number; nameMax: number; schedMax: number; schedBig?: number }, mode: BoldMode): Paragraph[] {
   const { lines, total } = personLayout(c, w, h, g);
   const first = Math.max(0, (h - total) / 2 - g.topPad);
   return [
@@ -540,7 +540,7 @@ function labelSection(page: LabelPageModel, opts: DocxOptions): ISectionOptions 
           margins: { top: 0, bottom: 0, left: tw(1), right: tw(1) },
           shading: m ? { type: ShadingType.CLEAR, fill: marked ? 'FFE08A' : 'FFFFFF', color: 'auto' } : HATCH_FILL,
           borders: { top: b, bottom: b, left: b, right: b },
-          children: m ? (m.persons ? personParas(m, box.w - 2, box.h, { topPad: 5, coordPt: g.coordPt, codePt: isB4 ? 33 : 31, nameMax: 18, schedMax: 11 }, mode) : m.periodLines ? periodParas(m, box.w - 2, box.h, g.coordPt, mode) : cellParas(m, g, INK, mode)) : hatchParas(box.w - 2.1, box.h - 1.4),
+          children: m ? (m.persons ? personParas(m, box.w - 2, box.h, { topPad: 5, coordPt: g.coordPt, codePt: isB4 ? 33 : 31, nameMax: 18, schedMax: 11, schedBig: 16 }, mode) : m.periodLines ? periodParas(m, box.w - 2, box.h, g.coordPt, mode) : cellParas(m, g, INK, mode)) : hatchParas(box.w - 2.1, box.h - 1.4),
         }),
       );
     }
