@@ -28,4 +28,3 @@ describe('教室複製與 B4 上限提示（#205）', () => {
     expect(html).toContain('複製這間教室');
   });
 });
-});
