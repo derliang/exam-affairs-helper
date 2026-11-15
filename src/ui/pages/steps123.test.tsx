@@ -104,6 +104,15 @@ describe('步驟② 考試名單', () => {
     expect(html).toContain('已比對');
     expect(html).toContain('再匯入一次');
   });
+  it('#242：差異全部選好、還沒按套用：不再同時寫「還有 0 筆」和「共 N 筆」，改說已選好並給「套用」', () => {
+    const { doc, second } = twoGsat();
+    const diffs: RosterDiff[] = [{ kind: 'only-in-exam', code: '0145', exam: { classNo: 1, seatNo: 45, name: '測試生' }, choice: 'use-roster' }];
+    const d: Doc = { ...doc, examFiles: { [second.id]: { entries: [{ classNo: 1, seatNo: 45, name: '測試生', subjectIds: ['chi'] }], diffs } } };
+    const html = renderToString(<Step2 doc={d} exam={second} onChange={noop} onToRoster={noop} />);
+    expect(html).not.toContain('還有 0 筆');
+    expect(html).toContain('差異都選好了');
+    expect(html).toContain('套用 1 筆核對結果');
+  });
   it('有差異且未打開比對畫面：warn 提示「處理差異」；比對畫面在匯入後才自動打開（state），總覽不出現表格', () => {
     const { doc, second } = twoGsat();
     const diffs: RosterDiff[] = [{ kind: 'only-in-exam', code: '0145', exam: { classNo: 1, seatNo: 45, name: '測試生' } }];
