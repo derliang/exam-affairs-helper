@@ -28,6 +28,8 @@ export interface RunSeatingInput {
   periods?: ReadonlyMap<string, readonly SubjectPeriod[]>;
   /** 預備教室排座方式（D94-4）；沒給＝監考優先（以前的排法）。畫面預設傳同學優先 */
   reserveMode?: ReserveMode;
+  /** 預備教室座位排法（#258）；沒給＝最少深位 */
+  reserveLayout?: 'min-depth' | 'min-rows';
   /** 產生時間（ISO 字串）；由呼叫端給，讓函式保持純粹 */
   now: string;
 }
@@ -52,7 +54,7 @@ export function seatingVersion(input: RunSeatingInput): string {
  */
 function versionExtras(input: RunSeatingInput): Record<string, unknown> {
   const groups = periodGroupKey(input.subjects, input.periods);
-  return { ...(groups ? { periodGroups: groups } : {}), ...(input.reserveMode === 'proctor' ? { reserveMode: 'proctor' } : {}) };
+  return { ...(groups ? { periodGroups: groups } : {}), ...(input.reserveMode === 'proctor' ? { reserveMode: 'proctor' } : {}), ...(input.reserveLayout === 'min-rows' ? { reserveLayout: 'min-rows' } : {}) };
 }
 
 /** D79：全科缺考者（無任何考科）的編號；設「仍排座」時為空（＝都要排） */
@@ -83,6 +85,7 @@ export function runSeating(input: RunSeatingInput): RunSeatingResult {
     classes: input.classes,
     ...(input.periods ? { periods: input.periods } : {}),
     ...(input.reserveMode ? { mode: input.reserveMode } : {}),
+    ...(input.reserveLayout ? { reserveLayout: input.reserveLayout } : {}),
   });
   if (!detached.ok) return { ok: false, errors: detached.errors };
 

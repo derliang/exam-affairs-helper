@@ -2,7 +2,8 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { checkPlan, type PlanInput } from './contract';
-import { balanceRows, planD99 } from './engine';
+import { balanceRows } from '../../data/helpers';
+import { planD99 } from './engine';
 import { classRoom, grid, makeClass, reserveRoom } from './fixtures';
 
 const PHY = { s1: 'phy' };

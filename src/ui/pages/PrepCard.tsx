@@ -14,6 +14,11 @@ export function PrepCard(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
     const r = updateExam(doc, exam.id, { reserveSeatMode: v });
     if (r.ok) p.onChange(r.doc);
   };
+  const layout = exam.reserveLayout ?? 'min-depth';
+  const setLayout = (v: 'min-depth' | 'min-rows') => {
+    const r = updateExam(doc, exam.id, { reserveLayout: v });
+    if (r.ok) p.onChange(r.doc);
+  };
   const preview = m === 'peer' ? detachPreview(doc, exam) : null;
   const warnings = preview?.ok ? preview.warnings ?? [] : [];
   return (
@@ -30,6 +35,14 @@ export function PrepCard(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
             <b>② 監考優先</b>
             <span class="small muted">盡量讓同班坐在一起，方便監考；同學不保證每節同一個座位。同班座號一定由小到大，不會有遞增警告。</span>
           </button>
+        </div>
+        <div>
+          <h4 class="sh">座位排法</h4>
+          <p class="small muted">預備教室沒坐滿時：<b>最少深位（預設）</b>＝人數平均分到各排，每排只坐前幾個深位；<b>最少排數</b>＝一排坐滿再坐下一排。</p>
+          <div class="row" role="group" aria-label="預備教室座位排法">
+            <button type="button" class={`btn${layout === 'min-depth' ? ' btn-primary' : ''}`} aria-pressed={layout === 'min-depth'} onClick={() => setLayout('min-depth')}>最少深位（預設）</button>
+            <button type="button" class={`btn${layout === 'min-rows' ? ' btn-primary' : ''}`} aria-pressed={layout === 'min-rows'} onClick={() => setLayout('min-rows')}>最少排數</button>
+          </div>
         </div>
         {warnings.length > 0 && (
           <div class="alert a-warn" role="status">

@@ -172,6 +172,8 @@ export interface ExamConfig {
   seatFullyAbsent?: boolean;
   /** 預備教室排座方式（D94-4）：peer＝① 同學優先（沒設＝預設）、proctor＝② 監考優先 */
   reserveSeatMode?: 'peer' | 'proctor';
+  /** 學測／會考預備教室座位排法（#258）：min-depth＝最少深位（沒設＝預設，人數平均分到各排）、min-rows＝最少排數（一排坐滿再下一排） */
+  reserveLayout?: 'min-depth' | 'min-rows';
   /** 分科排座模式（D99）：fewest-rooms＝少教室優先（沒設＝預設）、least-movement＝少移動優先 */
   astMode?: 'fewest-rooms' | 'least-movement';
   /** 分科綜合教室座位排法（#258）：min-depth＝最少深位（沒設＝預設，人數平均分到各排）、min-rows＝最少排數 */

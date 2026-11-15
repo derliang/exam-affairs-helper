@@ -13,6 +13,7 @@
  * 同分決勝（DESIGN 10.14，使用者 2026-11-12 確認）：班級教室依班序靠前者優先、綜合教室排後；
  *   同時段考場編號小者先排；再比學號（班座號）小者。
  */
+import { balanceRows } from '../../data/helpers';
 import type { SeatPos } from '../../data/types';
 import {
   codeOf,
@@ -593,23 +594,6 @@ class Ctx {
     }
     return out;
   }
-}
-
-/**
- * 把 n 人平均分到各排：一次一人，給目前人數最少且還有空位的排（同數量取排序前面的排），
- * 所以各排人數差不超過 1（排的容量不足才例外），深位數＝ceil(n／排數)。每排只保留前 c 個深位。
- */
-export function balanceRows(rows: Room['rows'], n: number): Room['rows'] {
-  const cnt = rows.map(() => 0);
-  for (let k = 0; k < n; k++) {
-    let best = -1;
-    rows.forEach((r, i) => {
-      if (cnt[i]! < r.depths.length && (best < 0 || cnt[i]! < cnt[best]!)) best = i;
-    });
-    if (best < 0) return rows; // 座位不足：維持原樣，由 layoutRoom 回報
-    cnt[best]!++;
-  }
-  return rows.map((r, i) => ({ row: r.row, depths: r.depths.slice(0, cnt[i]!) })).filter((r) => r.depths.length > 0);
 }
 
 function toRoom(r: PlanRoom, idx: number): Room {
