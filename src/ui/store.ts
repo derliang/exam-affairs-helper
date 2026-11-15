@@ -102,6 +102,8 @@ export interface NewExamOptions {
   /** 學測次別（使用者選擇）；沒給就依學年度＋學期推算，不是歷史筆數 */
   round?: number;
   semester?: Semester;
+  /** 學年度（民國年）；沒給就依建立日期推算（#211） */
+  year?: number;
   /** 沿用上一次同類型模擬考的設定（教室、標示規則、參加方式、標籤格式、自訂考科） */
   prev?: ExamConfig;
 }
@@ -116,10 +118,12 @@ export function newExam(doc: Doc, kind: ExamKind, name: string, now: Date, opts:
   const division: Division = kind === 'bcct' ? 'junior' : 'senior';
   const semester = opts.semester ?? defaultSemester(kind);
   if (opts.round !== undefined && (!Number.isInteger(opts.round) || opts.round < 1)) return fail('次別要是 1 以上的整數');
-  const round = kind === 'gsat' ? opts.round ?? nextRound(doc, kind, now) : undefined;
+  const year = opts.year ?? schoolYear(now);
+  if (opts.year !== undefined && !validYear(year)) return fail('學年度要是民國年（例如 114）');
+  const round = kind === 'gsat' ? opts.round ?? nextRound(doc, kind, now, year) : undefined;
   const prev = opts.prev && opts.prev.kind === kind ? opts.prev : undefined;
   const exam: ExamConfig = {
-    id: `exam-${now.getTime()}`, name: n, kind, division, semester, round,
+    id: `exam-${now.getTime()}`, name: n, kind, division, semester, schoolYear: year, round,
     participation: prev?.participation ?? (kind === 'ast' ? 'partial' : 'all'), // 分科不是人人參加（D64）
     subjects: prev && isCustomized(prev.subjects) ? structuredClone(prev.subjects) : defaultSubjects(kind, round),
     markRules: prev ? structuredClone(prev.markRules) : [], classroomIds: prev ? [...prev.classroomIds] : [],
@@ -132,30 +136,34 @@ export function newExam(doc: Doc, kind: ExamKind, name: string, now: Date, opts:
 }
 
 /** 同一學年度、同類型已有幾次，下一次就是第幾次（新學年從第 1 次重新開始，#68） */
-export function nextRound(doc: Doc, kind: ExamKind, now: Date): number {
-  const year = schoolYear(now);
-  return doc.exams.filter((e) => e.kind === kind && schoolYear(new Date(e.createdAt)) === year).length + 1;
+export function nextRound(doc: Doc, kind: ExamKind, now: Date, year: number = schoolYear(now)): number {
+  return doc.exams.filter((e) => e.kind === kind && examYear(e) === year).length + 1;
 }
 
 /** 新增頁預設的名稱：「學測第三次」「會考第一次」，已被用掉就往後找（資料夾名稱會用它） */
-export function suggestExamName(doc: Doc, kind: ExamKind, now: Date = new Date()): string {
+export function suggestExamName(doc: Doc, kind: ExamKind, now: Date = new Date(), year: number = schoolYear(now)): string {
   const cn = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
   const base = KIND_LABEL[kind].replace(/（.*）/, '');
-  for (let i = nextRound(doc, kind, now); i < 100; i++) {
+  for (let i = nextRound(doc, kind, now, year); i < 100; i++) {
     const name = `${base}第${cn[i] ?? i}次`;
     if (!doc.exams.some((e) => e.name === name)) return name;
     // 同名的是舊學年的考試：新學年的「第一次」改加學年度前綴，次別仍是正確的 i
-    const withYear = `${schoolYear(now)}學年度${name}`;
-    if (doc.exams.some((e) => e.name === name && schoolYear(new Date(e.createdAt)) !== schoolYear(now)) && !doc.exams.some((e) => e.name === withYear)) return withYear;
+    const withYear = `${year}學年度${name}`;
+    if (doc.exams.some((e) => e.name === name && examYear(e) !== year) && !doc.exams.some((e) => e.name === withYear)) return withYear;
   }
   return base;
 }
+
+const validYear = (y: number): boolean => Number.isInteger(y) && y >= 90 && y <= 200;
 
 /** 台灣學年度：8 月起算新學年（與原型一致） */
 export function schoolYear(d: Date): number {
   const y = d.getFullYear() - 1911;
   return d.getMonth() >= 7 ? y : y - 1;
 }
+
+/** 這次考試的學年度：使用者指定的優先，舊存檔沒有就依建立日期推算（#211） */
+export const examYear = (e: Pick<ExamConfig, 'schoolYear' | 'createdAt'>): number => e.schoolYear ?? schoolYear(new Date(e.createdAt));
 
 /** 這次沿用的對象：同類型最近一次修改的模擬考（新增考試與會考快速模式共用這個定義；accept 可再加條件） */
 export function previousExam(doc: Doc, kind: ExamKind, accept: (e: ExamConfig) => boolean = () => true): ExamConfig | undefined {
@@ -197,6 +205,7 @@ export function updateExam(doc: Doc, id: string, patch: Partial<ExamConfig>): Re
     if (doc.exams.some((e) => e.id !== id && e.name === n)) return fail('已有同名的模擬考');
     patch = { ...patch, name: n };
   }
+  if (patch.schoolYear !== undefined && !validYear(patch.schoolYear)) return fail('學年度要是民國年（例如 114）');
   return { ok: true, doc: { ...doc, exams: doc.exams.map((e) => (e.id === id ? { ...e, ...patch } : e)) } };
 }
 
