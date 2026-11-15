@@ -397,3 +397,42 @@ describe('v2.36 輸出紙面補強（B 類）', () => {
     expect(h).toContain('k-study');
   });
 });
+
+describe('座位表頁首標籤換行與兩時段格（#247、#212）', () => {
+  it('#247 標籤很多時換成多列，每列都不超過頁寬；Word 的標籤表格不只一個', async () => {
+    const { chipRowCount, SEAT_PAGE } = await import('./index');
+    const few = ['共 5 人', '不考英文 2 人'];
+    const many = ['共 5 人', ...['國文', '英文', '數學A', '數學B', '社會', '自然', '英聽'].map((s) => `不考${s} 3 人`), '加考物理 1 人'];
+    expect(chipRowCount(few)).toBe(1);
+    expect(chipRowCount(many)).toBeGreaterThan(1);
+    const f = makeFixture();
+    const p = buildSeatPages(f, 'class')[0]!;
+    p.chips = many;
+    const { text } = await unzip(await renderDocx({ seat: [p] }, { fonts, ...meta }));
+    const xml = await text('word/document.xml');
+    for (const c of many) expect(xml).toContain(c);
+    // 標籤列表格（高度 7.2mm＝408 twips）的寬度都不超過可印寬度
+    const maxW = Math.round(((SEAT_PAGE.w - 2 * SEAT_PAGE.padX) / 25.4) * 1440);
+    for (const m of xml.matchAll(/<w:tblW w:w="(\d+)" w:type="dxa"\/>/g)) expect(Number(m[1])).toBeLessThanOrEqual(maxW + 2);
+    // 座位格仍整張放得進一頁：第一段表格的列數不增加（版面高度有扣掉多出來的列）
+    expect(renderPrintHtml({ seat: [p] }, meta)).toContain('pp-chip');
+  });
+
+  it('#212 兩人輪流的格：每人兩行（編號、班級｜姓名）再接時程，姓名字級不再縮成一行擠', async () => {
+    const { personLayout } = await import('./index');
+    const c = {
+      coord: '1-1', seat: { row: 1, depth: 1 }, code: '', classLabel: '', name: '', colorBg: 'FFFFFF', colorLine: '222222', colorFg: '22201B', tags: [], marks: [],
+      persons: [
+        { code: '0105', classLabel: '溫', name: '甲生105', sched: ['第一天 國綜'] },
+        { code: '0206', classLabel: '良', name: '甲生206', sched: ['第一天 英文'] },
+      ],
+    };
+    const { lines } = personLayout(c, 23.5, 32, { topPad: 4.5, codePt: 19, nameMax: 10.5, schedMax: 7 }); // 預備教室座位格高度放寬到最多 32mm
+    const tight = personLayout(c, 23.5, 26, { topPad: 4.5, codePt: 19, nameMax: 10.5, schedMax: 7 }).lines[1]!.pt;
+    expect(tight).toBeGreaterThanOrEqual(7.5); // 即使只有 26mm 高，也比原本單行擠的 6.5pt 大
+    expect(lines).toHaveLength(6); // 每人：編號、班級｜姓名、時程
+    const nameLine = lines[1]!;
+    expect(nameLine.runs.map((r) => r.text).join('')).toBe('溫 | 甲生105');
+    expect(nameLine.pt).toBeGreaterThanOrEqual(10); // 放寬高度後接近姓名上限 10.5pt
+  });
+});

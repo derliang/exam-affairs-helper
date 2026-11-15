@@ -347,27 +347,41 @@ function seatSection(page: SeatPageModel, opts: DocxOptions): ISectionOptions {
   const noInside = { top: none, bottom: none, left: none, right: none, insideHorizontal: none, insideVertical: none };
 
   // 小標籤列：共 N 人、不考／加考各科人數
-  const chipCols: number[] = [];
-  const chipCells: TableCell[] = [];
+  // 超過頁寬就換下一列（#247：不考科目很多時整列超出右邊界被切掉）。每一列各自一個表格，列與列之間留一小段空白
+  const chipRows: { t: string; i: number; w: number }[][] = [[]];
+  let used = 0;
   page.chips.forEach((t, i) => {
-    if (i > 0) {
-      chipCols.push(tw(2));
-      chipCells.push(new TableCell({ width: { size: tw(2), type: WidthType.DXA }, borders: noBd, children: [line([], { h: 1 })] }));
-    }
-    const w = textMm(t, 12, true) * 1.06 + 7 + 3;
-    chipCols.push(tw(w));
-    chipCells.push(
-      new TableCell({
-        width: { size: tw(w), type: WidthType.DXA },
-        verticalAlign: VerticalAlign.CENTER,
-        shading: i === 0 ? { type: ShadingType.CLEAR, fill: NAVY, color: 'auto' } : undefined,
-        borders: { top: bd(NAVY, 7), bottom: bd(NAVY, 7), left: bd(NAVY, 7), right: bd(NAVY, 7) },
-        margins: { top: 0, bottom: 0, left: tw(3.5), right: tw(3.5) },
-        children: [line([run2(t, { size: 12, bold: true, color: i === 0 ? 'FFFFFF' : NAVY }, mode)], { h: 7 })],
-      }),
-    );
+    const w = Math.min(innerW, textMm(t, 12, true) * 1.06 + 7 + 3);
+    const cur = chipRows[chipRows.length - 1]!;
+    if (cur.length > 0 && used + 2 + w > innerW) { chipRows.push([]); used = 0; }
+    const row = chipRows[chipRows.length - 1]!;
+    used += (row.length > 0 ? 2 : 0) + w;
+    row.push({ t, i, w });
   });
-  const chipTable = new Table({ width: { size: chipCols.reduce((a, b) => a + b, 0), type: WidthType.DXA }, columnWidths: chipCols, layout: TableLayoutType.FIXED, borders: noInside, rows: [new TableRow({ height: { value: tw(7.2), rule: HeightRule.EXACT }, children: chipCells })] });
+  const chipTables: (Table | Paragraph)[] = [];
+  chipRows.forEach((row, ri) => {
+    const cols: number[] = [];
+    const cells: TableCell[] = [];
+    row.forEach(({ t, i, w }, k) => {
+      if (k > 0) {
+        cols.push(tw(2));
+        cells.push(new TableCell({ width: { size: tw(2), type: WidthType.DXA }, borders: noBd, children: [line([], { h: 1 })] }));
+      }
+      cols.push(tw(w));
+      cells.push(
+        new TableCell({
+          width: { size: tw(w), type: WidthType.DXA },
+          verticalAlign: VerticalAlign.CENTER,
+          shading: i === 0 ? { type: ShadingType.CLEAR, fill: NAVY, color: 'auto' } : undefined,
+          borders: { top: bd(NAVY, 7), bottom: bd(NAVY, 7), left: bd(NAVY, 7), right: bd(NAVY, 7) },
+          margins: { top: 0, bottom: 0, left: tw(3.5), right: tw(3.5) },
+          children: [line([run2(t, { size: 12, bold: true, color: i === 0 ? 'FFFFFF' : NAVY }, mode)], { h: 7 })],
+        }),
+      );
+    });
+    if (ri > 0) chipTables.push(spacer(1.5));
+    chipTables.push(new Table({ width: { size: cols.reduce((a, b) => a + b, 0), type: WidthType.DXA }, columnWidths: cols, layout: TableLayoutType.FIXED, borders: noInside, rows: [new TableRow({ height: { value: tw(7.2), rule: HeightRule.EXACT }, children: cells })] }));
+  });
 
   // 座位格：最外框深色粗線，格間細線；有標示的格加粗黑框
   const g = { h: ch, innerW: cw - 1.4, topPad: 4.5, codePt: 19, namePt: 12, coordPt: 6.5, markPt: 8, markArea: 5.2, bottomPad: 0.8, codeAtBottom: false, codeGap: 0 };
@@ -478,7 +492,7 @@ function seatSection(page: SeatPageModel, opts: DocxOptions): ISectionOptions {
     children: [
       headBlock({ widthMm: innerW, h1: page.heading ?? page.examName, ...(page.heading ? {} : { h2: '座位表' }), room: page.roomName, h1Pt: 15, roomPt: 16, padX: 6, padY: 1.6 }, mode),
       spacer(3.5),
-      chipTable,
+      ...chipTables,
       spacer(4),
       grid,
       spacer(3),
