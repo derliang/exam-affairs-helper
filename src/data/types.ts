@@ -163,6 +163,8 @@ export interface ExamConfig {
   kind: ExamKind;
   division: Division;
   semester: Semester;
+  /** 學年度（民國年，#211）：使用者可指定（補登過去學年）；舊存檔沒有，就依建立日期推算（examYear） */
+  schoolYear?: number;
   /** 學測第幾次（1～4）；決定數學是否分 A/B 與英聽（D36/D52） */
   round?: number;
   participation: Participation;

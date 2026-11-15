@@ -1,6 +1,8 @@
 /** 學生名單的 Excel 範本／匯出／匯入合併（純函式，可單元測試；不碰 DOM） */
 import type { Division, Student } from '../data';
 import { studentCode } from '../data';
+import type { ExamConfig } from '../data';
+import { examResult, isStale } from './seating';
 import type { Doc } from './store';
 import { addClass, sortRoster } from './store';
 
@@ -75,3 +77,22 @@ export function importOutcome(doc: Doc, division: Division, plan: ImportPlan, un
 }
 
 export const codeLabel = (s: Pick<Student, 'classNo' | 'seatNo'>): string => studentCode(s.classNo, s.seatNo);
+
+/** #206 取代共用名單前的預警：已排座、取代後會變「過期」的模擬考名稱（與 applyImport 同一套邏輯，不另行估算） */
+export function examsMadeStale(doc: Doc, division: Division, plan: ImportPlan, unknown: UnknownClassAction = 'skip'): string[] {
+  const after = applyImport(doc, division, plan, unknown);
+  return doc.exams
+    .filter((e) => e.division === division && examResult(doc, e) && !isStale(doc, e) && isStale(after, e))
+    .map((e) => e.name);
+}
+
+/** #206 模擬考卡片：考試名單（建立時的人數）與目前共用學生名單不一致就標「名單已更動」。部分參加只比對考生是否仍在名單內 */
+export function rosterChanged(doc: Doc, exam: ExamConfig): boolean {
+  const entries = doc.examFiles?.[exam.id]?.entries;
+  if (!entries?.length) return false;
+  const roster = doc.rosters[exam.division] ?? [];
+  const key = (x: { classNo: number; seatNo: number; name: string }) => `${x.classNo}-${x.seatNo}-${x.name.trim()}`;
+  const set = new Set(roster.map(key));
+  if (entries.some((e) => !set.has(key(e)))) return true;
+  return exam.participation === 'all' && roster.length !== entries.length;
+}

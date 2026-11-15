@@ -3,7 +3,7 @@ import type { Division, Track } from '../../data';
 import { readXlsx, writeXlsx, XlsError } from '../../import';
 import { Alert, Button, FormatButton, Modal } from '../components';
 import { downloadBytes, XLSX_MIME } from '../download';
-import { applyImport, exportRows, importOutcome, planImport, templateRows, type ImportPlan, type UnknownClassAction } from '../rosterIO';
+import { applyImport, examsMadeStale, exportRows, importOutcome, planImport, templateRows, type ImportPlan, type UnknownClassAction } from '../rosterIO';
 import { setClassTrack, type Doc } from '../store';
 import { parseRosterWorkbook } from '../step2';
 
@@ -36,6 +36,7 @@ export function RosterIO(p: { doc: Doc; division: Division; onChange: (d: Doc) =
   };
 
   const outcome = plan ? importOutcome(p.doc, p.division, plan, unk) : null;
+  const staleExams = plan ? examsMadeStale(p.doc, p.division, plan, unk) : [];
   const confirm = () => {
     if (!plan || !outcome || outcome.count === 0) return;
     let d = applyImport(p.doc, p.division, plan, unk);
@@ -74,6 +75,13 @@ export function RosterIO(p: { doc: Doc; division: Division; onChange: (d: Doc) =
         <Modal title={`匯入${DIV_NAME[p.division]}學生名單`} onClose={() => setPlan(null)}
           actions={<><Button onClick={() => setPlan(null)}>取消</Button><Button kind="primary" disabled={!outcome || outcome.count === 0} onClick={confirm}>確認取代為 {outcome?.count ?? 0} 人名單</Button></>}>
           <p>讀到 <strong>{plan.after}</strong> 人，實際會匯入 <strong>{outcome?.count ?? 0}</strong> 人{outcome && outcome.skipped > 0 ? `（略過 ${outcome.skipped} 人）` : ''}（目前 {plan.before} 人）。確定後會<strong>取代</strong>{DIV_NAME[p.division]}整份名單；之後可用「↶ 復原」回到匯入前。</p>
+          {staleExams.length > 0 && (
+            <Alert tone="warn">
+              取代共用學生名單後，<b>會使 {staleExams.length} 個已排座的模擬考過期</b>：
+              <ul style="margin:6px 0 0;padding-left:18px">{staleExams.map((n) => <li key={n}>{n}</li>)}</ul>
+              <div class="small muted" style="margin-top:6px">過期的模擬考要重新排座才能下載。</div>
+            </Alert>
+          )}
           <p class="muted small">偵測到的格式：{plan.layout === 'blocks' ? '各班並排（區塊標題）' : plan.layout === 'wide' ? '各班並排（表頭欄位）' : '一人一列'}</p>
           {plan.unknownClasses.length > 0 && (() => {
             const labels = plan.unknownClasses.map((n) => `${String(n).padStart(2, '0')} 班（${plan.unknownCounts[n] ?? 0} 人）`).join('、');

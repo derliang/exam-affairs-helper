@@ -32,6 +32,13 @@ describe('prepareExport', () => {
     if (!r.ok) expect(r.errors[0]).toMatch(/^缺考試名單.*②/);
   });
 
+  it('會考全員參加、沒匯入考試名單：不擋「缺考試名單」，用學生名單當考生（#209）', () => {
+    const d = docOf();
+    const exam = { ...d.exams[0]!, kind: 'bcct' as const, division: 'junior' as const, participation: 'all' as const };
+    const r = prepareExport({ ...d, rosters: { senior: [], junior: d.rosters.senior }, exams: [exam], examFiles: {} }, exam);
+    if (!r.ok) expect(r.errors[0]).not.toMatch(/缺考試名單/);
+  });
+
   it('沒有排座結果：擋下並請回 ⑤', () => {
     const d = docOf();
     const r = prepareExport(d, d.exams[0]!);
