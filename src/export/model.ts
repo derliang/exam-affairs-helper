@@ -803,3 +803,10 @@ export function rotationPage(p: SeatPageModel): TablePageModel | undefined {
     rows: p.rotation.rows,
   };
 }
+
+/** 橫式公告表的列高與字級：一班一頁，依列數縮放（#215）；45 人也放得進一頁（列高最小 3.4mm、字 6.5pt） */
+export function landscapeFit(nRows: number, nHead: number): { rowMm: number; pt: number } {
+  const avail = 210 - 17 - 30; // 橫式 A4 高度扣上下邊界、標題、說明與頁尾
+  const rowMm = Math.max(2.8, Math.min(8, avail / (nRows + nHead)));
+  return { rowMm, pt: Math.max(6, Math.min(10.5, Math.floor((rowMm / 0.3528 / 1.5) * 2) / 2)) };
+}

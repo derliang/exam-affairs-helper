@@ -4,7 +4,7 @@
  * 座位表與標籤的樣式照設計系統成品頁「座位表與標籤」稿件（docs/design/mockups/設計系統.html #paper）：
  * 改這裡的版面要同步改稿件，反之亦然。
  */
-import { footerText, isSpecial, labelBoxMm, labelGrid, namePtFit, PAPER_MM, periodLineFontPt, personLayout, rotationPage, SEAT_PAGE, seatGeometry, statLayout, SLOT_TIP, type CellModel, type LabelPageModel, type ListPageModel, type SeatPageModel, type TablePageModel } from './model';
+import { footerText, isSpecial, labelBoxMm, labelGrid, landscapeFit, namePtFit, PAPER_MM, periodLineFontPt, personLayout, rotationPage, SEAT_PAGE, seatGeometry, statLayout, SLOT_TIP, type CellModel, type LabelPageModel, type ListPageModel, type SeatPageModel, type TablePageModel } from './model';
 
 export interface HtmlOptions {
   generatedAt: string;
@@ -108,19 +108,19 @@ function tableHtml(p: TablePageModel, o: HtmlOptions): string {
   const tr = (cells: string[], tag: 'td' | 'th', cls = '') =>
     `<tr${cls}>${cells.map((c, i) => `<${tag} style="width:${(((p.widths[i] ?? 1) * 100) / sum).toFixed(1)}%">${esc(c)}</${tag}>`).join('')}</tr>`;
   const land = !!p.landscape;
-  const n = p.rows.length + (p.totalRow ? 1 : 0) + (p.headGroups ? 2 : 1);
-  const fit = land ? Math.max(4.2, Math.min(8, (PAPER_MM.A4.w - 24 - 30) / n)) : 9;
+  const lf = landscapeFit(p.rows.length + (p.totalRow ? 1 : 0), p.headGroups ? 2 : 1);
+  const fit = land ? lf.rowMm : 9;
   const kcls = (ri: number, ci: number) => (p.cellKinds?.[ri]?.[ci] ? ` class="k-${p.cellKinds[ri]![ci]}"` : '');
   const rows = p.rows.map((r, ri) => `<tr>${r.map((c, ci) => `<td${kcls(ri, ci)} style="width:${(((p.widths[ci] ?? 1) * 100) / sum).toFixed(1)}%">${esc(c)}</td>`).join('')}</tr>`).join('') + (p.totalRow ? tr(p.totalRow, 'td', ' class="total"') : '');
   const grp = p.headGroups ? `<tr>${p.headGroups.map((g) => `<th colspan="${g.span}" class="g">${esc(g.text)}</th>`).join('')}</tr>` : '';
-  return `<section class="sheet a4${land ? ' land' : ''}" style="page:${land ? 'a4l' : 'a4'}${land ? `;--rh:${+fit.toFixed(2)}mm;--rp:${Math.max(7, Math.min(10.5, Math.floor((fit / 0.3528 / 1.5) * 2) / 2))}pt` : ''}"><h1>${esc(p.title)}</h1>${p.subtitle ? `<p class="sub">${esc(p.subtitle)}</p>` : ''}${p.legend ? `<p class="lg">${esc(p.legend)}</p>` : ''}<table class="list tbl"><thead>${grp}${tr(p.heads, 'th')}</thead><tbody>${rows}</tbody></table>
+  return `<section class="sheet a4${land ? ' land' : ''}" style="page:${land ? 'a4l' : 'a4'}${land ? `;--rh:${+fit.toFixed(2)}mm;--rp:${lf.pt}pt` : ''}"><h1>${esc(land && p.subtitle ? `${p.title}　${p.subtitle}` : p.title)}</h1>${p.subtitle && !land ? `<p class="sub">${esc(p.subtitle)}</p>` : ''}${p.legend ? `<p class="lg">${esc(p.legend)}</p>` : ''}<table class="list tbl"><thead>${grp}${tr(p.heads, 'th')}</thead><tbody>${rows}</tbody></table>
 <footer>${esc(footerText(o.generatedAt, o.dataVersion))}</footer></section>`;
 }
 
 const CSS = `
 @page a4 { size: 210mm 297mm; margin: 12mm }
 @page a4full { size: 210mm 297mm; margin: 0 }
-@page a4l { size: 297mm 210mm; margin: 12mm }
+@page a4l { size: 297mm 210mm; margin: 8mm 12mm 9mm }
 @page b4 { size: ${PAPER_MM.B4.w}mm ${PAPER_MM.B4.h}mm; margin: 0 }
 @page a3 { size: ${PAPER_MM.A3.w}mm ${PAPER_MM.A3.h}mm; margin: 0 }
 * { -webkit-print-color-adjust: exact; print-color-adjust: exact }
@@ -133,6 +133,11 @@ table.list th { background: #eee }
 table.tbl td { height: 9mm }
 table.tbl tr.total td { font-weight: 700; background: #f4f4f4 }
 .sheet.land table.tbl th, .sheet.land table.tbl td { height: var(--rh); padding: 0 1.5mm; font-size: var(--rp); text-align: center; vertical-align: middle }
+.sheet.land h1 { font-size: 14pt; margin: 0 0 .8mm }
+.sheet.land p.lg { font-size: 8pt; margin: 0 0 1.5mm }
+.sheet.land { break-after: auto; min-height: 190mm }
+.sheet.land + .sheet.land { break-before: page }
+.sheet.land footer { position: absolute; right: 0; bottom: 0; margin: 0; line-height: 1 }
 .sheet.land table.tbl th.g { background: #e2e2e2 }
 table.tbl td.k-exam { font-weight: 700 }
 table.tbl td.k-study { background: #d9d9d9 }
