@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { ExamConfig, ExamEntry, Participation, RosterDiff, RosterDiffChoice } from '../../data';
-import { allResolved, applyDiffs, applyGroupChoice, classifyDiff, compareRosters, groupDiffs, type DiffGroup, diffsStale, isResolved, readXlsx, XlsError, refreshDiffs, validateResolved, type Sheet } from '../../import';
+import { allResolved, applyDiffs, applyGroupChoice, compareRosters, groupDiffs, type DiffGroup, diffsStale, isResolved, readXlsx, XlsError, refreshDiffs, validateResolved, type Sheet } from '../../import';
 import { Alert, Badge, Button, ClassChip, ConfirmButton, More, PageHead, Seg, StatsBar, StepHead } from '../components';
 import { confirmCopy } from '../flow';
 import { addClass, diffOptions, rosterName, syncDiffs, updateExam, type Doc } from '../store';
@@ -8,13 +8,12 @@ import { previewChoice } from '../step2';
 import { ImportWizard, scanOptionsFor } from './ImportWizard';
 
 /** 差異卡標題（稿 v2.34 H-6 的 7 種情形；「班級或座號不同」「姓名不同」由兩邊內容判斷） */
-const titleOf = (d: RosterDiff): string => {
+export const titleOf = (d: RosterDiff): string => {
   if (d.kind === 'only-in-exam') return '考試名單有，學生名單沒有';
   if (d.kind === 'only-in-roster') return '學生名單有，考試名單沒有';
   if (d.kind === 'group-diff') return '同一人的組別不同';
   if (d.kind === 'new-class') return '考試名單有這個班級，班級資料沒有';
-  if (classifyDiff(d) === 'B') return '座號相同、姓名完全不同（可能不是同一人）';
-  return d.exam && d.roster && d.exam.classNo === d.roster.classNo && d.exam.seatNo === d.roster.seatNo ? '同一人的姓名不同' : '同一人的班級或座號不同';
+  return d.exam && d.roster && d.exam.classNo === d.roster.classNo && d.exam.seatNo === d.roster.seatNo ? '相同班級與座號，但姓名不同' : '同一人的班級或座號不同';
 };
 const CHOICE_TEXT: Record<RosterDiffChoice, string> = {
   'use-exam': '以考試名單為準', 'use-roster': '以學生名單為準', manual: '手動編輯',
@@ -297,7 +296,8 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
           : '學生名單有、考試名單沒有的人，列為差異，逐筆處理。'}</p>
         {fullyAbsent > 0 && (
           <Alert tone="info">
-            有 {fullyAbsent} 人全科缺考：{exam.seatFullyAbsent ? '目前照樣排座。' : '預設不排座、不計領卷份數。'}
+            其中 {fullyAbsent} 位全科缺考：{exam.seatFullyAbsent ? '目前照樣排座。' : '預設不排座、不計領卷份數，⑤ 的考生人數會比這裡少。'}
+            <details><summary class="small">列出是誰</summary><ul>{(entries ?? []).filter((e) => e.subjectIds.length === 0).map((e) => <li key={`${e.classNo}-${e.seatNo}`}>{who(e).replace(/　.*$/, '')}</li>)}</ul></details>
             <label style="margin-left:12px"><input type="checkbox" checked={!!exam.seatFullyAbsent}
               onChange={(e) => { const r = updateExam(doc, exam.id, { seatFullyAbsent: (e.target as HTMLInputElement).checked }); if (r.ok) p.onChange(r.doc); }} /> 全科缺考者仍排座</label>
           </Alert>

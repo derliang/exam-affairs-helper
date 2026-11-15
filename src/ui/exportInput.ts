@@ -4,7 +4,7 @@
  * 不在匯出時重算：⑤ 驗證的、⑥ 預覽的、實際匯出的永遠是同一份（同座位、同版本碼、同產生時間）。
  * 沒有結果或已過期（名單或設定在排座後改過）就擋下，請回 ⑤ 重新排座。
  */
-import { examResult, isStale, validationChecks } from './seating';
+import { examEntries, examResult, isStale, validationChecks } from './seating';
 import type { ExamConfig, ExamEntry, Override } from '../data';
 import type { ExportInput } from '../export';
 import type { preflight } from '../export/plan';
@@ -31,7 +31,8 @@ export function prepareExport(doc: Doc, exam: ExamConfig): Prepared {
     .map((id) => doc.settings.classrooms.find((c) => c.id === id))
     .filter((c): c is NonNullable<typeof c> => !!c);
   if (rooms.length === 0) return { ok: false, errors: ['缺教室：這次考試還沒勾選教室，請先到 ③ 教室設定勾選要用的教室，再回來下載。'] };
-  const entries = entriesOf(doc, exam);
+  // 會考全員參加不需匯入（② 已這麼說）：examEntries 會用學生名單當考生，與 ③④⑤ 同一口徑（#209）
+  const entries = examEntries(doc, exam);
   if (!entries || entries.length === 0) return { ok: false, errors: ['缺考試名單：請先到 ② 考試名單匯入大考中心的考生資料 Excel，再回來下載。'] };
   const result = examResult(doc, exam);
   if (!result) return { ok: false, errors: ['缺排座結果：請先到 ⑤ 排座並完成驗證，再回來下載。'] };

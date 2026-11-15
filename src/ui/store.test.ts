@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { demoDoc } from './repository';
-import { addStudent, defaultSemester, newExam, removeStudent, searchStudents, setClassColor, setClassTrack, updateStudent } from './store';
+import { addStudent, defaultSemester, examYear, newExam, removeStudent, searchStudents, setClassColor, setClassTrack, updateExam, updateStudent } from './store';
 
 describe('學生名單', () => {
   it('新增：重複座號、班級不存在、座號越界、姓名空白都擋下', () => {
@@ -113,5 +113,31 @@ describe('新考試的標籤格數（D74）', () => {
     expect(sem('ast')).toBe('second');
     expect(sem('bcct')).toBe('first');
     expect(sem('ast', 'first')).toBe('first');
+  });
+});
+
+describe('學年度可指定（#211）', () => {
+  const today = new Date(2026, 10, 15); // 115 學年
+  const base = () => ({ ...demoDoc(), exams: [] });
+  it('沒指定就依日期；指定 114 就記 114，不被建立日期覆蓋', () => {
+    const a = newExam(base(), 'ast', '分科第七次', today);
+    if (!a.ok) throw new Error(a.error);
+    expect(examYear(a.doc.exams[0]!)).toBe(115);
+    const b = newExam(base(), 'ast', '114-2 分科第七次', today, { year: 114 });
+    if (!b.ok) throw new Error(b.error);
+    expect(examYear(b.doc.exams[0]!)).toBe(114);
+  });
+  it('次別只算同學年度；① 可改學年度；不合理的年度擋下；舊存檔沒欄位照舊推算', () => {
+    const a = newExam(base(), 'gsat', '學測第一次', today, { year: 114 });
+    if (!a.ok) throw new Error(a.error);
+    const b = newExam(a.doc, 'gsat', '學測乙', today);
+    if (!b.ok) throw new Error(b.error);
+    expect(b.doc.exams[1]!.round).toBe(1); // 115 學年第一次，不接 114 的
+    expect(newExam(base(), 'ast', 'x', today, { year: 14 }).ok).toBe(false);
+    const u = updateExam(b.doc, b.doc.exams[1]!.id, { schoolYear: 114 });
+    expect(u.ok && examYear(u.doc.exams[1]!)).toBe(114);
+    expect(updateExam(b.doc, b.doc.exams[1]!.id, { schoolYear: 1.5 }).ok).toBe(false);
+    const { schoolYear: _drop, ...legacy } = a.doc.exams[0]!;
+    expect(examYear(legacy)).toBe(115);
   });
 });
