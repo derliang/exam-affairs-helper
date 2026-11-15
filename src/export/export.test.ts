@@ -436,6 +436,25 @@ describe('座位表頁首標籤換行與兩時段格（#247、#212）', () => {
     expect(nameLine.pt).toBeGreaterThanOrEqual(10); // 放寬高度後接近姓名上限 10.5pt
   });
 
+  it('#220 殘留：兩人各考 3～6 科（合計超過 4 行）時科目併成一行，整塊放得進格高、最後一行不被切', async () => {
+    const { personLayout } = await import('./index');
+    for (const ns of [3, 4, 6]) for (const h of [24, 28, 32]) {
+      const names = ['物理', '化學', '數甲', '生物', '歷史', '地理'].slice(0, ns);
+      const sched = names.map((s, i) => `第二天 時段${'一二三四五六'[i]} ${s}`);
+      const c = {
+        coord: '1-1', seat: { row: 1, depth: 1 }, code: '', classLabel: '', name: '', colorBg: 'FFFFFF', colorLine: '222222', colorFg: '22201B', tags: [], marks: [],
+        persons: [
+          { code: '0105', classLabel: '溫', name: '王小明', sched, schedShort: names },
+          { code: '0206', classLabel: '良', name: '李大華', sched, schedShort: names },
+        ],
+      };
+      const { lines, total } = personLayout(c, 24, h, { topPad: 4.5, codePt: 19, nameMax: 10.5, schedMax: 7 });
+      expect(lines).toHaveLength(6); // 每人：編號、班級｜姓名、一行科目
+      expect(lines[2]!.runs[0]!.text).toBe(names.join('、'));
+      expect(total).toBeLessThanOrEqual(h - 4.5 - 1 + 0.3);
+    }
+  });
+
   it('#220 兩人各兩個時段（8 行）＋長科目名：整塊（含折行）放得進格高，最後一行不會被格下緣切掉', async () => {
     const { personLayout } = await import('./index');
     const sched = ['第二天 時段一 數學A', '第三天 時段二 公民與社會'];

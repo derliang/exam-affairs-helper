@@ -38,6 +38,20 @@ export interface AstOutputs {
   version: string;
 }
 
+/** A4 直式表格每頁大約放幾列（列高 9mm 起跳，扣邊界、標題與表頭；表頭每頁重複）。只用在預估頁數 */
+export const TABLE_ROWS_PER_PAGE = 26;
+
+/**
+ * 某一類輸出實際會印出幾頁（#269）：標籤一張紙一頁；座位表＝每間一頁，加上 3 人以上輪流的座位清單（長表會跨頁）；
+ * 其他表格 A4 橫式一頁，直式依列數估頁（原本一個表一律算 1 頁，輪流清單 13 頁卻只算 3 頁）
+ */
+export function estimatePages(o: AstOutputs, k: 'label' | 'seat' | 'ann' | 'use' | 'reg' | 'study'): number {
+  const tbl = (t: TablePageModel): number => (t.landscape ? 1 : Math.max(1, Math.ceil(t.rows.length / TABLE_ROWS_PER_PAGE)));
+  if (k === 'label') return o.label.length;
+  if (k === 'seat') return o.seat.reduce((n, p) => n + 1 + (p.rotation ? Math.max(1, Math.ceil(p.rotation.rows.length / TABLE_ROWS_PER_PAGE)) : 0), 0);
+  return o[k].reduce((n, t) => n + tbl(t), 0);
+}
+
 /** 「1天2」＝第 1 天時段二，標籤上的短標 */
 export const slotShort = (s: AstSlot): string => `${s.day + 1}天${s.slot}`;
 
@@ -88,6 +102,8 @@ function personsOfSeat(c: Ctx, list: { slot: number; code: string; subjectId: st
     classLabel: c.className(Number(code.slice(0, 2))),
     name: c.nameOf.get(code) ?? '',
     sched: [...xs.map((x) => `${c.slots[x.slot]!.label} ${sub(c, x.subjectId)}`), ...(c.examNoOf.get(code) ? [`應試 ${c.examNoOf.get(code)}`] : [])],
+    // 只列科目的精簡寫法（#220 殘留、#216）：與 sched 逐行對應
+    schedShort: [...xs.map((x) => sub(c, x.subjectId)), ...(c.examNoOf.get(code) ? [`應試 ${c.examNoOf.get(code)}`] : [])],
   }));
 }
 
