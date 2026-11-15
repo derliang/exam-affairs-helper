@@ -32,6 +32,7 @@ import { ReservePage } from './pages/ReservePage';
 import { createFsRepository, isFsAccessSupported, SwitchBlockedError } from '../data';
 import { createMemoryRepository, emptyDoc, withDefaults, type Repository } from './repository';
 import { examLabel, stampModified, type Doc } from './store';
+import { activateForExam, migrateRosterYear } from './rosterYears';
 import { APP_VERSION, formatVersion } from './version';
 import { describeChange } from './describeChange';
 import { canUndo, commit, newHistory, nextUndoLabel, undo, undoSteps, undoTo, type History } from './undo';
@@ -68,7 +69,7 @@ export function App() {
   // 資料夾授權後載入；每次變更存檔
   const load = async () => {
     const raw = await repo.load();
-    const d = withDefaults(raw);
+    const d = migrateRosterYear(withDefaults(raw));
     setHist(newHistory(d));
     setWarning(fsRepo?.lastWarning());
     if (d !== raw) void repo.save(d); // 全新資料夾：把預設班級存下來
@@ -99,6 +100,14 @@ export function App() {
     setStaleNote(r.dropped.length > 1 ? `已回到「${r.dropped[r.dropped.length - 1]}」之前。後面 ${r.dropped.length - 1} 步已過期，需要時請重做：${r.dropped.slice(0, -1).reverse().join('、')}。` : undefined);
   };
 
+  // 開啟某次考試：它的學年度已有自己的名單與班級就換成那一份（只是換視角，不進復原記錄；#208）
+  const openExam = (examId: string) => {
+    const e = hist.present.exams.find((x) => x.id === examId);
+    if (!e) return;
+    const d = activateForExam(hist.present, e);
+    if (d === hist.present) return;
+    setHist((h) => ({ ...h, present: d })); void repo.save(d);
+  };
   const go = (r: Route) => setNav((s) => goTo(s, r));
   const go2 = (r: Route, from: { route: Route; label: string }) => setNav((s) => pushTo(s, r, from));
   const lookupOn = enabledNav({ settings: hist.present.settings }).some((n) => n.route.page === 'lookup');
@@ -173,7 +182,7 @@ export function App() {
         {r.page === 'init' && <Init repo={repo} fsSupported={fsSupported} onRestore={fsRepo ? () => fsRepo.restore() : undefined} onDone={async () => { await load(); go({ page: 'exams' }); }} />}
         {saveErr && <div style="margin-bottom:12px"><Alert tone="danger" action={<Button small onClick={retrySave}>重試存檔</Button>}>最新的修改還沒有存進資料夾（{saveErr}）。請確認資料夾仍可寫入後按「重試存檔」；在存妥之前請不要關閉頁面。</Alert></div>}
         {warning && r.page !== 'init' && <div style="margin-bottom:12px"><Alert tone="warn">{warning}</Alert></div>}
-        {r.page === 'exams' && <Exams doc={hist.present} folder={repo.folderName?.()} onOpen={(examId) => go({ page: 'step', examId, step: 1 })} onNew={() => go({ page: 'new' })} onSettings={() => go2({ page: 'settings' }, { route: r, label: pageName(r, hist.present) })} onChangeFolder={() => void changeFolder()} />}
+        {r.page === 'exams' && <Exams doc={hist.present} folder={repo.folderName?.()} onOpen={(examId) => { openExam(examId); go({ page: 'step', examId, step: 1 }); }} onNew={() => go({ page: 'new' })} onSettings={() => go2({ page: 'settings' }, { route: r, label: pageName(r, hist.present) })} onChangeFolder={() => void changeFolder()} />}
         {r.page === 'new' && <NewExam doc={hist.present} onCancel={() => go({ page: 'exams' })} onCreate={(d, examId) => { edit(d); go({ page: 'step', examId, step: 1 }); }} />}
         {r.page === 'lookup' && <Lookup doc={hist.present} examId={r.examId} crumbs={pathCrumbs} onGoStep={(examId, step) => go({ page: 'step', examId, step })} onExams={() => go({ page: 'exams' })} />}
         {r.page === 'settings' && <Settings doc={hist.present} onChange={edit} tab={r.tab} onTab={(tab) => setNav((s) => (s.route.page === 'settings' ? { ...s, route: { ...s.route, tab } } : s))} {...(r.division ? { division: r.division } : {})} />}
