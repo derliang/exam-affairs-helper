@@ -3,6 +3,7 @@ import type { ExamConfig, ExamEntry } from '../data';
 import { afterExport, checkExamName, confirmCopy, firstIssueStep, flowOf, nextAction, prerequisites, summaryText } from './flow';
 import { reseat, setMarkChoice } from './seating';
 import type { Doc } from './store';
+import { examsMadeStale, planImport } from './rosterIO';
 
 const NOW = '2026-11-08T10:00:00.000Z';
 
@@ -239,5 +240,16 @@ describe('施工N：D82 考生人數、TODO-17 下一步不擋人', () => {
   it('TODO-19：步驟 ⑥ 叫「下載」', async () => {
     const { STEP_NAMES } = await import('./nav');
     expect(STEP_NAMES[5]).toBe('下載');
+  });
+});
+
+describe('#206 取代共用名單預警', () => {
+  it('已排座且共用名單的姓名與考試名單不同 → 列出會過期的模擬考', () => {
+    const { d, e } = seated();
+    const base: Doc = { ...d, rosters: { senior: entries.map((x) => ({ classNo: x.classNo, seatNo: x.seatNo, name: x.name })), junior: [] } };
+    const same = planImport(base, 'senior', base.rosters.senior);
+    expect(examsMadeStale(base, 'senior', same)).toEqual([]);
+    const renamed = planImport(base, 'senior', base.rosters.senior.map((s, i) => (i === 0 ? { ...s, name: '換名' } : s)));
+    expect(examsMadeStale(base, 'senior', renamed)).toEqual([e.name]);
   });
 });

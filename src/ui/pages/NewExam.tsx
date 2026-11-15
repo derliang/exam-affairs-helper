@@ -20,20 +20,30 @@ export function NewExam(p: { doc: Doc; onCancel: () => void; onCreate: (d: Doc, 
   const [semester, setSemester] = useState<Semester>(defaultSemester('gsat'));
   // 使用者沒自己改過學期時，換類型就跟著換預設學期（D91）
   const [semEdited, setSemEdited] = useState(false);
+  // 學年度預設依今天算，可改（補登過去學年的考試，#211）；使用者沒改過就不鎖定
+  const [yearText, setYearText] = useState(() => String(schoolYear(now())));
   const [err, setErr] = useState('');
   const check = checkExamName(p.doc, name);
   const prev = previousExam(p.doc, kind);
   const isJ = kind === 'bcct';
+  const yearNum = Number(yearText);
+  const yearOk = Number.isInteger(yearNum) && yearNum >= 90 && yearNum <= 200;
+  const onYear = (v: string) => {
+    setYearText(v);
+    const y = Number(v);
+    if (!edited && Number.isInteger(y) && y >= 90 && y <= 200) setName(suggestExamName(p.doc, kind, now(), y));
+  };
 
   const pick = (k: ExamKind) => {
     setKind(k); setErr('');
-    if (!edited) setName(suggestExamName(p.doc, k, now()));
+    if (!edited) setName(suggestExamName(p.doc, k, now(), yearNum));
     if (!semEdited) setSemester(defaultSemester(k));
   };
   const submit = () => {
-    if (!check.ok) return;
+    if (!check.ok || !yearOk) return;
     const t = now();
-    const r = newExam(p.doc, kind, name, t, { semester, ...(prev ? { prev } : {}) });
+    const year = Number(yearText);
+    const r = newExam(p.doc, kind, name, t, { semester, year, ...(prev ? { prev } : {}) });
     if (!r.ok) { setErr(r.error); return; }
     p.onCreate(r.doc, r.doc.exams[r.doc.exams.length - 1]!.id);
   };
@@ -71,7 +81,10 @@ export function NewExam(p: { doc: Doc; onCancel: () => void; onCreate: (d: Doc, 
                   </button>
                 ))}
               </div>
-              <span class="hint">學測預設上學期、分科預設下學期（切換類型時自動帶入，仍可自己改）；學年度依今天的日期自動算：{schoolYear(now())} 學年</span></div>
+              <span class="hint">學測預設上學期、分科預設下學期（切換類型時自動帶入，仍可自己改）</span></div>
+            <div class={`field${yearOk ? '' : ' err'}`}><label for="exam-year">學年度</label>
+              <input id="exam-year" class="input" inputMode="numeric" value={yearText} aria-invalid={!yearOk} onInput={(e) => onYear(e.currentTarget.value)} />
+              <span class={yearOk ? 'hint' : 'field-msg'}>{yearOk ? '預設依今天的日期（8 月起算新學年）；補登過去學年的考試可改，例如 114' : '請填民國年，例如 114'}</span></div>
             <div class="field"><span class="label">對象</span>
               <div class="input" style="display:flex;align-items:center">{isJ ? '國三' : '高三'}</div>
               <span class="hint">由類型決定</span></div>
@@ -89,7 +102,7 @@ export function NewExam(p: { doc: Doc; onCancel: () => void; onCreate: (d: Doc, 
         {err && <Alert tone="danger">{err}</Alert>}
         <div class="btnrow" style="justify-content:flex-end">
           <Button onClick={p.onCancel}>取消</Button>
-          <Button kind="primary" disabled={!check.ok} onClick={submit}>建立並開始</Button>
+          <Button kind="primary" disabled={!check.ok || !yearOk} onClick={submit}>建立並開始</Button>
         </div>
       </div>
     </section>
