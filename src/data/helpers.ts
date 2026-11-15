@@ -112,3 +112,19 @@ export function withRoomDivisions(settings: Settings, exams: Pick<ExamConfig, 'd
   const ctx: RoomDivisionContext = { classes: settings.classes, exams };
   return { ...settings, classrooms: settings.classrooms.map((r) => (r.division ? r : { ...r, division: roomDivision(r, ctx) })) };
 }
+
+/** 本次考試專用座位配置（#210）：有覆寫就用覆寫的座位欄位，名稱、組別、部別等一律沿用共用教室；沒有覆寫回傳原物件 */
+export function effectiveRoom(exam: Pick<ExamConfig, 'roomOverrides'>, room: Classroom): Classroom {
+  const o = exam.roomOverrides?.[room.id];
+  if (!o) return room;
+  const { disabled: _d, rowDepths: _r, ...rest } = room;
+  void _d; void _r;
+  return { ...rest, rows: o.rows, depth: o.depth, seatCount: o.seatCount, ...(o.disabled?.length ? { disabled: o.disabled } : {}), ...(o.rowDepths ? { rowDepths: o.rowDepths } : {}) };
+}
+
+export const effectiveRooms = (exam: Pick<ExamConfig, 'roomOverrides'>, rooms: Classroom[]): Classroom[] =>
+  exam.roomOverrides ? rooms.map((r) => effectiveRoom(exam, r)) : rooms;
+
+/** 該次考試看到的設定：教室清單換成覆寫後的版本（其他欄位不動） */
+export const settingsForExam = (settings: Settings, exam: Pick<ExamConfig, 'roomOverrides'>): Settings =>
+  exam.roomOverrides ? { ...settings, classrooms: effectiveRooms(exam, settings.classrooms) } : settings;

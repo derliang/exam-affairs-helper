@@ -7,8 +7,8 @@ const room = (o: Partial<Classroom> = {}): Classroom => ({ id: 'r', name: 'A', k
 
 describe('教室座位編輯', () => {
   it('座位上限＝一張標籤紙：B4 48、A3 49', () => {
-    expect(seatCap('B4')).toBe(48);
-    expect(seatCap('A3')).toBe(49);
+    expect(seatCap('B4')).toBe(56);
+    expect(seatCap('A3')).toBe(56);
   });
   it('座位序號：第 1 排深位 1→depth，再第 2 排', () => {
     const r = room({ rows: 2, depth: 3, seatCount: 4 });

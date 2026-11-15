@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
 import type { Classroom, ExamConfig } from '../../data';
-import { classroomSeats, rowDepthOf } from '../../data';
+import { classroomSeats, effectiveRooms, rowDepthOf } from '../../data';
 import type { PlanRoom } from '../../core/astD99/contract';
 import { Alert, Badge, Button, StepHead } from '../components';
 import { AST_STEP_BLURBS } from '../nav';
@@ -92,7 +92,7 @@ export function AstStep5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
         <Alert tone="danger" action={<Button onClick={() => p.onStep(3)}>前往 ③ 教室與自習空間</Button>}><b>座位不夠，排不出方案。</b>有時段的考生比本次勾選的考場座位多。請到 ③ 勾選更多教室或增加座位，補足後這裡才會出現教室用途與座位圖。</Alert></section>
     );
   }
-  const roomData = new Map(doc.settings.classrooms.map((c) => [c.id, c]));
+  const roomData = new Map(effectiveRooms(exam, doc.settings.classrooms).map((c) => [c.id, c]));
   const roomName = (id: string) => roomData.get(id)?.name ?? id;
   const planRooms = plan.input.rooms;
   const used = (r: PlanRoom) => r.kind === 'class' || slots.some((s) => usageCell(plan, s, r).kind !== 'none');
