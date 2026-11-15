@@ -314,7 +314,7 @@ const subjectShortEq = (full: string, short: string): boolean => subjectShort(fu
 export const isSpecial = (c: CellModel): boolean => (c.corners?.length ?? 0) > 0;
 
 /** 人員格的一行：runs 依序畫，pt 為字級 */
-export interface PersonLine { runs: { text: string; bold?: boolean }[]; pt: number; gapBefore: number }
+export interface PersonLine { runs: { text: string; bold?: boolean }[]; pt: number; gapBefore: number; /** 優先保字級的行（#212：兩人格的「班級｜姓名」） */ pri?: boolean }
 
 /**
  * 預備教室／綜合教室／整合標籤的格內排法（v2.36）：1 人＝大字編號＋「班級｜姓名」＋時程行；
@@ -339,9 +339,9 @@ export function personLayout(
     ];
   } else if (ps.length === 2) {
     ps.forEach((p, i) => {
-      // 每人兩行：編號一行、「班級｜姓名」一行（#212：原本擠成一行，字只剩約 6.5pt），時程行接在後面
+      // 每人兩行：姓名字級上限放寬 15%（#212：兩人格的班級姓名要比一人格更不能縮）；編號一行、「班級｜姓名」一行（#212：原本擠成一行，字只剩約 6.5pt），時程行接在後面
       lines.push({ runs: [{ text: p.code, bold: true }], pt: fitW(p.code, true, o.codePt * 0.5), gapBefore: i === 0 ? 0 : 1.5 });
-      lines.push({ runs: [{ text: p.classLabel, bold: true }, { text: ' | ' }, { text: p.name }], pt: namePtFit(p.classLabel, p.name, w, o.nameMax), gapBefore: 0.2 });
+      lines.push({ runs: [{ text: p.classLabel, bold: true }, { text: ' | ' }, { text: p.name }], pt: namePtFit(p.classLabel, p.name, w, o.nameMax * 1.15), gapBefore: 0.2, pri: true });
       for (const s of p.sched) lines.push({ runs: [{ text: s, bold: true }], pt: fitW(s, true, o.schedMax), gapBefore: 0.3 });
     });
   } else if (ps.length === 1) {
@@ -351,12 +351,22 @@ export function personLayout(
     lines.push({ runs: [{ text: p.classLabel, bold: true }, { text: ' | ' }, { text: p.name }], pt: npt, gapBefore: 1.5 });
     for (const s of p.sched) lines.push({ runs: [{ text: s, bold: true }], pt: fitW(s, true, o.schedMax), gapBefore: 1 });
   }
+  const hOf = (pri: boolean, f: (pt: number) => number) => lines.filter((l) => !!l.pri === pri).reduce((a, l) => a + f(l.pt) * PT * 1.15, 0);
+  const dims = () => ({ hN: hOf(true, (pt) => pt), hO: hOf(false, (pt) => pt), avail2: avail - lines.reduce((x, l) => x + l.gapBefore, 0) });
+  // 兩人格：編號與時程行縮到 6pt 後，姓名還能保留的比例（低於 0.8 就退回整體等比縮）
+  const twoPersonKN = (): number => { const d = dims(); return Math.min(1, (d.avail2 - hOf(false, (pt) => Math.min(pt, 6))) / Math.max(1, d.hN)); };
   const height = (ls: PersonLine[], k: number) => ls.reduce((a, l) => a + l.pt * k * PT * 1.15 + l.gapBefore, 0);
   const avail = h - o.topPad - 1;
   // 行間留白是固定值，不跟著縮：只讓字高部分縮到放得進去
   const gaps = lines.reduce((x, l) => x + l.gapBefore, 0);
   const k = Math.min(1, Math.max(0.2, (avail - gaps) / Math.max(1, height(lines, 1) - gaps)));
-  if (k < 1) lines = lines.map((l) => ({ ...l, pt: Math.max(6, Math.floor(l.pt * k * 2) / 2) }));
+  const kN = ps.length === 2 && k < 1 ? twoPersonKN() : 1;
+  if (k < 1 && ps.length === 2 && kN >= 0.8) {
+    // #212：兩人格放不下時，先縮編號與時程行（最小 6pt），把空間留給「班級｜姓名」；仍放不下才一起縮
+    const { hN, hO, avail2 } = dims();
+    const kO = Math.min(1, Math.max(0.2, (avail2 - hN * kN) / Math.max(1, hO)));
+    lines = lines.map((l) => ({ ...l, pt: Math.max(6, Math.floor(l.pt * (l.pri ? kN : kO) * 2) / 2) }));
+  } else if (k < 1) lines = lines.map((l) => ({ ...l, pt: Math.max(6, Math.floor(l.pt * k * 2) / 2) }));
   return { lines, total: height(lines, 1) };
 }
 
