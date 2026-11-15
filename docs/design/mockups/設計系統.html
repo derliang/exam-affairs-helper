@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>模擬考設計系統 稿 v2.36</title>
+<title>模擬考設計系統 稿 v2.37</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -492,7 +492,7 @@ details.more{font-size:14px;color:var(--text-2)}details.more summary{cursor:poin
 </style>
 
 <div class="top">
-  <span class="brand">模擬考小幫手 設計系統 <span class="badge b-acc">稿 v2.36・2026-11-15</span></span>
+  <span class="brand">模擬考小幫手 設計系統 <span class="badge b-acc">稿 v2.37・2026-11-15</span></span>
   <nav class="toc" aria-label="目錄">
     <a href="#color">色彩</a><a href="#type">字型</a><a href="#base">間距圓角</a><a href="#comp">元件</a><a href="#steps">步驟導覽</a><a href="#special">專屬元件</a><a href="#ast">分科新模型</a><a href="#ast2">分科下一批</a><a href="#paper">座位表與標籤</a><a href="#paper36">輸出補強 v2.36</a><a href="#paper36b">名單與教室 v2.36</a><a href="#brandbar">品牌列</a><a href="#footer">頁尾</a><a href="#align">對位測試頁</a><a href="#open">待確認</a>
   </nav>
@@ -1392,7 +1392,39 @@ details.more{font-size:14px;color:var(--text-2)}details.more summary{cursor:poin
       <ul class="sp">
         <li>單人格＝一般教室標籤規格：大字編號 33pt（A3 31pt）、「班級｜姓名」放得下取最大，下方多一行「第○天 ○○科」（9～15pt，不寫時段）。A4 預備教室座位表的格子同一個排法，只是比標籤小。</li>
         <li>同天考兩科：「第一天 自然、數A」；跨天：「第一天 自然　第二天 數A」；放不下自動縮小字級，最小仍大於現況。</li>
-        <li>分科整合標籤（#216）：格內每行「第N天 科目　班座號　姓名」，同一個版式與字級規則；標題「1 天 2＝第 1 天時段二」難讀，改成各行直接寫「第N天 時段X 科目」，標題不再解釋縮寫。預備教室仍只寫「第○天 ○○科」不寫時段。</li></ul></div>
+        <li><b>（#216 的版式已被 v2.37「④-2 兩倍寬」取代，見下一張卡）</b>分科整合標籤（#216）：格內每行「第N天 科目　班座號　姓名」，同一個版式與字級規則；標題「1 天 2＝第 1 天時段二」難讀，改成各行直接寫「第N天 時段X 科目」，標題不再解釋縮寫。預備教室仍只寫「第○天 ○○科」不寫時段。</li></ul></div>
+
+    <div class="card" id="v237" style="margin-top:16px"><style>#v237 .g>div{overflow-x:auto;max-width:100%}#v237 .g>div>.cell{flex-shrink:0}</style><div class="lab">④-2 分科整合標籤改「兩倍寬」（#216，<b>稿 v2.37，待使用者審稿</b>；覆寫上一張卡中「整合標籤同一版式」的部分）</div>
+      <p class="small muted">使用者裁示（2026-11-15，調度員轉達）：分科整合標籤每張佔<b>兩格寬</b>，科目字放大，空間不夠只列科目；<b>只有分科整合標籤改</b>，學測／會考／預備教室標籤維持單格。以下 1mm＝4px、全部假資料。</p>
+      <div class="v36 g" style="grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr))">
+        <div><div class="small">B4（250×353mm）：每張 76.7×41.3mm（兩個舊格併成一張）。單人、4 科：左半編號與「班級｜姓名」、右半科目，空間夠就寫完整「第N天 時段X 科目」，約 10.5pt（舊版約 5.5pt）</div>
+          <div class="cell" style="width:307px;height:165px;flex-direction:row;justify-content:flex-start;padding:0 10px"><i class="co">1-1</i>
+            <div style="width:48%;display:flex;flex-direction:column;align-items:center"><b class="no" style="font-size:50px">0101</b><span class="nm" style="font-size:24px;margin-top:6px"><em>溫</em>王小明</span></div>
+            <div style="flex:1;text-align:left;font-weight:700;font-size:15px;line-height:1.6;padding-left:8px;border-left:1px solid #8E8670;white-space:nowrap">第一天 時段一 物理<br>第一天 時段二 化學<br>第一天 時段三 數甲<br>第一天 時段四 生物</div></div></div>
+        <div><div class="small">B4：6 科、完整寫法放不下（小於約 10.5pt）→ 只列科目、依時間順序，字放到約 17pt</div>
+          <div class="cell" style="width:307px;height:165px;flex-direction:row;justify-content:flex-start;padding:0 10px"><i class="co">1-2</i>
+            <div style="width:48%;display:flex;flex-direction:column;align-items:center"><b class="no" style="font-size:50px">0102</b><span class="nm" style="font-size:24px;margin-top:6px"><em>良</em>陳大文</span></div>
+            <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:0 4px;text-align:left;font-weight:700;font-size:23px;line-height:1.5;padding-left:8px;border-left:1px solid #8E8670"><span>物理</span><span>歷史</span><span>化學</span><span>地理</span><span>數甲</span><span>公民</span></div></div></div>
+        <div><div class="small">B4：2 人輪流同一座位 → 左右各一人（各是約半張的單人格），不再把兩人疊在同一個窄格裡</div>
+          <div class="cell" style="width:307px;height:165px;flex-direction:row;padding:0"><i class="co" style="z-index:1">1-3</i>
+            <div style="width:50%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;border-right:1px solid #8E8670"><b class="no" style="font-size:34px">0103</b><span class="nm" style="font-size:20px;margin-top:3px"><em>溫</em>李安仁</span><span style="font-size:15px;font-weight:700;line-height:1.3;margin-top:5px">物理<br>化學</span></div>
+            <div style="width:50%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center"><b class="no" style="font-size:34px">0204</b><span class="nm" style="font-size:20px;margin-top:3px"><em>良</em>林小美</span><span style="font-size:15px;font-weight:700;line-height:1.3;margin-top:5px">歷史<br>地理</span></div></div></div>
+        <div><div class="small">B4：3 人以上輪流 → 只印座位與「共 N 人輪流／見座位表下一頁」（同現行規則，字放大）</div>
+          <div class="cell" style="width:307px;height:165px"><i class="co">2-1</i><b class="no" style="font-size:48px">2－1</b><span style="font-size:21px;margin-top:8px;font-weight:700">共 3 人輪流　見座位表下一頁</span></div></div>
+        <div><div class="small">A3：每張 70×35mm（35mm 正方的舊格併兩個）。單人 4 科、只列科目，約 14pt</div>
+          <div class="cell" style="width:280px;height:140px;flex-direction:row;justify-content:flex-start;padding:0 8px"><i class="co">1-1</i>
+            <div style="width:46%;display:flex;flex-direction:column;align-items:center"><b class="no" style="font-size:44px">0101</b><span class="nm" style="font-size:21px;margin-top:5px"><em>溫</em>王小明</span></div>
+            <div style="flex:1;text-align:left;font-weight:700;font-size:20px;line-height:1.25;padding-left:8px;border-left:1px solid #8E8670">物理<br>化學<br>數甲<br>生物</div></div></div>
+        <div><div class="small">整張紙：B4 由 6×8 變 <b>3×8＝24 張</b>（舊 48 張）；A3 由 7×7 變 <b>4×7＝28 張</b>（舊 49 張，欄由 7 欄改 8 欄、左右各留約 8.5mm）</div>
+          <div style="display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap">
+            <div title="B4 3×8" style="display:grid;grid-template-columns:repeat(3,34px);grid-auto-rows:20px;gap:1px;background:#8E8670;border:1px solid #8E8670"><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i></div>
+            <div title="A3 4×7" style="display:grid;grid-template-columns:repeat(4,30px);grid-auto-rows:15px;gap:1px;background:#8E8670;border:1px solid #8E8670"><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i><i style="background:#fff"></i></div></div></div>
+      </div>
+      <ul class="sp">
+        <li><b>規則</b>：①只改分科整合標籤；②每個座位一張、佔橫向相鄰兩格，裁切線在兩格之外（中間沒有線）；③單人：左半＝座標、大字編號、「班級｜姓名」（編號最小 16pt、姓名最小 9pt），右半＝科目行，科目字取放得下的最大（上限 B4 20pt、A3 16pt）；④完整「第N天 時段X 科目」放大後不到約 10.5pt，就只列科目（依時間順序，≥5 科時分兩欄）；有應試編號時多一行「應試 ＿＿」；⑤2 人輪流＝左右各一人，各自套③；⑥3 人以上輪流＝只印座位與「共 N 人輪流」。</li>
+        <li><b>A3 格數（設計員定案，待審）</b>：A3 舊版是 7×7、每格 35mm 正方（沿用舊標籤，D74）。兩倍寬要成對，7 欄是奇數，只能每列放 3 張、浪費一欄（49→21 張）。改 <b>8 欄×7 列</b>：35mm 正方不變、兩格併一張＝70×35mm，每列 4 張、一張紙 28 張；寬度 280mm，左右各留約 8.5mm（大於一般印表機不可印邊界約 5mm）。B4 維持扣 10mm 邊界均分、6 欄併成 3 欄＝3×8＝24 張。</li>
+        <li><b>被否決</b>：①只放大字、格數不變（使用者先選後改，改為兩倍寬）；②A3 維持 7 欄、每列 3 張（浪費整欄）；③一人一格不併格、但把科目改兩欄（B4 格寬 38mm，兩欄後每欄不到 19mm，字反而更小）。</li>
+        <li><b>代價</b>：張數增加（座位 48 個時，B4 由 1 張紙變 2 張）；這是使用者要的取捨，列印前下載畫面要寫明「整合標籤每張兩格寬、共 N 張紙」。</li></ul></div>
 
     <div class="card" style="margin-top:16px"><div class="lab">⑤ 名單與統計表（#219、#220、#213、#214，<b>使用者已核可</b>）</div>
       <div class="v36 g" style="grid-template-columns:repeat(auto-fit,minmax(340px,1fr))">
