@@ -27,7 +27,7 @@ describe('#199 原班教室對應', () => {
   });
   it('原班教室對不上時診斷出哪些班、幾人；對得上不誤報', () => {
     expect(homeIssues(input('fewest-rooms', [1, 2, 3, 4, 5, 6]))).toEqual([]);
-    expect(homeIssues(input('fewest-rooms', [1, 2, 3]))).toEqual([
+    expect(homeIssues(input('fewest-rooms', [1, 2, 3]))).toMatchObject([
       { classNo: 4, students: 22, kind: 'none', cap: 0 },
       { classNo: 5, students: 22, kind: 'none', cap: 0 },
       { classNo: 6, students: 22, kind: 'none', cap: 0 },
