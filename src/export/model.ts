@@ -825,6 +825,16 @@ export function periodLineFontPt(lines: readonly { head: string; text: string }[
   return Math.max(6, Math.min(26, Math.floor(Math.min(byH, byW) * 2) / 2));
 }
 
+/**
+ * 座位格太矮時的縮放比例（#223）：上緣座標、編號、「班級｜姓名」、角標區加起來要放得進格高，
+ * 放不下就整體等比縮小（最小 0.5），回傳 k（1＝不用縮）。座位表與列印頁共用同一個算法。
+ */
+export function fitSeatCell(g: { h: number; topPad: number; codePt: number; markArea: number; bottomPad: number }, namePt: number): { k: number } {
+  const need = g.codePt * 0.3528 + namePt * 0.3528 * 1.15 + g.markArea;
+  const avail = g.h - g.topPad - g.bottomPad;
+  return { k: Math.max(0.5, Math.min(1, avail / need)) };
+}
+
 /** 3 人以上輪流的座位清單頁（接在預備教室座位表之後；沒有就 undefined） */
 export function rotationPage(p: SeatPageModel): TablePageModel | undefined {
   if (!p.rotation) return undefined;
