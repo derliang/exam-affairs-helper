@@ -3,7 +3,7 @@ import type { ExamConfig, Semester, Subject } from '../../data';
 import { Alert, Badge, Button, ConfirmButton, Modal, More, Seg, StepHead } from '../components';
 import { carryMode, carryRows, carrySource, resumeCarry, stopCarry } from '../carry';
 import { confirmCopy } from '../flow';
-import { updateExam, examLabel, KIND_LABEL, type Doc } from '../store';
+import { updateExam, examLabel, examYear, KIND_LABEL, type Doc } from '../store';
 import { defaultSubjects, isCustomized, mathSplit, removeSubject, saveSubject, subjectTags, subjectWho, WHO_LABEL, type SubjectWho } from '../subjects';
 
 const CN = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
@@ -46,7 +46,11 @@ export function Step1(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
                 </button>
               ))}
             </div>
-            <span class="hint">學測預設上學期、分科預設下學期；學年度依建立日期自動算</span></div>
+            <span class="hint">學測預設上學期、分科預設下學期</span></div>
+          <div class="field"><label for="x-year">學年度</label>
+            <input id="x-year" class="input" inputMode="numeric" value={String(examYear(exam))}
+              onChange={(e) => { const v = e.currentTarget.value.trim(); const y = Number(v); if (v && Number.isInteger(y)) set({ schoolYear: y }); else { setErr('學年度要是民國年（例如 114）'); e.currentTarget.value = String(examYear(exam)); } }} />
+            <span class="hint">預設依建立日期算；補登過去學年的考試可改，例如 114</span></div>
           <div class="field"><span class="label">類型與對象</span>
             <div class="input" style="display:flex;align-items:center;gap:8px;background:var(--surface)"><Badge>{examLabel(exam)}</Badge>{exam.division === 'senior' ? '高三' : '國三'}</div>
             <span class="hint">建立後不可更改類型</span></div>
