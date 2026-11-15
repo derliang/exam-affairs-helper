@@ -1310,7 +1310,7 @@ details.more{font-size:14px;color:var(--text-2)}details.more summary{cursor:poin
 
   <section id="paper36">
     <header><h2>輸出紙面補強（稿 v2.36）</h2>
-      <p>驗收員用真實資料驗收 v1.10.2 的下載檔後，使用者提出的版面問題（Issue #212～#223）。全部假資料、紙面永遠淺色。<b>標「待核可」的項目要使用者看過才實作</b>；字級、表頭、統計表欄位等不改版面結構的小修已先做（PR #229，1.10.3）。</p></header>
+      <p>驗收員用真實資料驗收 v1.10.2 的下載檔後，使用者提出的版面問題（Issue #212～#223）。全部假資料、紙面永遠淺色。<b>使用者 2026-11-15 已裁示：以下各項都照本頁定案版本實作</b>（未選的方案收在 DESIGN 10.22「被否決」）；字級、表頭、統計表欄位等小修已先做（PR #229）。</p></header>
     <style>
       #paper36 .v36{--ink:#22201B;--navy:#1F3A5F;--gray:#6B6657;--cut:#8E8670;color:var(--ink);font-family:'Noto Sans TC',sans-serif}
       #paper36 .v36 *{box-sizing:border-box}
@@ -1357,17 +1357,14 @@ details.more{font-size:14px;color:var(--text-2)}details.more summary{cursor:poin
       <ul class="sp"><li><b>統計表</b>（座位表下方，#217）：第一欄加寬、放不下才折行，列高隨行數撐開；座位格高度扣掉的就是這個總高，整張表一定在頁面內（舊：固定列高 8.6mm 把長列名切掉，且整張被頁底切斷）。字 12pt。</li>
       <li><b>有標示（不考／加考）的標籤格</b>維持原排法（姓名上限 15pt），標示小牌仍放得下。</li></ul></div>
 
-    <div class="card" style="margin-top:16px"><div class="lab">② 特殊考生標示（#223，<b>待核可</b>；方案 C 為建議）</div>
+    <div class="card" style="margin-top:16px"><div class="lab">② 特殊考生標示（#223，<b>使用者已選方案 C</b>）</div>
       <p class="small muted">原做法：不考的格子外框加粗＋黑底白字「X 社會」小牌。不考的人一多，粗框互相連成不規則網格，反而看不出誰是少數。下方同一頁 24 人，分別在「不考 0 人／3 人／一半以上」三種情況比較（座位用班級色底，此處以淡底示意）。</p>
       <div class="v36" id="v36marks"></div>
       <ul class="sp">
-        <li><b>A 輕量角標</b>：拿掉粗框，格子大小與底色不變；不考／加考改成格子右下角的單字角標（「社」黑底白字＝不考，「＋數」白底黑框＝加考；多科用「社數」），頁首小標籤與圖例寫全名。</li>
-        <li><b>B 多數時反過來標</b>：某科不考人數超過該頁一半時，改標「有考」的人（角標「考社」），頁首小標籤寫「本頁多數不考社會，只標有考者」，少數永遠是被標的那一邊。</li>
-        <li><b>C（建議）＝A＋B</b>：預設用 A；超過一半的科目自動改用 B，並在頁首小標籤講明規則。三種資料都清楚，黑白列印也分得出（黑底白字 vs 白底黑框）。</li>
-        <li>標籤（格子淡黃底＋小牌）：沿用現況，粗框的問題只在座位表；標籤上同樣可改單字角標以省空間，是否一併改請一併裁示。</li></ul></div>
+        <li><b>定案（C）</b>：拿掉粗外框，格子大小與底色不變；不考＝右下角黑底白字單字角標（「社」），加考＝白底黑框（「＋數」），多科用「社數」；頁首小標籤與圖例寫全名。某科不考人數超過該頁一半時，改標「有考」的人（角標「考社」），頁首小標籤寫明「本頁多數不考社會，只標有考者」。黑白列印分得出（黑底白字 vs 白底黑框）。</li><li><b>標籤也一樣</b>改單字角標（與座位表一致；標籤格仍是淡黃底）。</li><li><b>被否決</b>：A（只換角標、不反標）、B（只反標、不換角標）。</li></ul></div>
 
-    <div class="card" style="margin-top:16px"><div class="lab">③ 班級公告重新設計（#215，<b>待核可</b>）</div>
-      <p class="small muted">原做法：一人一列、8 個時段橫排，每格擠「考 高三溫 1－1」折成兩三行，表頭「第一天 時段一 物理」被折行，考與自習只靠文字分。新版：A4 橫式、一班一頁，<b>學生一眼找到「我哪個時段在哪、考還是自習」</b>。我假設公告貼在班上給學生看，導師也用同一張（請確認）。</p>
+    <div class="card" style="margin-top:16px"><div class="lab">③ 班級公告重新設計（#215，<b>使用者已核可</b>）</div>
+      <p class="small muted">原做法：一人一列、8 個時段橫排，每格擠「考 高三溫 1－1」折成兩三行，表頭「第一天 時段一 物理」被折行，考與自習只靠文字分。新版：A4 橫式、一班一頁，<b>學生一眼找到「我哪個時段在哪、考還是自習」</b>。使用者裁示：公告貼在班上給學生看，導師共用同一張。</p>
       <div class="pap v36"><div style="min-width:860px">
         <div style="display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #1F3A5F;padding-bottom:6px;margin-bottom:8px"><div><div style="color:#1F3A5F;font-weight:700;font-size:16px">115 學年 分科模擬考（第 7 次）</div><div style="font-family:'Noto Serif TC',serif;font-weight:700;font-size:28px;line-height:1.1">班級公告</div></div><div style="background:#1F3A5F;color:#fff;padding:5px 18px;font-weight:700;font-size:18px">高三溫（14 人）</div></div>
         <div style="font-size:13px;margin-bottom:6px">本班教室：<b>高三溫</b>（格內沒寫教室＝在本班教室）　<span class="exm">粗體座位</span>＝考試，座位是「排－深位」　<span class="stdy" style="padding:0 6px">灰底</span>＝自習，只寫教室</div>
@@ -1378,8 +1375,8 @@ details.more{font-size:14px;color:var(--text-2)}details.more summary{cursor:poin
         <li><b>格內只放有用的字</b>：考試＝座位「1－1」粗體大字，教室與本班教室相同就省略，不同才在上面小字寫教室；自習＝灰底、「自習」加教室；不考也不自習＝「—」。「高三溫」「綜合教室」不再每格重複。</li>
         <li>考與自習<b>不只靠顏色</b>：考試粗體＋有座位、自習灰底＋「自習」字樣，黑白列印也分得出。</li></ul></div>
 
-    <div class="card" style="margin-top:16px"><div class="lab">④ 預備教室／綜合教室與整合標籤，格子與一般教室同規格（#221、#212、#216，<b>待核可</b>）</div>
-      <p class="small muted">使用者：「預備教室的標籤規格要跟教室一樣，哪一天考什麼列在標籤上，只要寫『第○天○○科』，不用寫時段」；「綜合教室的標籤要跟教室同規格，之前講過了」。現況（D94-5：只印節次＋科目＋班座號、不印姓名、小字）改成下面的格子。分科整合標籤（#216）同一個版式。<b>這會修改 D94-5「標籤不印姓名」</b>，請確認。</p>
+    <div class="card" style="margin-top:16px"><div class="lab">④ 預備教室／綜合教室與整合標籤，格子與一般教室同規格（#221、#212、#216，<b>使用者已核可</b>）</div>
+      <p class="small muted">使用者：「預備教室的標籤規格要跟教室一樣，哪一天考什麼列在標籤上，只要寫『第○天○○科』，不用寫時段」；「綜合教室的標籤要跟教室同規格，之前講過了」。現況（D94-5：只印節次＋科目＋班座號、不印姓名、小字）改成下面的格子，<b>已改寫 D94-5</b>。分科整合標籤（#216）同一個版式，但<b>整合標籤各行也寫時段</b>（「第1天 時段二 物理」，使用者裁示）。</p>
       <div class="v36 g">
         <div><div class="small">只有 1 人坐這個座位（最常見）</div>
           <div class="cell" style="width:175px;height:175px"><i class="co">1-1</i><b class="no" style="font-size:58px;margin-top:4px">0101</b><span class="nm" style="font-size:30px;margin-top:6px"><em>溫</em>王小明華</span><span style="font-size:15px;margin-top:8px;font-weight:700">第一天 自然　第二天 數A</span></div></div>
@@ -1395,20 +1392,20 @@ details.more{font-size:14px;color:var(--text-2)}details.more summary{cursor:poin
       <ul class="sp">
         <li>單人格＝一般教室標籤規格：大字編號 33pt（A3 31pt）、「班級｜姓名」放得下取最大，下方多一行「第○天 ○○科」（9～15pt，不寫時段）。A4 預備教室座位表的格子同一個排法，只是比標籤小。</li>
         <li>同天考兩科：「第一天 自然、數A」；跨天：「第一天 自然　第二天 數A」；放不下自動縮小字級，最小仍大於現況。</li>
-        <li>分科整合標籤（#216）：格內每行「第N天 科目　班座號　姓名」，同一個版式與字級規則；標題「1 天 2＝第 1 天時段二」難讀，改成各行直接寫「第N天」，標題不再解釋縮寫（<b>待確認</b>：整合標籤是否也不寫時段）。</li></ul></div>
+        <li>分科整合標籤（#216）：格內每行「第N天 科目　班座號　姓名」，同一個版式與字級規則；標題「1 天 2＝第 1 天時段二」難讀，改成各行直接寫「第N天 時段X 科目」，標題不再解釋縮寫。預備教室仍只寫「第○天 ○○科」不寫時段。</li></ul></div>
 
-    <div class="card" style="margin-top:16px"><div class="lab">⑤ 名單與統計表（#219、#220、#213、#214，<b>待核可／待確認</b>）</div>
+    <div class="card" style="margin-top:16px"><div class="lab">⑤ 名單與統計表（#219、#220、#213、#214，<b>使用者已核可</b>）</div>
       <div class="v36 g" style="grid-template-columns:repeat(auto-fit,minmax(340px,1fr))">
         <div><div class="small"><b>學測抽離自習名單</b>（#219）：標題加日期與時段；表頭「科目｜班級｜座號｜姓名｜去處｜用途」<span class="tag">表頭已實作</span></div>
           <div class="pap"><div style="text-align:center;font-weight:700;font-size:14px">抽離自習名單（社會，共 12 人）</div><div style="text-align:center;font-size:13px;margin:2px 0 6px">第一天　時段一　社會</div>
           <table class="t"><tr><th>科目</th><th>班級</th><th>座號</th><th>姓名</th><th>去處（教室／座位）</th><th>用途</th></tr><tr><td>社會</td><td>溫</td><td>05</td><td>王小明</td><td>自習教室 A</td><td>抽離自習</td></tr><tr><td>社會</td><td>良</td><td>11</td><td>李安仁</td><td>自習教室 A</td><td>抽離自習</td></tr></table></div>
-          <p class="note">程式沒有「日期」欄（只有第幾天與時段），所以寫「第一天」；要印真正日期要新增考試日期欄位，請確認要不要。一個時段一科一頁，分頁後每頁都有這一行。</p></div>
-        <div><div class="small"><b>分科綜合教室座位表</b>（#220）：座位圖下方加各班人數統計，每個時段一列<span class="tag">待核可</span></div>
+          <p class="note">使用者裁示只加「第N天 時段X 科目」，<b>不新增日期欄</b>。一個時段一科一頁，分頁後每頁都有這一行。</p></div>
+        <div><div class="small"><b>分科綜合教室座位表</b>（#220）：座位圖下方加各班人數統計，每個時段一列<span class="tag">已核可</span></div>
           <div class="pap"><table class="t"><tr><th>時段</th><th>溫</th><th>良</th><th>恭</th><th>儉</th><th>勤</th><th>誠</th><th>合計</th></tr><tr><td class="l">第一天 時段一　物理</td><td>3</td><td>2</td><td>3</td><td>2</td><td>3</td><td>2</td><td><b>15</b></td></tr><tr><td class="l">第一天 時段二　化學</td><td>2</td><td>3</td><td>2</td><td>3</td><td>2</td><td>3</td><td><b>15</b></td></tr><tr><td class="l">不重複人數</td><td>4</td><td>3</td><td>4</td><td>3</td><td>3</td><td>3</td><td><b>17</b></td></tr></table></div>
-          <p class="note">我的假設（請確認）：統計的是「這間教室內各班的人」；人會隨時段換，所以每個時段一列、最後一列是不重複人數（等於「已使用 N 格」那句的人數）；放在座位圖與講臺之下、格內說明之前，說明縮成一行。欄位同會考座位表那張，字 12pt、列名放得下。</p></div>
+          <p class="note">定案：統計的是「這間教室內各班的人」；人會隨時段換，所以每個時段一列、最後一列是不重複人數（等於「已使用 N 格」那句的人數）；放在座位圖與講臺之下、格內說明之前，說明縮成一行。欄位同會考座位表那張，字 12pt、列名放得下。</p></div>
         <div><div class="small"><b>名冊類表頭規則</b>（#213、#214、#219）</div>
           <ul class="sp" style="margin-top:4px"><li><b>班級與座號一律分兩欄</b>，座號欄只放座號；不再用「班座號」「考生編號」（四位數）當欄名。已實作：自習教室名單（地點｜班級｜座號｜姓名）、抽離名單與抽離自習名單。</li>
-          <li><b>#214「座位｜班級｜座號｜姓名｜到考｜缺考」</b>：Issue 沒說是哪份。我的判斷是<b>分科每科試務清冊的每間考場簽到名冊</b>（現為「座位（排－深位）｜班座號｜姓名｜應試編號｜到考｜缺考」，到考、缺考是兩個空格供手寫打勾）；另一份「出缺席記錄表」有「座位、考生編號、班級、姓名＋科目欄」，沒有到考缺考欄，我只建議同樣把編號拆成班級、座號。有應試編號時放在姓名之後。<b>待確認</b>後才改。</li></ul></div>
+          <li><b>#214「座位｜班級｜座號｜姓名｜到考｜缺考」</b>：Issue 沒說是哪份。定案（使用者裁示，照我的候選實作，<b>日後請核對是不是這份</b>）：<b>分科每科試務清冊的每間考場簽到名冊</b>（現為「座位（排－深位）｜班座號｜姓名｜應試編號｜到考｜缺考」，到考、缺考是兩個空格供手寫打勾）；另一份「出缺席記錄表」有「座位、考生編號、班級、姓名＋科目欄」，沒有到考缺考欄，我只建議同樣把編號拆成班級、座號。有應試編號時放在姓名之後。實作：簽到名冊表頭＝「座位｜班級｜座號｜姓名（｜應試編號）｜到考｜缺考」，應試編號有匯入才印、放姓名之後（清冊其他表不動）；出缺席記錄表只把「考生編號」拆成班級、座號。</li></ul></div>
       </div>
     </div>
   </section>
@@ -1431,12 +1428,12 @@ details.more{font-size:14px;color:var(--text-2)}details.more summary{cursor:poin
     }
     var host=document.getElementById('v36marks');
     if(host){
-      var names={cur:'現況（粗框＋小牌）',A:'A 輕量角標',B:'B 多數時反標',C:'C＝A＋B（建議）'};
+      var names={cur:'舊做法（粗框＋小牌，已取代）',C:'定案：右下角單字角標，過半時反標'};
       var conds=[[0,'不考社會 0 人'],[3,'不考社會 3 人（少數）'],[15,'不考社會 15 人（超過一半）']];
       var h='<div style="display:grid;gap:14px">';
       conds.forEach(function(cd){
         h+='<div><div class="small" style="margin-bottom:4px"><b>'+cd[1]+'</b></div><div class="g" style="grid-template-columns:repeat(auto-fit,minmax(215px,1fr))">';
-        ['cur','A','B','C'].forEach(function(o){
+        ['cur','C'].forEach(function(o){
           h+='<div><div class="small muted">'+names[o]+'</div>'+build(cd[0],o,'社會')+'</div>';
         });
         h+='</div></div>';
