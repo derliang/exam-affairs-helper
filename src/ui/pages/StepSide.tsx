@@ -2,7 +2,7 @@ import { subjectShort } from '../../core/subjectShort';
 import type { ExamConfig } from '../../data';
 import { Alert } from '../components';
 import { examClasses, markRows, seatableEntries } from '../seating';
-import { examLabel, schoolYear, type Doc } from '../store';
+import { examLabel, examYear, type Doc } from '../store';
 import { mathSplit } from '../subjects';
 
 /** 右側欄（原型 v1side／v4side）：只有 ① 與 ④ 有，其餘步驟沒有右側欄（原型 stepView） */
@@ -25,7 +25,7 @@ function Side1(p: { exam: ExamConfig }) {
           <div><small>考科</small><strong>{exam.subjects.length}</strong></div>
           <div><small>學期</small><strong>{term}學期</strong></div>
         </div>
-        <p class="small muted">{examLabel(exam)}・{schoolYear(new Date(exam.createdAt))} 學年・{exam.division === 'senior' ? '高三' : '國三'}</p>
+        <p class="small muted">{examLabel(exam)}・{examYear(exam)} 學年・{exam.division === 'senior' ? '高三' : '國三'}</p>
       </div>
       <div class="card stack">
         <div class="lab">這一步會影響</div>

@@ -51,7 +51,8 @@ describe('新增模擬考整頁', () => {
     expect(html).toContain('termcards');
     expect(html).toContain('上學期');
     expect(html).toContain('高三');
-    expect(html).toContain('115 學年');
+    expect(html).toContain('學年度');
+    expect(html).toContain('value="115"');
     expect(html).toContain('還沒有同類型的模擬考');
   });
   it('有同類型舊考試時顯示會帶入哪一次的設定', () => {

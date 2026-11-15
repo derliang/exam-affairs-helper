@@ -8,12 +8,12 @@ import { previewChoice } from '../step2';
 import { ImportWizard, scanOptionsFor } from './ImportWizard';
 
 /** 差異卡標題（稿 v2.34 H-6 的 7 種情形；「班級或座號不同」「姓名不同」由兩邊內容判斷） */
-const titleOf = (d: RosterDiff): string => {
+export const titleOf = (d: RosterDiff): string => {
   if (d.kind === 'only-in-exam') return '考試名單有，學生名單沒有';
   if (d.kind === 'only-in-roster') return '學生名單有，考試名單沒有';
   if (d.kind === 'group-diff') return '同一人的組別不同';
   if (d.kind === 'new-class') return '考試名單有這個班級，班級資料沒有';
-  return d.exam && d.roster && d.exam.classNo === d.roster.classNo && d.exam.seatNo === d.roster.seatNo ? '同一人的姓名不同' : '同一人的班級或座號不同';
+  return d.exam && d.roster && d.exam.classNo === d.roster.classNo && d.exam.seatNo === d.roster.seatNo ? '相同班級與座號，但姓名不同' : '同一人的班級或座號不同';
 };
 const CHOICE_TEXT: Record<RosterDiffChoice, string> = {
   'use-exam': '以考試名單為準', 'use-roster': '以學生名單為準', manual: '手動編輯',

@@ -1,6 +1,6 @@
 /** 座位表／標籤表頭範本（稿 v2.22 校-54）：兩欄分開；舊存檔只有單一「表頭文字」時兩欄都帶入它 */
 import type { ExamConfig, Settings } from '../data';
-import { KIND_LABEL, schoolYear } from './store';
+import { KIND_LABEL, examYear } from './store';
 
 export const DEFAULT_SEAT_HEADER = '【{學年}學年第{次別}次{類型}模擬考】座位表';
 export const DEFAULT_LABEL_HEADER = '{學年}學年第{次別}次{類型}模擬考';
@@ -16,7 +16,7 @@ export function headerTemplates(s: Pick<Settings, 'headerText' | 'seatHeader' | 
 /** 把 {學年}{次別}{類型} 換成這次模擬考的內容 */
 export function fillHeader(template: string, exam: Pick<ExamConfig, 'kind' | 'round' | 'createdAt'>): string {
   return template
-    .replaceAll('{學年}', String(schoolYear(new Date(exam.createdAt))))
+    .replaceAll('{學年}', String(examYear(exam)))
     .replaceAll('{次別}', exam.round ? String(exam.round) : '')
     .replaceAll('{類型}', KIND_LABEL[exam.kind]);
 }
