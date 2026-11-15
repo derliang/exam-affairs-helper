@@ -4,7 +4,8 @@ import { studentCode } from '../data';
 import type { ExamConfig } from '../data';
 import { examResult, isStale } from './seating';
 import type { Doc } from './store';
-import { addClass, sortRoster } from './store';
+import { addClass, examYear, sortRoster } from './store';
+import { rosterFor, rosterYearOf } from './rosterYears';
 
 export const TEMPLATE_HEADER = ['班級', '座號', '姓名', '學號（選填）'];
 
@@ -82,7 +83,8 @@ export const codeLabel = (s: Pick<Student, 'classNo' | 'seatNo'>): string => stu
 export function examsMadeStale(doc: Doc, division: Division, plan: ImportPlan, unknown: UnknownClassAction = 'skip'): string[] {
   const after = applyImport(doc, division, plan, unknown);
   return doc.exams
-    .filter((e) => e.division === division && examResult(doc, e) && !isStale(doc, e) && isStale(after, e))
+    // #254：名單依學年度分存，匯入只影響「作用中學年度」的考試，別的學年度的考試不受影響
+    .filter((e) => e.division === division && examYear(e) === rosterYearOf(doc) && examResult(doc, e) && !isStale(doc, e) && isStale(after, e))
     .map((e) => e.name);
 }
 
@@ -90,7 +92,9 @@ export function examsMadeStale(doc: Doc, division: Division, plan: ImportPlan, u
 export function rosterChanged(doc: Doc, exam: ExamConfig): boolean {
   const entries = doc.examFiles?.[exam.id]?.entries;
   if (!entries?.length) return false;
-  const roster = doc.rosters[exam.division] ?? [];
+  // #254：只比對該考試學年度自己的名單；那個學年度沒有名單資料時無從比對，不標
+  if (examYear(exam) !== rosterYearOf(doc) && !doc.otherYears?.[String(examYear(exam))]) return false;
+  const roster = rosterFor(doc, exam)[exam.division] ?? [];
   const key = (x: { classNo: number; seatNo: number; name: string }) => `${x.classNo}-${x.seatNo}-${x.name.trim()}`;
   const set = new Set(roster.map(key));
   if (entries.some((e) => !set.has(key(e)))) return true;
