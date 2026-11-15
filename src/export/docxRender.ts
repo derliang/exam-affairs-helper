@@ -185,7 +185,7 @@ function headBlock(
   const leftW = o.widthMm - roomW;
   const lineBd = bd(NAVY, 18);
   const left: Paragraph[] = [
-    line([run2(o.h1, { size: o.h1Pt, bold: true, color: NAVY, spacing: o.h1Pt * 0.04 }, mode)], { h: o.h1Pt * 0.3528 * 1.45, align: AlignmentType.LEFT }),
+    line([run2(o.h1, { size: o.h1Pt, bold: true, color: NAVY }, mode)], { h: o.h1Pt * 0.3528 * 1.45, align: AlignmentType.LEFT }),
   ];
   if (o.h2) left.push(line([run2(o.h2, { size: 28, bold: true, font: SERIF }, mode)], { h: 28 * 0.3528 * 1.1 + 1.2, align: AlignmentType.LEFT, before: 1 }));
   const chip = new Table({
@@ -648,7 +648,7 @@ function tableSection(page: TablePageModel, opts: DocxOptions): ISectionOptions 
   const sum = page.widths.reduce((a, b) => a + b, 0);
   const columnWidths = page.widths.map((f) => Math.floor((contentW * f) / sum));
   const nHead = page.headGroups ? 2 : 1;
-  const fit = land ? landscapeFit(page.rows.length + (page.totalRow ? 1 : 0), nHead) : { rowMm: 9, pt: 10.5 };
+  const fit = land ? landscapeFit(page.rows.length + (page.totalRow ? 1 : 0), nHead, page.emWidths ? sum : undefined) : { rowMm: 9, pt: 10.5 };
   const mk = (texts: string[], kind: 'head' | 'body' | 'total', kinds?: ('exam' | 'study' | undefined)[]) =>
     new TableRow({
       tableHeader: kind === 'head',
