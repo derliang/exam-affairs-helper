@@ -43,3 +43,12 @@ describe('Q2：考生口徑', () => {
     expect(checkSeats(30, 0).message).toContain('② 考試名單');
   });
 });
+
+describe('#208：姓名不同的差異卡標題只陳述事實，不斷定是同一人', () => {
+  it('相同班級與座號但姓名不同', async () => {
+    const { titleOf } = await import('./pages/Step2');
+    const d: RosterDiff = { kind: 'mismatch', code: '0105' as RosterDiff['code'], exam: B, roster: A };
+    expect(titleOf(d)).toBe('相同班級與座號，但姓名不同');
+    expect(titleOf(d)).not.toMatch(/同一人/);
+  });
+});
