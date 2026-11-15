@@ -104,6 +104,8 @@ class Ctx {
   readonly subjectOrder: Map<string, number>[];
   readonly approved: Set<number>[];
   private cache: Map<string, SlotPlan | null>[] = [];
+  /** 候選考場組合的結果：同一時段、其他時段用到的教室相同時答案一樣（輪流改選常重複），不必再列舉一次 */
+  private candCache = new Map<string, SlotPlan[]>();
 
   constructor(input: PlanInput) {
     this.input = input;
@@ -221,6 +223,15 @@ class Ctx {
   // ───────────── 候選考場組合 ─────────────
 
   private candidates(s: number, usedElsewhere: Set<number>): SlotPlan[] {
+    const key = `${s}|${[...usedElsewhere].sort((a, b) => a - b).join(',')}`;
+    const hit = this.candCache.get(key);
+    if (hit) return [...hit]; // 呼叫端會 push，回複本
+    const made = this.candidatesRaw(s, usedElsewhere);
+    this.candCache.set(key, made);
+    return [...made];
+  }
+
+  private candidatesRaw(s: number, usedElsewhere: Set<number>): SlotPlan[] {
     const slot = this.input.slots[s]!;
     const groups = this.groupsOf(slot);
     const examinees = groups.reduce((a, g) => a + g.students.length, 0);
@@ -244,24 +255,27 @@ class Ctx {
     const spare = (r: Room): number => Math.max(0, r.studyCap - (nonExamByClass.get(r.classNo!) ?? 0));
     let homeless = 0;
     for (const [c, n] of nonExamByClass) if (!this.home.has(c)) homeless += n;
+    const mark = new Uint8Array(this.rooms.length);
     const quick = (S: Room[]): Vec => {
-      const inS = new Set(S.map((r) => r.idx));
+      // 用可重複使用的旗標陣列代替每次新建 Set（列舉上限 20 萬次，這裡是最熱的地方）
+      for (const r of S) mark[r.idx] = 1;
       let displaced = 0;
       let need = homeless;
       let homeExam = 0;
       for (const r of this.home.values()) {
-        if (inS.has(r.idx)) {
+        if (mark[r.idx]) {
           displaced += nonExamByClass.get(r.classNo!) ?? 0;
           homeExam += Math.min(examByClass.get(r.classNo!) ?? 0, r.seats.length);
         } else need += homeOverflow(r);
       }
       need += displaced;
       let room = 0;
-      for (const r of reserveStudy) if (!inS.has(r.idx)) room += r.studyCap;
-      for (const r of this.home.values()) if (!inS.has(r.idx) && (allowOther || approved.has(r.idx))) room += spare(r);
+      for (const r of reserveStudy) if (!mark[r.idx]) room += r.studyCap;
+      for (const r of this.home.values()) if (!mark[r.idx] && (allowOther || approved.has(r.idx))) room += spare(r);
       const overflow = Math.max(0, need - room);
       const fresh = S.filter((r) => !usedElsewhere.has(r.idx)).length;
       const leave = examinees - homeExam + displaced;
+      for (const r of S) mark[r.idx] = 0;
       return this.input.mode === 'least-movement' ? [overflow, leave, fresh, displaced, S.length] : [overflow, fresh, displaced, S.length];
     };
     const top: { v: Vec; S: Room[]; rk: number[] }[] = [];
@@ -269,6 +283,8 @@ class Ctx {
     const consider = (S: Room[]): void => {
       enumerated++;
       const v = quick(S);
+      // 名額已滿且比最後一名還差：不可能進榜，省掉後面的比較（結果不變）
+      if (top.length >= TOP_CANDIDATES && cmpVec(v, top[top.length - 1]!.v) > 0) return;
       const rk = S.map((r) => r.rank);
       const pos = top.findIndex((t) => (cmpVec(v, t.v) || cmpVec(rk, t.rk)) < 0);
       if (pos < 0) {
