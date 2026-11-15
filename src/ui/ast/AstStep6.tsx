@@ -18,7 +18,7 @@ type Loaded = { fonts: FontData; has: (ch: string) => boolean };
 type Tab = 'label' | 'ann' | 'reg' | 'study';
 const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
-const FILE_LABEL: Record<AstOutputKey, string> = { label: '整合標籤', ann: '班級公告', use: '每節教室用途表', reg: '每科試務清冊', study: '自習教室名單與布置標籤工作表' };
+const FILE_LABEL: Record<AstOutputKey, string> = { label: '整合標籤', seat: '綜合教室座位表', ann: '班級公告', use: '每節教室用途表', reg: '每科試務清冊', study: '自習教室名單與布置標籤工作表' };
 const pagesOf = (o: AstOutputs, k: AstOutputKey): number => o[k].length;
 
 /** 把勾選的項目轉成輸出檔（Word 每項一個檔；PDF 合併成一個列印頁） */
@@ -28,7 +28,7 @@ export async function runAstExport(o: AstOutputs, keys: AstOutputKey[], format: 
   const chosen = keys.filter((k) => pagesOf(o, k) > 0);
   if (chosen.length === 0) throw new Error('勾選的項目沒有可輸出的頁面');
   if (format === 'pdf') {
-    const html = renderPrintHtml({ label: chosen.includes('label') ? o.label : [], table: chosen.filter((k) => k !== 'label').flatMap((k) => o[k]) }, meta);
+    const html = renderPrintHtml({ label: chosen.includes('label') ? o.label : [], seat: chosen.includes('seat') ? o.seat : [], table: chosen.filter((k) => k !== 'label' && k !== 'seat').flatMap((k) => o[k as 'ann' | 'use' | 'reg' | 'study']) }, meta);
     const n = chosen.reduce((a, k) => a + pagesOf(o, k), 0);
     return [{ name: `${base}-分科輸出-列印用頁面.html`, mime: 'text/html', data: html, desc: `${n} 頁（${chosen.map((k) => FILE_LABEL[k]).join('、')}），開啟後選「另存為 PDF」`, pages: n }];
   }
@@ -39,7 +39,7 @@ export async function runAstExport(o: AstOutputs, keys: AstOutputKey[], format: 
   for (const k of chosen) {
     // 每個檔之間讓出主執行緒，畫面才不會整個卡住（大班數時每個檔要數秒）
     await new Promise<void>((r) => setTimeout(r, 0));
-    const data = await renderDocx(k === 'label' ? { label: o.label } : { table: o[k] }, opts);
+    const data = await renderDocx(k === 'label' ? { label: o.label } : k === 'seat' ? { seat: o.seat } : { table: o[k] }, opts);
     out.push({ name: `${base}-${FILE_LABEL[k]}${k === 'label' ? `（${paper}）` : ''}.docx`, mime: DOCX_MIME, data, desc: k === 'label' ? `${o.label.length} 張紙（每間考場一張，${paper}）` : `${o[k].length} 頁（A4）`, pages: pagesOf(o, k) });
   }
   return out;
@@ -50,7 +50,7 @@ export function AstStep6(p: { doc: Doc; exam: ExamConfig; onGoStep: (n: 2 | 3 | 
   const { doc, exam } = p;
   const [format, setFormat] = useState<ExportFormat>('word');
   const [paper, setPaper] = useState<LabelPaper>('B4');
-  const [on, setOn] = useState<Record<AstOutputKey, boolean>>({ label: true, ann: true, use: true, reg: true, study: true });
+  const [on, setOn] = useState<Record<AstOutputKey, boolean>>({ label: true, seat: true, ann: true, use: true, reg: true, study: true });
   const [tab, setTab] = useState<Tab>('label');
   const [pi, setPi] = useState(0);
   const [busy, setBusy] = useState(false);
