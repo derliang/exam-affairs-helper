@@ -5,10 +5,16 @@ import type { ExamFiles } from '../data/folder';
 import { defaultLabelLayout } from '../export/model';
 import { diffsStale, refreshDiffs, type CompareOptions } from '../import/compare';
 import { defaultSubjects, isCustomized } from './subjects';
+import { rosterFor, viewForYear, type YearData } from './rosterYears';
 
 export interface Doc {
   settings: Settings;
+  /** 目前作用中學年度的學生名單（#208：其他學年度在 otherYears，見 rosterYears.ts） */
   rosters: Record<Division, Student[]>;
+  /** rosters 與 settings.classes 屬於哪個學年度；舊存檔沒有，載入時補（migrateRosterYear） */
+  rosterYear?: number;
+  /** 其他學年度的名單與班級，鍵是學年度（民國年）字串 */
+  otherYears?: Record<string, YearData>;
   exams: ExamConfig[];
   /** 每次模擬考底下的其他檔案（考試名單、比對、覆寫、排座結果），以考試 id 為鍵；跟著復原 */
   examFiles?: Record<string, Partial<ExamFiles>>;
@@ -91,7 +97,8 @@ export function syncDiffs(doc: Doc): Doc {
   for (const e of doc.exams) {
     const f = files[e.id];
     if (!f?.entries) continue;
-    const fresh = refreshDiffs(doc.rosters[e.division], f.entries, e.participation, f.diffs ?? [], diffOptions(doc, e));
+    // 名單與班級用該考試學年度的那一份（沒有自己的資料就退回目前這份，#208）
+    const fresh = refreshDiffs(rosterFor(doc, e)[e.division], f.entries, e.participation, f.diffs ?? [], diffOptions(viewForYear(doc, examYear(e)), e));
     if (!diffsStale(f.diffs ?? [], fresh)) continue;
     files = { ...files, [e.id]: { ...f, diffs: fresh } };
   }

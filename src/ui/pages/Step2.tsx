@@ -3,7 +3,8 @@ import type { ExamConfig, ExamEntry, Participation, RosterDiff, RosterDiffChoice
 import { allResolved, applyDiffs, applyGroupChoice, compareRosters, groupDiffs, type DiffGroup, diffsStale, isResolved, readXlsx, XlsError, refreshDiffs, validateResolved, type Sheet } from '../../import';
 import { Alert, Badge, Button, ClassChip, ConfirmButton, More, PageHead, Seg, StatsBar, StepHead } from '../components';
 import { confirmCopy } from '../flow';
-import { addClass, diffOptions, rosterName, syncDiffs, updateExam, type Doc } from '../store';
+import { addClass, diffOptions, examYear, rosterName, syncDiffs, updateExam, type Doc } from '../store';
+import { rosterYearMismatch, rosterYearOf } from '../rosterYears';
 import { previewChoice } from '../step2';
 import { ImportWizard, scanOptionsFor } from './ImportWizard';
 
@@ -273,6 +274,13 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
           <Alert tone="warn" action={<Button small onClick={() => setLost([])}>知道了</Button>}>
             <b>「以學生名單為準」影響了 {lost.length} 人：</b>{lost.join('、')}。他們在考試名單上原本的考科與 X／＋ 標示已清掉（或沒有考科），請到 ④ 或個別覆寫確認。
           </Alert>
+        )}
+        <div class="row" style="gap:8px">
+          <span class="small muted">名單年度：{rosterYearOf(doc)} 學年</span>
+          {rosterYearMismatch(doc, exam) && <Badge tone="warn">年度不符</Badge>}
+        </div>
+        {rosterYearMismatch(doc, exam) && (
+          <Alert tone="warn">這次考試是 {examYear(exam)} 學年度，但目前的{sn}是 {rosterYearOf(doc)} 學年度的名單，比對結果可能不準。請到「共用設定 → 學生名單」切換或新增 {examYear(exam)} 學年度並匯入名單。</Alert>
         )}
         {filePick}
         {err && <Alert tone="danger">{err}</Alert>}
