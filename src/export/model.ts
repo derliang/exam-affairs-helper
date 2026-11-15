@@ -103,6 +103,8 @@ export interface ListRow {
   subject: string;
   code: string;
   className: string;
+  /** 座號（只放座號，不與班級合併；#219） */
+  seatNo: string;
   name: string;
   place: string;
   purpose: string;
@@ -437,6 +439,7 @@ export function buildStudyLists(input: ExportInput): ListPageModel[] {
       subject: ctx.subjectName.get(d.subjectId) ?? d.subjectId,
       code: d.code,
       className: ctx.classes.get(Number(d.code.slice(0, 2)))?.name ?? '',
+      seatNo: String(parseCode(d.code).seatNo).padStart(2, '0'),
       name: ctx.students.get(d.code)?.name ?? '',
       place: rooms.get(d.roomId)?.name ?? d.roomId,
       purpose: '抽離自習',
@@ -463,6 +466,7 @@ export function buildDetachList(input: ExportInput): ListPageModel {
       subject: ctx.subjectName.get(d.subjectId) ?? d.subjectId,
       code: d.code,
       className: ctx.classes.get(Number(d.code.slice(0, 2)))?.name ?? '',
+      seatNo: String(parseCode(d.code).seatNo).padStart(2, '0'),
       name: ctx.students.get(d.code)?.name ?? ctx.entries.get(d.code)?.name ?? '',
       place,
       purpose: d.purpose === 'exam' ? '抽離考試' : '抽離自習',
@@ -480,6 +484,7 @@ export function buildDetachList(input: ExportInput): ListPageModel {
       subject: '（全科）',
       code: o.code,
       className: ctx.classes.get(Number(o.code.slice(0, 2)))?.name ?? '',
+      seatNo: String(parseCode(o.code).seatNo).padStart(2, '0'),
       name: ctx.students.get(o.code)?.name ?? ctx.entries.get(o.code)?.name ?? '',
       place: o.location,
       purpose,
@@ -524,13 +529,54 @@ export function statRows(p: SeatPageModel): { label: string; per: number[]; tota
 
 export const SEAT_PAGE = { w: 210, h: 297, padX: 15, padY: 12 };
 
+/** 估字寬（mm）：全形 1em、英數約 0.58em、空白 0.28em */
+export function textWidthMm(text: string, pt: number, bold = false): number {
+  let em = 0;
+  for (const ch of text) {
+    if (ch === ' ') em += 0.28;
+    else if (/[!-~]/.test(ch)) em += /[ij|l.,:;!']/.test(ch) ? 0.3 : 0.58;
+    else em += 1;
+  }
+  return em * pt * 0.3528 * (bold ? 1.02 : 1);
+}
+
+/**
+ * 格內「班級｜姓名」的字級（pt）：在格寬放得下的前提下取最大（#222、#218）。
+ * 班級字粗體、與姓名以細線隔開（約 1.2em 的間隔）；maxPt 是上限（三字姓名才會用到），最小 minPt。
+ */
+export function namePtFit(classLabel: string, name: string, innerMm: number, maxPt: number, minPt = 7): number {
+  const em = textWidthMm(classLabel, 1, true) / 0.3528 + textWidthMm(name, 1) / 0.3528 + 1.4;
+  const fit = innerMm / (em * 0.3528);
+  return Math.max(minPt, Math.min(maxPt, Math.floor(fit * 2) / 2));
+}
+
+/**
+ * 座位表下方統計表的版面（#217）：第一欄放得下的字不折行；放不下的折行，列高隨行數撐開，
+ * 座位格高度（seatGeometry）扣掉的也是同一個總高，整張表一定在頁面內。Word 與列印頁共用。
+ */
+export function statLayout(p: SeatPageModel): { cols: number[]; rowH: number[]; pt: number; total: number } {
+  const innerW = SEAT_PAGE.w - 2 * SEAT_PAGE.padX;
+  const rows = statRows(p);
+  const n = p.stats.table.classes.length;
+  const pt = 12;
+  const totalW = 18;
+  const classW = Math.max(12, Math.min(20, (innerW - totalW - 60) / Math.max(1, n)));
+  const firstW = innerW - classW * n - totalW;
+  const usable = firstW - 4;
+  const lines = (label: string) => Math.max(1, Math.ceil(textWidthMm(label, pt, false) / usable));
+  const lineH = pt * 0.3528 * 1.3;
+  const h = (k: number) => Math.max(8, +(k * lineH + 3.4).toFixed(1));
+  const rowH = [h(1), ...rows.map((r) => h(lines(r.label)))];
+  return { cols: [firstW, ...Array<number>(n).fill(classW), totalW], rowH, pt, total: rowH.reduce((a, b) => a + b, 0) };
+}
+
 /** 座位表的格子尺寸（mm）與統計列。統計表列數隨科目變：先扣掉標題、小標籤、講臺、統計表、頁尾，剩下的才給座位格 */
 export function seatGeometry(p: SeatPageModel): { cw: number; ch: number; st: ReturnType<typeof statRows> } {
   const innerW = SEAT_PAGE.w - 2 * SEAT_PAGE.padX;
   const cw = Math.min(p.slotMode ? 24.79 : 25, +((innerW - 6.5) / p.rows).toFixed(2));
   const st = p.slotMode ? [] : statRows(p);
   // 時段版沒有統計表，改留一段格內說明（約 14mm）
-  const fixed = 22 + 12 + 4 + 5 + 11 + (p.slotMode ? 14 : 5 + 8 * (st.length + 1)) + 16;
+  const fixed = 22 + 12 + 4 + 5 + 11 + (p.slotMode ? 14 : 5 + statLayout(p).total) + 16;
   const ch = Math.min(p.slotMode ? 26 : 23, +((SEAT_PAGE.h - 2 * SEAT_PAGE.padY - fixed) / p.depth).toFixed(2));
   return { cw, ch, st };
 }
