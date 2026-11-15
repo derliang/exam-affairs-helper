@@ -48,6 +48,7 @@ import {
   type TablePageModel,
   type SeatPageModel,
   rotationPage,
+  landscapeFit,
 } from './model';
 
 export const FONT = 'Noto Sans TC';
@@ -625,13 +626,6 @@ function listSection(page: ListPageModel, opts: DocxOptions): ISectionOptions {
 
 /* ---------- 通用表格頁（A4，領卷清單等）---------- */
 
-/** 橫式公告表的列高與字級：一班一頁，依列數縮放（#215） */
-export function landscapeFit(nRows: number, nHead: number): { rowMm: number; pt: number } {
-  const avail = PAPER_MM.A4.w - 2 * A4_MARGIN_MM - 30; // 橫式的可用高度扣掉標題、說明與頁尾
-  const rowMm = Math.max(4.2, Math.min(8, avail / (nRows + nHead)));
-  return { rowMm, pt: Math.max(7, Math.min(10.5, Math.floor((rowMm / 0.3528 / 1.5) * 2) / 2)) };
-}
-
 function tableSection(page: TablePageModel, opts: DocxOptions): ISectionOptions {
   const mode = opts.boldMode ?? 'embed-bold';
   const land = !!page.landscape;
@@ -645,7 +639,7 @@ function tableSection(page: TablePageModel, opts: DocxOptions): ISectionOptions 
     new TableRow({
       tableHeader: kind === 'head',
       cantSplit: true,
-      height: { value: mmToTwip(kind === 'head' && !land ? 0 : fit.rowMm), rule: kind === 'head' && !land ? HeightRule.AUTO : HeightRule.ATLEAST },
+      height: { value: mmToTwip(kind === 'head' && !land ? 0 : fit.rowMm), rule: kind === 'head' && !land ? HeightRule.AUTO : land ? HeightRule.EXACT : HeightRule.ATLEAST },
       children: texts.map(
         (t, i) =>
           new TableCell({
@@ -657,7 +651,7 @@ function tableSection(page: TablePageModel, opts: DocxOptions): ISectionOptions 
                 ? kinds?.[i] === 'study' ? { type: ShadingType.CLEAR, fill: 'D9D9D9', color: 'auto' } : undefined
                 : { type: ShadingType.CLEAR, fill: kind === 'head' ? 'EEEEEE' : 'F4F4F4', color: 'auto' },
             margins: { top: land ? 10 : 40, bottom: land ? 10 : 40, left: 60, right: 60 },
-            children: [para([run(t, { size: fit.pt, bold: kind !== 'body' || kinds?.[i] === 'exam' }, mode)], land && kind !== 'body' ? AlignmentType.CENTER : AlignmentType.LEFT)],
+            children: [para([run(t, { size: fit.pt, bold: kind !== 'body' || kinds?.[i] === 'exam' }, mode)], land && kind !== 'body' ? AlignmentType.CENTER : AlignmentType.LEFT, land ? { spacing: { before: 0, after: 0, line: Math.round(fit.pt * 20 * 1.25), lineRule: LineRuleType.EXACT } } : {})],
           }),
       ),
     });
@@ -667,7 +661,7 @@ function tableSection(page: TablePageModel, opts: DocxOptions): ISectionOptions 
     return new TableRow({
       tableHeader: true,
       cantSplit: true,
-      height: { value: mmToTwip(fit.rowMm), rule: HeightRule.ATLEAST },
+      height: { value: mmToTwip(fit.rowMm), rule: HeightRule.EXACT },
       children: page.headGroups.map((g) => {
         const w = columnWidths.slice(col, col + g.span).reduce((x, y) => x + y, 0);
         col += g.span;
@@ -688,15 +682,18 @@ function tableSection(page: TablePageModel, opts: DocxOptions): ISectionOptions 
     properties: {
       page: {
         size: { width: mmToTwip(PAPER_MM.A4.w), height: mmToTwip(PAPER_MM.A4.h), ...(land ? { orientation: PageOrientation.LANDSCAPE } : {}) },
-        margin: { top: mmToTwip(A4_MARGIN_MM), bottom: mmToTwip(A4_MARGIN_MM), left: mmToTwip(A4_MARGIN_MM), right: mmToTwip(A4_MARGIN_MM), footer: mmToTwip(6) },
+        margin: { top: mmToTwip(land ? 8 : A4_MARGIN_MM), bottom: mmToTwip(land ? 9 : A4_MARGIN_MM), left: mmToTwip(A4_MARGIN_MM), right: mmToTwip(A4_MARGIN_MM), footer: mmToTwip(land ? 4 : 6) },
       },
     },
     footers: { default: footer(opts) },
     children: [
-      para([run(page.title, { size: land ? 15 : 16, bold: true }, mode)], AlignmentType.CENTER, { spacing: { before: 0, after: 60 } }),
-      ...(page.subtitle ? [para([run(page.subtitle, { size: 12 }, mode)], AlignmentType.CENTER, { spacing: { before: 0, after: page.legend ? 40 : 120 } })] : []),
-      ...(page.legend ? [para([run(page.legend, { size: 9.5, color: GRAY }, mode)], AlignmentType.CENTER, { spacing: { before: 0, after: 100 } })] : []),
+      // 橫式公告：標題與人數同一行，省下高度讓 45 人以上也擠得進一頁
+      para([run(land && page.subtitle ? `${page.title}　${page.subtitle}` : page.title, { size: land ? 14 : 16, bold: true }, mode)], AlignmentType.CENTER, { spacing: { before: 0, after: land ? 30 : 60 } }),
+      ...(page.subtitle && !land ? [para([run(page.subtitle, { size: 12 }, mode)], AlignmentType.CENTER, { spacing: { before: 0, after: page.legend ? 40 : 120 } })] : []),
+      ...(page.legend ? [para([run(page.legend, { size: land ? 8 : 9.5, color: GRAY }, mode)], AlignmentType.CENTER, { spacing: { before: 0, after: land ? 50 : 100 } })] : []),
       new Table({ width: { size: columnWidths.reduce((a, b) => a + b, 0), type: WidthType.DXA }, columnWidths, layout: TableLayoutType.FIXED, rows }),
+      // Word 表格後一定要有一個段落；橫式公告表剛好填滿一頁時，這個段落會獨自掉到下一頁，所以壓成極小
+      ...(land ? [line([], { h: 0.35 })] : []),
     ],
   };
 }
