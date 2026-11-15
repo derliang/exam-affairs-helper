@@ -172,6 +172,7 @@ export function seatingInputOf(doc: Doc, exam: ExamConfig, now: string): RunSeat
     ...(rosterNameDiffs(doc, exam).length ? { rosterNames: rosterNameDiffs(doc, exam) } : {}),
     periods: examSubjectPeriods(exam, doc.settings),
     reserveMode: reserveModeOf(exam),
+    ...(exam.reserveLayout === 'min-rows' ? { reserveLayout: 'min-rows' as const } : {}),
     now,
   };
 }
@@ -299,6 +300,7 @@ export function detachPreview(doc: Doc, exam: ExamConfig): DetachResult {
     classes: examClasses(doc, exam),
     periods: examSubjectPeriods(exam, doc.settings),
     mode: reserveModeOf(exam),
+    ...(exam.reserveLayout === 'min-rows' ? { reserveLayout: 'min-rows' as const } : {}),
   });
 }
 

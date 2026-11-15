@@ -8,7 +8,7 @@
 import type { ExamConfig, LabelPaper } from '../../data';
 import { subjectShort } from '../../core/subjectShort';
 import { dataVersion } from '../../core/version';
-import { defaultLabelLayout, type LabelPageModel, type TablePageModel, type CellModel, type PersonModel, type SeatPageModel } from '../../export/model';
+import { defaultLabelLayout, textEm, type LabelPageModel, type TablePageModel, type CellModel, type PersonModel, type SeatPageModel } from '../../export/model';
 import { examEntries } from '../seating';
 import type { Doc } from '../store';
 import { astSlots, awayStudy, usageCell, type AstPlan, type AstSlot } from './model';
@@ -192,8 +192,8 @@ function announcePages(c: Ctx): TablePageModel[] {
     else headGroups.push({ text: dayOf(s), span: 1 });
   }
   const heads = [...lead, ...c.slots.map((s) => `${s.label.slice(dayOf(s).length).trim()} ${s.subjectIds.map((i) => sub(c, i)).join('、')}`)];
-  // 欄寬依表頭字數給，讓「時段四 公民與社會」這種長科目名不折行
-  const widths = [0.7, 1.3, ...(c.hasExamNo ? [1.2] : []), ...heads.slice(lead.length).map((h) => Math.max(1.4, h.length * 0.2))];
+  // 欄寬（em）：取表頭與所有格子的最大字寬，教室名稱不折行不截字（#259）
+  const colEm: number[] = heads.map((h) => textEm(h, true));
   return classes.map((cl): TablePageModel => {
     const students = c.plan.input.students.filter((s) => s.classNo === cl).sort((a, b) => a.seatNo - b.seatNo);
     const kinds: ('exam' | 'study' | undefined)[][] = [];
@@ -215,8 +215,9 @@ function announcePages(c: Ctx): TablePageModel[] {
       kinds.push(k);
       return [String(s.seatNo), s.name, ...(c.hasExamNo ? [c.examNoOf.get(code) ?? ''] : []), ...cells];
     });
+    const widths = colEm.map((w, i) => Math.max(w, ...rows.map((r) => textEm(r[i] ?? '', true))) + 1.2);
     return {
-      kind: 'table', landscape: true, title: `${c.exam.name}　班級公告　${c.className(cl)}班`,
+      kind: 'table', landscape: true, emWidths: true, title: `${c.exam.name}　班級公告　${c.className(cl)}班`,
       subtitle: `共 ${rows.length} 人`,
       legend: '粗體＝考試座位（排－深位；沒寫教室就是在本班教室）　灰底＝自習（寫教室）　—＝不考也不自習',
       heads, headGroups, widths, rows, cellKinds: kinds,

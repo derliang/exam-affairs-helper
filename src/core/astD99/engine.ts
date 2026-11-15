@@ -13,6 +13,7 @@
  * 同分決勝（DESIGN 10.14，使用者 2026-11-12 確認）：班級教室依班序靠前者優先、綜合教室排後；
  *   同時段考場編號小者先排；再比學號（班座號）小者。
  */
+import { balanceRows } from '../../data/helpers';
 import type { SeatPos } from '../../data/types';
 import {
   codeOf,
@@ -491,12 +492,19 @@ class Ctx {
     let mixed = 0;
     const examCount = new Map<number, number>();
     for (const [r, m] of rooms) {
-      const lay = layoutRoom(this.rooms[r]!, this.orderedSubjects(m, order));
+      const lay = layoutRoom(this.shapeRoom(this.rooms[r]!, m), this.orderedSubjects(m, order));
       mixed += lay.mixedRows.length;
       examCount.set(r, [...m.values()].reduce((a, l) => a + l.length, 0));
     }
     const rankKey = [...S].map((r) => this.rooms[r]!.rank).sort((a, b) => a - b);
     return { key: S.join(','), rankKey, examRoom, studyRoom, rooms, unplaced, used, displaced, leave, balance, mixed, examCount, usedApprovals };
+  }
+
+  /** 綜合教室預設「最少深位」（#258）：把各排縮成平均人數（差不超過 1），再交給 layoutRoom 逐排排滿；其他教室、min-rows 原樣 */
+  private shapeRoom(room: Room, m: Map<string, Stu[]>): Pick<Room, 'rows'> {
+    if (room.kind !== 'reserve' || this.input.reserveLayout === 'min-rows') return room;
+    const n = [...m.values()].reduce((a, l) => a + l.length, 0);
+    return { rows: balanceRows(room.rows, n) };
   }
 
   private orderedSubjects(m: Map<string, Stu[]>, order: Map<string, number>): { subject: string; students: Stu[] }[] {
@@ -524,7 +532,7 @@ class Ctx {
       for (const r of [...p.rooms.keys()].sort((a, b) => a - b)) {
         const room = this.rooms[r]!;
         u[room.id] = 'exam';
-        const lay = layoutRoom(room, this.orderedSubjects(p.rooms.get(r)!, order));
+        const lay = layoutRoom(this.shapeRoom(room, p.rooms.get(r)!), this.orderedSubjects(p.rooms.get(r)!, order));
         const placed = alignSeats(lay.placed, room, lastSeat);
         for (const x of placed) {
           exams.push({ slotId: slot.id, code: x.st.code, subjectId: x.subject, roomId: room.id, row: x.row, depth: x.depth });

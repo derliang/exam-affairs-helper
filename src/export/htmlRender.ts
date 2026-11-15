@@ -108,7 +108,7 @@ function tableHtml(p: TablePageModel, o: HtmlOptions): string {
   const tr = (cells: string[], tag: 'td' | 'th', cls = '') =>
     `<tr${cls}>${cells.map((c, i) => `<${tag} style="width:${(((p.widths[i] ?? 1) * 100) / sum).toFixed(1)}%">${esc(c)}</${tag}>`).join('')}</tr>`;
   const land = !!p.landscape;
-  const lf = landscapeFit(p.rows.length + (p.totalRow ? 1 : 0), p.headGroups ? 2 : 1);
+  const lf = landscapeFit(p.rows.length + (p.totalRow ? 1 : 0), p.headGroups ? 2 : 1, p.emWidths ? sum : undefined);
   const fit = land ? lf.rowMm : 9;
   const kcls = (ri: number, ci: number) => (p.cellKinds?.[ri]?.[ci] ? ` class="k-${p.cellKinds[ri]![ci]}"` : '');
   const rows = p.rows.map((r, ri) => `<tr>${r.map((c, ci) => `<td${kcls(ri, ci)} style="width:${(((p.widths[ci] ?? 1) * 100) / sum).toFixed(1)}%">${esc(c)}</td>`).join('')}</tr>`).join('') + (p.totalRow ? tr(p.totalRow, 'td', ' class="total"') : '');

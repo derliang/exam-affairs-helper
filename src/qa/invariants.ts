@@ -196,6 +196,7 @@ export function checkMarksAndDetach(input: RunSeatingInput, r: SeatingResult, sp
   // INV-12 抽離考試座位：每科每間教室已坐座位為前段（空位只在最後）；整科同班學號沿座位遞增
   const perSubject = new Map<string, { code: string; room: number; ord: number }[]>();
   const perRoom = new Map<string, Set<number>>();
+  const rowCount = new Map<string, Map<number, number>>();
   for (const d of r.detaches) {
     if (d.purpose !== 'exam' || !d.seat) continue;
     const room = rooms.get(d.roomId);
@@ -205,8 +206,33 @@ export function checkMarksAndDetach(input: RunSeatingInput, r: SeatingResult, sp
     perSubject.set(d.subjectId, [...(perSubject.get(d.subjectId) ?? []), { code: d.code, room: input.classrooms.findIndex((c) => c.id === d.roomId), ord }]);
     const k = `${d.subjectId}/${d.roomId}`;
     perRoom.set(k, (perRoom.get(k) ?? new Set<number>()).add(ord));
+    const rc = rowCount.get(k) ?? new Map<number, number>();
+    rc.set(seat.row, (rc.get(seat.row) ?? 0) + 1);
+    rowCount.set(k, rc);
   }
-  for (const [k, s] of perRoom) for (let i = 0; i < s.size; i++) if (!s.has(i)) { bad.push(`INV-12 ${k} 抽離座位中間有空位`); break; }
+  // #258：預設「最少深位」——沒坐滿的教室把人平均分到各排（各排人數差不超過 1），每排只坐前幾個座位；坐滿的教室仍是前段
+  for (const [k, s] of perRoom) {
+    const room = rooms.get(k.slice(k.indexOf('/') + 1));
+    const rc = rowCount.get(k)!;
+    const seatsByRow = new Map<number, number>();
+    if (room) for (const st of classroomSeats(room)) seatsByRow.set(st.row, (seatsByRow.get(st.row) ?? 0) + 1);
+    const full = room ? s.size >= classroomSeats(room).length : false;
+    if (full) continue;
+    const counts = [...seatsByRow.keys()].map((row) => rc.get(row) ?? 0);
+    const cap = [...seatsByRow.values()];
+    // 有人的排各自是前段（該排第 1 個座位起連續）
+    const rowOrds = new Map<number, number[]>();
+    if (room) classroomSeats(room).forEach((st, i) => { if (s.has(i)) rowOrds.set(st.row, [...(rowOrds.get(st.row) ?? []), i]); });
+    let gap = false;
+    for (const [row, ords] of rowOrds) {
+      const first = classroomSeats(room!).findIndex((st) => st.row === row);
+      ords.sort((x, y) => x - y);
+      if (ords.some((o, i) => o !== first + i)) gap = true;
+    }
+    // 各排人數差不超過 1（只比還有空位容量的排）
+    const spread = counts.some((c, i) => cap[i]! > c && counts.some((d) => d - c > 1));
+    if (gap || spread) bad.push(`INV-12 ${k} 抽離座位沒有平均分到各排或排內有空位`);
+  }
   for (const [sid, l] of perSubject) {
     l.sort((a, b) => a.room - b.room || a.ord - b.ord);
     const last = new Map<number, number>();
