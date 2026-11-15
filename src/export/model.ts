@@ -314,7 +314,7 @@ const subjectShortEq = (full: string, short: string): boolean => subjectShort(fu
 export const isSpecial = (c: CellModel): boolean => (c.corners?.length ?? 0) > 0;
 
 /** 人員格的一行：runs 依序畫，pt 為字級 */
-export interface PersonLine { runs: { text: string; bold?: boolean }[]; pt: number; gapBefore: number; /** 優先保字級的行（#212：兩人格的「班級｜姓名」） */ pri?: boolean }
+export interface PersonLine { runs: { text: string; bold?: boolean }[]; pt: number; gapBefore: number; /** 估計折成幾行（預設 1）；高度已含折行 */ n?: number; /** 優先保字級的行（#212：兩人格的「班級｜姓名」） */ pri?: boolean }
 
 /**
  * 預備教室／綜合教室／整合標籤的格內排法（v2.36）：1 人＝大字編號＋「班級｜姓名」＋時程行；
@@ -367,7 +367,19 @@ export function personLayout(
     const kO = Math.min(1, Math.max(0.2, (avail2 - hN * kN) / Math.max(1, hO)));
     lines = lines.map((l) => ({ ...l, pt: Math.max(6, Math.floor(l.pt * (l.pri ? kN : kO) * 2) / 2) }));
   } else if (k < 1) lines = lines.map((l) => ({ ...l, pt: Math.max(6, Math.floor(l.pt * k * 2) / 2) }));
-  return { lines, total: height(lines, 1) };
+  // #220：6pt 下限加固定行距、加上長科目名折行（例「第三天 時段二 公民與社會」在窄格折成兩行）後，
+  // 整塊仍可能比格子高，最後一行就被列高切掉一半。這裡估計每行折成幾行，放不下就連下限與行距一起再等比縮（4pt 為底），重複到放得進為止
+  const txt = (l: PersonLine): string => l.runs.map((x) => x.text).join('');
+  const hN = (ls: PersonLine[]): number => ls.reduce((a, l) => a + l.pt * (l.n ?? 1) * PT * 1.15 + l.gapBefore, 0);
+  let total = 0;
+  for (let it = 0; it < 5; it++) {
+    lines = lines.map((l) => ({ ...l, n: Math.max(1, Math.ceil(textWidthMm(txt(l), l.pt, true) / (w * 0.97))) }));
+    total = hN(lines);
+    if (total <= avail + 0.05) break;
+    const f = Math.max(0.3, avail / total);
+    lines = lines.map((l) => ({ ...l, pt: Math.max(4, Math.floor(l.pt * f * 2) / 2), gapBefore: l.gapBefore * f }));
+  }
+  return { lines, total };
 }
 
 export const SLOT_TIP = '格內每個人一區：班級座號、姓名、第幾天考什麼科目；3 人以上輪流的座位列在座位表下一頁。抽離自習不排座位，只出名單。';
