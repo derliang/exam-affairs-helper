@@ -63,7 +63,18 @@ function parseSheet(xml: string, shared: string[]): string[][] {
   return rows;
 }
 
+export const XLS_MESSAGE = '這是舊版 Excel（.xls），請用 Excel 另存新檔成 .xlsx 後再匯入';
+
+/** 舊版 .xls（OLE 複合檔）的檔頭 D0 CF 11 E0（#202） */
+export function isLegacyXls(data: ArrayBuffer | Uint8Array): boolean {
+  const b = data instanceof Uint8Array ? data : new Uint8Array(data);
+  return b.length >= 4 && b[0] === 0xd0 && b[1] === 0xcf && b[2] === 0x11 && b[3] === 0xe0;
+}
+
+export class XlsError extends Error {}
+
 export async function readXlsx(data: ArrayBuffer | Uint8Array): Promise<Sheet[]> {
+  if (isLegacyXls(data)) throw new XlsError(XLS_MESSAGE);
   const zip = await JSZip.loadAsync(data);
   const wb = await zip.file('xl/workbook.xml')?.async('string');
   if (!wb) throw new Error('不是有效的 Excel 檔（找不到 workbook.xml）');
