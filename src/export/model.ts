@@ -112,6 +112,9 @@ export interface LabelPageModel {
   flipNotes?: string[];
   /** 依座位順序，長度 ≤ cols*rows；其餘格空白 */
   cells: CellModel[];
+  /** 教室超出一張標籤紙時自動分張（#210）：本張左下角的座位（排、深位，預設 1、1），與「第 N／共 M 張」 */
+  origin?: { row: number; depth: number };
+  part?: { n: number; of: number };
 }
 export interface ListRow {
   subject: string;
@@ -510,12 +513,21 @@ export function buildSeatPages(input: ExportInput, scope: Scope = 'all'): SeatPa
  * 標籤依實際座位位置排（與座位表同一張圖，只是沒有講臺與統計）：欄＝排（左→右），列＝深位（最大深位在上、1 在下，0101 在左下角）。
  * 沒有座位的位置留空白格。超出標籤格數時丟錯，不默默截斷。
  */
-function checkLabelBounds(roomName: string, seats: { row: number; depth: number }[], layout: { cols: number; rows: number }): void {
-  const maxRow = Math.max(0, ...seats.map((s) => s.row));
-  const maxDepth = Math.max(0, ...seats.map((s) => s.depth));
-  if (maxRow > layout.cols || maxDepth > layout.rows) {
-    throw new Error(`教室「${roomName}」的座位排到第 ${maxRow} 排、深位 ${maxDepth}，超過標籤每張 ${layout.cols} 排×${layout.rows} 深位（${layout.cols}×${layout.rows}）`);
+/**
+ * 教室比一張標籤紙大（#210：排、深位最多 8）時依紙張格數切成多張，每張左下角為 origin；
+ * 沒座位的區塊不出張。不超出就只有一張、origin 為 1-1，與舊行為相同。
+ */
+export function splitLabelTiles<T extends { seat: { row: number; depth: number } }>(cells: T[], layout: { cols: number; rows: number }): { origin: { row: number; depth: number }; cells: T[] }[] {
+  const maxRow = Math.max(1, ...cells.map((c) => c.seat.row));
+  const maxDepth = Math.max(1, ...cells.map((c) => c.seat.depth));
+  const tiles: { origin: { row: number; depth: number }; cells: T[] }[] = [];
+  for (let r0 = 1; r0 <= maxRow; r0 += layout.cols) {
+    for (let d0 = 1; d0 <= maxDepth; d0 += layout.rows) {
+      const mine = cells.filter((c) => c.seat.row >= r0 && c.seat.row < r0 + layout.cols && c.seat.depth >= d0 && c.seat.depth < d0 + layout.rows);
+      if (mine.length) tiles.push({ origin: { row: r0, depth: d0 }, cells: mine });
+    }
   }
+  return tiles;
 }
 
 /** 標籤頁的格子陣列（由左到右、由上到下，長度 cols×rows）：依座位位置放，沒人的位置是 undefined */
@@ -523,8 +535,8 @@ export function labelGrid(p: LabelPageModel): (CellModel | undefined)[] {
   const { cols, rows } = p.layout;
   const g: (CellModel | undefined)[] = Array.from({ length: cols * rows }, () => undefined);
   for (const c of p.cells) {
-    const col = c.seat.row - 1;
-    const rowIdx = rows - c.seat.depth;
+    const col = c.seat.row - (p.origin?.row ?? 1);
+    const rowIdx = rows - 1 - (c.seat.depth - (p.origin?.depth ?? 1));
     if (col >= 0 && col < cols && rowIdx >= 0 && rowIdx < rows) g[rowIdx * cols + col] = c;
   }
   return g;
@@ -542,16 +554,20 @@ export function buildLabelPages(input: ExportInput, scope: Scope = 'all'): Label
       .filter((a) => a.classroomId === id)
       .sort((a, b) => a.row - b.row || a.depth - b.depth);
     if (mine.length === 0) continue;
-    checkLabelBounds(room.name, mine.map((a) => a), layout);
-    pages.push({
-      kind: 'label',
-      title: `${input.exam.name}　${room.name}`,
-      examName: input.exam.name,
-      ...(input.labelHeading?.trim() ? { heading: input.labelHeading.trim() } : {}),
-      roomName: room.name,
-      layout,
-      notes: labelNoteLines(input.settings.labelNotes),
-      cells: mine.map((a) => makeCell(a.code, a, ctx)),
+    const tiles = splitLabelTiles(mine.map((a) => ({ seat: { row: a.row, depth: a.depth }, a })), layout);
+    tiles.forEach((t, i) => {
+      const suffix = tiles.length > 1 ? `（第 ${i + 1}／${tiles.length} 張）` : '';
+      pages.push({
+        kind: 'label',
+        title: `${input.exam.name}　${room.name}${suffix}`,
+        examName: input.exam.name,
+        ...(input.labelHeading?.trim() ? { heading: input.labelHeading.trim() } : {}),
+        roomName: room.name + suffix,
+        layout,
+        notes: labelNoteLines(input.settings.labelNotes),
+        cells: t.cells.map((x) => makeCell(x.a.code, x.a, ctx)),
+        ...(tiles.length > 1 ? { origin: t.origin, part: { n: i + 1, of: tiles.length } } : {}),
+      });
     });
     const lp = pages[pages.length - 1]!;
     const lnotes = applyCorners(lp.cells, input.exam.subjects.map((s) => s.name));
@@ -566,16 +582,19 @@ export function buildLabelPages(input: ExportInput, scope: Scope = 'all'): Label
       const room = input.settings.classrooms.find((c) => c.id === roomId);
       if (!seats || !room) continue;
       const list = [...seats.values()].sort((a, b) => a.seat.row - b.seat.row || a.seat.depth - b.seat.depth);
-      checkLabelBounds(room.name, list.map((x) => x.seat), layout);
+      const tiles = splitLabelTiles(list, layout);
+      tiles.forEach((t, i) => {
+      const suffix = tiles.length > 1 ? `（第 ${i + 1}／${tiles.length} 張）` : '';
       pages.push({
         kind: 'label',
-        title: `${input.exam.name}　${room.name}　抽離考試`,
+        title: `${input.exam.name}　${room.name}　抽離考試${suffix}`,
         examName: input.exam.name,
         ...(input.labelHeading?.trim() ? { heading: input.labelHeading.trim() } : {}),
-        roomName: `${room.name}　抽離考試`,
+        roomName: `${room.name}　抽離考試${suffix}`,
         layout,
         notes: labelNoteLines(input.settings.labelNotes),
-        cells: list.map((x) => ({
+        ...(tiles.length > 1 ? { origin: t.origin, part: { n: i + 1, of: tiles.length } } : {}),
+        cells: t.cells.map((x) => ({
           coord: seatLabel(x.seat),
           seat: { row: x.seat.row, depth: x.seat.depth },
           code: '',
@@ -589,6 +608,7 @@ export function buildLabelPages(input: ExportInput, scope: Scope = 'all'): Label
           periodLines: x.lines.sort((a, b) => a.period - b.period).map(({ head, text }) => ({ head, text })),
           persons: personsOf(x, ctx),
         })),
+      });
       });
     }
   }
