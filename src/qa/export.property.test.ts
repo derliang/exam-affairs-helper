@@ -136,8 +136,10 @@ describe('輸出版面模型與排座結果逐筆一致', () => {
       const list = buildDetachList(input);
       const expected = new Map<string, number>();
       const bump = (n: string) => n && expected.set(n, (expected.get(n) ?? 0) + 1);
-      for (const p of seat) for (const c of p.cells.values()) bump(c.name);
-      for (const p of label) for (const c of p.cells) bump(c.name);
+      // 人員格（預備教室等）：2 人以內各印一區；3 人以上格內只印座位，姓名在「輪流座位」頁
+      const bumpCell = (c: { name: string; persons?: { name: string }[] }) => (c.persons ? (c.persons.length <= 2 ? c.persons.forEach((q) => bump(q.name)) : undefined) : bump(c.name));
+      for (const p of seat) { for (const c of p.cells.values()) bumpCell(c); for (const r of p.rotation?.rows ?? []) bump(r[4]!); }
+      for (const p of label) for (const c of p.cells) bumpCell(c);
       for (const r of list.rows) bump(r.name);
 
       const docx = await docxText(await renderDocx({ seat, label, list }, { fonts, ...meta }));

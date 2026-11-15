@@ -251,13 +251,15 @@ describe('PDF 列印 HTML：照稿件版面（設計系統成品頁「座位表�
     expect(h).toContain('資料版本碼：A1B2C3D4');
   });
 
-  it('座位表：深位 1 在最下列、沒人的位置畫斜線底、有標示的格子加框', () => {
+  it('座位表：深位 1 在最下列、沒人的位置畫斜線底、特殊考生改右下角單字角標（不再加粗框）', () => {
     const h = html();
     expect(h.indexOf('>0105<')).toBeGreaterThan(-1);
     expect(h).toContain('pp-e'); // 空位
-    expect(h).toContain('pp-c mk'); // 有標示
-    expect(h).toContain('<span class="pp-mk x">X 英文</span>');
-    expect(h).toContain('<span class="pp-mk add">＋ 數學</span>');
+    expect(h).not.toContain('pp-c mk'); // v2.36：拿掉整格粗框
+    expect(h).toContain('class="pp-cn"');
+    expect(h).toContain('<span class="pp-mk x">英</span>');
+    expect(h).toContain('<span class="pp-mk add">＋數</span>');
+    expect(h).not.toContain('X 英文'); // 也沒有整句小牌
   });
 
   it('統計表：每班人數相同的科目合併成一列', () => {
@@ -289,12 +291,109 @@ describe('PDF 列印 HTML：照稿件版面（設計系統成品頁「座位表�
     expect(h8).toContain('height:33.6mm');
   });
 
-  it('預備教室座位表（時段版）：白底、格內每行一個時段、頁尾有格內說明、沒有統計表', () => {
+  it('預備教室座位表（時段版）：白底、格內每人一區、格內說明、下方有時段統計表（#220）', () => {
     const f = makeFixture();
     const p = buildSeatPages(f).find((x) => x.slotMode)!;
     const h = renderPrintHtml({ seat: [p] }, meta);
-    expect(h).toContain('pp-pll');
-    expect(h).toContain('格內每一行是一個時段');
-    expect(h).not.toContain('<table class="pp-st">');
+    expect(h).toContain('pp-pe');
+    expect(h).toContain('格內每個人一區');
+    expect(h).toContain('<table class="pp-st">');
+    expect(h).toContain('不重複人數');
+  });
+});
+
+describe('v2.36 輸出紙面補強（B 類）', () => {
+  it('#223 角標：不考＝「英」、加考＝「＋數」，Word 與列印頁都印、不再有整格粗框', async () => {
+    const f = makeFixture();
+    const p = buildSeatPages(f, 'class')[0]!;
+    const c2 = p.cells.get('1-2')!;
+    expect(c2.corners).toEqual([{ kind: 'x', text: '英' }]);
+    expect(p.cells.get('1-3')!.corners).toEqual([{ kind: 'add', text: '＋數' }]);
+    const { text } = await unzip(await renderDocx({ seat: [p] }, { fonts, ...meta }));
+    const xml = await text('word/document.xml');
+    expect(xml).toContain('>\u00a0英\u00a0<'.replace(/\u00a0/g, ' '));
+    expect(xml).not.toContain('FFE08A'); // 座位表沒有淡黃底
+  });
+
+  it('#223 反標：某科不考超過該頁一半時改標「有考」者，頁首寫明', () => {
+    const f = makeFixture();
+    // 甲教室 18 人，讓 10 人不考英文（超過一半）
+    f.result.marks = f.result.assignments.filter((a) => a.classroomId === 'r1').slice(0, 10).map((a) => ({ code: a.code, subjectId: 'en', mode: 'absent' as const }));
+    const p = buildSeatPages(f, 'class')[0]!;
+    expect(p.flipNotes).toEqual(['本頁多數不考英文，只標有考者']);
+    expect(p.chips).toContain('本頁多數不考英文，只標有考者');
+    const absentCell = p.cells.get('1-1')!;
+    expect(absentCell.corners).toEqual([]); // 不考的人不標
+    const takes = [...p.cells.values()].filter((c) => c.corners?.some((k) => k.kind === 'take' && k.text === '考英'));
+    expect(takes.length).toBe(8);
+    expect(renderPrintHtml({ seat: [p] }, meta)).toContain('>考英<');
+  });
+
+  it('#223 標籤同樣用單字角標，並把反標說明放在頁首', () => {
+    const f = makeFixture();
+    const lp = buildLabelPages(f, 'class')[0]!;
+    expect(lp.cells.find((c) => c.code === '0102')!.corners).toEqual([{ kind: 'x', text: '英' }]);
+    expect(renderPrintHtml({ label: [lp] }, meta)).not.toContain('pp-c mk');
+  });
+
+  it('#221 #212 預備教室座位表：格內每人一區，2 人輪流各一區、有大字編號與「班級｜姓名」', () => {
+    const f = makeFixture();
+    const p = buildSeatPages(f).find((x) => x.slotMode)!;
+    const c = p.cells.get('1-1')!;
+    expect(c.persons!.map((q) => q.code)).toEqual(['0105']);
+    expect(c.persons![0]).toMatchObject({ classLabel: '溫', name: '甲生105' });
+    expect(c.persons![0]!.sched[0]).toMatch(/英文/);
+  });
+
+  it('#220 預備教室統計表：每個時段一列、最後一列「不重複人數」', () => {
+    const f = makeFixture();
+    const p = buildSeatPages(f).find((x) => x.slotMode)!;
+    const t = p.stats.table;
+    expect(t.headLabel).toBe('時段');
+    expect(t.rows[t.rows.length - 1]!.label).toBe('不重複人數');
+    expect(t.rows[t.rows.length - 1]!.total).toBe(p.stats.total);
+  });
+
+  it('#221 3 人以上輪流：格內只印座位，其餘列在座位表下一頁（Word 與列印頁都多一頁）', async () => {
+    const f = makeFixture();
+    f.result.detaches = ['0105', '0106', '0107'].map((code, i) => ({ code, subjectId: i === 0 ? 'zh' : 'en', purpose: 'exam' as const, roomId: 'rv', seat: { row: 1, depth: 1 } }));
+    const p = buildSeatPages(f).find((x) => x.slotMode)!;
+    expect(p.cells.get('1-1')!.persons).toHaveLength(3);
+    expect(p.rotation!.rows.length).toBeGreaterThanOrEqual(3);
+    const h = renderPrintHtml({ seat: [p] }, meta);
+    expect(h).toContain('輪流座位');
+    expect(h).toContain('共 3 人輪流');
+    const { text } = await unzip(await renderDocx({ seat: [p] }, { fonts, ...meta }));
+    expect(await text('word/document.xml')).toContain('輪流座位');
+  });
+
+  it('#219 抽離自習名單：標題下一行「第N天　時段X　科目」，沒有日期欄', async () => {
+    const f = makeFixture();
+    const l = buildDetachList(f);
+    const lists = (Array.isArray(l) ? l : [l]) as { title: string; subtitle?: string }[];
+    expect(lists.length).toBeGreaterThan(0);
+    const study = (await import('./index')).buildStudyLists(f);
+    expect(study.length).toBeGreaterThan(0);
+    expect(study[0]!.subtitle).toBe('國文'); // 沒有節次表就只寫科目；有節次表見 periodDetach.test
+    const h = renderPrintHtml({ list: study }, meta);
+    expect(h).toContain(study[0]!.subtitle!);
+    expect(h).not.toContain('日期');
+  });
+
+  it('#215 橫式公告表：Word 頁面橫向、兩層表頭（跨欄）、自習格灰底', async () => {
+    const t = {
+      kind: 'table' as const, landscape: true, title: '公告', heads: ['座號', '姓名', '時段一 國文', '時段二 英文'],
+      headGroups: [{ text: '', span: 2 }, { text: '第一天', span: 2 }], widths: [1, 1, 2, 2],
+      rows: [['1', '甲', '3－2', '自習 乙教室']], cellKinds: [[undefined, undefined, 'exam' as const, 'study' as const]],
+    };
+    const { text } = await unzip(await renderDocx({ table: [t] }, { fonts, ...meta }));
+    const xml = await text('word/document.xml');
+    expect(xml).toContain('w:orient="landscape"');
+    expect(xml).toContain('w:gridSpan w:val="2"');
+    expect(xml).toContain('D9D9D9');
+    const h = renderPrintHtml({ table: [t] }, meta);
+    expect(h).toContain('page:a4l');
+    expect(h).toContain('colspan="2"');
+    expect(h).toContain('k-study');
   });
 });
