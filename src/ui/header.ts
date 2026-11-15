@@ -15,7 +15,9 @@ export function headerTemplates(s: Pick<Settings, 'headerText' | 'seatHeader' | 
 
 /** 把 {學年}{次別}{類型} 換成這次模擬考的內容 */
 export function fillHeader(template: string, exam: Pick<ExamConfig, 'kind' | 'round' | 'createdAt'>): string {
-  return template
+  // #255：會考、分科沒有次別，整段「第{次別}次」拿掉，不留下「第次」
+  const t = exam.round ? template : template.replaceAll('第{次別}次', '');
+  return t
     .replaceAll('{學年}', String(examYear(exam)))
     .replaceAll('{次別}', exam.round ? String(exam.round) : '')
     .replaceAll('{類型}', KIND_LABEL[exam.kind]);

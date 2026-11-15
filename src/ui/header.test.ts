@@ -17,4 +17,9 @@ describe('表頭範本（校-54）', () => {
     expect(fillHeader(DEFAULT_SEAT_HEADER, { kind: 'gsat', round: 2, createdAt: '2026-10-01T02:00:00Z' })).toBe('【115學年第2次學測模擬考】座位表');
     expect(fillHeader('{學年}{類型}', { kind: 'bcct', createdAt: '2026-03-01T02:00:00Z' })).toBe('114會考');
   });
+  it('#255 會考、分科沒有次別：整段「第{次別}次」拿掉，不留下「第次」', () => {
+    expect(fillHeader(DEFAULT_LABEL_HEADER, { kind: 'bcct', createdAt: '2026-10-01T02:00:00Z' })).toBe('115學年會考模擬考');
+    expect(fillHeader(DEFAULT_SEAT_HEADER, { kind: 'ast', createdAt: '2026-10-01T02:00:00Z' })).toBe('【115學年分科模擬考】座位表');
+    expect(fillHeader(DEFAULT_LABEL_HEADER, { kind: 'gsat', round: 1, createdAt: '2026-10-01T02:00:00Z' })).toBe('115學年第1次學測模擬考');
+  });
 });

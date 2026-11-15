@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { ExamConfig, ExamEntry } from '../data';
 import { afterExport, checkExamName, confirmCopy, firstIssueStep, flowOf, nextAction, prerequisites, summaryText } from './flow';
-import { reseat, setMarkChoice } from './seating';
+import { isStale, reseat, setMarkChoice } from './seating';
 import type { Doc } from './store';
-import { examsMadeStale, planImport } from './rosterIO';
+import { examsMadeStale, planImport, rosterChanged } from './rosterIO';
 
 const NOW = '2026-11-08T10:00:00.000Z';
 
@@ -251,5 +251,24 @@ describe('#206 取代共用名單預警', () => {
     expect(examsMadeStale(base, 'senior', same)).toEqual([]);
     const renamed = planImport(base, 'senior', base.rosters.senior.map((s, i) => (i === 0 ? { ...s, name: '換名' } : s)));
     expect(examsMadeStale(base, 'senior', renamed)).toEqual([e.name]);
+  });
+});
+
+describe('#254 名單依學年度分存：匯入別的學年度不影響這個學年度的考試', () => {
+  it('115 學年已排座的考試，在工作資料為 114 學年時匯入 114 名單：不列為會過期、也不標「名單已更動」', () => {
+    const { d, e } = seated();
+    const e115 = { ...e, schoolYear: 115 };
+    const base: Doc = {
+      ...d,
+      exams: d.exams.map((x) => (x.id === e.id ? e115 : x)),
+      rosterYear: 114,
+      rosters: { senior: entries.map((x) => ({ classNo: x.classNo, seatNo: x.seatNo, name: x.name })), junior: [] },
+    };
+    const renamed = planImport(base, 'senior', base.rosters.senior.map((s, i) => (i === 0 ? { ...s, name: '換名' } : s)));
+    expect(examsMadeStale(base, 'senior', renamed)).toEqual([]);
+    // 115 學年自己的名單收在 otherYears；匯入 114 後它沒變，所以考試也不是「名單已更動」
+    const other = { ...base, rosters: { senior: [], junior: [] }, otherYears: { '115': { rosters: { senior: entries.map((x) => ({ classNo: x.classNo, seatNo: x.seatNo, name: x.name })), junior: [] }, classes: base.settings.classes } } };
+    expect(rosterChanged(other, e115)).toBe(false);
+    expect(isStale(other, e115)).toBe(false);
   });
 });
