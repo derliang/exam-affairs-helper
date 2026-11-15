@@ -8,7 +8,7 @@ import { Alert, Badge, Button, FormatPick, Seg, StepHead } from '../components';
 import { AST_STEP_BLURBS } from '../nav';
 import { examEntries } from '../seating';
 import type { Doc } from '../store';
-import { download, kb, openPrintPage } from '../pages/Step6';
+import { download, downloadMany, kb, openPrintPage, wordNoticeText } from '../pages/Step6';
 import { phaseOf } from '../../core/astD99/release';
 import { PhaseCard, VersionCard } from './AstRelease';
 import { astPlan } from './model';
@@ -72,7 +72,8 @@ export function AstStep6(p: { doc: Doc; exam: ExamConfig; onGoStep: (n: 2 | 3 | 
     setBusy(true); setErr('');
     try {
       const res = await runAstExport(outs, keys, format, paper, exam.name, loader);
-      for (const f of res) { if (f.mime === 'text/html') { if (!openPrintPage(f)) throw new Error('瀏覽器擋住了新視窗，請允許本網站開啟彈出視窗後再按一次。'); } else download(f); }
+      for (const f of res.filter((x) => x.mime === 'text/html')) { if (!openPrintPage(f)) throw new Error('瀏覽器擋住了新視窗，請允許本網站開啟彈出視窗後再按一次。'); }
+      await downloadMany(res.filter((x) => x.mime !== 'text/html'));
       setResults(res);
     } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } finally { setBusy(false); }
   };
@@ -126,9 +127,9 @@ export function AstStep6(p: { doc: Doc; exam: ExamConfig; onGoStep: (n: 2 | 3 | 
         {err && <Alert tone="danger">{err}</Alert>}
         {results && (
           <div class="psec">
-            <Alert tone="ok"><b>{format === 'word' ? `已下載 ${results.length} 個檔案` : '已開啟列印用頁面'}</b>{format === 'word' ? '，請看瀏覽器的下載資料夾。' : '，請在新視窗選「列印」→ 目的地選「另存為 PDF」。'}</Alert>
-            <div style="overflow-x:auto"><table class="t compact"><thead><tr><th>檔案</th><th>內容</th><th>大小</th></tr></thead>
-              <tbody>{results.map((f) => <tr key={f.name}><td><b>{f.name}</b></td><td class="muted">{f.desc}</td><td>{kb(typeof f.data === 'string' ? f.data.length : f.data.byteLength)}</td></tr>)}</tbody></table></div>
+            <Alert tone="ok"><b>{format === 'word' ? '下載已送出' : '已開啟列印用頁面'}</b>{format === 'word' ? wordNoticeText(results.length) : '，請在新視窗選「列印」→ 目的地選「另存為 PDF」。'}</Alert>
+            <div style="overflow-x:auto"><table class="t compact"><thead><tr><th>檔案</th><th>內容</th><th>大小</th>{format === 'word' && <th></th>}</tr></thead>
+              <tbody>{results.map((f) => <tr key={f.name}><td><b>{f.name}</b></td><td class="muted">{f.desc}</td><td>{kb(typeof f.data === 'string' ? f.data.length : f.data.byteLength)}</td>{format === 'word' && <td><Button small onClick={() => download(f)}>再下載</Button></td>}</tr>)}</tbody></table></div>
             <p class="small muted">本次版本碼：<Badge>{outs?.version ?? ''}</Badge>（頁尾相同，產生時間 {footerText(new Date().toISOString(), outs?.version ?? '').split('　')[0]}）</p>
             {format === 'word' && <Alert tone="warn">修改 Word 文件後，請自行重新核對；系統不會驗證改後內容。</Alert>}
             {p.onExams && <div><Button kind="primary" onClick={p.onExams}>回模擬考列表</Button></div>}
