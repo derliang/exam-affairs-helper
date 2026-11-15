@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { demoDoc } from './repository';
-import { addStudent, defaultSemester, examYear, newExam, removeStudent, searchStudents, setClassColor, setClassTrack, updateExam, updateStudent } from './store';
+import { addStudent, defaultSemester, examYear, newExam, nextRound, removeStudent, searchStudents, setClassColor, setClassTrack, updateExam, updateStudent, type Doc } from './store';
 
 describe('學生名單', () => {
   it('新增：重複座號、班級不存在、座號越界、姓名空白都擋下', () => {
@@ -139,5 +139,31 @@ describe('學年度可指定（#211）', () => {
     expect(updateExam(b.doc, b.doc.exams[1]!.id, { schoolYear: 1.5 }).ok).toBe(false);
     const { schoolYear: _drop, ...legacy } = a.doc.exams[0]!;
     expect(examYear(legacy)).toBe(115);
+  });
+});
+
+describe('預設次別（#248）', () => {
+  const today = new Date(2026, 10, 15);
+  const withRounds = (rounds: number[]) => {
+    let d: Doc = { ...demoDoc(), exams: [] };
+    rounds.forEach((r, i) => {
+      const x = newExam(d, 'gsat', `舊${i}`, new Date(today.getTime() + i * 1000), { round: r });
+      if (!x.ok) throw new Error(x.error);
+      d = x.doc;
+    });
+    return d;
+  };
+  it('沒有考試就第 1 次；補登缺的次別補回缺的那次，不是筆數 + 1', () => {
+    expect(nextRound(withRounds([]), 'gsat', today)).toBe(1);
+    expect(nextRound(withRounds([3, 4]), 'gsat', today)).toBe(1); // 已有 E3、E4，再建 E1
+    expect(nextRound(withRounds([1, 3, 4]), 'gsat', today)).toBe(2);
+    expect(nextRound(withRounds([1, 2, 3]), 'gsat', today)).toBe(4);
+  });
+  it('新建的學測沒給次別時用這個預設；不同學年度互不影響', () => {
+    const d = withRounds([4]);
+    const r = newExam(d, 'gsat', '補登', new Date(today.getTime() + 9000));
+    expect(r.ok && r.doc.exams.at(-1)!.round).toBe(1);
+    const old = newExam(d, 'gsat', '另一學年', new Date(today.getTime() + 9000), { year: 114 });
+    expect(old.ok && old.doc.exams.at(-1)!.round).toBe(1);
   });
 });
