@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import JSZip from 'jszip';
 import { describe, expect, it } from 'vitest';
 import type { ClassInfo, Classroom, Mark, Subject } from '../data/types';
-import { buildLabelPages, renderDocx, renderPrintHtml } from '../export';
+import { buildLabelPages, buildStudyLists, renderDocx, renderPrintHtml } from '../export';
 import { makeFixture } from '../export/fixtures';
 import { allocateDetaches, periodGroups, type ReserveMode } from './detach';
 import { defaultSchedule, subjectPeriods, type SubjectPeriod } from './periods';
@@ -158,15 +158,20 @@ describe('預備教室合併標籤（D94-5）', () => {
       ['1-2', ['第一天 時段一 英文　溫 07', '第二天 時段一 數學　溫 07']],
     ]);
   });
-  it('列印與 Word 都印出各行，不印時間與姓名', async () => {
+  it('#219 抽離自習名單標題下一行「第N天　時段X　科目」，不新增日期欄', () => {
+    const [l] = buildStudyLists(fixture());
+    expect(l!.subtitle).toBe('第一天　時段三、第二天　時段三　國文');
+    expect(Object.keys(l!.rows[0]!)).not.toContain('date');
+  });
+  it('列印與 Word 都印出各行與姓名（v2.36 改寫 D94-5），不印時間', async () => {
     const pages = buildLabelPages(fixture(), 'reserve');
     const html = renderPrintHtml({ label: pages }, meta);
-    for (const s of ['第一天 時段三', '國綜　溫 05', '國寫　溫 05', '數學　溫 07']) expect(html).toContain(s);
-    expect(html).not.toContain('甲生');
+    for (const s of ['第一天 國綜', '第二天 國寫', '第二天 數學', '甲生105']) expect(html).toContain(s);
+    expect(html).toContain('甲生');
     const z = await JSZip.loadAsync(await renderDocx({ label: pages }, { fonts, ...meta }));
     const xml = await z.file('word/document.xml')!.async('string');
-    for (const s of ['第一天 時段三', '國綜　溫 05', '數學　溫 07']) expect(xml).toContain(s);
-    expect(xml).not.toContain('甲生');
+    for (const s of ['第一天 國綜', '第二天 數學', '甲生105']) expect(xml).toContain(s);
+    expect(xml).toContain('甲生');
   });
 });
 

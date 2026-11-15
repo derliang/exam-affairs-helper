@@ -347,7 +347,9 @@ export function personLayout(
   }
   const height = (ls: PersonLine[], k: number) => ls.reduce((a, l) => a + l.pt * k * PT * 1.15 + l.gapBefore, 0);
   const avail = h - o.topPad - 1;
-  const k = Math.min(1, avail / Math.max(1, height(lines, 1)));
+  // 行間留白是固定值，不跟著縮：只讓字高部分縮到放得進去
+  const gaps = lines.reduce((x, l) => x + l.gapBefore, 0);
+  const k = Math.min(1, Math.max(0.2, (avail - gaps) / Math.max(1, height(lines, 1) - gaps)));
   if (k < 1) lines = lines.map((l) => ({ ...l, pt: Math.max(6, Math.floor(l.pt * k * 2) / 2) }));
   return { lines, total: height(lines, 1) };
 }
@@ -787,4 +789,17 @@ export function periodLineFontPt(lines: readonly { head: string; text: string }[
   const widest = Math.max(...lines.map((l) => emWidth(l.head) * 0.7 + 0.6 + emWidth(l.text)));
   const byW = cellW / widest / PT;
   return Math.max(6, Math.min(26, Math.floor(Math.min(byH, byW) * 2) / 2));
+}
+
+/** 3 人以上輪流的座位清單頁（接在預備教室座位表之後；沒有就 undefined） */
+export function rotationPage(p: SeatPageModel): TablePageModel | undefined {
+  if (!p.rotation) return undefined;
+  return {
+    kind: 'table',
+    title: `${p.heading ?? p.examName}　${p.roomName}　輪流座位`,
+    subtitle: '3 人以上輪流使用的座位（標籤上只印座位）',
+    heads: p.rotation.heads,
+    widths: [1.2, 2.4, 1.4, 0.9, 1.6],
+    rows: p.rotation.rows,
+  };
 }
