@@ -65,7 +65,7 @@ export interface CellModel {
 /** 角標：x＝不考（黑底白字）、add＝加考／抽離考試（白底黑框）、take＝「有考」（該科不考超過一半時反標，白底黑框） */
 export interface CornerTag { kind: 'x' | 'add' | 'take'; text: string }
 /** 坐這格的一個人。sched 每個元素是一行時程，例「第一天 自然、數A」「第1天 時段二 物理」 */
-export interface PersonModel { code: string; classLabel: string; name: string; sched: string[] }
+export interface PersonModel { code: string; classLabel: string; name: string; sched: string[]; /** 只列科目的精簡版（與 sched 逐行對應、時間順序）：格子放不下完整寫法時改用 */ schedShort?: string[] }
 export interface StatsModel {
   perClass: { className: string; count: number }[];
   total: number;
@@ -342,7 +342,10 @@ export function personLayout(
       // 每人兩行：姓名字級上限放寬 15%（#212：兩人格的班級姓名要比一人格更不能縮）；編號一行、「班級｜姓名」一行（#212：原本擠成一行，字只剩約 6.5pt），時程行接在後面
       lines.push({ runs: [{ text: p.code, bold: true }], pt: fitW(p.code, true, o.codePt * 0.5), gapBefore: i === 0 ? 0 : 1.5 });
       lines.push({ runs: [{ text: p.classLabel, bold: true }, { text: ' | ' }, { text: p.name }], pt: namePtFit(p.classLabel, p.name, w, o.nameMax * 1.15), gapBefore: 0.2, pri: true });
-      for (const s of p.sched) lines.push({ runs: [{ text: s, bold: true }], pt: fitW(s, true, o.schedMax), gapBefore: 0.3 });
+      // #220 殘留：兩人合計超過 4 行時（例如各考 3～4 科），完整寫法怎麼縮都放不進格子，最後一行被切；
+      // 這時每人的科目併成一行「科目、科目…」（依時間順序，過長由下面的折行估計再縮）
+      const many = ps.reduce((a, q) => a + q.sched.length, 0) > 4 && ps.every((q) => q.schedShort?.length === q.sched.length);
+      for (const s of many ? [p.schedShort!.join('、')] : p.sched) lines.push({ runs: [{ text: s, bold: true }], pt: fitW(s, true, o.schedMax), gapBefore: 0.3 });
     });
   } else if (ps.length === 1) {
     const p = ps[0]!;
