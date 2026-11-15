@@ -6,6 +6,7 @@
  */
 import { examResult, isStale, validationChecks } from './seating';
 import type { ExamConfig, ExamEntry, Override } from '../data';
+import { settingsForExam } from '../data';
 import type { ExportInput } from '../export';
 import type { preflight } from '../export/plan';
 import type { Doc } from './store';
@@ -27,8 +28,9 @@ export type Prepared =
 export function prepareExport(doc: Doc, exam: ExamConfig): Prepared {
   const students = doc.rosters[exam.division];
   if (students.length === 0) return { ok: false, errors: ['缺學生名單：請先到「共用設定 → 學生名單」匯入或新增學生，再回來下載。'] };
+  const settings = settingsForExam(doc.settings, exam);
   const rooms = exam.classroomIds
-    .map((id) => doc.settings.classrooms.find((c) => c.id === id))
+    .map((id) => settings.classrooms.find((c) => c.id === id))
     .filter((c): c is NonNullable<typeof c> => !!c);
   if (rooms.length === 0) return { ok: false, errors: ['缺教室：這次考試還沒勾選教室，請先到 ③ 教室設定勾選要用的教室，再回來下載。'] };
   const entries = entriesOf(doc, exam);
@@ -40,7 +42,7 @@ export function prepareExport(doc: Doc, exam: ExamConfig): Prepared {
   const failed = validationChecks(doc, exam, result).filter((c) => !c.ok);
   if (failed.length) return { ok: false, errors: [`排座驗證未通過：${failed.map((c) => `${c.title}（${c.detail}）`).join('；')}。請先到 ⑤ 處理並重新排座，再回來下載。`] };
   const tpl = headerTemplates(doc.settings);
-  return { ok: true, warnings: [], input: { settings: doc.settings, exam, students, entries, result, seatHeading: fillHeader(tpl.seat, exam), labelHeading: fillHeader(tpl.label, exam) } };
+  return { ok: true, warnings: [], input: { settings, exam, students, entries, result, seatHeading: fillHeader(tpl.seat, exam), labelHeading: fillHeader(tpl.label, exam) } };
 }
 
 

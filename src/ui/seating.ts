@@ -3,7 +3,7 @@
  * 排座本身在 src/core；這裡負責從 Doc 組輸入、判斷擋下原因與過期、存回結果與覆寫。
  */
 import type { ClassInfo, Classroom, ExamConfig, ExamEntry, MarkMode, MarkRule, Override, SeatingResult, SingleOverride, Track } from '../data';
-import { classroomSeats, studentCode } from '../data';
+import { classroomSeats, effectiveRooms, studentCode } from '../data';
 import { isResolved } from '../import/compare';
 import { subjectShort } from '../core/subjectShort';
 import {
@@ -24,7 +24,7 @@ import {
 } from '../core';
 import { examSubjectPeriods } from '../core/periods';
 import type { Doc, Result } from './store';
-import { roomOverLabelText, roomsMissingTrack, roomsOverLabel } from './rooms';
+import { roomsMissingTrack } from './rooms';
 
 export type StepNo = 1 | 2 | 3 | 4 | 5 | 6;
 
@@ -41,7 +41,7 @@ export const examClasses = (doc: Doc, exam: ExamConfig): ClassInfo[] =>
 
 /** 本次勾選的教室，依 classroomIds 順序（D65） */
 export function examRooms(doc: Doc, exam: ExamConfig): Classroom[] {
-  const byId = new Map(doc.settings.classrooms.map((c) => [c.id, c]));
+  const byId = new Map(effectiveRooms(exam, doc.settings.classrooms).map((c) => [c.id, c]));
   return exam.classroomIds.map((id) => byId.get(id)).filter((c): c is Classroom => !!c);
 }
 
@@ -182,9 +182,6 @@ export function seatingBlockers(doc: Doc, exam: ExamConfig): Blocker[] {
   if (!rooms.some((r) => r.kind === 'class')) out.push({ step: 3, text: '③ 還沒有選班級教室' });
   const noTrack = roomsMissingTrack(rooms, exam.division);
   if (noTrack.length) out.push({ step: 3, text: `③ 班級教室「${noTrack.map((r) => r.name).join('、')}」還沒指定理組／文組` });
-  const paper = doc.settings.defaultLabelPaper;
-  const over = roomsOverLabel(rooms, paper);
-  if (over.length) out.push({ step: 3, text: `③ ${over.map((r) => roomOverLabelText(r, paper)).join('；')}，請在 ③ 改小橫排或深位` });
   const n = effectiveMarkRules(doc, exam).undecided.length;
   if (n) out.push({ step: 4, text: `④ 有 ${n} 項標示接近一半，要先選標「不考」或「加考」` });
   return out;

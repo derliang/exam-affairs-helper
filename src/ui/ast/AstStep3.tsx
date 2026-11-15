@@ -30,7 +30,7 @@ function SeatEditor(p: { room: Classroom; cap: number; maxDepth: number; onChang
   }
   return (
     <div class="aed">
-      <div class="small muted">每一排的深位數可以不同（用 − ＋ 調整）；點座位可停用或恢復，停用的座位不排人。沒有座位的地方（該排深位比較少）也畫成斜線。座位上限依標籤紙張（目前最多 {p.cap} 個座位、每排最多 {p.maxDepth} 個深位）。</div>
+      <div class="small muted">每一排的深位數可以不同（用 − ＋ 調整）；點座位可停用或恢復，停用的座位不排人。沒有座位的地方（該排深位比較少）也畫成斜線。座位上限：最多 {p.cap} 個座位、每排最多 {p.maxDepth} 個深位；比標籤紙大時，標籤會自動分張。</div>
       <div class="aedgrid" style={{ gridTemplateColumns: cols }}>
         {depths.map((d, i) => (
           <div class="aedcol" key={i}>

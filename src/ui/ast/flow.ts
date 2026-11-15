@@ -5,6 +5,7 @@
  * - ⑤：方案有待核可、排不進、或硬性限制不通過就擋下。
  */
 import type { ExamConfig } from '../../data';
+import { effectiveRooms } from '../../data';
 import type { FlowIssue } from '../flow';
 import type { Doc } from '../store';
 import { astCapacity, astPlan, astSlots } from './model';
@@ -16,7 +17,7 @@ export function astFlow(doc: Doc, exam: ExamConfig, s2: boolean, classSeats: num
   const plan = astPlan(doc, exam);
   const cap = astCapacity(doc, exam, plan);
   const slots = astSlots(doc, exam);
-  const rooms = doc.settings.classrooms.filter((r) => exam.classroomIds.includes(r.id) && r.kind === 'class');
+  const rooms = effectiveRooms(exam, doc.settings.classrooms).filter((r) => exam.classroomIds.includes(r.id) && r.kind === 'class');
   const spare = students > 0 ? classSeats - Math.max(cap.science.need, cap.liberal.need) : classSeats;
   let s3 = rooms.length > 0;
   if (rooms.length === 0) issues.push({ step: 3, text: '③ 還沒有選班級教室', fix: '去 ③ 勾選教室', level: 'block' });
