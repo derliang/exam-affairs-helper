@@ -38,14 +38,15 @@ export function classCapacity(doc: Doc, exam: ExamConfig): { lines: CapacityLine
   return { lines, untracked: rooms.filter((r) => !r.track).length, noList: false, seats };
 }
 
-export type ReserveCheck = { tone: 'ok' | 'warn' | 'info'; message: string };
+export type ReserveCheck = { tone: 'ok' | 'warn' | 'info'; message: string; /** 不含「預備教室座位不足：」前綴的內文，供已自帶標題的版面使用（#204） */ detail?: string };
 
 /** 預備教室容量：沿用抽離分配的結果（不夠會回報是哪一科） */
 export function reserveCheck(doc: Doc, exam: ExamConfig): ReserveCheck {
   if (exam.kind === 'bcct') return { tone: 'info', message: '會考沒有抽離，不需要預備教室。' };
   const r = detachPreview(doc, exam);
   if (r.ok) return { tone: 'ok', message: '預備教室容量夠用（同一節各科的抽離人數加總再比容量）：每一節的抽離考試與自習都排得下。' };
-  return { tone: 'warn', message: `預備教室座位不足：${r.errors[0] ?? ''}。請增加預備教室。` };
+  const detail = `${r.errors[0] ?? ''}。請增加預備教室。`;
+  return { tone: 'warn', message: `預備教室座位不足：${detail}`, detail };
 }
 
 export interface ReserveNeed {
