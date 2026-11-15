@@ -2,8 +2,9 @@
 import type { ExamConfig } from '../data';
 import { flowOf } from './flow';
 import { stepNamesOf } from './nav';
+import { viewForYear } from './rosterYears';
 import { examEntries, needsMarks, type StepNo } from './seating';
-import { lastModified, type Doc } from './store';
+import { examYear, lastModified, type Doc } from './store';
 
 /** d 完成／s 過期／c 目前／n 不需要／空字串 未開始（與原型 .dots 的 class 一致） */
 export type Cell = 'd' | 's' | 'c' | 'n' | '';
@@ -23,7 +24,8 @@ export interface ExamProgress {
 const NO = '①②③④⑤⑥';
 const stepLabel = (i: number, kind?: string): string => `${NO[i]} ${stepNamesOf(kind)[i]}`;
 
-export function examProgress(doc: Doc, exam: ExamConfig): ExamProgress {
+export function examProgress(rawDoc: Doc, exam: ExamConfig): ExamProgress {
+  const doc = viewForYear(rawDoc, examYear(exam)); // #264：列表一律用該考試自己學年度的視角
   // 傳 0：不把任何一步當成「目前正在看」，拿到純粹的完成狀態
   const flow = flowOf(doc, exam, 0 as unknown as StepNo);
   const skip4 = !needsMarks(exam);
