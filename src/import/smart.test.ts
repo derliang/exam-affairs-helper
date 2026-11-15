@@ -223,3 +223,15 @@ describe('#200 複合標示與 #202 舊版 xls', () => {
     await expect(readXlsx(xls)).rejects.toThrow('舊版 Excel（.xls）');
   });
 });
+
+describe('#233 全科缺考警示', () => {
+  const subj = [{ id: 'chi', name: '國文' }, { id: 'eng', name: '英文' }];
+  const opts = { subjects: subj, groupTable: { '0': ['chi', 'eng'] } };
+  it('標示涵蓋全部考科的考生列入 allAbsent', () => {
+    const s = scanExamSheet([['班級', '座號', '姓名', '組別', '特殊生需求註明'], ['01', '1', '甲', '0', 'x英文x國綜'], ['01', '2', '乙', '0', 'x英文']], opts);
+    const mapping: Record<string, string> = {};
+    for (const g of s.groups) if (g.suggestion) mapping[g.id] = g.suggestion;
+    const r = buildEntries(s, opts, { mapping, rows: {} });
+    expect(r.allAbsent).toEqual([{ classNo: 1, seatNo: 1 }]);
+  });
+});
