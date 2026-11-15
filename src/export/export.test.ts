@@ -436,6 +436,26 @@ describe('座位表頁首標籤換行與兩時段格（#247、#212）', () => {
     expect(nameLine.pt).toBeGreaterThanOrEqual(10); // 放寬高度後接近姓名上限 10.5pt
   });
 
+  it('#216 兩倍寬 wideLayout：單人左編號姓名、右科目（放不下只列科目）；2 人左右各一人；3 人以上合併', async () => {
+    const { wideLayout } = await import('./index');
+    const person = (code: string, n: number) => ({ code, classLabel: '溫', name: '王小明', sched: ['物理', '化學', '數甲', '生物', '歷史', '地理'].slice(0, n).map((s, i) => `第一天 時段${'一二三四五六'[i]} ${s}`), schedShort: ['物理', '化學', '數甲', '生物', '歷史', '地理'].slice(0, n) });
+    const cell = (ps: ReturnType<typeof person>[]) => ({ coord: '1-1', seat: { row: 1, depth: 1 }, code: '', classLabel: '', name: '', colorBg: 'FFFFFF', colorLine: '222222', colorFg: '22201B', tags: [], marks: [], persons: ps });
+    const o = { topPad: 5, codePt: 33, nameMax: 18, subjMax: 20 };
+    const full = wideLayout(cell([person('0101', 4)]), 36.3, 35, o); // B4 半張 36mm：完整寫法仍有約 11pt → 照寫
+    expect(full.right![0]!.runs[0]!.text).toBe('第一天 時段一 物理');
+    const one = wideLayout(cell([person('0101', 4)]), 33, 35, o); // A3 半張 33mm：完整寫法不到 10.5pt → 只列科目
+    expect(one.left!.map((l) => l.runs[0]!.text)).toEqual(['0101', '溫']);
+    expect(one.right!.map((l) => l.runs[0]!.text)).toEqual(['物理', '化學', '數甲', '生物']); // 完整寫法放不下 → 只列科目
+    expect(Math.min(...one.right!.map((l) => l.pt))).toBeGreaterThanOrEqual(10.5);
+    const six = wideLayout(cell([person('0101', 6)]), 33, 35, o);
+    expect(six.right!).toHaveLength(3); // ≥5 科兩科一行
+    expect(six.right![0]!.runs[0]!.text).toBe('物理　化學');
+    const two = wideLayout(cell([person('0101', 2), person('0202', 2)]), 36, 35, o);
+    expect(two.left).toBeTruthy(); expect(two.right).toBeTruthy();
+    const many = wideLayout(cell([person('0101', 1), person('0202', 1), person('0303', 1)]), 36, 35, o);
+    expect(many.span!.map((l) => l.runs[0]!.text).join('')).toContain('3 人輪流');
+  });
+
   it('#220 殘留：兩人各考 3～6 科（合計超過 4 行）時科目併成一行，整塊放得進格高、最後一行不被切', async () => {
     const { personLayout } = await import('./index');
     for (const ns of [3, 4, 6]) for (const h of [24, 28, 32]) {
