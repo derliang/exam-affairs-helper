@@ -75,7 +75,7 @@ describe('匯出前檢查', () => {
     expect(i[0]!.text).toContain('至少勾選');
   });
 
-  it('標籤格數不夠會擋下並說明', () => {
+  it.skip('（#210 已改自動分張，不再擋）標籤格數不夠會擋下並說明', () => {
     const f = makeFixture();
     f.settings.classrooms[0]!.rows = 8; // 不影響；改用結果塞滿
     for (let i = 0; i < 60; i++) f.result.assignments.push({ classroomId: 'r1', row: 9 + Math.floor(i / 5), depth: (i % 5) + 1, code: '0101' });

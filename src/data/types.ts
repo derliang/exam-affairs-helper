@@ -60,6 +60,9 @@ export type ClassroomKind = 'class' | 'reserve';
  * 座位順序：第 1 排深位 1→depth，再第 2 排…，跳過 disabled，取前 seatCount 個。
  * 沒有 disabled 的舊資料：不排的座位就是順序最後的那幾個。
  */
+/** 一間教室的「座位配置」：覆寫只能改這幾個欄位（#210） */
+export type RoomSeatLayout = Pick<Classroom, 'rows' | 'depth' | 'seatCount' | 'disabled' | 'rowDepths'>;
+
 export interface Classroom {
   id: string;
   name: string;
@@ -197,6 +200,12 @@ export interface ExamConfig {
   markRules: MarkRule[];
   /** 本次勾選的教室 id（D65） */
   classroomIds: string[];
+  /**
+   * 本次考試專用的座位配置覆寫（#210，使用者 2026-11-15 裁示：一般與分科都支援、只含座位配置不含名稱／組別）。
+   * key＝教室 id；排座、座位表、標籤、匯出一律經 effectiveRoom 取「覆寫優先」的教室，不改共用教室清單。
+   * 舊存檔沒有這個欄位＝沒有覆寫（不需遷移）。
+   */
+  roomOverrides?: Record<string, RoomSeatLayout>;
   labelLayout: LabelLayout;
   createdAt: string;
   /** 最後修改時間（ISO）；舊資料沒有這個欄位時以 createdAt 代替 */

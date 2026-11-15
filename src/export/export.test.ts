@@ -110,8 +110,12 @@ describe('版面模型', () => {
     expect(b4.h).toBeCloseTo((353 - 20 - 3) / 8, 5);
   });
 
-  it('標籤：座位多於格數時丟錯，不默默截斷', () => {
-    expect(() => buildLabelPages(makeFixture({ labelCols: 4, labelRows: 4 }))).toThrow(/超過標籤/);
+  it('標籤：座位多於一張格數時自動分張（#210），不截斷', () => {
+    const f = makeFixture({ labelCols: 4, labelRows: 4 });
+    const pages = buildLabelPages(f, 'class');
+    const total = pages.reduce((n, p) => n + p.cells.length, 0);
+    expect(total).toBe(f.result.assignments.filter((a) => f.exam.classroomIds.includes(a.classroomId)).length);
+    expect(pages.some((p) => p.part && p.part.of > 1)).toBe(true);
   });
 
   it('抽離名單：抽離考試／自習／單人特例都列', () => {

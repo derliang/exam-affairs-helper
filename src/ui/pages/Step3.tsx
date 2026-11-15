@@ -1,4 +1,4 @@
-import type { ExamConfig, Track } from '../../data';
+import type { ExamConfig, RoomSeatLayout, Track } from '../../data';
 import { Alert, Badge, Button, More, Seg, StepHead } from '../components';
 import { RoomList } from '../components/RoomList';
 import { PrepCard } from './PrepCard';
@@ -32,6 +32,12 @@ export function Step3(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
     if (!added.length) return p.onChange(next);
     const r = updateExam(next, exam.id, { classroomIds: [...exam.classroomIds, ...added] });
     p.onChange(r.ok ? r.doc : next);
+  };
+  const setOverride = (id: string, l: RoomSeatLayout | null) => {
+    const cur = { ...(exam.roomOverrides ?? {}) };
+    if (l) cur[id] = l; else delete cur[id];
+    const r = updateExam(doc, exam.id, { roomOverrides: cur });
+    if (r.ok) p.onChange(r.doc);
   };
   const setIds = (ids: string[]) => { const r = updateExam(doc, exam.id, { classroomIds: ids }); if (r.ok) p.onChange(r.doc); };
 
@@ -107,11 +113,11 @@ export function Step3(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
             <div>
               <h3>教室與座位</h3>
               <p class="small muted">每間教室一列，打開開關就列入本次考試。</p>
-              <More title="說明：座位表與教室來源">{senior ? '預備教室座位另計，不計入班級教室合計。' : ''}教室清單是所有模擬考共用的：修改教室會影響其他使用這間教室的模擬考。</More>
+              <More title="說明：座位表與教室來源">{senior ? '預備教室座位另計，不計入班級教室合計。' : ''}教室清單是所有模擬考共用的：修改教室會影響其他使用這間教室的模擬考；只想改這次考試的座位，請用「本次調整座位」。</More>
             </div>
             {p.onToRooms && <Button onClick={p.onToRooms}>到共用設定看教室清單</Button>}
           </div>
-          <RoomList {...(p.onToSchool ? { onGoSchool: p.onToSchool } : {})} junior={!senior} division={exam.division} exams={doc.exams} classes={doc.settings.classes} rooms={rooms} paper={doc.settings.defaultLabelPaper} onChange={setRooms} selected={exam.classroomIds} onSelect={setIds} />
+          <RoomList {...(p.onToSchool ? { onGoSchool: p.onToSchool } : {})} junior={!senior} division={exam.division} exams={doc.exams} classes={doc.settings.classes} rooms={rooms} paper={doc.settings.defaultLabelPaper} onChange={setRooms} selected={exam.classroomIds} onSelect={setIds} overrides={exam.roomOverrides} onOverride={setOverride} />
         </div>
       </div>
 
