@@ -1,6 +1,6 @@
 import { useRef, useState } from 'preact/hooks';
 import type { Division, Track } from '../../data';
-import { readXlsx, writeXlsx } from '../../import';
+import { readXlsx, writeXlsx, XlsError } from '../../import';
 import { Alert, Button, FormatButton, Modal } from '../components';
 import { downloadBytes, XLSX_MIME } from '../download';
 import { applyImport, exportRows, importOutcome, planImport, templateRows, type ImportPlan, type UnknownClassAction } from '../rosterIO';
@@ -31,7 +31,7 @@ export function RosterIO(p: { doc: Doc; division: Division; onChange: (d: Doc) =
       setUnk('add');
       setPlan({ ...planImport(p.doc, p.division, r.students), layout: r.layout, issues: r.issues.map((i) => i.message), tracks: r.classTracks });
     } catch (e) {
-      setErr(`讀不了這個檔案：${e instanceof Error ? e.message : String(e)}。請確認是 .xlsx 檔`);
+      setErr(e instanceof XlsError ? e.message : `讀不了這個檔案：${e instanceof Error ? e.message : String(e)}。請確認是 .xlsx 檔`);
     }
   };
 
@@ -51,7 +51,8 @@ export function RosterIO(p: { doc: Doc; division: Division; onChange: (d: Doc) =
       <FormatButton kind="xls" onClick={() => setTpl(true)}>下載名單範本</FormatButton>
       <FormatButton kind="xls" onClick={() => input.current?.click()}>匯入學生名單</FormatButton>
       <FormatButton kind="xls" onClick={async () => downloadBytes(`${DIV_NAME[p.division]}學生名單.xlsx`, await writeXlsx(exportRows(p.doc.rosters[p.division]), '學生名單'), XLSX_MIME)}>匯出學生名單</FormatButton>
-      <input ref={input} type="file" accept=".xlsx" hidden aria-label="選擇學生名單 Excel 檔"
+      <span class="small muted">匯入接受 .xlsx；舊版 .xls 請先另存成 .xlsx</span>
+      <input ref={input} type="file" accept=".xlsx,.xls" hidden aria-label="選擇學生名單 Excel 檔"
         onChange={(e) => { const f = e.currentTarget.files?.[0]; e.currentTarget.value = ''; if (f) void onFile(f); }} />
       {tpl && (
         <Modal title="下載名單範本" onClose={() => setTpl(false)}
