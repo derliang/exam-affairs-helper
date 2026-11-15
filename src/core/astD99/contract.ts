@@ -13,6 +13,8 @@ export interface PlanRoom {
   /** class＝原班教室（classNo 為所屬班）、reserve＝綜合（預備）教室 */
   kind: 'class' | 'reserve';
   classNo?: number;
+  /** 教室名稱（只供診斷文字用，不參與排座） */
+  name?: string;
   /** 實際可用座位（可不規則、可缺位） */
   seats: readonly SeatPos[];
   /** 自習容量；D99 預設等於座位數，不得自行調大 */
