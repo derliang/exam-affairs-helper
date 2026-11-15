@@ -57,13 +57,21 @@ export interface CellModel {
    * 有這個欄位的格子只印座標與這幾行。
    */
   periodLines?: { head: string; text: string }[];
+  /** 預備教室／綜合教室／整合標籤格（v2.36，#221 #212 #216）：每個坐這格的人一筆，版式同一般教室標籤 */
+  persons?: PersonModel[];
+  /** 特殊考生單字角標（v2.36，#223）：右下角；取代整格粗框與整句小牌 */
+  corners?: CornerTag[];
 }
+/** 角標：x＝不考（黑底白字）、add＝加考／抽離考試（白底黑框）、take＝「有考」（該科不考超過一半時反標，白底黑框） */
+export interface CornerTag { kind: 'x' | 'add' | 'take'; text: string }
+/** 坐這格的一個人。sched 每個元素是一行時程，例「第一天 自然、數A」「第1天 時段二 物理」 */
+export interface PersonModel { code: string; classLabel: string; name: string; sched: string[] }
 export interface StatsModel {
   perClass: { className: string; count: number }[];
   total: number;
   perSubject: { subjectName: string; count: number }[];
   /** 統計表（列印頁用，D40）：欄＝班級，列＝本教室考生人數與各科考試人數 */
-  table: { classes: string[]; rows: { label: string; per: number[]; total: number }[] };
+  table: { classes: string[]; rows: { label: string; per: number[]; total: number }[]; /** 第一欄表頭（預設「項目」；預備教室時段版用「時段」） */ headLabel?: string };
 }
 export interface SeatPageModel {
   kind: 'seat';
@@ -86,6 +94,10 @@ export interface SeatPageModel {
   /** 可用座位（空位只在最後，D72） */
   usable: Set<string>;
   stats: StatsModel;
+  /** 該科不考人數超過一半時改標「有考」者的說明（頁首小標籤） */
+  flipNotes?: string[];
+  /** 預備教室時段版：3 人以上輪流的座位，列在座位表下一頁（座位 × 天 × 科目 × 人） */
+  rotation?: { heads: string[]; rows: string[][] };
 }
 export interface LabelPageModel {
   kind: 'label';
@@ -96,6 +108,8 @@ export interface LabelPageModel {
   layout: LabelLayout;
   /** 注意事項框的行（設定頁可改）；空陣列＝不印框 */
   notes: NoteLine[];
+  /** 該科不考人數超過一半時改標「有考」者的說明 */
+  flipNotes?: string[];
   /** 依座位順序，長度 ≤ cols*rows；其餘格空白 */
   cells: CellModel[];
   /** 教室超出一張標籤紙時自動分張（#210）：本張左下角的座位（排、深位，預設 1、1），與「第 N／共 M 張」 */
@@ -115,6 +129,8 @@ export interface ListRow {
 export interface ListPageModel {
   kind: 'list';
   title: string;
+  /** 標題下一行（#219：第N天　時段X　科目） */
+  subtitle?: string;
   rows: ListRow[];
 }
 /** 通用表格頁（A4）：領卷清單等共用。widths 為各欄相對寬度；空字串的格子印成空白（供手寫勾選） */
@@ -127,6 +143,14 @@ export interface TablePageModel {
   rows: string[][];
   /** 合計列（粗體，放最後） */
   totalRow?: string[];
+  /** A4 橫式（班級公告，#215） */
+  landscape?: boolean;
+  /** 兩層表頭的上層：每項 {text, span}；span 總和＝欄數時，第一層在 heads 之上 */
+  headGroups?: { text: string; span: number }[];
+  /** 各格樣式（與 rows 同形）：'exam' 粗體、'study' 灰底；沒給＝一般 */
+  cellKinds?: (('exam' | 'study' | undefined)[])[];
+  /** 表頭上方一行說明（頁首右側教室牌改放在 title 之後） */
+  legend?: string;
 }
 export type PageModel = SeatPageModel | LabelPageModel | ListPageModel | TablePageModel;
 
@@ -251,8 +275,144 @@ function chipsOf(total: number, cells: Iterable<CellModel>, subjects: { name: st
 }
 
 
-export const SLOT_TIP = '格內每一行是一個時段：「天・時段」「科目」「班級座號」。同一個人每個時段坐同一格時，各時段各列一行；不同的人輪流坐同一格時也各列一行。抽離自習不排座位，只出名單。';
-type MergedCell = { seat: { row: number; depth: number }; lines: { period: number; head: string; text: string }[] };
+/** 角標用的單字：社會→社、英聽→英；數A／數甲這類（單字加一碼英文或甲乙丙）保留全寫，才分得出 */
+export function abbrevSubject(s: string): string {
+  const t = s.trim();
+  if (/^[\u4e00-\u9fff][A-Za-z甲乙丙]$/.test(t)) return t;
+  return t.charAt(0);
+}
+
+/**
+ * 特殊考生角標（#223，使用者裁示方案 C）：不考＝「社」、加考＝「＋數」、多科連寫；
+ * 某科不考人數超過該頁（有考生的格子）一半時，改標「有考」的人（「考社」），不標不考的人。
+ * 直接寫進格子的 corners，回傳要印在頁首的說明（每個反標的科目一句）。
+ */
+export function applyCorners(cells: CellModel[], subjectOrder: readonly string[] = []): string[] {
+  const real = cells.filter((c) => c.code);
+  const absent = new Map<string, number>();
+  for (const c of real) for (const m of c.marks) if (m.kind === 'absent') absent.set(m.subject, (absent.get(m.subject) ?? 0) + 1);
+  const flipped = [...absent].filter(([, n]) => n * 2 > real.length).map(([s]) => s);
+  const rank = (s: string) => { const i = subjectOrder.findIndex((x) => subjectShortEq(x, s)); return i < 0 ? 99 : i; };
+  flipped.sort((a, b) => rank(a) - rank(b));
+  for (const c of real) {
+    const tags: CornerTag[] = [];
+    const xs = c.marks.filter((m) => m.kind === 'absent' && !flipped.includes(m.subject)).map((m) => abbrevSubject(m.subject));
+    if (xs.length) tags.push({ kind: 'x', text: xs.join('') });
+    const adds = c.marks.filter((m) => m.kind !== 'absent').map((m) => abbrevSubject(m.subject));
+    if (adds.length) tags.push({ kind: 'add', text: `＋${adds.join('')}` });
+    const takes = flipped.filter((s) => !c.marks.some((m) => m.kind === 'absent' && m.subject === s)).map(abbrevSubject);
+    if (takes.length) tags.push({ kind: 'take', text: `考${takes.join('')}` });
+    c.corners = tags;
+  }
+  return flipped.map((s) => `本頁多數不考${s}，只標有考者`);
+}
+const subjectShortEq = (full: string, short: string): boolean => subjectShort(full) === short || full === short;
+
+/** 格子有特殊標示（淡黃底用）：有角標的格子 */
+export const isSpecial = (c: CellModel): boolean => (c.corners?.length ?? 0) > 0;
+
+/** 人員格的一行：runs 依序畫，pt 為字級 */
+export interface PersonLine { runs: { text: string; bold?: boolean }[]; pt: number; gapBefore: number }
+
+/**
+ * 預備教室／綜合教室／整合標籤的格內排法（v2.36）：1 人＝大字編號＋「班級｜姓名」＋時程行；
+ * 2 人輪流＝每人一區；3 人以上＝只印座位，其餘列在座位表下一頁。字級在格子放得下的前提下取最大，
+ * 放不下整體等比縮小（最小 6pt）。回傳每行與整塊的總高（mm），呼叫端據此垂直置中。
+ */
+export function personLayout(
+  c: CellModel,
+  w: number,
+  h: number,
+  o: { topPad: number; codePt: number; nameMax: number; schedMax: number },
+): { lines: PersonLine[]; total: number } {
+  const ps = c.persons ?? [];
+  const PT = 0.3528;
+  const fitW = (text: string, bold: boolean, max: number): number => Math.max(6, Math.min(max, Math.floor((w / Math.max(0.5, textWidthMm(text, 1, bold) / PT) / PT) * 2) / 2));
+  let lines: PersonLine[] = [];
+  if (ps.length >= 3) {
+    lines = [
+      { runs: [{ text: c.coord, bold: true }], pt: Math.min(o.codePt * 0.8, fitW(c.coord, true, o.codePt * 0.8)), gapBefore: 0 },
+      { runs: [{ text: `共 ${ps.length} 人輪流` }], pt: fitW(`共 ${ps.length} 人輪流`, false, o.nameMax), gapBefore: 1.5 },
+      { runs: [{ text: '見座位表下一頁' }], pt: fitW('見座位表下一頁', false, o.nameMax), gapBefore: 0.5 },
+    ];
+  } else if (ps.length === 2) {
+    ps.forEach((p, i) => {
+      const head = `${p.code}　${p.classLabel} | ${p.name}`;
+      lines.push({ runs: [{ text: p.code, bold: true }, { text: '　' }, { text: p.classLabel, bold: true }, { text: ' | ' }, { text: p.name }], pt: fitW(head, true, o.codePt * 0.5), gapBefore: i === 0 ? 0 : 2 });
+      for (const s of p.sched) lines.push({ runs: [{ text: s, bold: true }], pt: fitW(s, true, o.schedMax), gapBefore: 0.3 });
+    });
+  } else if (ps.length === 1) {
+    const p = ps[0]!;
+    lines.push({ runs: [{ text: p.code, bold: true }], pt: o.codePt, gapBefore: 0 });
+    const npt = namePtFit(p.classLabel, p.name, w, o.nameMax);
+    lines.push({ runs: [{ text: p.classLabel, bold: true }, { text: ' | ' }, { text: p.name }], pt: npt, gapBefore: 1.5 });
+    for (const s of p.sched) lines.push({ runs: [{ text: s, bold: true }], pt: fitW(s, true, o.schedMax), gapBefore: 1 });
+  }
+  const height = (ls: PersonLine[], k: number) => ls.reduce((a, l) => a + l.pt * k * PT * 1.15 + l.gapBefore, 0);
+  const avail = h - o.topPad - 1;
+  // 行間留白是固定值，不跟著縮：只讓字高部分縮到放得進去
+  const gaps = lines.reduce((x, l) => x + l.gapBefore, 0);
+  const k = Math.min(1, Math.max(0.2, (avail - gaps) / Math.max(1, height(lines, 1) - gaps)));
+  if (k < 1) lines = lines.map((l) => ({ ...l, pt: Math.max(6, Math.floor(l.pt * k * 2) / 2) }));
+  return { lines, total: height(lines, 1) };
+}
+
+export const SLOT_TIP = '格內每個人一區：班級座號、姓名、第幾天考什麼科目；3 人以上輪流的座位列在座位表下一頁。抽離自習不排座位，只出名單。';
+
+/** 一個座位上的人（依最早的時段排序）：同一人各天的科目合併成「第一天 自然、數A」 */
+function personsOf(cell: MergedCell, ctx: ReturnType<typeof ctxOf>): PersonModel[] {
+  const byCode = new Map<string, MergedLine[]>();
+  for (const l of [...cell.lines].sort((a, b) => a.period - b.period)) byCode.set(l.code, [...(byCode.get(l.code) ?? []), l]);
+  return [...byCode].map(([code, ls]) => {
+    const p = parseCode(code);
+    const days = new Map<number | undefined, string[]>();
+    for (const l of ls) { const subs = days.get(l.day) ?? []; if (!subs.includes(l.subject)) subs.push(l.subject); days.set(l.day, subs); }
+    return {
+      code,
+      classLabel: ctx.classes.get(p.classNo)?.name ?? String(p.classNo),
+      name: ctx.students.get(code)?.name ?? ctx.entries.get(code)?.name ?? '',
+      sched: [...days].map(([d, subs]) => (d === undefined ? subs.join('、') : `${dayName(d)} ${subs.join('、')}`)),
+    };
+  });
+}
+
+/** 預備教室時段版的下方統計（#220）：每個時段一列（各班人數＋合計），最後一列「不重複人數」 */
+function slotStats(seats: Map<string, MergedCell>, ctx: ReturnType<typeof ctxOf>): StatsModel['table'] {
+  const classNos = new Set<number>();
+  const byHead = new Map<string, { subjects: Set<string>; codes: Set<string> }>();
+  const all = new Set<string>();
+  for (const m of seats.values()) {
+    for (const l of m.lines) {
+      classNos.add(parseCode(l.code).classNo);
+      all.add(l.code);
+      const e = byHead.get(l.head) ?? { subjects: new Set<string>(), codes: new Set<string>() };
+      e.subjects.add(l.subject); e.codes.add(l.code); byHead.set(l.head, e);
+    }
+  }
+  const nos = [...classNos].sort((a, b) => a - b);
+  const per = (codes: Iterable<string>) => { const arr = [...codes]; return nos.map((n) => arr.filter((c) => parseCode(c).classNo === n).length); };
+  return {
+    headLabel: '時段',
+    classes: nos.map((n) => ctx.classes.get(n)?.name ?? String(n)),
+    rows: [
+      ...[...byHead].map(([h, e]) => ({ label: `${h ? `${h}　` : ''}${[...e.subjects].join('、')}`, per: per(e.codes), total: e.codes.size })),
+      { label: '不重複人數', per: per(all), total: all.size },
+    ],
+  };
+}
+
+/** 3 人以上輪流的座位，列在座位表下一頁（座位 × 天 × 科目 × 人） */
+function rotationRows(seats: Map<string, MergedCell>, ctx: ReturnType<typeof ctxOf>): { heads: string[]; rows: string[][] } | undefined {
+  const rows: string[][] = [];
+  for (const m of [...seats.values()].sort((a, b) => a.seat.row - b.seat.row || a.seat.depth - b.seat.depth)) {
+    const ps = personsOf(m, ctx);
+    if (ps.length < 3) continue;
+    for (const p of ps) for (const s of p.sched) rows.push([seatLabel(m.seat), s, p.classLabel, String(parseCode(p.code).seatNo).padStart(2, '0'), p.name]);
+  }
+  return rows.length ? { heads: ['座位', '天與科目', '班級', '座號', '姓名'], rows } : undefined;
+}
+type MergedLine = { period: number; head: string; text: string; code: string; day: number | undefined; subject: string };
+type MergedCell = { seat: { row: number; depth: number }; lines: MergedLine[] };
 /** 預備教室「時段版」合併（D94-5、稿 v2.28）：每間預備教室、每個座位，各時段一行（天・時段／科目 班座號）；只含抽離考試 */
 function reserveMerged(input: ExportInput, ctx: ReturnType<typeof ctxOf>): Map<string, Map<string, MergedCell>> {
   const periods = examSubjectPeriods(input.exam, input.settings);
@@ -268,7 +428,7 @@ function reserveMerged(input: ExportInput, ctx: ReturnType<typeof ctxOf>): Map<s
     const who = `${ctx.classes.get(p.classNo)?.name ?? p.classNo} ${String(p.seatNo).padStart(2, '0')}`;
     for (const sp of periods.get(d.subjectId) ?? [{ period: 0, label: ctx.subjectName.get(d.subjectId) ?? d.subjectId }]) {
       if (cell.lines.some((l) => l.period === sp.period && l.text.endsWith(who))) continue;
-      cell.lines.push({ period: sp.period, head: sp.slot ? `${dayName(sp.day ?? 0)} ${slotName(sp.slot)}` : '', text: `${sp.label}　${who}` });
+      cell.lines.push({ period: sp.period, head: sp.slot ? `${dayName(sp.day ?? 0)} ${slotName(sp.slot)}` : '', text: `${sp.label}　${who}`, code: d.code, day: sp.slot ? (sp.day ?? 0) : undefined, subject: sp.label });
     }
   }
   return byRoom;
@@ -304,6 +464,8 @@ export function buildSeatPages(input: ExportInput, scope: Scope = 'all'): SeatPa
     });
     const pg = pages[pages.length - 1]!;
     pg.chips = chipsOf(pg.stats.total, cells.values(), input.exam.subjects);
+    const notes = applyCorners([...cells.values()], input.exam.subjects.map((s) => s.name));
+    if (notes.length) { pg.flipNotes = notes; pg.chips.push(...notes); }
   }
   if (scope !== 'class') {
     // 預備教室座位表（時段版，稿 v2.28）：一間預備教室一頁，格內每行一個時段；抽離自習不排座位
@@ -323,6 +485,7 @@ export function buildSeatPages(input: ExportInput, scope: Scope = 'all'): SeatPa
           coord: seatLabel(m.seat), seat: { row: m.seat.row, depth: m.seat.depth }, code: '', classLabel: '', name: '',
           colorBg: 'FFFFFF', colorLine: '222222', colorFg: '22201B', tags: [], marks: [],
           periodLines: [...m.lines].sort((x, y) => x.period - y.period).map(({ head, text }) => ({ head, text })),
+          persons: personsOf(m, ctx),
         });
       }
       pages.push({
@@ -338,7 +501,8 @@ export function buildSeatPages(input: ExportInput, scope: Scope = 'all'): SeatPa
         depth: room.depth,
         cells,
         usable: usableOf(room),
-        stats: { perClass: [], total: people.size, perSubject: [], table: { classes: [], rows: [] } },
+        stats: { perClass: [], total: people.size, perSubject: [], table: slotStats(seats, ctx) },
+        ...(() => { const r = rotationRows(seats, ctx); return r ? { rotation: r } : {}; })(),
       });
     }
   }
@@ -405,6 +569,9 @@ export function buildLabelPages(input: ExportInput, scope: Scope = 'all'): Label
         ...(tiles.length > 1 ? { origin: t.origin, part: { n: i + 1, of: tiles.length } } : {}),
       });
     });
+    const lp = pages[pages.length - 1]!;
+    const lnotes = applyCorners(lp.cells, input.exam.subjects.map((s) => s.name));
+    if (lnotes.length) lp.flipNotes = lnotes;
   }
   if (scope !== 'class') {
     // 預備教室合併標籤（D94-5）：每間預備教室一張紙、每個座位一張標籤；同一座位各節的使用者列在同一張，每節一行
@@ -439,6 +606,7 @@ export function buildLabelPages(input: ExportInput, scope: Scope = 'all'): Label
           tags: [],
           marks: [],
           periodLines: x.lines.sort((a, b) => a.period - b.period).map(({ head, text }) => ({ head, text })),
+          persons: personsOf(x, ctx),
         })),
       });
       });
@@ -466,11 +634,18 @@ export function buildStudyLists(input: ExportInput): ListPageModel[] {
     });
     bySubject.set(d.subjectId, rows);
   }
+  // #219：標題下加「第N天　時段X　科目」（沒有日期欄，不新增）
+  const periods = examSubjectPeriods(input.exam, input.settings);
+  const whenOf = (subId: string, name: string): string => {
+    const heads = [...new Set((periods.get(subId) ?? []).filter((p) => p.slot).map((p) => `${dayName(p.day ?? 0)}　${slotName(p.slot!)}`))];
+    return heads.length ? `${heads.join('、')}　${name}` : name;
+  };
   return input.exam.subjects
     .filter((sub) => bySubject.has(sub.id))
     .map((sub) => ({
       kind: 'list' as const,
       title: `${input.exam.name}　抽離自習名單（${sub.name}，共 ${bySubject.get(sub.id)!.length} 人）`,
+      subtitle: whenOf(sub.id, sub.name),
       rows: bySubject.get(sub.id)!.sort((a, b) => a.code.localeCompare(b.code)),
     }));
 }
@@ -536,6 +711,7 @@ export function groupMarks(c: CellModel): { kind: 'x' | 'add'; text: string }[] 
 
 /** 統計表的列：各科人數與每班完全相同的科目合併成一列（例：考國文、英文） */
 export function statRows(p: SeatPageModel): { label: string; per: number[]; total: number }[] {
+  if (p.slotMode) return p.stats.table.rows;
   const out: { label: string; per: number[]; total: number; subs: string[] }[] = [];
   const [first, ...rest] = p.stats.table.rows;
   if (first) out.push({ ...first, subs: [] });
@@ -594,9 +770,9 @@ export function statLayout(p: SeatPageModel): { cols: number[]; rowH: number[]; 
 export function seatGeometry(p: SeatPageModel): { cw: number; ch: number; st: ReturnType<typeof statRows> } {
   const innerW = SEAT_PAGE.w - 2 * SEAT_PAGE.padX;
   const cw = Math.min(p.slotMode ? 24.79 : 25, +((innerW - 6.5) / p.rows).toFixed(2));
-  const st = p.slotMode ? [] : statRows(p);
-  // 時段版沒有統計表，改留一段格內說明（約 14mm）
-  const fixed = 22 + 12 + 4 + 5 + 11 + (p.slotMode ? 14 : 5 + statLayout(p).total) + 16;
+  const st = statRows(p);
+  // 時段版：統計表（每時段一列）加一行格內說明（約 6mm）
+  const fixed = 22 + 12 + 4 + 5 + 11 + (p.slotMode ? 6 + 5 + statLayout(p).total : 5 + statLayout(p).total) + 16;
   const ch = Math.min(p.slotMode ? 26 : 23, +((SEAT_PAGE.h - 2 * SEAT_PAGE.padY - fixed) / p.depth).toFixed(2));
   return { cw, ch, st };
 }
@@ -633,4 +809,24 @@ export function periodLineFontPt(lines: readonly { head: string; text: string }[
   const widest = Math.max(...lines.map((l) => emWidth(l.head) * 0.7 + 0.6 + emWidth(l.text)));
   const byW = cellW / widest / PT;
   return Math.max(6, Math.min(26, Math.floor(Math.min(byH, byW) * 2) / 2));
+}
+
+/** 3 人以上輪流的座位清單頁（接在預備教室座位表之後；沒有就 undefined） */
+export function rotationPage(p: SeatPageModel): TablePageModel | undefined {
+  if (!p.rotation) return undefined;
+  return {
+    kind: 'table',
+    title: `${p.heading ?? p.examName}　${p.roomName}　輪流座位`,
+    subtitle: '3 人以上輪流使用的座位（標籤上只印座位）',
+    heads: p.rotation.heads,
+    widths: [1.2, 2.4, 1.4, 0.9, 1.6],
+    rows: p.rotation.rows,
+  };
+}
+
+/** 橫式公告表的列高與字級：一班一頁，依列數縮放（#215）；45 人也放得進一頁（列高最小 3.4mm、字 6.5pt） */
+export function landscapeFit(nRows: number, nHead: number): { rowMm: number; pt: number } {
+  const avail = 210 - 17 - 30; // 橫式 A4 高度扣上下邊界、標題、說明與頁尾
+  const rowMm = Math.max(2.8, Math.min(8, avail / (nRows + nHead)));
+  return { rowMm, pt: Math.max(6, Math.min(10.5, Math.floor((rowMm / 0.3528 / 1.5) * 2) / 2)) };
 }

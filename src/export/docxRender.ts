@@ -14,6 +14,7 @@ import {
   HeightRule,
   ImageRun,
   LineRuleType,
+  PageOrientation,
   Packer,
   Paragraph,
   ShadingType,
@@ -29,7 +30,6 @@ import {
 import { hatchPng } from './hatchPng';
 import {
   footerText,
-  groupMarks,
   labelBoxMm,
   labelGrid,
   periodLineFontPt,
@@ -39,12 +39,16 @@ import {
   seatGeometry,
   statLayout,
   namePtFit,
+  personLayout,
+  isSpecial,
   SLOT_TIP,
   type CellModel,
   type LabelPageModel,
   type ListPageModel,
   type TablePageModel,
   type SeatPageModel,
+  rotationPage,
+  landscapeFit,
 } from './model';
 
 export const FONT = 'Noto Sans TC';
@@ -226,35 +230,28 @@ function headBlock(
   });
 }
 
-/** 格內的標示小牌（X 不考：黑底白字；＋ 加考：白底雙線框）。回傳固定行高的段落 */
-function chipPara(c: { kind: 'x' | 'add'; text: string }, pt: number, innerMm: number, mode: BoldMode): Paragraph {
-  const padH = 1.4;
-  const w = textMm(c.text, pt, true) + 2 * padH;
-  const side = Math.max(0, (innerMm - w) / 2);
-  const col = c.kind === 'x' ? 'FFFFFF' : INK;
-  const sp = (padH * 72) / 25.4; // 左右留白，用框線的 space 撐開（pt）
-  const b = c.kind === 'x' ? bd(INK, 4) : bd(INK, 8, BorderStyle.DOUBLE);
-  return line([run2(c.text, { size: pt, bold: true, color: col }, mode)], {
-    h: pt * 0.3528 * 1.15,
-    left: side,
-    right: side,
-    extra: {
-      shading: c.kind === 'x' ? { type: ShadingType.CLEAR, fill: INK, color: 'auto' } : undefined,
-      border: { top: { ...b, space: 1 }, bottom: { ...b, space: 1 }, left: { ...b, space: sp }, right: { ...b, space: sp } },
-    },
+/** 角標（#223）：右下角單字；不考＝黑底白字，加考／有考＝白底黑框 */
+function cornerRuns(c: CellModel, pt: number, mode: BoldMode): TextRun[] {
+  const out: TextRun[] = [];
+  const name = mode === 'separate-family' ? FONT_BOLD : FONT;
+  (c.corners ?? []).forEach((t, i) => {
+    if (i > 0) out.push(run2(' ', { size: pt * 0.5 }, mode));
+    out.push(
+      new TextRun({
+        text: ` ${t.text} `,
+        size: Math.round(pt * 2),
+        bold: mode === 'embed-bold' ? true : undefined,
+        color: t.kind === 'x' ? 'FFFFFF' : INK,
+        font: { ascii: name, hAnsi: name, eastAsia: name, cs: name },
+        shading: t.kind === 'x' ? { type: ShadingType.CLEAR, fill: INK, color: 'auto' } : undefined,
+        border: t.kind === 'x' ? undefined : { style: BorderStyle.SINGLE, size: 6, color: INK, space: 0 },
+      }),
+    );
   });
+  return out;
 }
 
-/** 格內最下方的標示區：固定高度 areaMm，標示垂直置中；沒有標示時是一段留白 */
-function markArea(c: CellModel, pt: number, areaMm: number, innerMm: number, mode: BoldMode): Paragraph[] {
-  const chips = groupMarks(c);
-  if (chips.length === 0) return [spacer(areaMm)];
-  const ch = pt * 0.3528 * 1.15 + 0.7; // 小牌高度（含上下框線）
-  const gap = Math.max(0, (areaMm - ch * chips.length) / 2);
-  return [spacer(gap), ...chips.map((m) => chipPara(m, pt, innerMm, mode)), spacer(gap)];
-}
-
-/** 一格（座位表或標籤）的段落：座標在右上、編號、班｜姓名、標示 */
+/** 一格（座位表或標籤）的段落：座標在右上、編號、班｜姓名；特殊考生在右下角印單字角標（v2.36） */
 function cellParas(
   c: CellModel,
   g: { h: number; innerW: number; topPad: number; codePt: number; namePt: number; nameMax?: number; coordPt: number; markPt: number; markArea: number; bottomPad: number; codeAtBottom: boolean; codeGap: number },
@@ -262,9 +259,7 @@ function cellParas(
   mode: BoldMode,
 ): Paragraph[] {
   const codeH = g.codePt * 0.3528;
-  // 標籤上沒有標示的格子：不留標示區（不多一個空段落），編號與「班級｜姓名」整塊在格內垂直置中，字級取最大（#218）
-  const free = g.codeAtBottom && c.marks.length === 0;
-  const npt = namePtFit(c.classLabel, c.name, g.innerW, free ? (g.nameMax ?? g.namePt) : g.namePt);
+  const npt = namePtFit(c.classLabel, c.name, g.innerW, g.nameMax ?? g.namePt);
   const nameH = npt * 0.3528 * 1.15;
   const nameLine = line(
     [
@@ -276,22 +271,41 @@ function cellParas(
     ],
     { h: nameH },
   );
-  if (free) {
+  const top = line([run2(c.coord, { size: g.coordPt, bold: true, color: '4A463A' }, mode)], { h: g.topPad, align: AlignmentType.RIGHT, right: 0.6 });
+  const hasCorner = (c.corners?.length ?? 0) > 0;
+  const cornerH = g.markPt * 0.3528 * 1.15 + 0.8;
+  const corner = (before: number, h: number) => line(cornerRuns(c, g.markPt, mode), { h, align: AlignmentType.RIGHT, before, right: 0.6 });
+  if (g.codeAtBottom) {
+    // 標籤：編號與「班級｜姓名」整塊在格內垂直置中，不留空行（#218）；角標貼右下角
     const block = codeH + g.codeGap + nameH;
+    const before = Math.max(0, (g.h - block) / 2 - g.topPad);
+    const used = g.topPad + before + codeH + g.codeGap + nameH;
     return [
-      line([run2(c.coord, { size: g.coordPt, bold: true, color: '4A463A' }, mode)], { h: g.topPad, align: AlignmentType.RIGHT, right: 0.6 }),
-      line([run2(c.code, { size: g.codePt, bold: true, color: INK, spacing: g.codePt * 0.02 }, mode)], { h: codeH, before: Math.max(0, (g.h - block) / 2 - g.topPad), after: g.codeGap }),
+      top,
+      line([run2(c.code, { size: g.codePt, bold: true, color: INK, spacing: g.codePt * 0.02 }, mode)], { h: codeH, before, after: g.codeGap }),
       nameLine,
+      ...(hasCorner ? [corner(Math.max(0, g.h - used - cornerH - 0.6), cornerH)] : []),
     ];
   }
   const region = g.h - g.topPad - nameH - g.markArea - g.bottomPad;
-  const before = g.codeAtBottom ? Math.max(0, region - codeH - g.codeGap + 1.2) : Math.max(0, (region - codeH) / 2);
-  const after = g.codeAtBottom ? Math.max(0, g.codeGap - 1.2) : Math.max(0, (region - codeH) / 2);
+  const pad = Math.max(0, (region - codeH) / 2);
+  return [
+    top,
+    line([run2(c.code, { size: g.codePt, bold: true, color: INK, spacing: g.codePt * 0.02 }, mode)], { h: codeH, before: pad, after: pad }),
+    nameLine,
+    hasCorner ? corner(0, g.markArea) : spacer(g.markArea),
+  ];
+}
+
+/** 人員格（預備教室／綜合教室／整合標籤，v2.36）：版式同一般標籤，格內每人一區；排法見 model.personLayout */
+function personParas(c: CellModel, w: number, h: number, g: { topPad: number; coordPt: number; codePt: number; nameMax: number; schedMax: number }, mode: BoldMode): Paragraph[] {
+  const { lines, total } = personLayout(c, w, h, g);
+  const first = Math.max(0, (h - total) / 2 - g.topPad);
   return [
     line([run2(c.coord, { size: g.coordPt, bold: true, color: '4A463A' }, mode)], { h: g.topPad, align: AlignmentType.RIGHT, right: 0.6 }),
-    line([run2(c.code, { size: g.codePt, bold: true, color: INK, spacing: g.codePt * 0.02 }, mode)], { h: codeH, before, after }),
-    nameLine,
-    ...markArea(c, g.markPt, g.markArea, g.innerW, mode),
+    ...lines.map((l, i) =>
+      line(l.runs.map((r) => run2(r.text, { size: l.pt, bold: r.bold, color: INK }, mode)), { h: l.pt * 0.3528 * 1.15, before: l.gapBefore + (i === 0 ? first : 0) }),
+    ),
   ];
 }
 
@@ -356,7 +370,7 @@ function seatSection(page: SeatPageModel, opts: DocxOptions): ISectionOptions {
   const chipTable = new Table({ width: { size: chipCols.reduce((a, b) => a + b, 0), type: WidthType.DXA }, columnWidths: chipCols, layout: TableLayoutType.FIXED, borders: noInside, rows: [new TableRow({ height: { value: tw(7.2), rule: HeightRule.EXACT }, children: chipCells })] });
 
   // 座位格：最外框深色粗線，格間細線；有標示的格加粗黑框
-  const g = { h: ch, innerW: cw - 1.4, topPad: 4.5, codePt: 19, namePt: 12, coordPt: 6.5, markPt: 7.5, markArea: 5.2, bottomPad: 0.8, codeAtBottom: false, codeGap: 0 };
+  const g = { h: ch, innerW: cw - 1.4, topPad: 4.5, codePt: 19, namePt: 12, coordPt: 6.5, markPt: 8, markArea: 5.2, bottomPad: 0.8, codeAtBottom: false, codeGap: 0 };
   const rows: TableRow[] = [];
   for (let d = page.depth; d >= 1; d--) {
     const cells: TableCell[] = [
@@ -371,11 +385,7 @@ function seatSection(page: SeatPageModel, opts: DocxOptions): ISectionOptions {
     for (let r = 1; r <= page.rows; r++) {
       const c = page.cells.get(`${r}-${d}`);
       const edge = (on: boolean) => (on ? bd(INK, 16) : bd(CUT, 7));
-      const marked = !!c && c.marks.length > 0;
-      const frame = bd(INK, 16);
-      const borders = marked
-        ? { top: frame, bottom: frame, left: frame, right: frame }
-        : { top: edge(d === page.depth), bottom: edge(d === 1), left: edge(r === 1), right: edge(r === page.rows) };
+      const borders = { top: edge(d === page.depth), bottom: edge(d === 1), left: edge(r === 1), right: edge(r === page.rows) };
       const pal = c ? (page.detachStyle ? DETACH : { bg: c.colorBg, line: c.colorLine, fg: c.colorFg }) : null;
       cells.push(
         new TableCell({
@@ -384,7 +394,7 @@ function seatSection(page: SeatPageModel, opts: DocxOptions): ISectionOptions {
           margins: { top: 0, bottom: 0, left: tw(0.5), right: tw(0.5) },
           shading: c ? { type: ShadingType.CLEAR, fill: pal!.bg, color: 'auto' } : HATCH_FILL,
           borders,
-          children: c ? (c.periodLines ? periodParas(c, cw - 1.3, ch, g.coordPt, mode) : cellParas(c, g, pal!.fg, mode)) : hatchParas(cw - 1.3, ch - 1.4),
+          children: c ? (c.persons ? personParas(c, cw - 1.3, ch, { topPad: 4.5, coordPt: g.coordPt, codePt: 19, nameMax: 10.5, schedMax: 7 }, mode) : c.periodLines ? periodParas(c, cw - 1.3, ch, g.coordPt, mode) : cellParas(c, g, pal!.fg, mode)) : hatchParas(cw - 1.3, ch - 1.4),
         }),
       );
     }
@@ -452,7 +462,7 @@ function seatSection(page: SeatPageModel, opts: DocxOptions): ISectionOptions {
       children: [line([run2(text, { size: sl.pt, bold: o.head || o.bold }, mode)], { h: sl.pt * 0.3528 * 1.3, align: i === 0 && !o.head ? AlignmentType.LEFT : AlignmentType.CENTER })],
     });
   const stRowsT = [
-    new TableRow({ height: { value: tw(sl.rowH[0]!), rule: HeightRule.EXACT }, children: ['項目', ...page.stats.table.classes, '合計'].map((t, i) => stCell(t, i, { head: true })) }),
+    new TableRow({ height: { value: tw(sl.rowH[0]!), rule: HeightRule.EXACT }, children: [page.stats.table.headLabel ?? '項目', ...page.stats.table.classes, '合計'].map((t, i) => stCell(t, i, { head: true })) }),
     ...st.map((r, ri) => new TableRow({ height: { value: tw(sl.rowH[ri + 1]!), rule: HeightRule.EXACT }, children: [r.label, ...r.per.map(String), String(r.total)].map((t, i, a) => stCell(t, i, { bold: i === a.length - 1 })) })),
   ];
   const stTable = new Table({ width: { size: tw(innerW), type: WidthType.DXA }, columnWidths: stCols.map(tw), layout: TableLayoutType.FIXED, borders: noInside, rows: stRowsT });
@@ -474,7 +484,8 @@ function seatSection(page: SeatPageModel, opts: DocxOptions): ISectionOptions {
       spacer(3),
       bottom,
       spacer(5),
-      page.slotMode ? line([run2(SLOT_TIP, { size: 11, color: GRAY }, mode)], { h: 14 }) : stTable,
+      ...(page.slotMode ? [line([run2(SLOT_TIP, { size: 10, color: GRAY }, mode)], { h: 5.5, align: AlignmentType.LEFT }), spacer(2)] : []),
+      stTable,
       line([], { h: 0.35 }),
     ],
   };
@@ -495,15 +506,15 @@ function labelSection(page: LabelPageModel, opts: DocxOptions): ISectionOptions 
   const cellTw = Math.floor((box.w * 1440) / 25.4);
   const noInside = { top: none, bottom: none, left: none, right: none, insideHorizontal: none, insideVertical: none };
 
-  const g = { h: box.h, innerW: box.w - 2.2, topPad: 5, codePt: isB4 ? 33 : 31, namePt: 15, nameMax: 18, coordPt: 9, markPt: 12, markArea: 9, bottomPad: 0.8, codeAtBottom: true, codeGap: 2.6 };
+  const g = { h: box.h, innerW: box.w - 2.2, topPad: 5, codePt: isB4 ? 33 : 31, namePt: 15, nameMax: 18, coordPt: 9, markPt: 11, markArea: 9, bottomPad: 0.8, codeAtBottom: true, codeGap: 2.6 };
   const grid = labelGrid(page);
   const rows: TableRow[] = [];
   for (let r = 0; r < layout.rows; r++) {
     const cells: TableCell[] = [];
     for (let c = 0; c < layout.cols; c++) {
       const m = grid[r * layout.cols + c];
-      const marked = !!m && m.marks.length > 0;
-      const b = marked ? bd(INK, 16) : bd(CUT, 8);
+      const marked = !!m && isSpecial(m);
+      const b = bd(CUT, 8);
       cells.push(
         new TableCell({
           width: { size: cellTw, type: WidthType.DXA },
@@ -511,7 +522,7 @@ function labelSection(page: LabelPageModel, opts: DocxOptions): ISectionOptions 
           margins: { top: 0, bottom: 0, left: tw(1), right: tw(1) },
           shading: m ? { type: ShadingType.CLEAR, fill: marked ? 'FFE08A' : 'FFFFFF', color: 'auto' } : HATCH_FILL,
           borders: { top: b, bottom: b, left: b, right: b },
-          children: m ? (m.periodLines ? periodParas(m, box.w - 2, box.h, g.coordPt, mode) : cellParas(m, g, INK, mode)) : hatchParas(box.w - 2.1, box.h - 1.4),
+          children: m ? (m.persons ? personParas(m, box.w - 2, box.h, { topPad: 5, coordPt: g.coordPt, codePt: isB4 ? 33 : 31, nameMax: 18, schedMax: 11 }, mode) : m.periodLines ? periodParas(m, box.w - 2, box.h, g.coordPt, mode) : cellParas(m, g, INK, mode)) : hatchParas(box.w - 2.1, box.h - 1.4),
         }),
       );
     }
@@ -563,7 +574,7 @@ function labelSection(page: LabelPageModel, opts: DocxOptions): ISectionOptions 
     },
     footers: { default: pageFooter(opts) },
     children: [
-      headBlock({ widthMm: gridW, h1: page.heading ?? `${page.examName}　標籤`, room: page.roomName, h1Pt: 15, roomPt: 12, padX: 4, padY: 1 }, mode),
+      headBlock({ widthMm: gridW, h1: (page.heading ?? `${page.examName}　標籤`) + (page.flipNotes?.length ? `　（${page.flipNotes.join('；')}）` : ''), room: page.roomName, h1Pt: 15, roomPt: 12, padX: 4, padY: 1 }, mode),
       spacer(3),
       gridTable,
       ...(lines.length ? [spacer(isB4 ? 5 : 8), note] : []),
@@ -606,7 +617,8 @@ function listSection(page: ListPageModel, opts: DocxOptions): ISectionOptions {
     },
     footers: { default: footer(opts) },
     children: [
-      para([run(page.title, { size: 16, bold: true }, mode)], AlignmentType.CENTER, { spacing: { before: 0, after: 120 } }),
+      para([run(page.title, { size: 16, bold: true }, mode)], AlignmentType.CENTER, { spacing: { before: 0, after: page.subtitle ? 60 : 120 } }),
+      ...(page.subtitle ? [para([run(page.subtitle, { size: 13, bold: true }, mode)], AlignmentType.CENTER, { spacing: { before: 0, after: 120 } })] : []),
       new Table({ width: { size: columnWidths.reduce((a, b) => a + b, 0), type: WidthType.DXA }, columnWidths, layout: TableLayoutType.FIXED, rows }),
     ],
   };
@@ -616,38 +628,72 @@ function listSection(page: ListPageModel, opts: DocxOptions): ISectionOptions {
 
 function tableSection(page: TablePageModel, opts: DocxOptions): ISectionOptions {
   const mode = opts.boldMode ?? 'embed-bold';
-  const contentW = mmToTwip(PAPER_MM.A4.w - 2 * A4_MARGIN_MM);
+  const land = !!page.landscape;
+  const pageW = land ? PAPER_MM.A4.h : PAPER_MM.A4.w;
+  const contentW = mmToTwip(pageW - 2 * A4_MARGIN_MM);
   const sum = page.widths.reduce((a, b) => a + b, 0);
   const columnWidths = page.widths.map((f) => Math.floor((contentW * f) / sum));
-  const mk = (texts: string[], kind: 'head' | 'body' | 'total') =>
+  const nHead = page.headGroups ? 2 : 1;
+  const fit = land ? landscapeFit(page.rows.length + (page.totalRow ? 1 : 0), nHead) : { rowMm: 9, pt: 10.5 };
+  const mk = (texts: string[], kind: 'head' | 'body' | 'total', kinds?: ('exam' | 'study' | undefined)[]) =>
     new TableRow({
       tableHeader: kind === 'head',
       cantSplit: true,
-      height: kind === 'head' ? undefined : { value: mmToTwip(9), rule: HeightRule.ATLEAST },
+      height: { value: mmToTwip(kind === 'head' && !land ? 0 : fit.rowMm), rule: kind === 'head' && !land ? HeightRule.AUTO : land ? HeightRule.EXACT : HeightRule.ATLEAST },
       children: texts.map(
         (t, i) =>
           new TableCell({
             width: { size: columnWidths[i]!, type: WidthType.DXA },
+            verticalAlign: VerticalAlign.CENTER,
             borders: allBorders(thin('808080')),
-            shading: kind === 'body' ? undefined : { type: ShadingType.CLEAR, fill: kind === 'head' ? 'EEEEEE' : 'F4F4F4', color: 'auto' },
-            margins: { top: 40, bottom: 40, left: 60, right: 60 },
-            children: [para([run(t, { size: 10.5, bold: kind !== 'body' }, mode)], AlignmentType.LEFT)],
+            shading:
+              kind === 'body'
+                ? kinds?.[i] === 'study' ? { type: ShadingType.CLEAR, fill: 'D9D9D9', color: 'auto' } : undefined
+                : { type: ShadingType.CLEAR, fill: kind === 'head' ? 'EEEEEE' : 'F4F4F4', color: 'auto' },
+            margins: { top: land ? 10 : 40, bottom: land ? 10 : 40, left: 60, right: 60 },
+            children: [para([run(t, { size: fit.pt, bold: kind !== 'body' || kinds?.[i] === 'exam' }, mode)], land && kind !== 'body' ? AlignmentType.CENTER : AlignmentType.LEFT, land ? { spacing: { before: 0, after: 0, line: Math.round(fit.pt * 20 * 1.25), lineRule: LineRuleType.EXACT } } : {})],
           }),
       ),
     });
-  const rows = [mk(page.heads, 'head'), ...page.rows.map((r) => mk(r, 'body')), ...(page.totalRow ? [mk(page.totalRow, 'total')] : [])];
+  const groupRow = (): TableRow | undefined => {
+    if (!page.headGroups) return undefined;
+    let col = 0;
+    return new TableRow({
+      tableHeader: true,
+      cantSplit: true,
+      height: { value: mmToTwip(fit.rowMm), rule: HeightRule.EXACT },
+      children: page.headGroups.map((g) => {
+        const w = columnWidths.slice(col, col + g.span).reduce((x, y) => x + y, 0);
+        col += g.span;
+        return new TableCell({
+          width: { size: w, type: WidthType.DXA },
+          columnSpan: g.span,
+          verticalAlign: VerticalAlign.CENTER,
+          borders: allBorders(thin('808080')),
+          shading: { type: ShadingType.CLEAR, fill: 'E2E2E2', color: 'auto' },
+          margins: { top: 10, bottom: 10, left: 60, right: 60 },
+          children: [para([run(g.text, { size: fit.pt, bold: true }, mode)], AlignmentType.CENTER)],
+        });
+      }),
+    });
+  };
+  const rows = [...(groupRow() ? [groupRow()!] : []), mk(page.heads, 'head'), ...page.rows.map((r, ri) => mk(r, 'body', page.cellKinds?.[ri])), ...(page.totalRow ? [mk(page.totalRow, 'total')] : [])];
   return {
     properties: {
       page: {
-        size: { width: mmToTwip(PAPER_MM.A4.w), height: mmToTwip(PAPER_MM.A4.h) },
-        margin: { top: mmToTwip(A4_MARGIN_MM), bottom: mmToTwip(A4_MARGIN_MM), left: mmToTwip(A4_MARGIN_MM), right: mmToTwip(A4_MARGIN_MM), footer: mmToTwip(6) },
+        size: { width: mmToTwip(PAPER_MM.A4.w), height: mmToTwip(PAPER_MM.A4.h), ...(land ? { orientation: PageOrientation.LANDSCAPE } : {}) },
+        margin: { top: mmToTwip(land ? 8 : A4_MARGIN_MM), bottom: mmToTwip(land ? 9 : A4_MARGIN_MM), left: mmToTwip(A4_MARGIN_MM), right: mmToTwip(A4_MARGIN_MM), footer: mmToTwip(land ? 4 : 6) },
       },
     },
     footers: { default: footer(opts) },
     children: [
-      para([run(page.title, { size: 16, bold: true }, mode)], AlignmentType.CENTER, { spacing: { before: 0, after: 80 } }),
-      ...(page.subtitle ? [para([run(page.subtitle, { size: 12 }, mode)], AlignmentType.CENTER, { spacing: { before: 0, after: 120 } })] : []),
+      // 橫式公告：標題與人數同一行，省下高度讓 45 人以上也擠得進一頁
+      para([run(land && page.subtitle ? `${page.title}　${page.subtitle}` : page.title, { size: land ? 14 : 16, bold: true }, mode)], AlignmentType.CENTER, { spacing: { before: 0, after: land ? 30 : 60 } }),
+      ...(page.subtitle && !land ? [para([run(page.subtitle, { size: 12 }, mode)], AlignmentType.CENTER, { spacing: { before: 0, after: page.legend ? 40 : 120 } })] : []),
+      ...(page.legend ? [para([run(page.legend, { size: land ? 8 : 9.5, color: GRAY }, mode)], AlignmentType.CENTER, { spacing: { before: 0, after: land ? 50 : 100 } })] : []),
       new Table({ width: { size: columnWidths.reduce((a, b) => a + b, 0), type: WidthType.DXA }, columnWidths, layout: TableLayoutType.FIXED, rows }),
+      // Word 表格後一定要有一個段落；橫式公告表剛好填滿一頁時，這個段落會獨自掉到下一頁，所以壓成極小
+      ...(land ? [line([], { h: 0.35 })] : []),
     ],
   };
 }
@@ -660,7 +706,11 @@ export type DocxPages = { seat?: SeatPageModel[]; label?: LabelPageModel[]; list
 export async function renderDocx(pages: DocxPages, opts: DocxOptions): Promise<Uint8Array> {
   const mode = opts.boldMode ?? 'embed-bold';
   const sections: ISectionOptions[] = [];
-  for (const p of pages.seat ?? []) sections.push(seatSection(p, opts));
+  for (const p of pages.seat ?? []) {
+    sections.push(seatSection(p, opts));
+    const rot = rotationPage(p);
+    if (rot) sections.push(tableSection(rot, opts));
+  }
   for (const p of pages.label ?? []) sections.push(labelSection(p, opts));
   for (const l of [pages.list ?? []].flat()) sections.push(listSection(l, opts));
   for (const t of pages.table ?? []) sections.push(tableSection(t, opts));

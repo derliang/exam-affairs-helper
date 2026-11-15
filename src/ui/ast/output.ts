@@ -8,18 +8,18 @@
 import type { ExamConfig, LabelPaper } from '../../data';
 import { subjectShort } from '../../core/subjectShort';
 import { dataVersion } from '../../core/version';
-import { defaultLabelLayout, type LabelPageModel, type TablePageModel, type CellModel } from '../../export/model';
+import { defaultLabelLayout, type LabelPageModel, type TablePageModel, type CellModel, type PersonModel } from '../../export/model';
 import { examEntries } from '../seating';
 import type { Doc } from '../store';
 import { astSlots, awayStudy, usageCell, type AstPlan, type AstSlot } from './model';
-import { codeOf } from '../../core/astD99/contract';
+import { codeOf, homeRoomIds } from '../../core/astD99/contract';
 
 export type AstOutputKey = 'label' | 'ann' | 'use' | 'reg' | 'study';
 
 export interface AstOutputItem { key: AstOutputKey; title: string; sub: string }
 export const AST_OUTPUT_ITEMS: AstOutputItem[] = [
   { key: 'label', title: '整合標籤（合併標籤）', sub: '每個座位一張、各時段一行；班座號＋姓名，名單有應試編號才印；每間考場一張紙' },
-  { key: 'ann', title: '班級公告', sub: '依原班逐生、各時段各一欄；考試列教室與座位，自習只列教室' },
+  { key: 'ann', title: '班級公告', sub: 'A4 橫式、一班一頁貼在班上；考試＝粗體座位（教室同本班就省略），自習＝灰底＋教室' },
   { key: 'use', title: '每節教室用途表', sub: '哪間教室哪個時段是考場或自習，附方案指標' },
   { key: 'reg', title: '每科試務清冊', sub: '每科：考場總表，加每間考場一頁簽到名冊' },
   { key: 'study', title: '自習教室名單與布置標籤工作表', sub: '每時段一份自習名單，加一份布置工作表' },
@@ -76,6 +76,18 @@ const slotHead = (c: Ctx, s: AstSlot): string => `${s.label} ${s.subjectIds.map(
 
 // ───── ① 整合標籤 ─────
 
+/** 坐這個座位的人（#216）：各行「第N天 時段X 科目」 */
+function personsOfSeat(c: Ctx, list: { slot: number; code: string; subjectId: string }[]): PersonModel[] {
+  const byCode = new Map<string, typeof list>();
+  for (const x of [...list].sort((a, b) => a.slot - b.slot)) byCode.set(x.code, [...(byCode.get(x.code) ?? []), x]);
+  return [...byCode].map(([code, xs]) => ({
+    code,
+    classLabel: c.className(Number(code.slice(0, 2))),
+    name: c.nameOf.get(code) ?? '',
+    sched: [...xs.map((x) => `${c.slots[x.slot]!.label} ${sub(c, x.subjectId)}`), ...(c.examNoOf.get(code) ? [`應試 ${c.examNoOf.get(code)}`] : [])],
+  }));
+}
+
 function labelPages(c: Ctx, paper: LabelPaper): LabelPageModel[] {
   const layout = defaultLabelLayout(paper);
   const slotIdx = new Map(c.slots.map((s, i) => [s.id, i]));
@@ -97,13 +109,14 @@ function labelPages(c: Ctx, paper: LabelPaper): LabelPageModel[] {
         code: '', classLabel: '', name: '',
         colorBg: 'FFFFFF', colorLine: '222222', colorFg: '22201B',
         tags: [], marks: [],
+        persons: personsOfSeat(c, list),
         periodLines: [...list].sort((a, b) => a.slot - b.slot).map((x) => ({
           head: slotShort(c.slots[x.slot]!),
           text: `${sub(c, x.subjectId)} ${x.code} ${c.nameOf.get(x.code) ?? ''}${c.examNoOf.get(x.code) ? ` ${c.examNoOf.get(x.code)}` : ''}`.trim(),
         })),
       };
     });
-    return { kind: 'label', title: `${c.exam.name}　${rn(c, id)}　整合標籤`, examName: c.exam.name, heading: `${c.exam.name}　整合標籤（1天2＝第 1 天時段二）`, roomName: `${rn(c, id)}　整合標籤`, layout, notes: [], cells };
+    return { kind: 'label', title: `${c.exam.name}　${rn(c, id)}　整合標籤`, examName: c.exam.name, heading: `${c.exam.name}　整合標籤`, roomName: `${rn(c, id)}　整合標籤`, layout, notes: [], cells };
   });
 }
 
@@ -113,20 +126,46 @@ function announcePages(c: Ctx): TablePageModel[] {
   const examAt = new Map(c.plan.out.exams.map((e) => [`${e.slotId}|${e.code}`, e]));
   const studyAt = new Map(c.plan.out.study.map((s) => [`${s.slotId}|${s.code}`, s]));
   const classes = [...new Set(c.plan.input.students.map((s) => s.classNo))].sort((a, b) => a - b);
-  const heads = ['座號', '姓名', ...(c.hasExamNo ? ['應試編號'] : []), ...c.slots.map((s) => slotHead(c, s))];
-  const widths = [0.9, 1.5, ...(c.hasExamNo ? [1.5] : []), ...c.slots.map(() => 1.8)];
+  const home = homeRoomIds(c.plan.input.rooms);
+  const lead = ['座號', '姓名', ...(c.hasExamNo ? ['應試編號'] : [])];
+  // 兩層表頭（#215）：上層「第N天」、下層「時段X 科目」，不折行
+  const dayOf = (s: AstSlot): string => s.label.split(' ')[0] ?? s.label;
+  const headGroups: { text: string; span: number }[] = [{ text: '', span: lead.length }];
+  for (const s of c.slots) {
+    const last = headGroups[headGroups.length - 1]!;
+    if (headGroups.length > 1 && last.text === dayOf(s)) last.span++;
+    else headGroups.push({ text: dayOf(s), span: 1 });
+  }
+  const heads = [...lead, ...c.slots.map((s) => `${s.label.slice(dayOf(s).length).trim()} ${s.subjectIds.map((i) => sub(c, i)).join('、')}`)];
+  // 欄寬依表頭字數給，讓「時段四 公民與社會」這種長科目名不折行
+  const widths = [0.7, 1.3, ...(c.hasExamNo ? [1.2] : []), ...heads.slice(lead.length).map((h) => Math.max(1.4, h.length * 0.2))];
   return classes.map((cl): TablePageModel => {
-    const rows = c.plan.input.students.filter((s) => s.classNo === cl).sort((a, b) => a.seatNo - b.seatNo).map((s) => {
+    const students = c.plan.input.students.filter((s) => s.classNo === cl).sort((a, b) => a.seatNo - b.seatNo);
+    const kinds: ('exam' | 'study' | undefined)[][] = [];
+    const rows = students.map((s) => {
       const code = codeOf(s);
-      return [String(s.seatNo), s.name, ...(c.hasExamNo ? [c.examNoOf.get(code) ?? ''] : []),
-        ...c.slots.map((sl) => {
-          const e = examAt.get(`${sl.id}|${code}`);
-          if (e) return `考 ${rn(c, e.roomId)} ${seatText(e.row, e.depth)}`;
-          const st = studyAt.get(`${sl.id}|${code}`);
-          return st ? `自習 ${rn(c, st.roomId)}` : '—';
-        })];
+      const k: ('exam' | 'study' | undefined)[] = lead.map(() => undefined);
+      const cells = c.slots.map((sl) => {
+        const e = examAt.get(`${sl.id}|${code}`);
+        if (e) {
+          k.push('exam');
+          const seat = seatText(e.row, e.depth);
+          return e.roomId === home.get(cl) ? seat : `${seat} ${rn(c, e.roomId)}`;
+        }
+        const st = studyAt.get(`${sl.id}|${code}`);
+        if (st) { k.push('study'); return `自習 ${rn(c, st.roomId)}`; }
+        k.push(undefined);
+        return '—';
+      });
+      kinds.push(k);
+      return [String(s.seatNo), s.name, ...(c.hasExamNo ? [c.examNoOf.get(code) ?? ''] : []), ...cells];
     });
-    return { kind: 'table', title: `${c.exam.name}　班級公告`, subtitle: `${c.className(cl)}班（共 ${rows.length} 人）　座位為「排－深位」；自習只列教室`, heads, widths, rows };
+    return {
+      kind: 'table', landscape: true, title: `${c.exam.name}　班級公告　${c.className(cl)}班`,
+      subtitle: `共 ${rows.length} 人`,
+      legend: '粗體＝考試座位（排－深位；沒寫教室就是在本班教室）　灰底＝自習（寫教室）　—＝不考也不自習',
+      heads, headGroups, widths, rows, cellKinds: kinds,
+    };
   });
 }
 
@@ -190,8 +229,8 @@ function registerPages(c: Ctx): TablePageModel[] {
         const list = here.filter((e) => e.roomId === id).sort((a, b) => a.row - b.row || a.depth - b.depth);
         out.push({
           kind: 'table', title: head, subtitle: `${where}　${rn(c, id)}　簽到名冊　應考 ${list.length} 人${mixedIn(id) > 0 ? '　注意：同排混科，依座位分區發卷' : ''}`,
-          heads: ['座位（排－深位）', '班座號', '姓名', ...(c.hasExamNo ? ['應試編號'] : []), '到考', '缺考'], widths: [1.4, 1.1, 1.6, ...(c.hasExamNo ? [1.5] : []), 0.8, 0.8],
-          rows: list.map((e) => [seatText(e.row, e.depth), e.code, c.nameOf.get(e.code) ?? '', ...(c.hasExamNo ? [c.examNoOf.get(e.code) ?? ''] : []), '□', '□']),
+          heads: ['座位', '班級', '座號', '姓名', ...(c.hasExamNo ? ['應試編號'] : []), '到考', '缺考'], widths: [1, 1, 0.8, 1.6, ...(c.hasExamNo ? [1.5] : []), 0.8, 0.8],
+          rows: list.map((e) => [seatText(e.row, e.depth), c.className(Number(e.code.slice(0, 2))), e.code.slice(2), c.nameOf.get(e.code) ?? '', ...(c.hasExamNo ? [c.examNoOf.get(e.code) ?? ''] : []), '□', '□']),
         });
       }
     }
