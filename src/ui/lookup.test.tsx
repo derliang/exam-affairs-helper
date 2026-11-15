@@ -5,7 +5,7 @@ import './featureRegister/lookup';
 import { enabledNav } from './features';
 import { Lookup } from './pages/Lookup';
 import { lookupExaminee, searchExaminees } from './lookup';
-import { reseat, setMarkChoice, setOverride } from './seating';
+import { reseat, setMarkChoice, setOverride, unseatedFullyAbsent } from './seating';
 import type { Doc } from './store';
 
 const NOW = '2026-11-08T10:00:00.000Z';
@@ -119,6 +119,13 @@ describe('H4 查詢結果', () => {
     const hit = lookupExaminee(d, e, res, absent);
     expect(hit).toMatchObject({ allAbsent: true, rows: [] });
     expect(hit.absentSeat).toBeUndefined();
+  });
+  it('#233：unseatedFullyAbsent 列出不排座的全科缺考者；勾「仍排座」則為空', () => {
+    const absent: ExamEntry = { classNo: 2, seatNo: 4, name: '缺考者', subjectIds: [] };
+    const e = exam(decided());
+    expect(unseatedFullyAbsent(doc(e, [...entries, absent]), e).map((x) => `${x.classNo}-${x.seatNo}`)).toEqual(['2-4']);
+    const e2 = exam({ ...decided(), seatFullyAbsent: true });
+    expect(unseatedFullyAbsent(doc(e2, [...entries, absent]), e2)).toEqual([]);
   });
   it('全科缺考且勾了「仍排座」：排座真的排了他，查詢要給教室與座位，不能說未排座', () => {
     const absent: ExamEntry = { classNo: 2, seatNo: 4, name: '缺考者', subjectIds: [] };
