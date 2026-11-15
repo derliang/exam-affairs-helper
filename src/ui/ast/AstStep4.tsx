@@ -45,7 +45,7 @@ export function AstStep4(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
   const a = met('fewest-rooms');
   const b = met('least-movement');
   const slots = astSlots(doc, exam);
-  const issues = plans[mode] ? homeIssues(plans[mode]!.input) : [];
+  const issues = plans[mode] ? homeIssues(plans[mode]!.input, { classNames: new Map(doc.settings.classes.filter((c) => c.division === exam.division).map((c) => [c.no, c.name])) }) : [];
   const issueN = issues.reduce((x, i) => x + (i.kind === 'none' ? i.students : Math.max(0, i.students - i.cap)), 0);
   const same = !!a && !!b && JSON.stringify(a) === JSON.stringify(b);
 
@@ -82,8 +82,8 @@ export function AstStep4(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
       {issues.length > 0 && (
         <Alert tone="warn" action={<Button onClick={() => p.onStep(3)}>前往 ③ 教室與自習空間</Button>}>
           <b>有 {issueN} 位參加者沒有可留的原班教室。</b>
-          {issues.map((i) => (i.kind === 'none' ? `班 ${i.classNo}（${i.students} 人）找不到對應的班級教室` : `班 ${i.classNo}（${i.students} 人）原班教室自習容量只有 ${i.cap}`)).join('；')}。
-          這些人不考試時沒地方留在原班，只能去綜合教室自習，「少移動優先」也幫不上忙。請確認班級教室名稱與班級名稱一致，且已在 ③ 勾選、自習容量夠。
+          {issues.map((i) => i.detail).join('；')}。
+          這些人不考試時沒地方留在原班，只能去綜合教室自習，「少移動優先」也幫不上忙。請把班級教室名稱改成與班級名稱一致（可加「高三」等年級前綴），且已在 ③ 勾選、自習容量夠。
         </Alert>
       )}
       {same && (
