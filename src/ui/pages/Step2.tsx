@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { ExamConfig, ExamEntry, Participation, RosterDiff, RosterDiffChoice } from '../../data';
-import { allResolved, applyDiffs, applyGroupChoice, compareRosters, groupDiffs, type DiffGroup, diffsStale, isResolved, readXlsx, XlsError, refreshDiffs, validateResolved, type Sheet } from '../../import';
+import { allResolved, applyDiffs, applyGroupChoice, compareRosters, groupDiffs, manyDiffs, type DiffGroup, diffsStale, isResolved, readXlsx, XlsError, refreshDiffs, validateResolved, type Sheet } from '../../import';
 import { Alert, Badge, Button, ClassChip, ConfirmButton, More, PageHead, Seg, StatsBar, StepHead } from '../components';
 import { confirmCopy } from '../flow';
 import { addClass, diffOptions, examYear, rosterName, syncDiffs, updateExam, type Doc } from '../store';
@@ -21,7 +21,7 @@ const CHOICE_TEXT: Record<RosterDiffChoice, string> = {
   'add-class': '新增班級', 'remap-class': '改成既有班級', 'skip-class': '不匯入這班',
 };
 const GROUP_META: Record<DiffGroup, { title: string; desc: string }> = {
-  A: { title: 'A 缺字／子字串', desc: '同座號，一邊姓名是另一邊的一部分（例：「王小明」↔「王小」）。多半是考試名單漏字或截斷。' },
+  A: { title: 'A 疑似缺字', desc: '同座號，一邊姓名是另一邊的一部分，或兩邊只差一個字（例：「王小明」↔「王小」、「王小明」↔「王曉明」）。多半是漏字、截斷或打錯字。' },
   B: { title: 'B 座號相同、姓名完全不同', desc: '座號對得上，但兩邊姓名沒有包含關係。' },
   C: { title: 'C 缺漏', desc: '只在一邊有的人（考試名單有、學生名單沒有，或相反）。' },
 };
@@ -138,6 +138,9 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
           <More title="說明：每一筆怎麼處理">每一筆選一種處理方式（多數是：以考試名單為準、以學生名單為準，或兩邊都不對就手動編輯）。上方 A／B／C 分組可以整組一次套用；選「以考試名單為準」會改到所有模擬考共用的名單。</More>
           <StatsBar items={[{ label: '差異', value: diffs.length }, { label: '已處理', value: resolved }, { label: '未處理', value: diffs.length - resolved, bad: diffs.length - resolved > 0 }]} />
         </div>
+        {manyDiffs(diffs.length, Math.max(roster.length, entries.length)) && (
+          <Alert tone="warn"><b>差異很多（{diffs.length} 筆，超過名單的 30%），名單可能不是同一個年度／學期的名冊。</b>請先確認「共用設定 → 學生名單」的年度是否對，再決定要不要整組套用。</Alert>
+        )}
         {(['A', 'B', 'C'] as DiffGroup[]).map((g) => {
           const list = grouped[g];
           if (list.length === 0) return null;

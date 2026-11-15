@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ExamEntry, Student } from '../data';
 import { compareRosters } from './compare';
-import { applyGroupChoice, classifyDiff, groupDiffs } from './diffGroups';
+import { applyGroupChoice, classifyDiff, groupDiffs, manyDiffs, nameSimilar } from './diffGroups';
 
 const S = (classNo: number, seatNo: number, name: string): Student => ({ classNo, seatNo, name });
 const E = (classNo: number, seatNo: number, name: string): ExamEntry => ({ classNo, seatNo, name, subjectIds: ['chinese'] });
@@ -35,5 +35,25 @@ describe('#201 差異分組', () => {
     expect(next.find((d) => d.code === '0104')?.choice).toBeUndefined();
     const over = applyGroupChoice(pre, 'A', 'use-exam');
     expect(over.find((d) => d.code === '0101')?.choice).toBe('use-exam');
+  });
+});
+
+describe('#208 疑似缺字（差一字）與差異過多提示', () => {
+  it('差一個字（換字、少字、多字）視為相似；兩字名換一字不算', () => {
+    expect(nameSimilar('王小明', '王曉明')).toBe(true);
+    expect(nameSimilar('王小明', '王明')).toBe(true);
+    expect(nameSimilar('王小明', '王大小明')).toBe(true);
+    expect(nameSimilar('王小', '王大')).toBe(false);
+    expect(nameSimilar('王小明', '陳美玲')).toBe(false);
+    expect(nameSimilar('王小明', '李曉華')).toBe(false);
+  });
+  it('姓名差一字的 mismatch 歸 A', () => {
+    const { diffs } = compareRosters([S(1, 1, '王小明')], [E(1, 1, '王曉明')], 'all');
+    expect(groupDiffs(diffs).A).toHaveLength(1);
+  });
+  it('差異超過 30% 才提示', () => {
+    expect(manyDiffs(3, 10)).toBe(false);
+    expect(manyDiffs(4, 10)).toBe(true);
+    expect(manyDiffs(0, 0)).toBe(false);
   });
 });
