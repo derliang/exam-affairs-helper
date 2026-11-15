@@ -262,7 +262,8 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
           : '學生名單有、考試名單沒有的人，列為差異，逐筆處理。'}</p>
         {fullyAbsent > 0 && (
           <Alert tone="info">
-            有 {fullyAbsent} 人全科缺考：{exam.seatFullyAbsent ? '目前照樣排座。' : '預設不排座、不計領卷份數。'}
+            其中 {fullyAbsent} 位全科缺考：{exam.seatFullyAbsent ? '目前照樣排座。' : '預設不排座、不計領卷份數，⑤ 的考生人數會比這裡少。'}
+            <details><summary class="small">列出是誰</summary><ul>{(entries ?? []).filter((e) => e.subjectIds.length === 0).map((e) => <li key={`${e.classNo}-${e.seatNo}`}>{who(e).replace(/　.*$/, '')}</li>)}</ul></details>
             <label style="margin-left:12px"><input type="checkbox" checked={!!exam.seatFullyAbsent}
               onChange={(e) => { const r = updateExam(doc, exam.id, { seatFullyAbsent: (e.target as HTMLInputElement).checked }); if (r.ok) p.onChange(r.doc); }} /> 全科缺考者仍排座</label>
           </Alert>

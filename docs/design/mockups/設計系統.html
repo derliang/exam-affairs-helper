@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>模擬考設計系統 稿 v2.35</title>
+<title>模擬考設計系統 稿 v2.36</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -492,9 +492,9 @@ details.more{font-size:14px;color:var(--text-2)}details.more summary{cursor:poin
 </style>
 
 <div class="top">
-  <span class="brand">模擬考小幫手 設計系統 <span class="badge b-acc">稿 v2.35・2026-11-14</span></span>
+  <span class="brand">模擬考小幫手 設計系統 <span class="badge b-acc">稿 v2.36・2026-11-15</span></span>
   <nav class="toc" aria-label="目錄">
-    <a href="#color">色彩</a><a href="#type">字型</a><a href="#base">間距圓角</a><a href="#comp">元件</a><a href="#steps">步驟導覽</a><a href="#special">專屬元件</a><a href="#ast">分科新模型</a><a href="#ast2">分科下一批</a><a href="#paper">座位表與標籤</a><a href="#brandbar">品牌列</a><a href="#footer">頁尾</a><a href="#align">對位測試頁</a><a href="#open">待確認</a>
+    <a href="#color">色彩</a><a href="#type">字型</a><a href="#base">間距圓角</a><a href="#comp">元件</a><a href="#steps">步驟導覽</a><a href="#special">專屬元件</a><a href="#ast">分科新模型</a><a href="#ast2">分科下一批</a><a href="#paper">座位表與標籤</a><a href="#paper36">輸出補強 v2.36</a><a href="#paper36b">名單與教室 v2.36</a><a href="#brandbar">品牌列</a><a href="#footer">頁尾</a><a href="#align">對位測試頁</a><a href="#open">待確認</a>
   </nav>
   <div class="seg" role="group" aria-label="深淺色">
     <button type="button" id="thSys" aria-pressed="true">跟隨系統</button>
@@ -1307,6 +1307,238 @@ details.more{font-size:14px;color:var(--text-2)}details.more summary{cursor:poin
     document.querySelectorAll('.pp').forEach(function(e){e.classList.toggle('pp-gray',on)})};
 })();
 </script>
+
+  <section id="paper36">
+    <header><h2>輸出紙面補強（稿 v2.36）</h2>
+      <p>驗收員用真實資料驗收 v1.10.2 的下載檔後，使用者提出的版面問題（Issue #212～#223）。全部假資料、紙面永遠淺色。<b>使用者 2026-11-15 已裁示：以下各項都照本頁定案版本實作</b>（未選的方案收在 DESIGN 10.22「被否決」）；字級、表頭、統計表欄位等小修已先做（PR #229）。</p></header>
+    <style>
+      #paper36 .v36{--ink:#22201B;--navy:#1F3A5F;--gray:#6B6657;--cut:#8E8670;color:var(--ink);font-family:'Noto Sans TC',sans-serif}
+      #paper36 .v36 *{box-sizing:border-box}
+      #paper36 .g{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));align-items:start}
+      #paper36 .g>*{min-width:0}
+      #paper36 .tag{display:inline-block;font-size:12px;font-weight:700;padding:1px 8px;border-radius:99px;border:1px solid #999;margin-left:6px;vertical-align:middle}
+      #paper36 .cell{background:#fff;border:1px solid #8E8670;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#22201B}
+      #paper36 .cell .co{position:absolute;right:4px;top:3px;font-size:11px;font-weight:700;color:#4A463A;font-style:normal}
+      #paper36 .cell b.no{font-weight:700;line-height:1}
+      #paper36 .cell .nm{white-space:nowrap}
+      #paper36 .cell .nm em{font-style:normal;font-weight:700;padding-right:.3em;margin-right:.3em;border-right:1px solid currentColor}
+      #paper36 .seat{display:grid;border:2px solid #22201B;background:#fff;width:max-content;color:#22201B}
+      #paper36 .sc{width:34px;height:32px;border-right:1px solid #8E8670;border-bottom:1px solid #8E8670;position:relative;font-size:8px;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1}
+      #paper36 .sc i{font-style:normal;font-weight:500;font-size:7px}
+      #paper36 .sc.thick{box-shadow:inset 0 0 0 2px #22201B}
+      #paper36 .sc .x{background:#22201B;color:#fff;font-size:7px;padding:0 2px;border-radius:1px;margin-top:1px;white-space:nowrap}
+      #paper36 .sc .corner{position:absolute;right:0;bottom:0;background:#22201B;color:#fff;font-size:8px;font-weight:700;padding:0 3px;line-height:12px}
+      #paper36 .sc .cornerk{position:absolute;right:0;bottom:0;border:1px solid #22201B;background:#fff;color:#22201B;font-size:8px;font-weight:700;padding:0 3px;line-height:11px}
+      #paper36 table.t{border-collapse:collapse;width:100%;background:#fff;color:#22201B}
+      #paper36 table.t th,#paper36 table.t td{border:1px solid #8E8670;padding:3px 6px;font-size:12px;text-align:center}
+      #paper36 table.t th{background:#F3EEDD}
+      #paper36 table.t td.l{text-align:left}
+      #paper36 .exm{font-weight:800}
+      #paper36 .stdy{background:#EFEFEA;color:#4A463A}
+      #paper36 .pap{overflow-x:auto;background:#fff;padding:10px;border:1px solid #8E8670;color:#22201B}
+      #paper36 .note{font-size:13px;margin:6px 0 0}
+      #paper36 ul.sp{margin:10px 0 0;padding-left:20px;display:grid;gap:5px;font-size:14px}
+    </style>
+
+    <div class="card"><div class="lab">① 格內字級（#222、#218、#217；<b>小修，已實作</b>）</div>
+      <p class="small muted">座位表格子 25×23mm、標籤格 35mm，以下 1mm＝5px 畫。原則：格內最醒目的是考生，「班級｜姓名」在格寬放得下的前提下取最大，短姓名更大；標籤沒有標示的格子，編號與班級姓名整塊在格內垂直置中，不留空行。</p>
+      <div class="v36 g">
+        <div><div class="small">座位表 舊：姓名 8.5pt</div>
+          <div class="cell" style="width:125px;height:115px;background:#F8E9CF"><i class="co">1-1</i><b class="no" style="font-size:33px;margin-top:14px">0101</b><span class="nm" style="font-size:15px;margin-top:4px"><em>溫</em>王小明華</span></div></div>
+        <div><div class="small">座位表 新：四字姓名約 10.5pt<span class="tag">新</span></div>
+          <div class="cell" style="width:125px;height:115px;background:#F8E9CF"><i class="co">1-1</i><b class="no" style="font-size:33px;margin-top:14px">0101</b><span class="nm" style="font-size:18.5px;margin-top:4px"><em>溫</em>王小明華</span></div></div>
+        <div><div class="small">座位表 新：三字姓名 12pt<span class="tag">新</span></div>
+          <div class="cell" style="width:125px;height:115px;background:#F8E9CF"><i class="co">1-2</i><b class="no" style="font-size:33px;margin-top:14px">0102</b><span class="nm" style="font-size:21px;margin-top:4px"><em>溫</em>李安仁</span></div></div>
+        <div><div class="small">標籤 舊：固定 15pt、下方多一個空行</div>
+          <div class="cell" style="width:175px;height:175px;justify-content:flex-start"><i class="co">1-1</i><b class="no" style="font-size:58px;margin-top:36px">0101</b><span class="nm" style="font-size:26px;margin-top:6px"><em>溫</em>王小明華</span></div></div>
+        <div><div class="small">標籤 新：整塊垂直置中、字取最大（上限 18pt）<span class="tag">新</span></div>
+          <div class="cell" style="width:175px;height:175px"><i class="co">1-1</i><b class="no" style="font-size:58px;margin-top:6px">0101</b><span class="nm" style="font-size:30px;margin-top:8px"><em>溫</em>王小明華</span></div></div>
+      </div>
+      <ul class="sp"><li><b>統計表</b>（座位表下方，#217）：第一欄加寬、放不下才折行，列高隨行數撐開；座位格高度扣掉的就是這個總高，整張表一定在頁面內（舊：固定列高 8.6mm 把長列名切掉，且整張被頁底切斷）。字 12pt。</li>
+      <li><b>有標示（不考／加考）的標籤格</b>維持原排法（姓名上限 15pt），標示小牌仍放得下。</li></ul></div>
+
+    <div class="card" style="margin-top:16px"><div class="lab">② 特殊考生標示（#223，<b>使用者已選方案 C</b>）</div>
+      <p class="small muted">原做法：不考的格子外框加粗＋黑底白字「X 社會」小牌。不考的人一多，粗框互相連成不規則網格，反而看不出誰是少數。下方同一頁 24 人，分別在「不考 0 人／3 人／一半以上」三種情況比較（座位用班級色底，此處以淡底示意）。</p>
+      <div class="v36" id="v36marks"></div>
+      <ul class="sp">
+        <li><b>定案（C）</b>：拿掉粗外框，格子大小與底色不變；不考＝右下角黑底白字單字角標（「社」），加考＝白底黑框（「＋數」），多科用「社數」；頁首小標籤與圖例寫全名。某科不考人數超過該頁一半時，改標「有考」的人（角標「考社」），頁首小標籤寫明「本頁多數不考社會，只標有考者」。黑白列印分得出（黑底白字 vs 白底黑框）。</li><li><b>標籤也一樣</b>改單字角標（與座位表一致；標籤格仍是淡黃底）。</li><li><b>被否決</b>：A（只換角標、不反標）、B（只反標、不換角標）。</li></ul></div>
+
+    <div class="card" style="margin-top:16px"><div class="lab">③ 班級公告重新設計（#215，<b>使用者已核可</b>）</div>
+      <p class="small muted">原做法：一人一列、8 個時段橫排，每格擠「考 高三溫 1－1」折成兩三行，表頭「第一天 時段一 物理」被折行，考與自習只靠文字分。新版：A4 橫式、一班一頁，<b>學生一眼找到「我哪個時段在哪、考還是自習」</b>。使用者裁示：公告貼在班上給學生看，導師共用同一張。</p>
+      <div class="pap v36"><div style="min-width:860px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #1F3A5F;padding-bottom:6px;margin-bottom:8px"><div><div style="color:#1F3A5F;font-weight:700;font-size:16px">115 學年 分科模擬考（第 7 次）</div><div style="font-family:'Noto Serif TC',serif;font-weight:700;font-size:28px;line-height:1.1">班級公告</div></div><div style="background:#1F3A5F;color:#fff;padding:5px 18px;font-weight:700;font-size:18px">高三溫（14 人）</div></div>
+        <div style="font-size:13px;margin-bottom:6px">本班教室：<b>高三溫</b>（格內沒寫教室＝在本班教室）　<span class="exm">粗體座位</span>＝考試，座位是「排－深位」　<span class="stdy" style="padding:0 6px">灰底</span>＝自習，只寫教室</div>
+        <table class="t" id="v36ann"></table>
+      </div></div>
+      <ul class="sp">
+        <li><b>兩層表頭</b>：上層「第一天」「第二天」合併，下層「時段一 物理」不折行（A4 橫 273mm 扣座號與姓名，每欄約 29mm）。</li>
+        <li><b>格內只放有用的字</b>：考試＝座位「1－1」粗體大字，教室與本班教室相同就省略，不同才在上面小字寫教室；自習＝灰底、「自習」加教室；不考也不自習＝「—」。「高三溫」「綜合教室」不再每格重複。</li>
+        <li>考與自習<b>不只靠顏色</b>：考試粗體＋有座位、自習灰底＋「自習」字樣，黑白列印也分得出。</li></ul></div>
+
+    <div class="card" style="margin-top:16px"><div class="lab">④ 預備教室／綜合教室與整合標籤，格子與一般教室同規格（#221、#212、#216，<b>使用者已核可</b>）</div>
+      <p class="small muted">使用者：「預備教室的標籤規格要跟教室一樣，哪一天考什麼列在標籤上，只要寫『第○天○○科』，不用寫時段」；「綜合教室的標籤要跟教室同規格，之前講過了」。現況（D94-5：只印節次＋科目＋班座號、不印姓名、小字）改成下面的格子，<b>已改寫 D94-5</b>。分科整合標籤（#216）同一個版式，但<b>整合標籤各行也寫時段</b>（「第1天 時段二 物理」，使用者裁示）。</p>
+      <div class="v36 g">
+        <div><div class="small">只有 1 人坐這個座位（最常見）</div>
+          <div class="cell" style="width:175px;height:175px"><i class="co">1-1</i><b class="no" style="font-size:58px;margin-top:4px">0101</b><span class="nm" style="font-size:30px;margin-top:6px"><em>溫</em>王小明華</span><span style="font-size:15px;margin-top:8px;font-weight:700">第一天 自然　第二天 數A</span></div></div>
+        <div><div class="small">2 人輪流坐同一個座位（每人一區）</div>
+          <div class="cell" style="width:175px;height:175px;justify-content:space-evenly"><i class="co">1-2</i>
+            <div style="line-height:1.15;margin-top:8px"><b class="no" style="font-size:30px">0102</b> <span class="nm" style="font-size:18px"><em>溫</em>李安仁</span><div style="font-size:14px;font-weight:700">第一天 自然</div></div>
+            <div style="line-height:1.15"><b class="no" style="font-size:30px">0203</b> <span class="nm" style="font-size:18px"><em>良</em>陳大文</span><div style="font-size:14px;font-weight:700">第二天 數A</div></div></div></div>
+        <div><div class="small">3 人以上輪流：標籤只印座位，其餘列在座位表下一頁</div>
+          <div class="cell" style="width:175px;height:175px"><i class="co">2-1</i><b class="no" style="font-size:40px">2-1</b><span style="font-size:15px;margin-top:6px;font-weight:700">共 3 人輪流<br>見座位表下一頁</span></div></div>
+        <div><div class="small">座位表下一頁（A4）：座位 × 天 × 科目 × 人</div>
+          <div class="pap"><table class="t" style="font-size:11px"><tr><th>座位</th><th>第N天</th><th>科目</th><th>班級</th><th>座號</th><th>姓名</th></tr><tr><td>2-1</td><td>第一天</td><td>自然</td><td>溫</td><td>03</td><td>張一</td></tr><tr><td>2-1</td><td>第二天</td><td>數A</td><td>良</td><td>07</td><td>林二</td></tr><tr><td>2-1</td><td>第二天</td><td>英文</td><td>恭</td><td>12</td><td>黃三</td></tr></table></div></div>
+      </div>
+      <ul class="sp">
+        <li>單人格＝一般教室標籤規格：大字編號 33pt（A3 31pt）、「班級｜姓名」放得下取最大，下方多一行「第○天 ○○科」（9～15pt，不寫時段）。A4 預備教室座位表的格子同一個排法，只是比標籤小。</li>
+        <li>同天考兩科：「第一天 自然、數A」；跨天：「第一天 自然　第二天 數A」；放不下自動縮小字級，最小仍大於現況。</li>
+        <li>分科整合標籤（#216）：格內每行「第N天 科目　班座號　姓名」，同一個版式與字級規則；標題「1 天 2＝第 1 天時段二」難讀，改成各行直接寫「第N天 時段X 科目」，標題不再解釋縮寫。預備教室仍只寫「第○天 ○○科」不寫時段。</li></ul></div>
+
+    <div class="card" style="margin-top:16px"><div class="lab">⑤ 名單與統計表（#219、#220、#213、#214，<b>使用者已核可</b>）</div>
+      <div class="v36 g" style="grid-template-columns:repeat(auto-fit,minmax(340px,1fr))">
+        <div><div class="small"><b>學測抽離自習名單</b>（#219）：標題加日期與時段；表頭「科目｜班級｜座號｜姓名｜去處｜用途」<span class="tag">表頭已實作</span></div>
+          <div class="pap"><div style="text-align:center;font-weight:700;font-size:14px">抽離自習名單（社會，共 12 人）</div><div style="text-align:center;font-size:13px;margin:2px 0 6px">第一天　時段一　社會</div>
+          <table class="t"><tr><th>科目</th><th>班級</th><th>座號</th><th>姓名</th><th>去處（教室／座位）</th><th>用途</th></tr><tr><td>社會</td><td>溫</td><td>05</td><td>王小明</td><td>自習教室 A</td><td>抽離自習</td></tr><tr><td>社會</td><td>良</td><td>11</td><td>李安仁</td><td>自習教室 A</td><td>抽離自習</td></tr></table></div>
+          <p class="note">使用者裁示只加「第N天 時段X 科目」，<b>不新增日期欄</b>。一個時段一科一頁，分頁後每頁都有這一行。</p></div>
+        <div><div class="small"><b>分科綜合教室座位表</b>（#220）：座位圖下方加各班人數統計，每個時段一列<span class="tag">已核可</span></div>
+          <div class="pap"><table class="t"><tr><th>時段</th><th>溫</th><th>良</th><th>恭</th><th>儉</th><th>勤</th><th>誠</th><th>合計</th></tr><tr><td class="l">第一天 時段一　物理</td><td>3</td><td>2</td><td>3</td><td>2</td><td>3</td><td>2</td><td><b>15</b></td></tr><tr><td class="l">第一天 時段二　化學</td><td>2</td><td>3</td><td>2</td><td>3</td><td>2</td><td>3</td><td><b>15</b></td></tr><tr><td class="l">不重複人數</td><td>4</td><td>3</td><td>4</td><td>3</td><td>3</td><td>3</td><td><b>17</b></td></tr></table></div>
+          <p class="note">定案：統計的是「這間教室內各班的人」；人會隨時段換，所以每個時段一列、最後一列是不重複人數（等於「已使用 N 格」那句的人數）；放在座位圖與講臺之下、格內說明之前，說明縮成一行。欄位同會考座位表那張，字 12pt、列名放得下。</p></div>
+        <div><div class="small"><b>名冊類表頭規則</b>（#213、#214、#219）</div>
+          <ul class="sp" style="margin-top:4px"><li><b>班級與座號一律分兩欄</b>，座號欄只放座號；不再用「班座號」「考生編號」（四位數）當欄名。已實作：自習教室名單（地點｜班級｜座號｜姓名）、抽離名單與抽離自習名單。</li>
+          <li><b>#214「座位｜班級｜座號｜姓名｜到考｜缺考」</b>：Issue 沒說是哪份。定案（使用者裁示，照我的候選實作，<b>日後請核對是不是這份</b>）：<b>分科每科試務清冊的每間考場簽到名冊</b>（現為「座位（排－深位）｜班座號｜姓名｜應試編號｜到考｜缺考」，到考、缺考是兩個空格供手寫打勾）；另一份「出缺席記錄表」有「座位、考生編號、班級、姓名＋科目欄」，沒有到考缺考欄，我只建議同樣把編號拆成班級、座號。有應試編號時放在姓名之後。實作：簽到名冊表頭＝「座位｜班級｜座號｜姓名（｜應試編號）｜到考｜缺考」，應試編號有匯入才印、放姓名之後（清冊其他表不動）；出缺席記錄表只把「考生編號」拆成班級、座號。</li></ul></div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+  (function(){
+    function build(n,opt,subj){
+      var cols=6,rows=4,total=24,out='<div class="seat" style="grid-template-columns:repeat('+cols+',34px)">';
+      var mostly=n>total/2;
+      for(var r=0;r<rows;r++)for(var c=0;c<cols;c++){
+        var i=r*cols+c, absent=i<n;
+        var cls='sc', extra='', bg=(c%2?'#E8F1EA':'#F8E9CF');
+        var flip=(opt==='B'||opt==='C')&&mostly;
+        if(opt==='cur'&&absent){cls+=' thick';extra='<span class="x">X '+subj+'</span>'}
+        else if(flip){ if(!absent) extra='<span class="cornerk">考'+subj.charAt(0)+'</span>'; }
+        else if(opt!=='cur'){ if(absent) extra='<span class="corner">'+subj.charAt(0)+'</span>'; }
+        out+='<div class="'+cls+'" style="background:'+bg+'">0'+(c+1)+'0'+(r+1)+'<i>溫｜甲生</i>'+extra+'</div>';
+      }
+      return out+'</div>';
+    }
+    var host=document.getElementById('v36marks');
+    if(host){
+      var names={cur:'舊做法（粗框＋小牌，已取代）',C:'定案：右下角單字角標，過半時反標'};
+      var conds=[[0,'不考社會 0 人'],[3,'不考社會 3 人（少數）'],[15,'不考社會 15 人（超過一半）']];
+      var h='<div style="display:grid;gap:14px">';
+      conds.forEach(function(cd){
+        h+='<div><div class="small" style="margin-bottom:4px"><b>'+cd[1]+'</b></div><div class="g" style="grid-template-columns:repeat(auto-fit,minmax(215px,1fr))">';
+        ['cur','C'].forEach(function(o){
+          h+='<div><div class="small muted">'+names[o]+'</div>'+build(cd[0],o,'社會')+'</div>';
+        });
+        h+='</div></div>';
+      });
+      host.innerHTML=h+'</div>';
+    }
+    var t=document.getElementById('v36ann');
+    if(t){
+      var heads=[['第一天',['時段一 物理','時段二 化學','時段三 生物']],['第二天',['時段一 地科','時段二 數乙','時段三 英文']]];
+      var slots=[];heads.forEach(function(d){d[1].forEach(function(s){slots.push(s)})});
+      var names2=['王小明','李安仁','陳大文','林小雯','黃志明','張雅婷','吳建宏','劉心怡','蔡明哲','楊淑芬','許家豪','鄭佩珊','謝宗翰','郭怡君'];
+      var pat=[['e','1－1'],['e','1－2'],['s','綜合教室 1'],['e','2－1'],['e','2－2'],['s','綜合教室 2'],['e','綜合教室 1　3－1'],['e','1－3'],['s','綜合教室 1']];
+      var html='<tr><th rowspan="2" style="width:40px">座號</th><th rowspan="2" style="width:80px">姓名</th>';
+      heads.forEach(function(d){html+='<th colspan="'+d[1].length+'">'+d[0]+'</th>'});
+      html+='</tr><tr>';slots.forEach(function(s){html+='<th style="white-space:nowrap">'+s+'</th>'});html+='</tr>';
+      for(var i=0;i<names2.length;i++){
+        html+='<tr><td>'+(i+1)+'</td><td>'+names2[i]+'</td>';
+        for(var j=0;j<slots.length;j++){
+          var p=pat[(i*2+j*3)%pat.length];
+          if((i+j)%7===0){html+='<td>—</td>';continue}
+          if(p[0]==='e'){var parts=p[1].split('　');html+='<td class="exm">'+(parts.length>1?'<div style="font-size:9px;font-weight:500">'+parts[0]+'</div>'+parts[1]:p[1])+'</td>'}
+          else html+='<td class="stdy"><div style="font-size:9px">自習</div>'+p[1]+'</td>';
+        }
+        html+='</tr>';
+      }
+      t.innerHTML=html;
+    }
+  })();
+  </script>
+
+  <section id="paper36b">
+    <header><h2>名單與教室畫面補強（稿 v2.36，使用者已決定的項目）</h2>
+      <p>調度員轉達使用者已決定的內容：名單比對三組區塊、#206 取代名單確認與列表卡片、#208 名單依學年度分存、#210 教室上限放寬與「本次調整座位」。全部假資料。這幾項<b>使用者已決定內容</b>，稿只是把畫面畫出來，不是新提案。</p></header>
+    <style>
+      #paper36b .b{border:1px solid var(--line,#bbb);border-radius:10px;padding:12px;margin:8px 0;background:var(--surface,#fff)}
+      #paper36b .b h4{margin:0 0 6px;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+      #paper36b .bt{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+      #paper36b .bt .btn{min-height:44px}
+      #paper36b .warnb{border-left:4px solid #B7791F;background:rgba(183,121,31,.12);padding:8px 10px;border-radius:6px;margin-top:8px;font-size:14px}
+      #paper36b table.m{border-collapse:collapse;width:100%;font-size:13px}
+      #paper36b table.m th,#paper36b table.m td{border-bottom:1px solid var(--line,#ccc);padding:6px 8px;text-align:left}
+      #paper36b .seatm{display:grid;grid-template-columns:repeat(8,26px);gap:2px}
+      #paper36b .seatm i{display:block;height:22px;border:1px solid var(--line,#999);border-radius:3px;background:rgba(127,127,127,.12)}
+      #paper36b .seatm i.off{background:repeating-linear-gradient(135deg,rgba(127,127,127,.25) 0 3px,transparent 3px 6px)}
+      #paper36b .g2{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+      #paper36b .g2>*{min-width:0}
+    </style>
+
+    <div class="card"><div class="lab">① 名單比對：三組批次區塊（調度員轉達，使用者已決定）</div>
+      <p class="small muted">名單比對頁在逐筆差異卡之前，新增三組區塊；每組有「整組以考試名單為準／整組以學生名單為準」批次鈕。分類邏輯已在施工分支 <code>src/import/diffGroups.ts</code>。</p>
+      <div class="b"><h4>A 缺字／子字串 <span class="badge b-acc">5 筆</span><span class="badge">預設：以學生名單為準</span></h4>
+        <div class="small muted">同座號，一邊姓名是另一邊的一部分（例：「王小明」↔「王小」；或少一個字）。多半是考試名單漏字或截斷。</div>
+        <table class="m"><tr><th>班級座號</th><th>考試名單</th><th>學生名單</th></tr><tr><td>溫 05</td><td>王小</td><td>王小明</td></tr><tr><td>良 11</td><td>李安</td><td>李安仁</td></tr></table>
+        <div class="bt"><button class="btn">整組以考試名單為準</button><button class="btn pri" style="outline:2px solid currentColor">整組以學生名單為準（預設）</button></div>
+        <div class="small muted" style="margin-top:6px">「以考試名單為準」旁小字：<b>會改到所有模擬考共用的名單</b>。</div></div>
+      <div class="b"><h4>B 座號相同、姓名完全不同 <span class="badge b-warn">3 筆</span></h4>
+        <div class="warnb"><b>可能不是同一人，名冊版本不同？</b>（座號對得上但姓名沒有任何重疊字）</div>
+        <table class="m"><tr><th>班級座號</th><th>考試名單</th><th>學生名單</th></tr><tr><td>恭 08</td><td>陳大文</td><td>黃志明</td></tr></table>
+        <div class="bt"><button class="btn">整組以考試名單為準</button><button class="btn">整組以學生名單為準</button></div>
+        <div class="small muted" style="margin-top:6px">不預設；<b>批次套用前多一道確認</b>：「這 3 筆姓名完全不同，可能不是同一人。確定整組以學生名單為準？」［取消］［確定套用］。「以考試名單為準」旁同樣寫「會改到所有模擬考共用的名單」。</div></div>
+      <div class="b"><h4>C 缺漏 <span class="badge">2 筆</span></h4>
+        <div class="small muted">只在一邊有的人（考試名單有、學生名單沒有，或相反）。</div>
+        <table class="m"><tr><th>班級座號</th><th>考試名單</th><th>學生名單</th></tr><tr><td>儉 21</td><td>林小雯</td><td>—（沒有）</td></tr></table>
+        <div class="bt"><button class="btn">整組以考試名單為準</button><button class="btn">整組以學生名單為準</button></div></div>
+      <p class="small muted">每組可展開看逐筆明細；逐筆選擇與「套用 N 筆核對結果」沿用 v2.35。375 寬時批次鈕直排各佔一行、高度 ≥44px。</p></div>
+
+    <div class="card" style="margin-top:16px"><div class="lab">② #206 取代共用學生名單的確認，與模擬考列表卡片</div>
+      <div class="g2">
+        <div class="b"><h4>確認對話框</h4>
+          <div>取代共用學生名單後，<b>會使 3 個已排座的模擬考過期</b>：</div>
+          <ul style="margin:6px 0 0;padding-left:18px;font-size:14px"><li>115 學測第 1 次</li><li>115 學測第 2 次</li><li>115 分科第 7 次</li></ul>
+          <div class="small muted" style="margin-top:6px">過期的模擬考要重新排座才能下載。</div>
+          <div class="bt"><button class="btn">取消</button><button class="btn pri">取代名單</button></div></div>
+        <div class="b"><h4>模擬考列表卡片</h4>
+          <div style="font-weight:700">115 學測第 1 次 <span class="badge b-warn">名單已更動</span></div>
+          <div class="small muted">考生 412 人（建立時的人數）</div>
+          <div class="small muted" style="margin-top:6px">人數<b>保留建立當時的數字</b>，不隨共用名單改變；名單被改過就加「名單已更動」徽章（琥珀，同過期色語彙，字樣＋顏色）。</div></div>
+      </div></div>
+
+    <div class="card" style="margin-top:16px"><div class="lab">③ #208 共用名單與班級資料依「學年度 × 部別」分存</div>
+      <div class="g2">
+        <div class="b"><h4>共用設定 → 學生名單／班級</h4>
+          <div class="row" style="gap:8px;flex-wrap:wrap"><span class="small">學年度</span><button class="btn">114</button><button class="btn pri">115</button><button class="btn">116</button></div>
+          <div class="small muted" style="margin-top:6px">學年度切換列（分段鈕）放在頁籤內容最上方；每個學年度各自有高中部、國中部的名單與班級。舊存檔自動歸到最近一次考試的學年度。</div></div>
+        <div class="b"><h4>匯入名單時選學年度</h4>
+          <div class="small">匯入「高三學生名單」→ 先選這份名單是哪一學年：</div>
+          <div class="bt"><button class="btn">114</button><button class="btn pri">115</button><button class="btn">116</button></div>
+          <div class="small muted" style="margin-top:6px">預設選目前頁面的學年度；選好才能繼續。</div></div>
+        <div class="b"><h4>模擬考步驟② 顯示名單年度</h4>
+          <div>名單年度：<b>115</b>　考試學年度：<b>116</b> <span class="badge b-warn">年度不符</span></div>
+          <div class="warnb">這場模擬考是 116 學年度，但用的是 115 學年度的學生名單。請先到共用設定匯入 116 的名單，或確認這樣沒問題。</div></div>
+      </div></div>
+
+    <div class="card" style="margin-top:16px"><div class="lab">④ #210 教室編輯上限放寬、與標籤紙脫鉤；「本次調整座位」</div>
+      <div class="g2">
+        <div class="b"><h4>教室座位圖編輯器：上限</h4>
+          <div class="seatm"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i class="off"></i></div>
+          <div class="small" style="margin-top:6px">排 ≤ 8、深位 ≤ 8、總座位 ≤ 56（與標籤紙格數脫鉤）。到達上限時提示：「排最多 8、深位最多 8，座位總數最多 56。」</div>
+          <div class="warnb" style="margin-top:8px">超出標籤紙格數的提示（編輯器與步驟③）：「這間教室 56 個座位超過標籤紙 B4（48 格）。輸出標籤時會自動分成 2 張貼，或改用 A3。」</div>
+          <div class="small muted" style="margin-top:6px">標籤輸出：教室座位超過紙張格數時，依紙張<b>自動分頁</b>（同一間拆成多張貼，頁首標「第 1／2 張」）。DESIGN 座位上限（D72、D74、#147）相關字句改寫為「編輯上限 8×8、56 個；標籤依紙張自動分頁」。</div></div>
+        <div class="b"><h4>步驟③ 每間勾選教室旁：「本次調整座位」</h4>
+          <table class="m"><tr><td>高三溫</td><td><button class="btn">本次調整座位</button></td></tr><tr><td>高三良 <span class="badge b-acc">本次專用</span></td><td><button class="btn">編輯本次座位</button> <button class="btn">還原成共用設定</button></td></tr></table>
+          <div class="small muted" style="margin-top:6px">開啟<b>同一個座位圖編輯器</b>，頂端標「本次專用」。<b>覆寫只含座位配置</b>（停用座位、每排深位數），不含教室名稱與組別；一般考試與分科（AstStep3）都有。「還原成共用設定」會丟掉這次的調整，先確認。</div></div>
+      </div></div>
+  </section>
 
   <section id="open">
     <header><h2>待使用者確認的提案</h2></header>
