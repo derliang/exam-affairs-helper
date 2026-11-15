@@ -4,7 +4,9 @@ import { readXlsx, writeXlsx, XlsError } from '../../import';
 import { Alert, Button, FormatButton, Modal } from '../components';
 import { downloadBytes, XLSX_MIME } from '../download';
 import { applyImport, examsMadeStale, exportRows, importOutcome, planImport, templateRows, type ImportPlan, type UnknownClassAction } from '../rosterIO';
-import { setClassTrack, type Doc } from '../store';
+import { setClassTrack, syncDiffs, type Doc } from '../store';
+import { rosterYearOf, switchRosterYear } from '../rosterYears';
+import type { Student } from '../../data';
 import { parseRosterWorkbook } from '../step2';
 
 const DIV_NAME: Record<Division, string> = { senior: '高中部', junior: '國中部' };
@@ -12,7 +14,15 @@ const DIV_NAME: Record<Division, string> = { senior: '高中部', junior: '國�
 /** 設定頁學生名單的 Excel 範本下載／匯入／下載（DESIGN 10.3，UI-09/10） */
 export function RosterIO(p: { doc: Doc; division: Division; onChange: (d: Doc) => void }) {
   const input = useRef<HTMLInputElement>(null);
-  const [plan, setPlan] = useState<(ImportPlan & { layout: string; issues: string[]; tracks?: Record<number, Track> }) | null>(null);
+  const [parsed, setParsed] = useState<{ students: Student[]; layout: string; issues: string[]; tracks?: Record<number, Track> } | null>(null);
+  // 匯入的名單屬於哪個學年度（#208，稿 v2.36）：必選，預設目前頁面的學年度
+  const [yearText, setYearText] = useState('');
+  const year = Number(yearText);
+  const yearOk = Number.isInteger(year) && year >= 90 && year <= 200;
+  const switched = parsed && yearOk && year !== rosterYearOf(p.doc) ? switchRosterYear(p.doc, year) : null;
+  const target: Doc = switched && switched.ok ? switched.doc : p.doc;
+  const plan = parsed ? { ...planImport(target, p.division, parsed.students), layout: parsed.layout, issues: parsed.issues, ...(parsed.tracks ? { tracks: parsed.tracks } : {}) } : null;
+  const setPlan = (_: null) => setParsed(null);
   const [useTracks, setUseTracks] = useState(true);
   const [unk, setUnk] = useState<UnknownClassAction>('add');
   const [err, setErr] = useState('');
@@ -29,21 +39,22 @@ export function RosterIO(p: { doc: Doc; division: Division; onChange: (d: Doc) =
         return;
       }
       setUnk('add');
-      setPlan({ ...planImport(p.doc, p.division, r.students), layout: r.layout, issues: r.issues.map((i) => i.message), tracks: r.classTracks });
+      setYearText(String(rosterYearOf(p.doc)));
+      setParsed({ students: r.students, layout: r.layout, issues: r.issues.map((i) => i.message), ...(r.classTracks ? { tracks: r.classTracks } : {}) });
     } catch (e) {
       setErr(e instanceof XlsError ? e.message : `讀不了這個檔案：${e instanceof Error ? e.message : String(e)}。請確認是 .xlsx 檔`);
     }
   };
 
-  const outcome = plan ? importOutcome(p.doc, p.division, plan, unk) : null;
-  const staleExams = plan ? examsMadeStale(p.doc, p.division, plan, unk) : [];
+  const outcome = plan ? importOutcome(target, p.division, plan, unk) : null;
+  const staleExams = plan ? examsMadeStale(target, p.division, plan, unk) : [];
   const confirm = () => {
-    if (!plan || !outcome || outcome.count === 0) return;
-    let d = applyImport(p.doc, p.division, plan, unk);
+    if (!plan || !outcome || outcome.count === 0 || !yearOk) return;
+    let d = applyImport(target, p.division, plan, unk);
     if (useTracks && plan.tracks && p.division === 'senior') {
       for (const [no, t] of Object.entries(plan.tracks)) d = setClassTrack(d, 'senior', Number(no), t);
     }
-    p.onChange(d);
+    p.onChange(syncDiffs(d));
     setPlan(null);
   };
 
@@ -73,8 +84,11 @@ export function RosterIO(p: { doc: Doc; division: Division; onChange: (d: Doc) =
       {err && <div style="flex-basis:100%"><Alert tone="danger">{err}</Alert></div>}
       {plan && (
         <Modal title={`匯入${DIV_NAME[p.division]}學生名單`} onClose={() => setPlan(null)}
-          actions={<><Button onClick={() => setPlan(null)}>取消</Button><Button kind="primary" disabled={!outcome || outcome.count === 0} onClick={confirm}>確認取代為 {outcome?.count ?? 0} 人名單</Button></>}>
+          actions={<><Button onClick={() => setPlan(null)}>取消</Button><Button kind="primary" disabled={!yearOk || !outcome || outcome.count === 0} onClick={confirm}>確認取代為 {outcome?.count ?? 0} 人名單</Button></>}>
           <p>讀到 <strong>{plan.after}</strong> 人，實際會匯入 <strong>{outcome?.count ?? 0}</strong> 人{outcome && outcome.skipped > 0 ? `（略過 ${outcome.skipped} 人）` : ''}（目前 {plan.before} 人）。確定後會<strong>取代</strong>{DIV_NAME[p.division]}整份名單；之後可用「↶ 復原」回到匯入前。</p>
+          <div class={`field${yearOk ? '' : ' err'}`} style="max-width:260px"><label for="roster-year">這份名單屬於哪個學年度</label>
+            <input id="roster-year" class="input" inputMode="numeric" value={yearText} aria-invalid={!yearOk} onInput={(e) => setYearText(e.currentTarget.value)} />
+            <span class={yearOk ? 'hint' : 'field-msg'}>{!yearOk ? '請填民國年，例如 114' : year === rosterYearOf(p.doc) ? '預設是目前頁面的學年度' : `會匯入到 ${year} 學年度，不動其他學年度的名單`}</span></div>
           {staleExams.length > 0 && (
             <Alert tone="warn">
               取代共用學生名單後，<b>會使 {staleExams.length} 個已排座的模擬考過期</b>：

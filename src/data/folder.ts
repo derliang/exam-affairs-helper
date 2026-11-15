@@ -5,6 +5,8 @@
  *   settings.json            Settings（D61）
  *   roster-senior.json       高中部學生名單（D62）
  *   roster-junior.json       國中部學生名單
+ *   roster-year.json         作用中名單所屬學年度（#208；舊資料夾沒有）
+ *   years/<學年>/roster.json 其他學年度的名單與班級（#208）
  *   exams/<id>/exam.json     ExamConfig
  *   exams/<id>/entries.json  考試名單 ExamEntry[]（D63）
  *   exams/<id>/diffs.json    名單比對的處理結果 RosterDiff[]
@@ -28,6 +30,7 @@ import type {
   Student,
 } from './types';
 import type { Doc } from '../ui/store';
+import type { YearData } from '../ui/rosterYears';
 
 export class StorageError extends Error {
   constructor(
@@ -83,6 +86,13 @@ export async function writeFile(fs: DirFS, path: string, data: unknown): Promise
 }
 
 const rosterPath = (d: Division) => `roster-${d}.json`;
+/** 學年度分存（#208）：作用中學年度、其他學年度的名單與班級 */
+const ROSTER_YEAR_PATH = 'roster-year.json';
+const yearPath = (y: string) => `years/${y}/roster.json`;
+const isYearKey = (y: string) => /^\d{2,3}$/.test(y);
+const isRosterYear = (v: unknown): v is { year: number } => isObj(v) && typeof v.year === 'number';
+const isYearData = (v: unknown): v is YearData =>
+  isObj(v) && isObj(v.rosters) && isStudents(v.rosters.senior) && isStudents(v.rosters.junior) && isArr(v.classes);
 const examDir = (id: string) => `exams/${id}`;
 
 const emptySettings = (): Settings => ({
@@ -107,6 +117,13 @@ export async function loadDoc(fs: DirFS): Promise<Loaded<Doc>> {
   const settings = note(await readFile(fs, 'settings.json', isSettings)) ?? emptySettings();
   const senior = note(await readFile(fs, rosterPath('senior'), isStudents)) ?? [];
   const junior = note(await readFile(fs, rosterPath('junior'), isStudents)) ?? [];
+  const ry = note(await readFile(fs, ROSTER_YEAR_PATH, isRosterYear));
+  const otherYears: Record<string, YearData> = {};
+  for (const y of await fs.listDirs('years')) {
+    if (!isYearKey(y)) continue;
+    const d = note(await readFile(fs, yearPath(y), isYearData));
+    if (d) otherYears[y] = d;
+  }
   const exams: ExamConfig[] = [];
   for (const id of await fs.listDirs('exams')) {
     const e = note(await readFile(fs, `${examDir(id)}/exam.json`, isExam));
@@ -123,6 +140,8 @@ export async function loadDoc(fs: DirFS): Promise<Loaded<Doc>> {
     if (Object.keys(files).length) examFiles[e.id] = files;
   }
   const doc: Doc = { settings: withRoomDivisions(settings, exams), rosters: { senior, junior }, exams };
+  if (ry) doc.rosterYear = ry.year;
+  if (Object.keys(otherYears).length) doc.otherYears = otherYears;
   if (Object.keys(examFiles).length) doc.examFiles = examFiles;
   return warnings.length ? { data: doc, warning: warnings.join('；') } : { data: doc };
 }
@@ -133,6 +152,14 @@ export async function saveDoc(fs: DirFS, doc: Doc): Promise<void> {
   await writeFile(fs, 'settings.json', doc.settings);
   await writeFile(fs, rosterPath('senior'), doc.rosters.senior);
   await writeFile(fs, rosterPath('junior'), doc.rosters.junior);
+  if (doc.rosterYear !== undefined) await writeFile(fs, ROSTER_YEAR_PATH, { year: doc.rosterYear });
+  const years = Object.keys(doc.otherYears ?? {});
+  for (const y of years) await writeFile(fs, yearPath(y), doc.otherYears![y]);
+  for (const y of await fs.listDirs('years')) {
+    if (years.includes(y)) continue;
+    await fs.remove(yearPath(y));
+    await fs.remove(`${yearPath(y)}.bak`);
+  }
   const keep = new Set<string>();
   for (const e of doc.exams) {
     assertSafeId(e.id);
@@ -169,6 +196,7 @@ const REMOVED = Symbol('removed');
 export function createIncrementalSaver(fs: DirFS): (doc: Doc) => Promise<void> {
   const written = new Map<string, unknown>();
   let scannedIds: string | null = null;
+  let scannedYears = false;
   const put = async (path: string, data: unknown) => {
     if (written.get(path) === data) return;
     await writeFile(fs, path, data);
@@ -183,6 +211,14 @@ export function createIncrementalSaver(fs: DirFS): (doc: Doc) => Promise<void> {
     await put('settings.json', doc.settings);
     await put(rosterPath('senior'), doc.rosters.senior);
     await put(rosterPath('junior'), doc.rosters.junior);
+    if (doc.rosterYear !== undefined) await put(ROSTER_YEAR_PATH, { year: doc.rosterYear });
+    const years = Object.keys(doc.otherYears ?? {});
+    for (const y of years) await put(yearPath(y), doc.otherYears![y]);
+    // 學年度被合併或移除：只在曾經寫過、或第一次存檔時才掃描，沒變動時不碰磁碟
+    const had = [...written.keys()].filter((p) => /^years\//.test(p) && written.get(p) !== REMOVED).map((p) => p.split('/')[1]!);
+    const gone = new Set(had.filter((y) => !years.includes(y)));
+    if (!scannedYears) { for (const y of await fs.listDirs('years')) if (!years.includes(y)) gone.add(y); scannedYears = true; }
+    for (const y of gone) { await drop(yearPath(y)); await fs.remove(`${yearPath(y)}.bak`); }
     const keep = new Set<string>();
     for (const e of doc.exams) {
       assertSafeId(e.id);
