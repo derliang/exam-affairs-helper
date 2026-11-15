@@ -6,7 +6,9 @@
  *  2. 本機真實檔案（只在這台電腦有雲端資料夾時執行）：讀入後只斷言「計數與結構」，
  *     斷言訊息與 log 都不含姓名；檔案不存在就整段略過。
  */
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { runSeating } from '../core';
 import type { ClassInfo, Classroom, ExamEntry, Subject } from '../data/types';
@@ -80,11 +82,28 @@ describe('真實版面結構回歸（寫死的計數）', () => {
   }
 });
 
-const DIR = 'C:/Users/derli/我的雲端硬碟/0AI/模擬考小幫手';
-const HAS_LOCAL = existsSync(DIR);
+/** 真實檔案資料夾：環境變數 MOCK_EXAM_REAL_DIR 指定；沒設就試已知的預設位置，找不到整段略過（#207） */
+const DEFAULT_DIRS = [`${process.env.USERPROFILE ?? process.env.HOME ?? ''}/我的雲端硬碟/0AI/模擬考小幫手`];
+export function findRealDir(env: string | undefined, defaults: readonly string[]): string | undefined {
+  const cands = env ? [env] : defaults;
+  return cands.find((d) => d && existsSync(d));
+}
+/** 遞迴列出資料夾（含子資料夾）底下所有 .xlsx 的相對路徑 */
+export function listXlsx(dir: string, rel = ''): string[] {
+  const out: string[] = [];
+  for (const e of readdirSync(join(dir, rel), { withFileTypes: true })) {
+    const r = rel ? `${rel}/${e.name}` : e.name;
+    if (e.isDirectory()) out.push(...listXlsx(dir, r));
+    else if (e.name.endsWith('.xlsx') && !e.name.startsWith('~$')) out.push(r);
+  }
+  return out;
+}
+const DIR = findRealDir(process.env.MOCK_EXAM_REAL_DIR, DEFAULT_DIRS) ?? '';
+const REAL_FILES = DIR ? listXlsx(DIR) : [];
+const HAS_LOCAL = REAL_FILES.length > 0;
 
 describe.skipIf(!HAS_LOCAL)('本機真實檔案：只斷言結構與計數（不印姓名）', () => {
-  const files = HAS_LOCAL ? readdirSync(DIR).filter((f) => f.endsWith('.xlsx')) : [];
+  const files = REAL_FILES;
   const perClass = (list: { classNo: number }[]): number[] => {
     const m = new Map<number, number>();
     for (const x of list) m.set(x.classNo, (m.get(x.classNo) ?? 0) + 1);
@@ -156,6 +175,27 @@ describe.skipIf(!HAS_LOCAL)('本機真實檔案：只斷言結構與計數（不
       // D79：全科缺考者（真實名單有 1 位）不排座
       expect(r.result.assignments.length).toBe(res.entries.filter((e) => e.subjectIds.length > 0).length);
       expect(r.fullyAbsent.length).toBe(res.entries.filter((e) => e.subjectIds.length === 0).length);
+    }
+  });
+});
+
+describe('真實檔案探測（#207，假資料夾）', () => {
+  it('遞迴找到子資料夾的 .xlsx、略過暫存檔；環境變數優先；不存在回 undefined', () => {
+    const base = mkdtempSync(join(tmpdir(), 'mxh-'));
+    try {
+      mkdirSync(join(base, '學測', '深'), { recursive: true });
+      writeFileSync(join(base, 'a.xlsx'), '');
+      writeFileSync(join(base, '學測', 'b.xlsx'), '');
+      writeFileSync(join(base, '學測', '深', 'c.xlsx'), '');
+      writeFileSync(join(base, '~$a.xlsx'), '');
+      writeFileSync(join(base, 'd.txt'), '');
+      expect(listXlsx(base).sort()).toEqual(['a.xlsx', '學測/b.xlsx', '學測/深/c.xlsx']);
+      expect(findRealDir(base, ['/nope'])).toBe(base);
+      expect(findRealDir(undefined, ['/nope', base])).toBe(base);
+      expect(findRealDir('/nope', [base])).toBeUndefined();
+      expect(findRealDir(undefined, [])).toBeUndefined();
+    } finally {
+      rmSync(base, { recursive: true, force: true });
     }
   });
 });
