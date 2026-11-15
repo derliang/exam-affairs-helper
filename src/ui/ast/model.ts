@@ -7,7 +7,7 @@
  * - 排座模式、允許他班原班自習、已核可的替代方案存在 ExamConfig（astMode／astAllowOtherStudy／astApprovals）。
  */
 import type { Classroom, ExamConfig, Track } from '../../data';
-import { classroomSeats, studyCapacityOf } from '../../data';
+import { classroomSeats, effectiveRooms, studyCapacityOf } from '../../data';
 import { dayName, slotName, examSubjectPeriods } from '../../core/periods';
 import { planD99 } from '../../core/astD99/engine';
 import { checkPlan, codeOf, homeRoomIds, type PlanInput, type PlanMode, type PlanOutput, type PlanRoom, type PlanSlot, type PlanStudent, type Proposal } from '../../core/astD99/contract';
@@ -83,7 +83,7 @@ export function astStudents(doc: Doc, exam: ExamConfig, slots: readonly AstSlot[
 }
 
 export function astRooms(doc: Doc, exam: ExamConfig): PlanRoom[] {
-  return toPlanRooms(doc.settings.classrooms, exam.classroomIds, doc.settings.classes.filter((c) => c.division === exam.division));
+  return toPlanRooms(effectiveRooms(exam, doc.settings.classrooms), exam.classroomIds, doc.settings.classes.filter((c) => c.division === exam.division));
 }
 
 /** 基準時程（候選 A）：共用設定的分科節次表，同節的科目放同一時段 */

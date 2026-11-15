@@ -10,6 +10,7 @@ import { Alert, Badge, Button, FormatPick, More, Seg, StepHead } from '../compon
 import { enabledExportItems, useIsEnabled } from '../features';
 import { prepareExport, relevantIssues, unresolvedDiffsOf } from '../exportInput';
 import { afterExport } from '../flow';
+import { labelSplitNote } from '../rooms';
 import type { Doc } from '../store';
 import { isStale, validationChecks } from '../seating';
 import { defaultLabelLayout } from '../../export/model';
@@ -70,7 +71,7 @@ function PreviewCard(p: { prepared: Extract<ReturnType<typeof prepareExport>, { 
     try {
     const withPaper = { ...input, exam: { ...input.exam, labelLayout: defaultLabelLayout(p.paper) } };
     const meta = { generatedAt: input.result.generatedAt, dataVersion: input.result.dataVersion, extraCss: `html{background:#e9ecf1;zoom:${kind === 'label' ? (p.paper === 'A3' ? 0.38 : 0.45) : 0.5}}body{margin:0;padding:8px}.sheet{width:${kind === 'label' ? (p.paper === 'A3' ? 297 : 250) : 210}mm;box-sizing:border-box;margin:0 auto 8px!important;box-shadow:0 1px 4px #0003}` };
-    if (kind === 'label') { const pg = buildLabelPages(withPaper, 'all').find((x) => x.roomName === room.name); return pg ? renderPrintHtml({ label: [pg] }, meta) : ''; }
+    if (kind === 'label') { const pgs = buildLabelPages(withPaper, 'all').filter((x) => x.roomName === room.name || x.roomName.startsWith(`${room.name}（第`)); return pgs.length ? renderPrintHtml({ label: pgs }, meta) : ''; }
     if (kind === 'seat') { const pg = buildSeatPages(withPaper, 'all').find((x) => x.roomName === room.name); return pg ? renderPrintHtml({ seat: [pg] }, meta) : ''; }
     if (kind === 'attendance') { const pg = buildAttendancePages(withPaper).find((t) => t.subtitle?.startsWith(room.name)); return pg ? renderPrintHtml({ table: [pg] }, meta) : ''; }
     const pg = room.kind === 'reserve' ? undefined : buildPickupPages(withPaper).find((t) => t.subtitle?.startsWith(room.name));
@@ -82,7 +83,7 @@ function PreviewCard(p: { prepared: Extract<ReturnType<typeof prepareExport>, { 
   }, [input, kind, idx, p.paper, room]);
   const kinds: { value: PreviewKind; label: string }[] = [{ value: 'label', label: '標籤' }, { value: 'seat', label: '座位表' }, ...(p.pickupOn ? [{ value: 'pickup' as const, label: '領卷清單' }] : []), ...(p.attendanceOn ? [{ value: 'attendance' as const, label: '出缺席記錄表' }] : [])];
   const cap = kind === 'label'
-    ? `${p.paper === 'A3' ? 'A3（297×420 mm）・7 排 × 7 深位 ＝ 49 格' : 'B4（250×353 mm）・6 排 × 8 深位 ＝ 48 格'}・格子大小固定，不隨人數變；用不到的格子空白，一張紙為限。`
+    ? `${p.paper === 'A3' ? 'A3（297×420 mm）・7 排 × 7 深位 ＝ 49 格' : 'B4（250×353 mm）・6 排 × 8 深位 ＝ 48 格'}・格子大小固定，不隨人數變；用不到的格子空白；教室比一張紙大時自動分成多張。`
     : kind === 'seat' ? 'A4 座位表，每頁附該教室的考生統計；實際檔案每間班級教室一頁。' : kind === 'attendance' ? 'A4 出缺席記錄表，每間教室一頁，照座位順序，留各科打勾欄。' : 'A4 領卷清單，每間教室一頁，列出每科試卷與答案卡份數。';
   return (
     <div class="card stack" style="margin-top:12px">
@@ -93,8 +94,9 @@ function PreviewCard(p: { prepared: Extract<ReturnType<typeof prepareExport>, { 
       {rooms.length > 1 && (
         <div class="row"><Seg<string> label="預覽教室" value={String(idx)} onChange={(v) => setRi(Number(v))} options={rooms.map((r, i) => ({ value: String(i), label: r.kind === 'reserve' ? `${r.name}（預備）` : r.name }))} /></div>
       )}
+      {kind === 'label' && room && labelSplitNote(room, p.paper) && <Alert tone="info">{labelSplitNote(room, p.paper)}預覽依序列出每一張。</Alert>}
       {typeof html === 'object'
-        ? <Alert tone="danger"><b>這間教室的預覽排不出來</b>：{html.error}。請回 ③ 調整教室的橫排或深位。</Alert>
+        ? <Alert tone="danger"><b>這間教室的預覽排不出來</b>：{html.error}。請回 ③ 調整教室的座位。</Alert>
         : html
         ? <iframe class="pvframe" title="下載預覽" sandbox="" srcdoc={html} style={`width:100%;height:${kind === 'label' ? 660 : 620}px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--sunken)`} />
         : <Alert tone="info">{room?.kind === 'reserve' ? '這間預備教室沒有加考的人：抽離自習不排座位、不印標籤，只出名單。' : '這間教室沒有可預覽的內容。'}</Alert>}
