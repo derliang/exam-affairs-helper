@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { ExamConfig, ExamEntry, Participation, RosterDiff, RosterDiffChoice } from '../../data';
-import { allResolved, applyDiffs, compareRosters, diffsStale, isResolved, readXlsx, refreshDiffs, validateResolved, type Sheet } from '../../import';
+import { allResolved, applyDiffs, compareRosters, diffsStale, isResolved, readXlsx, XlsError, refreshDiffs, validateResolved, type Sheet } from '../../import';
 import { Alert, Badge, Button, ClassChip, ConfirmButton, More, PageHead, Seg, StatsBar, StepHead } from '../components';
 import { confirmCopy } from '../flow';
 import { addClass, diffOptions, rosterName, syncDiffs, updateExam, type Doc } from '../store';
@@ -62,7 +62,7 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
       if (s.length === 0) setErr('檔案裡沒有工作表');
       else setSheets(s);
     } catch (e) {
-      setErr(`讀不了這個檔案：${e instanceof Error ? e.message : String(e)}。請確認是 .xlsx 檔`);
+      setErr(e instanceof XlsError ? e.message : `讀不了這個檔案：${e instanceof Error ? e.message : String(e)}。請確認是 .xlsx 檔`);
     }
   };
 
@@ -117,7 +117,7 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
   const clsLabel = (no: number) => `第${String(no).padStart(2, '0')}班`;
   const perClass = classes.map((c) => ({ c, n: roster.filter((s) => s.classNo === c.no).length }));
   const filePick = (
-    <input ref={input} type="file" accept=".xlsx" hidden aria-label="選擇考試名單 Excel 檔"
+    <input ref={input} type="file" accept=".xlsx,.xls" hidden aria-label="選擇考試名單 Excel 檔"
       onChange={(e) => { const f = e.currentTarget.files?.[0]; e.currentTarget.value = ''; if (f) void onFile(f); }} />
   );
 
@@ -256,6 +256,7 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
               options={[{ value: 'all', label: '全部學生參加' }, { value: 'partial', label: '只有部分學生參加' }]} />
           </div>
         </div>
+        <p class="small muted">匯入接受 .xlsx 檔；舊版 .xls 請先用 Excel 另存新檔成 .xlsx。</p>
         <p class="small muted">{exam.participation === 'partial'
           ? '未列入本次考試的人不視為名單差異，不排座、不出現在座位表。'
           : '學生名單有、考試名單沒有的人，列為差異，逐筆處理。'}</p>
