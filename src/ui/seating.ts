@@ -23,7 +23,8 @@ import {
   type DetachResult,
 } from '../core';
 import { examSubjectPeriods } from '../core/periods';
-import type { Doc, Result } from './store';
+import { examYear, type Doc, type Result } from './store';
+import { viewForYear } from './rosterYears';
 import { roomsMissingTrack } from './rooms';
 
 export type StepNo = 1 | 2 | 3 | 4 | 5 | 6;
@@ -197,7 +198,7 @@ export function seatingBlockers(doc: Doc, exam: ExamConfig): Blocker[] {
 export function isStale(doc: Doc, exam: ExamConfig): boolean {
   const r = examResult(doc, exam);
   // 舊存檔沒有排座簽章（dataVersion）就無從比對，視為未過期
-  return !!r && !!r.dataVersion && r.dataVersion !== seatingVersion(seatingInputOf(doc, exam, r.generatedAt));
+  return !!r && !!r.dataVersion && r.dataVersion !== seatingVersion(seatingInputOf(viewForYear(doc, examYear(exam)), exam, r.generatedAt));
 }
 
 function withFiles(doc: Doc, examId: string, patch: Partial<NonNullable<Doc['examFiles']>[string]>): Doc {
