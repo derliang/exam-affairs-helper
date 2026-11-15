@@ -1,7 +1,7 @@
 import { Badge, Button, EmptyState, More, PageHead } from '../components';
 import { rosterChanged } from '../rosterIO';
 import { examHeadcount, examLevel, examProgress, formatModified, sortExams } from '../examList';
-import { examLabel, lastModified, schoolYear, type Doc } from '../store';
+import { examLabel, lastModified, examYear, type Doc } from '../store';
 
 /** 模擬考列表（DESIGN 10.x）：頁首 h1＋資料夾 chip，每列有六格進度條、學年與人數、最後修改；依最後修改由新到舊 */
 export function Exams(p: {
@@ -27,7 +27,7 @@ export function Exams(p: {
                   <h3>{e.name}</h3>
                   <div class="meta">
                     <Badge>{examLabel(e)}</Badge>
-                    <span>{schoolYear(new Date(e.createdAt))} 學年・{examLevel(e)}・{examHeadcount(p.doc, e) > 0 ? `${examHeadcount(p.doc, e)} 人` : '尚未匯入名單'}</span>
+                    <span>{examYear(e)} 學年・{examLevel(e)}・{examHeadcount(p.doc, e) > 0 ? `${examHeadcount(p.doc, e)} 人` : '尚未匯入名單'}</span>
                     {rosterChanged(p.doc, e) && <Badge tone="warn">名單已更動</Badge>}
                   </div>
                 </div>
