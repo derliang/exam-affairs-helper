@@ -4,7 +4,7 @@
  * 座位表與標籤的樣式照設計系統成品頁「座位表與標籤」稿件（docs/design/mockups/設計系統.html #paper）：
  * 改這裡的版面要同步改稿件，反之亦然。
  */
-import { footerText, groupMarks, labelBoxMm, labelGrid, namePtFit, PAPER_MM, periodLineFontPt, SEAT_PAGE, seatGeometry, statLayout, SLOT_TIP, type CellModel, type LabelPageModel, type ListPageModel, type SeatPageModel, type TablePageModel } from './model';
+import { footerText, isSpecial, labelBoxMm, labelGrid, namePtFit, PAPER_MM, periodLineFontPt, personLayout, rotationPage, SEAT_PAGE, seatGeometry, statLayout, SLOT_TIP, type CellModel, type LabelPageModel, type ListPageModel, type SeatPageModel, type TablePageModel } from './model';
 
 export interface HtmlOptions {
   generatedAt: string;
@@ -22,27 +22,36 @@ export function esc(s: string): string {
 const DETACH = { bg: '#E6EBF7', fg: '#274690' };
 const mm = (n: number): string => `${+n.toFixed(2)}mm`;
 
-function marksHtml(c: CellModel): string {
-  return groupMarks(c).map((m) => `<span class="pp-mk ${m.kind}">${esc(m.text)}</span>`).join('');
+/** 右下角單字角標（#223）：不考＝黑底白字，加考／有考＝白底黑框 */
+function cornersHtml(c: CellModel): string {
+  const t = c.corners ?? [];
+  return t.length ? `<span class="pp-cn">${t.map((k) => `<span class="pp-mk ${k.kind === 'x' ? 'x' : 'add'}">${esc(k.text)}</span>`).join('')}</span>` : '';
 }
 
 /** 一格：座位表用班級色（抽離考試用柔和單色），標籤用白底，有標示的標籤格用淺黃 */
-function cellHtml(c: CellModel | undefined, w: number, h: number, mode: 'seat' | 'detach' | 'label'): string {
+function cellHtml(c: CellModel | undefined, w: number, h: number, mode: 'seat' | 'detach' | 'label', b4 = true): string {
   const size = `width:${mm(w)};height:${mm(h)}`;
   if (!c) return `<div class="pp-c pp-e" style="${size}"></div>`;
+  if (c.persons) {
+    // 預備教室／綜合教室／整合標籤（v2.36）：版式同一般標籤，格內每人一區；排法同 Word（model.personLayout）
+    const g = mode === 'label' ? { topPad: 5, codePt: b4 ? 33 : 31, nameMax: 18, schedMax: 11 } : { topPad: 4.5, codePt: 19, nameMax: 10.5, schedMax: 7 };
+    const { lines } = personLayout(c, w - (mode === 'label' ? 2 : 1.3), h, g);
+    const ls = lines.map((l) => `<span class="pp-pr" style="font-size:${l.pt}pt;margin-top:${mm(l.gapBefore)}">${l.runs.map((r) => (r.bold ? `<b>${esc(r.text)}</b>` : esc(r.text))).join('')}</span>`).join('');
+    return `<div class="pp-c pp-pe" style="${size};background:#fff"><i class="pp-co">${esc(c.coord)}</i><span class="pp-prs">${ls}</span></div>`;
+  }
   if (c.periodLines) {
     // 預備教室合併標籤（D94-5）：每節一行、同字級，印節次＋科目＋班座號
     const pt = periodLineFontPt(c.periodLines, w - 3, h - 5);
     const ls = c.periodLines.map((l) => `<span class="pp-pll" style="font-size:${pt}pt"><small style="font-size:${+(pt * 0.7).toFixed(1)}pt">${esc(l.head)}</small>${esc(l.text)}</span>`).join('');
     return `<div class="pp-c pp-pl" style="${size};background:#fff"><i class="pp-co">${esc(c.coord)}</i><span class="pp-pls">${ls}</span></div>`;
   }
-  const marked = c.marks.length > 0;
+  const marked = isSpecial(c);
   const bg = mode === 'label' ? (marked ? '#FFE08A' : '#fff') : mode === 'detach' ? DETACH.bg : `#${c.colorBg}`;
   const em = mode === 'label' ? '#22201B' : mode === 'detach' ? DETACH.fg : `#${c.colorFg}`;
   // 標籤上沒有標示的格子不留標示區、整塊垂直置中、字取最大（#218）；其餘字級在格寬內取最大（#222）
-  const free = mode === 'label' && !marked;
-  const npt = namePtFit(c.classLabel, c.name, w - (mode === 'label' ? 2.2 : 1.4), mode === 'label' ? (free ? 18 : 15) : 12);
-  return `<div class="pp-c${marked ? ' mk' : ''}${free ? ' fr' : ''}" style="${size};background:${bg}"><i class="pp-co">${esc(c.coord)}</i><b class="pp-no">${esc(c.code)}</b><span class="pp-nm" style="font-size:${npt}pt"><em style="color:${em}">${esc(c.classLabel)}</em><span>${esc(c.name)}</span></span>${marksHtml(c)}</div>`;
+  const free = mode === 'label';
+  const npt = namePtFit(c.classLabel, c.name, w - (mode === 'label' ? 2.2 : 1.4), mode === 'label' ? 18 : 12);
+  return `<div class="pp-c${free ? ' fr' : ''}" style="${size};background:${bg}"><i class="pp-co">${esc(c.coord)}</i><b class="pp-no">${esc(c.code)}</b><span class="pp-nm" style="font-size:${npt}pt"><em style="color:${em}">${esc(c.classLabel)}</em><span>${esc(c.name)}</span></span>${cornersHtml(c)}</div>`;
 }
 
 function seatHtml(p: SeatPageModel, o: HtmlOptions): string {
@@ -55,7 +64,7 @@ function seatHtml(p: SeatPageModel, o: HtmlOptions): string {
   const chips = p.chips.map((t, i) => `<span class="pp-chip${i === 0 ? ' s' : ''}">${esc(t)}</span>`).join('');
   const sl = statLayout(p);
   const colg = `<colgroup>${sl.cols.map((w) => `<col style="width:${mm(w)}">`).join('')}</colgroup>`;
-  const stHtml = `<table class="pp-st">${colg}<thead><tr><th>項目</th>${p.stats.table.classes.map((c) => `<th>${esc(c)}</th>`).join('')}<th>合計</th></tr></thead><tbody>${st
+  const stHtml = `<table class="pp-st">${colg}<thead><tr><th>${esc(p.stats.table.headLabel ?? '項目')}</th>${p.stats.table.classes.map((c) => `<th>${esc(c)}</th>`).join('')}<th>合計</th></tr></thead><tbody>${st
     .map((r) => `<tr><td>${esc(r.label)}</td>${r.per.map((n) => `<td>${n}</td>`).join('')}<td class="t">${r.total}</td></tr>`)
     .join('')}</tbody></table>`;
   return `<section class="sheet pp pp-seat" style="page:a4full;width:${SEAT_PAGE.w}mm;height:${SEAT_PAGE.h - 0.5}mm;padding:${SEAT_PAGE.padY}mm ${SEAT_PAGE.padX}mm">
@@ -63,7 +72,7 @@ function seatHtml(p: SeatPageModel, o: HtmlOptions): string {
 <div class="pp-chips">${chips}</div>
 <div class="pp-wrapg" style="margin-top:4mm"><div class="pp-ay" style="grid-template-rows:repeat(${p.depth},${mm(ch)})">${ay}</div><div><div class="pp-grid" style="grid-template-columns:repeat(${p.rows},${mm(cw)})">${cells}</div><div class="pp-ax" style="grid-template-columns:repeat(${p.rows},${mm(cw)})">${ax}</div></div></div>
 <div class="pp-bottom"><span class="l">${p.slotMode ? `已使用 ${p.cells.size} 格` : `共 ${p.stats.total} 人`}</span><span class="pp-pod">講臺</span><span></span></div>
-${p.slotMode ? `<div class="pp-sltip">${esc(SLOT_TIP)}</div>` : stHtml}
+${p.slotMode ? `<div class="pp-sltip">${esc(SLOT_TIP)}</div>` : ''}${stHtml}
 <div class="pp-foot">${esc(footerText(o.generatedAt, o.dataVersion))}</div></section>`;
 }
 
@@ -74,7 +83,7 @@ function labelHtml(p: LabelPageModel, o: HtmlOptions): string {
   // 稿件：格高最多 35mm，格子下方才留得出注意事項與頁尾（Word 版待下一步對齊後再共用）
   const cell = labelBoxMm(layout, margin, p.notes.length);
   const cells = labelGrid(p)
-    .map((m) => cellHtml(m, cell.w, cell.h, 'label'))
+    .map((m) => cellHtml(m, cell.w, cell.h, 'label', layout.paper === 'B4'))
     .join('');
   const padX = cell.padX;
   const noteHtml = p.notes.length
@@ -82,7 +91,7 @@ function labelHtml(p: LabelPageModel, o: HtmlOptions): string {
     : '';
   const cls = layout.paper.toLowerCase();
   return `<section class="sheet pp pp-lab ${cls}" style="page:${cls};width:${paper.w}mm;height:${paper.h - 0.5}mm;padding:${margin}mm ${mm(padX)}">
-<div class="pp-hd" style="margin-bottom:3mm"><div><div class="pp-h1">${esc(p.heading ?? `${p.examName}　標籤`)}</div></div><span class="pp-room" style="font-size:12pt;padding:1mm 4mm">${esc(p.roomName)}</span></div>
+<div class="pp-hd" style="margin-bottom:3mm"><div><div class="pp-h1">${esc((p.heading ?? `${p.examName}　標籤`) + (p.flipNotes?.length ? `　（${p.flipNotes.join('；')}）` : ''))}</div></div><span class="pp-room" style="font-size:12pt;padding:1mm 4mm">${esc(p.roomName)}</span></div>
 <div class="pp-grid" style="grid-template-columns:repeat(${layout.cols},${mm(cell.w)})">${cells}</div>
 ${noteHtml}
 <div class="pp-foot">${esc(footerText(o.generatedAt, o.dataVersion))}</div></section>`;
@@ -90,7 +99,7 @@ ${noteHtml}
 
 function listHtml(p: ListPageModel, o: HtmlOptions): string {
   const rows = p.rows.map((r) => `<tr><td>${esc(r.subject)}</td><td>${esc(r.className)}</td><td>${esc(r.seatNo)}</td><td>${esc(r.name)}</td><td>${esc(r.place)}</td><td>${esc(r.purpose)}</td></tr>`).join('');
-  return `<section class="sheet a4" style="page:a4"><h1>${esc(p.title)}</h1><table class="list"><thead><tr><th>科目</th><th>班級</th><th>座號</th><th>姓名</th><th>去處（教室／座位）</th><th>用途</th></tr></thead><tbody>${rows}</tbody></table>
+  return `<section class="sheet a4" style="page:a4"><h1>${esc(p.title)}</h1>${p.subtitle ? `<p class="sub"><b>${esc(p.subtitle)}</b></p>` : ''}<table class="list"><thead><tr><th>科目</th><th>班級</th><th>座號</th><th>姓名</th><th>去處（教室／座位）</th><th>用途</th></tr></thead><tbody>${rows}</tbody></table>
 <footer>${esc(footerText(o.generatedAt, o.dataVersion))}</footer></section>`;
 }
 
@@ -98,14 +107,20 @@ function tableHtml(p: TablePageModel, o: HtmlOptions): string {
   const sum = p.widths.reduce((a, b) => a + b, 0);
   const tr = (cells: string[], tag: 'td' | 'th', cls = '') =>
     `<tr${cls}>${cells.map((c, i) => `<${tag} style="width:${(((p.widths[i] ?? 1) * 100) / sum).toFixed(1)}%">${esc(c)}</${tag}>`).join('')}</tr>`;
-  const rows = p.rows.map((r) => tr(r, 'td')).join('') + (p.totalRow ? tr(p.totalRow, 'td', ' class="total"') : '');
-  return `<section class="sheet a4" style="page:a4"><h1>${esc(p.title)}</h1>${p.subtitle ? `<p class="sub">${esc(p.subtitle)}</p>` : ''}<table class="list tbl"><thead>${tr(p.heads, 'th')}</thead><tbody>${rows}</tbody></table>
+  const land = !!p.landscape;
+  const n = p.rows.length + (p.totalRow ? 1 : 0) + (p.headGroups ? 2 : 1);
+  const fit = land ? Math.max(4.2, Math.min(8, (PAPER_MM.A4.w - 24 - 30) / n)) : 9;
+  const kcls = (ri: number, ci: number) => (p.cellKinds?.[ri]?.[ci] ? ` class="k-${p.cellKinds[ri]![ci]}"` : '');
+  const rows = p.rows.map((r, ri) => `<tr>${r.map((c, ci) => `<td${kcls(ri, ci)} style="width:${(((p.widths[ci] ?? 1) * 100) / sum).toFixed(1)}%">${esc(c)}</td>`).join('')}</tr>`).join('') + (p.totalRow ? tr(p.totalRow, 'td', ' class="total"') : '');
+  const grp = p.headGroups ? `<tr>${p.headGroups.map((g) => `<th colspan="${g.span}" class="g">${esc(g.text)}</th>`).join('')}</tr>` : '';
+  return `<section class="sheet a4${land ? ' land' : ''}" style="page:${land ? 'a4l' : 'a4'}${land ? `;--rh:${+fit.toFixed(2)}mm;--rp:${Math.max(7, Math.min(10.5, Math.floor((fit / 0.3528 / 1.5) * 2) / 2))}pt` : ''}"><h1>${esc(p.title)}</h1>${p.subtitle ? `<p class="sub">${esc(p.subtitle)}</p>` : ''}${p.legend ? `<p class="lg">${esc(p.legend)}</p>` : ''}<table class="list tbl"><thead>${grp}${tr(p.heads, 'th')}</thead><tbody>${rows}</tbody></table>
 <footer>${esc(footerText(o.generatedAt, o.dataVersion))}</footer></section>`;
 }
 
 const CSS = `
 @page a4 { size: 210mm 297mm; margin: 12mm }
 @page a4full { size: 210mm 297mm; margin: 0 }
+@page a4l { size: 297mm 210mm; margin: 12mm }
 @page b4 { size: ${PAPER_MM.B4.w}mm ${PAPER_MM.B4.h}mm; margin: 0 }
 @page a3 { size: ${PAPER_MM.A3.w}mm ${PAPER_MM.A3.h}mm; margin: 0 }
 * { -webkit-print-color-adjust: exact; print-color-adjust: exact }
@@ -117,6 +132,11 @@ table.list th, table.list td { border: 1px solid #808080; padding: 1mm 2mm; text
 table.list th { background: #eee }
 table.tbl td { height: 9mm }
 table.tbl tr.total td { font-weight: 700; background: #f4f4f4 }
+.sheet.land table.tbl th, .sheet.land table.tbl td { height: var(--rh); padding: 0 1.5mm; font-size: var(--rp); text-align: center; vertical-align: middle }
+.sheet.land table.tbl th.g { background: #e2e2e2 }
+table.tbl td.k-exam { font-weight: 700 }
+table.tbl td.k-study { background: #d9d9d9 }
+.sheet.a4 p.lg { font-size: 9.5pt; color: #6b6657; text-align: center; margin: -2mm 0 3mm }
 .sheet.a4 p.sub { font-size: 12pt; text-align: center; margin: 0 0 4mm }
 footer { font-size: 8pt; color: #555; text-align: right; margin-top: 3mm }
 
@@ -145,7 +165,13 @@ footer { font-size: 8pt; color: #555; text-align: right; margin-top: 3mm }
 .pp .pp-mk{display:block;font-weight:700;line-height:1.25;padding:0 1.4mm;border-radius:.6mm;white-space:nowrap}
 .pp .pp-mk.x{background:var(--ink);color:#fff;border:.3mm solid var(--ink)}
 .pp .pp-mk.add{background:#fff;color:var(--ink);border:.45mm double var(--ink)}
-.pp .pp-c.mk{box-shadow:inset 0 0 0 .7mm var(--ink)}
+.pp .pp-cn{position:absolute;right:1mm;bottom:.8mm;display:flex;gap:.6mm}
+.pp .pp-cn .pp-mk{display:block;font-size:8pt;padding:0 .9mm}
+.pp.pp-lab .pp-cn .pp-mk{font-size:11pt}
+.pp .pp-c.pp-pe,.pp.pp-lab .pp-c.pp-pe,.pp.pp-seat .pp-c.pp-pe{display:flex;flex-direction:column;justify-content:center;padding:0}
+.pp .pp-prs{display:flex;flex-direction:column;align-items:center;width:100%;padding:0 1mm}
+.pp .pp-pr{white-space:nowrap;line-height:1.15}
+.pp .pp-pr b{font-weight:700}
 .pp .pp-e{background:repeating-linear-gradient(135deg,#F1EDE0 0 1.2mm,#E2DCC8 1.2mm 2.4mm)}
 .pp.pp-lab .pp-c{display:grid;grid-template-rows:1fr auto 9mm;justify-items:center;align-items:center;gap:0;padding:5mm 1mm .8mm}
 .pp.pp-lab .pp-no{align-self:end;margin-bottom:2.6mm;font-size:31pt}.pp.pp-lab .pp-nm{font-size:15pt}.pp.pp-lab .pp-mk{font-size:12pt}.pp.pp-lab .pp-co{font-size:9pt}
@@ -176,7 +202,7 @@ export type HtmlPages = { seat?: SeatPageModel[]; label?: LabelPageModel[]; list
 
 export function renderPrintHtml(pages: HtmlPages, o: HtmlOptions): string {
   const body = [
-    ...(pages.seat ?? []).map((p) => seatHtml(p, o)),
+    ...(pages.seat ?? []).flatMap((p) => { const r = rotationPage(p); return [seatHtml(p, o), ...(r ? [tableHtml(r, o)] : [])]; }),
     ...(pages.label ?? []).map((p) => labelHtml(p, o)),
     ...[pages.list ?? []].flat().map((l) => listHtml(l, o)),
     ...(pages.table ?? []).map((t) => tableHtml(t, o)),

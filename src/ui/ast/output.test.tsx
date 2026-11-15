@@ -44,7 +44,7 @@ const withExamNo = (doc: Doc, exam: ExamConfig): Doc => {
   const entries = doc.examFiles![exam.id]!.entries!.map((e: ExamEntry) => ({ ...e, examNo: `A${String(e.classNo)}${String(e.seatNo).padStart(2, '0')}` }));
   return { ...doc, examFiles: { ...doc.examFiles, [exam.id]: { entries } } };
 };
-const rosterTables = (o: ReturnType<typeof astOutputs>) => o.reg.filter((t) => t.heads[0] === '座位（排－深位）');
+const rosterTables = (o: ReturnType<typeof astOutputs>) => o.reg.filter((t) => t.heads.includes('到考'));
 
 describe('分科輸出：內容', () => {
   const { doc, exam } = fixture();
@@ -58,30 +58,42 @@ describe('分科輸出：內容', () => {
     expect(plan.out.metrics!.labels).toBe(seats.size);
     const cell = o.label[0]!.cells.find((c) => c.periodLines!.length > 1)!;
     expect(cell.periodLines![0]!.head).toMatch(/^\d天\d$/);
+    // #216：同一格各人各行「第N天 時段X 科目」，標題不再解釋縮寫
+    expect(cell.persons!.length).toBeGreaterThan(0);
+    expect(cell.persons!.flatMap((p) => p.sched).every((s) => /^第.+天 時段.+ \S+$/.test(s))).toBe(true);
+    expect(o.label.every((p) => !p.heading!.includes('＝'))).toBe(true);
     expect(JSON.stringify(o.label)).not.toMatch(/\d{1,2}:\d{2}/);
   });
-  it('班級公告：每班一份、每生一列、各時段一欄；考試列教室與座位、自習只列教室', () => {
+  it('班級公告（#215）：A4 橫式一班一頁、兩層表頭；考＝粗體座位、自習＝灰底＋教室、不考也不自習＝—', () => {
     expect(o.ann).toHaveLength(6);
     const t = o.ann[0]!;
+    expect(t.landscape).toBe(true);
     expect(t.rows).toHaveLength(12);
     expect(t.heads).toHaveLength(2 + 8);
+    expect(t.headGroups!.reduce((n, g) => n + g.span, 0)).toBe(t.heads.length);
+    expect(t.headGroups!.slice(1).every((g) => /^第.+天$/.test(g.text))).toBe(true);
     const cells = t.rows.flatMap((r) => r.slice(2));
-    expect(cells.some((c) => /^考 .+ \d+－\d+$/.test(c))).toBe(true);
-    expect(cells.some((c) => c.startsWith('自習'))).toBe(true);
-    expect(cells.filter((c) => c.startsWith('自習')).every((c) => !/\d－\d/.test(c))).toBe(true);
+    const kinds = t.cellKinds!.flatMap((r) => r.slice(2));
+    expect(kinds).toHaveLength(cells.length);
+    expect(cells.filter((_, i) => kinds[i] === 'exam').every((c) => /^\d+－\d+( .+)?$/.test(c))).toBe(true);
+    expect(cells.some((_, i) => kinds[i] === 'exam')).toBe(true);
+    expect(cells.filter((_, i) => kinds[i] === 'study').every((c) => c.startsWith('自習 ') && !/\d－\d/.test(c))).toBe(true);
+    expect(cells.some((_, i) => kinds[i] === 'study')).toBe(true);
+    expect(cells.filter((_, i) => kinds[i] === undefined).every((c) => c === '—')).toBe(true);
   });
   it('一致性：標籤、清冊、公告都從同一份方案來，座位逐筆相同（§13.1 第 7 條）', () => {
-    const roster = rosterTables(o).flatMap((t) => t.rows.map((r) => `${r[1]}|${r[0]}`));
+    const roster = rosterTables(o).flatMap((t) => t.rows.map((r) => `${r[1]}${r[2]}|${r[0]}`));
     expect(roster).toHaveLength(plan.out.exams.length);
-    const fromPlan = new Set(plan.out.exams.map((e) => `${e.code}|${e.row}－${e.depth}`));
+    const cls = (code: string) => doc.settings.classes.find((x) => x.no === Number(code.slice(0, 2)) && x.division === exam.division)?.name ?? code.slice(0, 2);
+    const fromPlan = new Set(plan.out.exams.map((e) => `${cls(e.code)}${e.code.slice(2)}|${e.row}－${e.depth}`));
     for (const r of roster) expect(fromPlan.has(r)).toBe(true);
     const labelTexts = o.label.flatMap((p) => p.cells.flatMap((c) => c.periodLines!.map((l) => l.text)));
     expect(labelTexts).toHaveLength(plan.out.exams.length);
     for (const e of plan.out.exams) expect(labelTexts.some((t) => t.includes(e.code))).toBe(true);
     // 公告：全部公告裡「考」的格子數＝方案的考試數
-    const annExam = o.ann.flatMap((t) => t.rows.flatMap((r) => r.slice(2))).filter((c) => c.startsWith('考 ')).length;
+    const annExam = o.ann.flatMap((t) => t.cellKinds!.flat()).filter((k) => k === 'exam').length;
     expect(annExam).toBe(plan.out.exams.length);
-    const annStudy = o.ann.flatMap((t) => t.rows.flatMap((r) => r.slice(2))).filter((c) => c.startsWith('自習')).length;
+    const annStudy = o.ann.flatMap((t) => t.cellKinds!.flat()).filter((k) => k === 'study').length;
     expect(annStudy).toBe(plan.out.study.length);
   });
   it('每科試務清冊：每科一份總表、每間考場一頁名冊；名冊有到考／缺考欄、總人數對得上', () => {

@@ -407,7 +407,9 @@ describe('分科輸出：T-24 班級公告、T-25 整合標籤', () => {
           const cell = r[2 + i]!;
           const e = plan.out.exams.find((x) => x.slotId === sl.id && x.code === code);
           const st = plan.out.study.find((x) => x.slotId === sl.id && x.code === code);
-          if (e) expect(cell).toBe(`考 ${roomName.get(e.roomId)} ${e.row}－${e.depth}`);
+          const home = plan.input.rooms.find((r2) => r2.kind === 'class' && r2.classNo === ci + 1)?.id;
+          // #215：考試＝粗體座位，教室與本班相同就省略，不同才寫教室
+          if (e) { expect(cell).toBe(e.roomId === home ? `${e.row}－${e.depth}` : `${e.row}－${e.depth} ${roomName.get(e.roomId)}`); expect(t.cellKinds![t.rows.indexOf(r)]![2 + i]).toBe('exam'); }
           else if (st) { expect(cell).toBe(`自習 ${roomName.get(st.roomId)}`); expect(cell).not.toMatch(/d－d/); }
           else expect.fail(`${code} ${sl.id} 沒有任何安排`);
           checked++;
