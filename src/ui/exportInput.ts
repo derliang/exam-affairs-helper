@@ -4,6 +4,7 @@
  * 不在匯出時重算：⑤ 驗證的、⑥ 預覽的、實際匯出的永遠是同一份（同座位、同版本碼、同產生時間）。
  * 沒有結果或已過期（名單或設定在排座後改過）就擋下，請回 ⑤ 重新排座。
  */
+import { isResolved } from '../import';
 import { examEntries, examResult, isStale, validationChecks } from './seating';
 import type { ExamConfig, ExamEntry, Override } from '../data';
 import { settingsForExam } from '../data';
@@ -17,8 +18,11 @@ export const entriesOf = (doc: Doc, exam: ExamConfig): ExamEntry[] | null => doc
 
 export const overridesOf = (doc: Doc, exam: ExamConfig): Override[] => doc.examFiles?.[exam.id]?.overrides ?? [];
 
-/** ② 尚未處理的名單差異數 */
-export const unresolvedDiffsOf = (doc: Doc, exam: ExamConfig): number => doc.examFiles?.[exam.id]?.diffs?.length ?? 0;
+/** ② 差異已選好處理方式、但還沒按「套用」的筆數：套用後差異會清空，名單才真的更新，所以這時不能下載（#242） */
+export const unappliedDiffsOf = (doc: Doc, exam: ExamConfig): number => (doc.examFiles?.[exam.id]?.diffs ?? []).filter(isResolved).length;
+
+/** ② 尚未處理（還沒選處理方式）的名單差異數；與 ⑤ 的檢核同一口徑（seating.ts），選好但還沒按「套用」的不算（#242） */
+export const unresolvedDiffsOf = (doc: Doc, exam: ExamConfig): number => (doc.examFiles?.[exam.id]?.diffs ?? []).filter((d) => !isResolved(d)).length;
 
 export type Prepared =
   | { ok: true; input: ExportInput; warnings: string[] }

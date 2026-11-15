@@ -250,6 +250,8 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
       : <Alert tone="warn" action={<Button kind="primary" onClick={p.onToRoster}>去匯入學生名單</Button>}><b>國三學生名單是空的。</b>會考不需匯入考試名單，請先到「共用設定」匯入國三學生名單。</Alert>)
     : !entries
     ? <Alert tone="warn" action={<Button kind="primary" onClick={() => input.current?.click()}>匯入本次考試名單</Button>}><b>還沒有匯入本次考試名單。</b>匯入後會和共用學生名單比對，排座前要處理完所有差異。</Alert>
+    : diffs.length > 0 && resolved === diffs.length
+      ? <Alert tone="info" action={<Button kind="primary" onClick={() => { void apply(); }}>套用 {diffs.length} 筆核對結果</Button>}><b>差異都選好了</b>（共 {diffs.length} 筆）：按「套用」才會更新學生名單與考試名單；也可以先<button type="button" class="linkbtn" onClick={() => setShowCmp(true)}>回頭檢查</button>。</Alert>
     : diffs.length > 0
       ? <Alert tone="warn" action={<Button kind="primary" onClick={() => setShowCmp(true)}>處理差異</Button>}><b>還有 {diffs.length - resolved} 筆差異沒處理</b>：共 {diffs.length} 筆，全部處理完才能繼續排座。</Alert>
       : <Alert tone="ok" action={<ConfirmButton kind="default" undoable copy={confirmCopy.reimportList(entries.length)} onConfirm={() => input.current?.click()}>再匯入一次</ConfirmButton>}><b>已比對：</b>考試名單與學生名單沒有未處理的差異。</Alert>;
@@ -260,7 +262,8 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
     : null;
   const headBadge = !entries && bcctAll ? <Badge tone="ok">全員參加，不需匯入</Badge>
     : !entries ? <Badge tone="warn">尚未匯入</Badge>
-    : diffs.length > 0 ? <Badge tone="warn">差異 {diffs.length} 筆</Badge>
+    : diffs.length > 0 && resolved === diffs.length ? <Badge tone="info">差異 {diffs.length} 筆・已選好，待套用</Badge>
+    : diffs.length > 0 ? <Badge tone="warn">差異 {diffs.length - resolved} 筆待處理</Badge>
     : <Badge tone="ok">✓ 已比對，沒有差異</Badge>;
 
   // 稿 v2.22（校-60）：步驟② 合成一張「考試名單」卡，區塊內上下分區；待處理時才多一則帶動作的提示

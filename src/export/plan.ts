@@ -101,6 +101,8 @@ export interface PreflightState {
   stale?: boolean;
   /** 考試名單與學生名單尚未處理的差異數（D42） */
   unresolvedDiffs?: number;
+  /** 差異已選好處理方式、但還沒按 ② 的「套用」的筆數（#242：名單還沒更新，不能下載） */
+  unappliedDiffs?: number;
 }
 
 /**
@@ -111,6 +113,7 @@ export function preflight(input: ExportInput, o: ExportOptions, st: PreflightSta
   const issues: Issue[] = [];
   if (st.stale) issues.push({ level: 'block', text: '需要重新排座：名單或設定在排座之後改過，舊座位表上的座位可能已經不對。請回 ⑤ 重新排座，再回來下載。' });
   if ((st.unresolvedDiffs ?? 0) > 0) issues.push({ level: 'block', text: `② 還有 ${st.unresolvedDiffs} 筆考試名單與學生名單的差異沒處理（例如新增、缺少或資料不同的考生）。請回 ② 逐筆選擇處理方式，處理完再下載。` });
+  else if ((st.unappliedDiffs ?? 0) > 0) issues.push({ level: 'block', text: `② 的 ${st.unappliedDiffs} 筆差異已選好處理方式，但還沒按「套用 ${st.unappliedDiffs} 筆核對結果」，名單還沒更新。請先回 ② 按「套用」，再回來下載。` });
   if (!o.seat && !o.label && !o.study && !o.reserve) issues.push({ level: 'block', text: '還沒勾選要下載的內容：請在下方至少勾選座位表、標籤、抽離自習名單或預備教室其中一項。' });
   try {
     buildParts(input, o);

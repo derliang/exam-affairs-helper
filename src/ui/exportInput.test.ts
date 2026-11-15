@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { makeFixture } from '../export/fixtures';
-import { prepareExport } from './exportInput';
+import { prepareExport, unappliedDiffsOf, unresolvedDiffsOf } from './exportInput';
 import { examResult, reseat } from './seating';
 import { emptyDoc } from './repository';
 import type { Doc } from './store';
@@ -10,6 +10,21 @@ function docOf(): Doc {
   const classrooms = f.settings.classrooms.map((r, i) => (r.kind === 'class' ? { ...r, track: i % 2 ? ('liberal' as const) : ('science' as const), rows: 4, depth: 5, seatCount: 20 } : r));
   return { settings: { ...f.settings, classrooms }, rosters: { senior: f.students, junior: [] }, exams: [f.exam], examFiles: { [f.exam.id]: { entries: f.entries, diffs: [], overrides: [] } } };
 }
+
+describe('#242：⑥ 的差異檢核只算「未處理」的', () => {
+  const diff = (n: number, choice?: 'use-exam' | 'use-roster') => ({ kind: 'mismatch' as const, code: `01${String(n).padStart(2, '0')}`, ...(choice ? { choice } : {}) });
+  it('全部選好（還沒按套用）＝0 筆未處理；只選一半＝只算沒選的', () => {
+    const d = docOf();
+    const id = d.exams[0]!.id;
+    const all = { ...d, examFiles: { [id]: { ...d.examFiles![id]!, diffs: [diff(1, 'use-roster'), diff(2, 'use-exam')] } } };
+    expect(unresolvedDiffsOf(all, d.exams[0]!)).toBe(0);
+    const half = { ...d, examFiles: { [id]: { ...d.examFiles![id]!, diffs: [diff(1, 'use-roster'), diff(2)] } } };
+    expect(unresolvedDiffsOf(half, d.exams[0]!)).toBe(1);
+    expect(unappliedDiffsOf(all, d.exams[0]!)).toBe(2);
+    expect(unappliedDiffsOf(half, d.exams[0]!)).toBe(1);
+    expect(unappliedDiffsOf(d, d.exams[0]!)).toBe(0);
+  });
+});
 
 describe('prepareExport', () => {
   it('學生名單空：擋下並說明', () => {
