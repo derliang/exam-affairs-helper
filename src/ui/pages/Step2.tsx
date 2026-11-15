@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { ExamConfig, ExamEntry, Participation, RosterDiff, RosterDiffChoice } from '../../data';
-import { allResolved, applyDiffs, compareRosters, diffsStale, isResolved, readXlsx, XlsError, refreshDiffs, validateResolved, type Sheet } from '../../import';
+import { allResolved, applyDiffs, applyGroupChoice, compareRosters, groupDiffs, type DiffGroup, diffsStale, isResolved, readXlsx, XlsError, refreshDiffs, validateResolved, type Sheet } from '../../import';
 import { Alert, Badge, Button, ClassChip, ConfirmButton, More, PageHead, Seg, StatsBar, StepHead } from '../components';
 import { confirmCopy } from '../flow';
 import { addClass, diffOptions, examYear, rosterName, syncDiffs, updateExam, type Doc } from '../store';
@@ -19,6 +19,11 @@ export const titleOf = (d: RosterDiff): string => {
 const CHOICE_TEXT: Record<RosterDiffChoice, string> = {
   'use-exam': '以考試名單為準', 'use-roster': '以學生名單為準', manual: '手動編輯',
   'add-class': '新增班級', 'remap-class': '改成既有班級', 'skip-class': '不匯入這班',
+};
+const GROUP_META: Record<DiffGroup, { title: string; desc: string }> = {
+  A: { title: 'A 缺字／子字串', desc: '同座號，一邊姓名是另一邊的一部分（例：「王小明」↔「王小」）。多半是考試名單漏字或截斷。' },
+  B: { title: 'B 座號相同、姓名完全不同', desc: '座號對得上，但兩邊姓名沒有包含關係。' },
+  C: { title: 'C 缺漏', desc: '只在一邊有的人（考試名單有、學生名單沒有，或相反）。' },
 };
 const optionsOf = (d: RosterDiff): RosterDiffChoice[] =>
   d.kind === 'new-class' ? ['add-class', 'remap-class', 'skip-class'] : d.kind === 'group-diff' ? ['use-exam', 'use-roster'] : ['use-exam', 'use-roster', 'manual'];
@@ -103,6 +108,7 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
   };
 
   const resolved = diffs.filter(isResolved).length;
+  const grouped = groupDiffs(diffs);
   /** 會考全員參加：沒匯入名單時，學生名單就是考試名單，這一步視為完成 */
   const bcctAll = exam.kind === 'bcct' && entries === null;
   const done = bcctAll ? roster.length > 0 : entries !== null && diffs.length === 0;
@@ -129,9 +135,37 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
         <PageHead crumbs={[{ label: `「${exam.name}」② 考試名單`, onClick: () => setShowCmp(false) }]} title="名單比對" badge={exam.name} />
         <div class="card stack">
           <p>匯入「{exam.name}」考試名單後，和共用學生名單比對，找到 <b>{diffs.length}</b> 筆差異；全部處理完才能繼續排座。</p>
-          <More title="說明：每一筆怎麼處理">每一筆選一種處理方式（多數是：以考試名單為準、以學生名單為準，或兩邊都不對就手動編輯）。</More>
+          <More title="說明：每一筆怎麼處理">每一筆選一種處理方式（多數是：以考試名單為準、以學生名單為準，或兩邊都不對就手動編輯）。上方 A／B／C 分組可以整組一次套用；選「以考試名單為準」會改到所有模擬考共用的名單。</More>
           <StatsBar items={[{ label: '差異', value: diffs.length }, { label: '已處理', value: resolved }, { label: '未處理', value: diffs.length - resolved, bad: diffs.length - resolved > 0 }]} />
         </div>
+        {(['A', 'B', 'C'] as DiffGroup[]).map((g) => {
+          const list = grouped[g];
+          if (list.length === 0) return null;
+          const meta = GROUP_META[g];
+          const left = list.filter((d) => !isResolved(d)).length;
+          const batch = (choice: 'use-exam' | 'use-roster') => save({ diffs: applyGroupChoice(diffs, g, choice) });
+          const btn = (choice: 'use-exam' | 'use-roster') => {
+            const text = `整組${CHOICE_TEXT[choice]}`;
+            const kind = g === 'A' && choice === 'use-roster' ? 'primary' : 'default';
+            return g === 'B'
+              ? <ConfirmButton kind={kind} undoable copy={{ title: '整組套用？', body: `這 ${list.length} 筆姓名完全不同，可能不是同一人。確定${text}？${choice === 'use-exam' ? '這會改到所有模擬考共用的名單。' : ''}`, confirm: '確定套用' }} onConfirm={() => batch(choice)}>{text}</ConfirmButton>
+              : <Button kind={kind} onClick={() => batch(choice)}>{text}</Button>;
+          };
+          return (
+            <div class="card stack" style="gap:10px" key={`grp-${g}`}>
+              <div class="row" style="gap:8px;flex-wrap:wrap"><b>{meta.title}</b><Badge tone="warn">{list.length} 筆</Badge>{g === 'A' && <Badge>建議：以學生名單為準</Badge>}{left === 0 && <Badge tone="ok">已處理</Badge>}</div>
+              <div class="small muted">{meta.desc}</div>
+              {g === 'B' && <Alert tone="warn"><b>可能不是同一人，名冊版本不同？</b>（座號對得上但姓名沒有任何重疊字）</Alert>}
+              <details><summary class="small">展開明細（{list.length} 筆）</summary>
+                <div class="scroll"><table class="t compact nw"><thead><tr><th>班級座號</th><th>考試名單</th><th>學生名單</th></tr></thead><tbody>
+                  {list.map((d) => { const at = (d.exam ?? d.roster)!; return <tr key={d.code}><td>{classes.find((c) => c.no === at.classNo)?.name ?? at.classNo} {String(at.seatNo).padStart(2, '0')}</td><td>{d.exam?.name ?? '—（沒有）'}</td><td>{d.roster?.name ?? '—（沒有）'}</td></tr>; })}
+                </tbody></table></div>
+              </details>
+              <div class="row" style="gap:8px;flex-wrap:wrap">{btn('use-exam')}{btn('use-roster')}</div>
+              <div class="small muted">「以考試名單為準」<b>會改到所有模擬考共用的名單</b>。</div>
+            </div>
+          );
+        })}
         {diffs.map((d, i) => {
           const picked = isResolved(d);
           const nc = d.kind === 'new-class';

@@ -3,7 +3,7 @@ import type { Division, Track } from '../../data';
 import { readXlsx, writeXlsx, XlsError } from '../../import';
 import { Alert, Button, FormatButton, Modal } from '../components';
 import { downloadBytes, XLSX_MIME } from '../download';
-import { applyImport, exportRows, importOutcome, planImport, templateRows, type ImportPlan, type UnknownClassAction } from '../rosterIO';
+import { applyImport, examsMadeStale, exportRows, importOutcome, planImport, templateRows, type ImportPlan, type UnknownClassAction } from '../rosterIO';
 import { setClassTrack, syncDiffs, type Doc } from '../store';
 import { rosterYearOf, switchRosterYear } from '../rosterYears';
 import type { Student } from '../../data';
@@ -47,6 +47,7 @@ export function RosterIO(p: { doc: Doc; division: Division; onChange: (d: Doc) =
   };
 
   const outcome = plan ? importOutcome(target, p.division, plan, unk) : null;
+  const staleExams = plan ? examsMadeStale(target, p.division, plan, unk) : [];
   const confirm = () => {
     if (!plan || !outcome || outcome.count === 0 || !yearOk) return;
     let d = applyImport(target, p.division, plan, unk);
@@ -88,6 +89,13 @@ export function RosterIO(p: { doc: Doc; division: Division; onChange: (d: Doc) =
           <div class={`field${yearOk ? '' : ' err'}`} style="max-width:260px"><label for="roster-year">這份名單屬於哪個學年度</label>
             <input id="roster-year" class="input" inputMode="numeric" value={yearText} aria-invalid={!yearOk} onInput={(e) => setYearText(e.currentTarget.value)} />
             <span class={yearOk ? 'hint' : 'field-msg'}>{!yearOk ? '請填民國年，例如 114' : year === rosterYearOf(p.doc) ? '預設是目前頁面的學年度' : `會匯入到 ${year} 學年度，不動其他學年度的名單`}</span></div>
+          {staleExams.length > 0 && (
+            <Alert tone="warn">
+              取代共用學生名單後，<b>會使 {staleExams.length} 個已排座的模擬考過期</b>：
+              <ul style="margin:6px 0 0;padding-left:18px">{staleExams.map((n) => <li key={n}>{n}</li>)}</ul>
+              <div class="small muted" style="margin-top:6px">過期的模擬考要重新排座才能下載。</div>
+            </Alert>
+          )}
           <p class="muted small">偵測到的格式：{plan.layout === 'blocks' ? '各班並排（區塊標題）' : plan.layout === 'wide' ? '各班並排（表頭欄位）' : '一人一列'}</p>
           {plan.unknownClasses.length > 0 && (() => {
             const labels = plan.unknownClasses.map((n) => `${String(n).padStart(2, '0')} 班（${plan.unknownCounts[n] ?? 0} 人）`).join('、');
