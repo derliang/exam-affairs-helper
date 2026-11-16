@@ -123,7 +123,12 @@ export function Step6(p: {
   loadFonts?: () => Promise<Loaded>;
 }) {
   const { exam } = p;
-  const [o, setO] = useState<ExportOptions>(() => defaultOptions(exam.labelLayout.paper));
+  const [oRaw, setO] = useState<ExportOptions>(() => defaultOptions(exam.labelLayout.paper));
+  const [studyTouched, setStudyTouched] = useState(false);
+  const prepared = useMemo(() => prepareExport(p.doc, exam), [p.doc, exam]);
+  // #284：有人抽離自習時「抽離自習名單」預設勾選（沒有人抽離自習就維持稿 v2.7 的預設不勾）；使用者自己勾過就照使用者的
+  const studyN = prepared.ok ? prepared.input.result.detaches.filter((d) => d.purpose === 'study').length : 0;
+  const o: ExportOptions = studyTouched || studyN === 0 ? oRaw : { ...oRaw, study: true };
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [extraOn, setExtraOn] = useState<Record<string, boolean>>({});
@@ -132,7 +137,7 @@ export function Step6(p: {
   const junior = exam.division === 'junior';
   const pickupOn = useIsEnabled('pickup-list', exam.kind);
   const attendanceOn = useIsEnabled('attendance-sheet', exam.kind);
-  const set = (patch: Partial<ExportOptions>) => { setO((x) => ({ ...x, ...patch })); setResults(null); };
+  const set = (patch: Partial<ExportOptions>) => { if ('study' in patch) setStudyTouched(true); setO((x) => ({ ...x, ...patch })); setResults(null); };
 
   // 選用功能多出的匯出項（D75）：功能關閉時完全不出現
   const extras = enabledExportItems({ settings: p.doc.settings, examKind: exam.kind });
@@ -142,7 +147,6 @@ export function Step6(p: {
   const mainNone = !o.seat && !o.label && !o.study && !o.reserve;
   const diffs = p.unresolvedDiffs ?? unresolvedDiffsOf(p.doc, exam);
   const unapplied = p.unappliedDiffs ?? unappliedDiffsOf(p.doc, exam);
-  const prepared = useMemo(() => prepareExport(p.doc, exam), [p.doc, exam]);
   // 校-64：名單或設定在排座後改過＝過期；⑤ 沒傳進來就自己算（排座簽章＝result.dataVersion，舊資料沒有簽章視為未過期）
   const stale = p.stale ?? isStale(p.doc, exam);
   const shownErrors = prepared.ok ? [] : prepared.errors.filter((e) => !(stale && e.startsWith('排座已過期')));
