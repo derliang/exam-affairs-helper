@@ -1,7 +1,7 @@
 {
   "name": "mock-exam-helper",
   "private": true,
-  "version": "1.17.15",
+  "version": "1.17.16",
   "type": "module",
   "scripts": {
     "dev": "vite",
