@@ -4,7 +4,7 @@ import { effectiveRoom, roomDivision, seatLabel } from '../../data';
 import { Alert, Badge, Button, ConfirmButton, Seg, Stepper, Switch } from './index';
 import { confirmCopy } from '../flow';
 import { classColorVars } from '../colors';
-import { addRoom, clickSeat, duplicateRoom, fillDefaultTracks, isSeatActive, patchRoom, removeRoom, labelSplitNote, resize, roomCapacity, seatCap, seatLimitNote, seatLimits, setRoomDivision, setRoomTrack } from '../rooms';
+import { addRoom, addRooms, clickSeat, duplicateRoom, fillDefaultTracks, isSeatActive, patchRoom, removeRoom, labelSplitNote, resize, roomCapacity, seatCap, seatLimitNote, seatLimits, setRoomDivision, setRoomTrack } from '../rooms';
 
 /**
  * 教室清單與座位表編輯（步驟③與設定頁共用，D69②）：每間一列，點該列或「編輯座位表」就在列下展開，可收合。
@@ -49,6 +49,7 @@ export function RoomList(p: {
     <div class="btnrow">
       <Button onClick={() => p.onChange(addRoom(p.rooms, 'class', p.division ?? 'senior', ctx))}>新增班級教室</Button>
       {!junior && <Button onClick={() => p.onChange(addRoom(p.rooms, 'reserve', p.division ?? 'senior', ctx))}>新增預備教室</Button>}
+      <BulkAdd onAdd={(n) => p.onChange(addRooms(p.rooms, 'class', n, p.division ?? 'senior', ctx))} />
     </div>
   );
   return (
@@ -161,8 +162,20 @@ export function RoomTable(p: {
       <div class="row">
         <Button onClick={() => p.onChange(addRoom(p.rooms, 'class', p.division, ctx))}>新增班級教室</Button>
         {!junior && <Button onClick={() => p.onChange(addRoom(p.rooms, 'reserve', p.division, ctx))}>新增預備教室</Button>}
+        <BulkAdd onAdd={(n) => p.onChange(addRooms(p.rooms, 'class', n, p.division, ctx))} />
       </div>
     </div>
+  );
+}
+
+/** 一次新增 N 間班級教室（#205）：先選間數再按鈕；新增後可逐間改排數，或用「複製這間教室」 */
+function BulkAdd(p: { onAdd: (n: number) => void }) {
+  const [n, setN] = useState(6);
+  return (
+    <span class="row" style="flex-wrap:nowrap;gap:6px">
+      <Stepper label="一次新增間數" value={n} max={20} onChange={setN} />
+      <Button onClick={() => p.onAdd(n)}>一次新增 {n} 間班級教室</Button>
+    </span>
   );
 }
 
