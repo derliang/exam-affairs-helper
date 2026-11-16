@@ -11,7 +11,7 @@ import type { Doc } from '../store';
 import { download, downloadMany, kb, openPrintPage, wordNoticeText } from '../pages/Step6';
 import { phaseOf } from '../../core/astD99/release';
 import { PhaseCard, VersionCard } from './AstRelease';
-import { astPlan } from './model';
+import { astPlan, astSnapshotMismatch } from './model';
 import { AST_OUTPUT_ITEMS, astOutputBlockers, astOutputs, estimatePages, type AstOutputKey, type AstOutputs } from './output';
 
 type Loaded = { fonts: FontData; has: (ch: string) => boolean };
@@ -61,7 +61,7 @@ export function AstStep6(p: { doc: Doc; exam: ExamConfig; onGoStep: (n: 2 | 3 | 
   const [results, setResults] = useState<OutputFile[] | null>(null);
   const hasList = examEntries(doc, exam).length > 0;
   const plan = useMemo(() => astPlan(doc, exam), [doc, exam]);
-  const blockers = astOutputBlockers(plan, hasList);
+  const blockers = astOutputBlockers(plan, hasList, astSnapshotMismatch(exam, plan));
   const built = useMemo((): { ok: true; o: AstOutputs } | { ok: false; error: string } | undefined => {
     if (!plan || blockers.length > 0) return undefined;
     try { return { ok: true, o: astOutputs(doc, exam, plan, paper) }; } catch (e) { return { ok: false, error: e instanceof Error ? e.message : String(e) }; }
