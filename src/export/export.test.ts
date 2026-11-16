@@ -462,6 +462,19 @@ describe('座位表頁首標籤換行與兩時段格（#247、#212）', () => {
     expect(many.left!.length).toBeGreaterThan(0); expect(many.right!.length).toBeGreaterThan(0);
   });
 
+  it('#216 備註：Word 輸出不含全形空白 U+3000（使用者的 Word 會顯示成方框），標題分隔改一般空白；列印頁不受影響', async () => {
+    const f = makeFixture();
+    const seat = buildSeatPages(f).slice(0, 1);
+    const label = buildLabelPages(f, 'class').slice(0, 1);
+    const t = { kind: 'table' as const, title: '分科第6次(E6)　簽到名冊', subtitle: 'A　B', heads: ['座位'], widths: [1], rows: [['1－1']] };
+    const buf = await renderDocx({ seat, label, table: [t] }, { fonts, ...meta });
+    const { text } = await unzip(buf);
+    const xml = await text('word/document.xml');
+    expect(xml).not.toContain('　');
+    expect(xml).toContain('分科第6次(E6)   簽到名冊');
+    expect(renderPrintHtml({ table: [t] }, meta)).toContain('　'); // 瀏覽器列印頁沒有方框問題，維持
+  });
+
   it('#212 #220 兩人格在矮格（8 深位）改精簡版：不留編號行、科目併一行，姓名不縮到 4pt、整塊放得進格高', async () => {
     const { personLayout } = await import('./index');
     const mk = (ns: number) => ({
@@ -477,9 +490,15 @@ describe('座位表頁首標籤換行與兩時段格（#247、#212）', () => {
       expect(r.total).toBeLessThanOrEqual(20.66 - 4.5 - 1 + 0.05); // 放得進格高，最後一行不被切
       if (ns === 2) expect(texts.filter((t) => t.includes('、'))).toHaveLength(2); // 每人科目併成一行
     }
-    // 格子夠高時維持完整版（有編號行）
+    // 格子夠高時姓名也能放大（科目字也有約 7pt），不會因為時程行太長被縮成 5pt
     const tall = personLayout(mk(1), 23.5, 32, o);
-    expect(tall.lines.map((l) => l.runs.map((x) => x.text).join('')).some((t) => /^150\d$/.test(t))).toBe(true);
+    expect(tall.lines.filter((l) => l.pri).every((l) => l.pt >= 7)).toBe(true);
+    expect(Math.min(...tall.lines.filter((l) => !l.pri).map((l) => l.pt))).toBeGreaterThanOrEqual(7);
+    // #212 單人考 2 個時段在矮格：科目併一行，編號與姓名不被擠到 4～5pt
+    const one = { ...mk(2), persons: [mk(2).persons[0]!] };
+    const r1 = personLayout(one, 23.5, 20.66, o);
+    expect(r1.lines.filter((l) => l.runs[0]!.text.includes('、'))).toHaveLength(1);
+    expect(Math.min(...r1.lines.map((l) => l.pt))).toBeGreaterThanOrEqual(6);
   });
 
   it('#220 殘留：兩人各考 3～6 科（合計超過 4 行）時科目併成一行，整塊放得進格高、最後一行不被切', async () => {
