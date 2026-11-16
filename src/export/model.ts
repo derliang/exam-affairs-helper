@@ -400,14 +400,36 @@ export function personLayout(
   // 整塊仍可能比格子高，最後一行就被列高切掉一半。這裡估計每行折成幾行，放不下就連下限與行距一起再等比縮（4pt 為底），重複到放得進為止
   const txt = (l: PersonLine): string => l.runs.map((x) => x.text).join('');
   const hN = (ls: PersonLine[]): number => ls.reduce((a, l) => a + l.pt * (l.n ?? 1) * PT * 1.15 + l.gapBefore, 0);
-  let total = 0;
-  for (let it = 0; it < 5; it++) {
-    lines = lines.map((l) => ({ ...l, n: Math.max(1, Math.ceil(textWidthMm(txt(l), l.pt, true) / (w * 0.97))) }));
-    total = hN(lines);
-    if (total <= avail + 0.05) break;
-    const f = Math.max(0.3, avail / total);
-    lines = lines.map((l) => ({ ...l, pt: Math.max(4, Math.floor(l.pt * f * 2) / 2), gapBefore: l.gapBefore * f }));
+  const settle = (ls0: PersonLine[]): { lines: PersonLine[]; total: number } => {
+    let ls = ls0;
+    for (let it = 0; it < 6; it++) {
+      ls = ls.map((l) => ({ ...l, n: Math.max(1, Math.ceil(textWidthMm(txt(l), l.pt, true) / (w * 0.97))) }));
+      if (hN(ls) <= avail + 0.05) break;
+      const f = Math.max(0.3, avail / hN(ls));
+      ls = ls.map((l) => ({ ...l, pt: Math.max(4, Math.floor(l.pt * f * 2) / 2), gapBefore: l.gapBefore * f }));
+    }
+    ls = ls.map((l) => ({ ...l, n: Math.max(1, Math.ceil(textWidthMm(txt(l), l.pt, true) / (w * 0.97))) }));
+    return { lines: ls, total: hN(ls) };
+  };
+  let res = settle(lines);
+  // #220 殘留（真實資料：格高只有約 14.7mm，一人 3～4 行、兩人 7～8 行，縮到 4pt 仍放不下，末行被列高切半）：
+  // 還是放不下就改緊湊寫法——每人只剩兩行：「編號　班級 | 姓名」與「科目、科目…」（時間順序），再縮到放得進
+  if (res.total > avail + 0.3 && ps.length >= 1 && ps.length <= 2) {
+    const compact: PersonLine[] = ps.flatMap((p, i): PersonLine[] => [
+      { runs: [{ text: p.code, bold: true }, { text: '  ' }, { text: p.classLabel, bold: true }, { text: ' | ' }, { text: p.name }], pt: 9, gapBefore: i ? 0.6 : 0 },
+      { runs: [{ text: (p.schedShort && p.schedShort.length === p.sched.length ? p.schedShort : p.sched).join('、'), bold: true }], pt: 7, gapBefore: 0.2 },
+    ]);
+    let r2 = settle(compact);
+    // 縮過頭時（折行估計讓字級一路降到 4pt）再逐步放回：每次加 0.5pt，仍放得進才保留
+    for (let g = 0; g < 12; g++) {
+      const up = settle(r2.lines.map((l) => ({ ...l, pt: l.pt + 0.5 })).map(({ n: _n, ...l }) => l));
+      if (up.total > avail + 0.05 || Math.min(...up.lines.map((l) => l.pt)) < Math.min(...r2.lines.map((l) => l.pt)) + 0.5) break;
+      r2 = up;
+    }
+    if (r2.total < res.total) res = r2;
   }
+  lines = res.lines;
+  const total = res.total;
   return { lines, total };
 }
 
