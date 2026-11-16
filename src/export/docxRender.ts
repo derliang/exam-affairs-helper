@@ -316,9 +316,9 @@ function personParas(c: CellModel, w: number, h: number, g: { topPad: number; co
 }
 
 /** 一側（半張）的行排版：上方一行座標（有才寫）、其餘行垂直置中（兩倍寬整合標籤用，同 personParas 的算法） */
-function sideParas(lines: PersonLine[], h: number, topPad: number, coord: string | undefined, mode: BoldMode, align: Align = AlignmentType.CENTER, left = 0): Paragraph[] {
+function sideParas(lines: PersonLine[], h: number, topPad: number, coord: string | undefined, mode: BoldMode, align: Align = AlignmentType.CENTER, left = 0, top = false): Paragraph[] {
   const total = lines.reduce((a, l) => a + l.pt * 0.3528 * 1.15 + l.gapBefore, 0);
-  const first = Math.max(0, (h - total) / 2 - topPad);
+  const first = top ? 0 : Math.max(0, (h - total) / 2 - topPad);
   return [
     line(coord ? [run2(coord, { size: 9, bold: true, color: '4A463A' }, mode)] : [], { h: topPad, align: AlignmentType.RIGHT, right: 0.6 }),
     ...lines.map((l, i) => line(l.runs.map((r) => run2(r.text, { size: l.pt, bold: r.bold, color: INK }, mode)), { h: l.pt * 0.3528 * 1.15, before: l.gapBefore + (i === 0 ? first : 0), align, left })),
@@ -345,11 +345,13 @@ function wideUnit(m: CellModel | undefined, o: { w: number; h: number; cellTw: n
   }
   const g = { topPad: 5, codePt: o.isB4 ? 33 : 31, nameMax: 18, subjMax: o.isB4 ? 20 : 16 };
   const lay = wideLayout(m, o.w - 2, o.h, g);
-  if (lay.span) return [mk(sideParas(lay.span, o.h, g.topPad, m.coord, o.mode), { top: b, bottom: b, left: b, right: b }, 2)];
-  const two = (m.persons?.length ?? 0) === 2;
+  const n = m.persons?.length ?? 0;
+  const two = n === 2;
+  const multi = n >= 3; // 3 人以上：每人一區、靠上排（D108）
+  const split = two || multi;
   return [
-    mk(sideParas(lay.left, o.h, g.topPad, undefined, o.mode), { top: b, bottom: b, left: b, right: two ? faint : none }),
-    mk(sideParas(lay.right, o.h, g.topPad, m.coord, o.mode, two ? AlignmentType.CENTER : AlignmentType.LEFT, two ? 0 : 1.5), { top: b, bottom: b, right: b, left: two ? faint : none }),
+    mk(sideParas(lay.left, o.h, g.topPad, undefined, o.mode, multi ? AlignmentType.LEFT : AlignmentType.CENTER, multi ? 1.5 : 0, multi), { top: b, bottom: b, left: b, right: split ? faint : none }),
+    mk(sideParas(lay.right, o.h, g.topPad, m.coord, o.mode, two ? AlignmentType.CENTER : AlignmentType.LEFT, two ? 0 : 1.5, multi), { top: b, bottom: b, right: b, left: split ? faint : none }),
   ];
 }
 

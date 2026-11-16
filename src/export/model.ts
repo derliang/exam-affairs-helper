@@ -343,14 +343,16 @@ export function personLayout(
       { runs: [{ text: '見座位表下一頁' }], pt: fitW('見座位表下一頁', false, o.nameMax), gapBefore: 0.5 },
     ];
   } else if (ps.length === 2) {
+    // 兩人格（#212 #220）：先排「編號＋班級姓名＋時程行」的完整版；高度放不下（深位多、格子矮）時改精簡版——
+    // 拿掉編號行（班級與姓名已足夠辨識），每人的科目併成一行「科目、科目」（依時間順序），把空間留給字級，
+    // 不再讓姓名縮到 4～5pt。字級仍受格寬限制，所以格寬決定姓名上限。
+    const PTH = PT * 1.15;
+    const natural = ps.reduce((a, p, i) => a + o.codePt * 0.5 * PTH + o.nameMax * 1.15 * PTH + p.sched.length * Math.min(o.schedMax, 7) * PTH + (i ? 1.5 : 0), 0);
+    const compact = natural > h - o.topPad - 1 && ps.every((q) => q.schedShort?.length === q.sched.length);
     ps.forEach((p, i) => {
-      // 每人兩行：姓名字級上限放寬 15%（#212：兩人格的班級姓名要比一人格更不能縮）；編號一行、「班級｜姓名」一行（#212：原本擠成一行，字只剩約 6.5pt），時程行接在後面
-      lines.push({ runs: [{ text: p.code, bold: true }], pt: fitW(p.code, true, o.codePt * 0.5), gapBefore: i === 0 ? 0 : 1.5 });
-      lines.push({ runs: [{ text: p.classLabel, bold: true }, { text: ' | ' }, { text: p.name }], pt: namePtFit(p.classLabel, p.name, w, o.nameMax * 1.15), gapBefore: 0.2, pri: true });
-      // #220 殘留：兩人合計超過 4 行時（例如各考 3～4 科），完整寫法怎麼縮都放不進格子，最後一行被切；
-      // 這時每人的科目併成一行「科目、科目…」（依時間順序，過長由下面的折行估計再縮）
-      const many = ps.reduce((a, q) => a + q.sched.length, 0) > 4 && ps.every((q) => q.schedShort?.length === q.sched.length);
-      for (const s of many ? [p.schedShort!.join('、')] : p.sched) lines.push({ runs: [{ text: s, bold: true }], pt: fitW(s, true, o.schedMax), gapBefore: 0.3 });
+      if (!compact) lines.push({ runs: [{ text: p.code, bold: true }], pt: fitW(p.code, true, o.codePt * 0.5), gapBefore: i === 0 ? 0 : 1.5 });
+      lines.push({ runs: [{ text: p.classLabel, bold: true }, { text: ' | ' }, { text: p.name }], pt: namePtFit(p.classLabel, p.name, w, o.nameMax * 1.15), gapBefore: compact ? (i === 0 ? 0 : 1.2) : 0.2, pri: true });
+      for (const s of compact ? [p.schedShort!.join('、')] : p.sched) lines.push({ runs: [{ text: s, bold: true }], pt: fitW(s, true, o.schedMax), gapBefore: 0.3 });
     });
   } else if (ps.length === 1) {
     const p = ps[0]!;
@@ -412,19 +414,57 @@ export function personLayout(
 }
 
 /**
+ * 3 人以上輪流的整合標籤（#216，D108）：學生要看得到自己坐哪、哪個時段，所以每人一區「班級｜姓名」加科目（依時間順序，只列科目名），
+ * 分左右兩半各排一欄，字級依空間放大或縮小（4～14pt，放不下才縮到 5pt 為底）。
+ */
+function multiPersonCols(ps: PersonModel[], coord: string, wHalf: number, h: number, topPad: number): { left: PersonLine[]; right: PersonLine[]; pt: number } {
+  const PT = 0.3528;
+  const LH = PT * 1.15;
+  const w = wHalf * 0.94;
+  const half = Math.ceil(ps.length / 2);
+  const groups = [ps.slice(0, half), ps.slice(half)];
+  const headPt = 11;
+  const avail = h - topPad - 1 - headPt * LH - 0.8;
+  const subjLines = (p: PersonModel, pt: number): string[] => {
+    const items = p.schedShort && p.schedShort.length ? p.schedShort : p.sched;
+    const out: string[] = [];
+    for (const t of items) {
+      const last = out[out.length - 1];
+      if (last !== undefined && textWidthMm(last + '、' + t, pt, true) <= w) out[out.length - 1] = last + '、' + t;
+      else out.push(t);
+    }
+    return out;
+  };
+  const heightAt = (pt: number): number =>
+    Math.max(...groups.map((g) => g.reduce((a, p) => a + pt * LH + subjLines(p, pt * 0.9).length * pt * 0.9 * LH + 0.9, 0)));
+  let pt = 14;
+  while (pt > 5 && heightAt(pt) > avail) pt -= 0.5;
+  // 姓名行寬度：最長的「班級｜姓名」也要放得下
+  const nameW = (p: PersonModel, x: number) => textWidthMm(p.classLabel, x, true) + textWidthMm(' | ' + p.name, x);
+  while (pt > 5 && ps.some((p) => nameW(p, pt) > w)) pt -= 0.5;
+  const col = (g: PersonModel[]): PersonLine[] =>
+    g.flatMap((p, i): PersonLine[] => [
+      { runs: [{ text: p.classLabel, bold: true }, { text: ' | ' }, { text: p.name }], pt, gapBefore: i === 0 ? 0.8 : 0.9, pri: true },
+      ...subjLines(p, pt * 0.9).map((t) => ({ runs: [{ text: t, bold: true }], pt: pt * 0.9, gapBefore: 0 })),
+    ]);
+  const head: PersonLine = { runs: [{ text: `座位 ${coord}`, bold: true }], pt: headPt, gapBefore: 0 };
+  return { left: [head, ...col(groups[0]!)], right: col(groups[1]!), pt };
+}
+
+/**
  * 分科整合標籤兩倍寬的格內排法（稿 v2.37／D107）。wHalf＝半張（一個實體格）可用寬、h＝格高（mm）：
  * 單人：左半＝編號＋「班級｜姓名」，右半＝科目行（完整寫法放大後不到 10.5pt 就只列科目；≥5 科兩科一行）；
- * 2 人輪流：左右各一人，各自套 personLayout 單人排法；3 人以上：整張一格只印座位與「共 N 人輪流」。
+ * 2 人輪流：左右各一人，各自套 personLayout 單人排法；3 人以上：每人一區「班級｜姓名」加科目，分左右兩欄（multiPersonCols，D108）。
  */
 export function wideLayout(
   c: CellModel,
   wHalf: number,
   h: number,
   o: { topPad: number; codePt: number; nameMax: number; subjMax: number },
-): { left: PersonLine[]; right: PersonLine[]; span?: undefined } | { span: PersonLine[]; left?: undefined; right?: undefined } {
+): { left: PersonLine[]; right: PersonLine[] } {
   const ps = c.persons ?? [];
   const base = { topPad: o.topPad, codePt: o.codePt, nameMax: o.nameMax, schedMax: 11, schedBig: o.subjMax };
-  if (ps.length >= 3) return { span: personLayout(c, wHalf * 2, h, { ...base, schedBig: undefined }).lines };
+  if (ps.length >= 3) { const m = multiPersonCols(ps, c.coord, wHalf, h, o.topPad); return { left: m.left, right: m.right }; }
   if (ps.length === 2) {
     // 兩人字級一致（編號 20pt、姓名 14pt 上限），不讓只考一科的人編號特別大
     const b2 = { ...base, codePt: Math.min(o.codePt, 20), nameMax: Math.min(o.nameMax, 14) };

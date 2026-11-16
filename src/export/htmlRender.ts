@@ -35,9 +35,11 @@ function wideHtml(c: CellModel | undefined, w: number, h: number, b4: boolean): 
   const lay = wideLayout(c, w - 1.5, h, { topPad: 5, codePt: b4 ? 33 : 31, nameMax: 18, subjMax: b4 ? 20 : 16 });
   const spans = (ls: PersonLine[]): string => ls.map((l) => `<span class="pp-pr" style="font-size:${l.pt}pt;margin-top:${mm(l.gapBefore)}">${l.runs.map((r) => (r.bold ? `<b>${esc(r.text)}</b>` : esc(r.text))).join('')}</span>`).join('');
   const co = `<i class="pp-co">${esc(c.coord)}</i>`;
-  if (lay.span) return `<div class="pp-c pp-pe" style="${size};grid-column:span 2;background:#fff">${co}<span class="pp-prs">${spans(lay.span)}</span></div>`;
-  const two = (c.persons?.length ?? 0) === 2;
-  return `<div class="pp-c pp-wd" style="${size};grid-column:span 2;background:#fff">${co}<div class="pp-wh">${spans(lay.left)}</div><div class="pp-wh${two ? '' : ' pp-wl'}"${two ? ' style="border-left:.2mm solid #C8C2AE"' : ''}>${spans(lay.right)}</div></div>`;
+  const n = c.persons?.length ?? 0;
+  const two = n === 2;
+  const multi = n >= 3; // 3 人以上：每人一區、靠上排（D108）
+  const cls = (right: boolean) => `pp-wh${multi ? ' pp-wl pp-wt' : right && !two ? ' pp-wl' : ''}`;
+  return `<div class="pp-c pp-wd" style="${size};grid-column:span 2;background:#fff">${co}<div class="${cls(false)}">${spans(lay.left)}</div><div class="${cls(true)}"${two || multi ? ' style="border-left:.2mm solid #C8C2AE"' : ''}>${spans(lay.right)}</div></div>`;
 }
 
 /** 一格：座位表用班級色（抽離考試用柔和單色），標籤用白底，有標示的標籤格用淺黃 */
@@ -191,6 +193,7 @@ footer { font-size: 8pt; color: #555; text-align: right; margin-top: 3mm }
 .pp.pp-lab .pp-c.pp-wd{display:flex!important;flex-direction:row!important;align-items:stretch;justify-content:flex-start;padding:5mm 0 0;gap:0;overflow:hidden}
 .pp.pp-lab .pp-wd .pp-wh{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}
 .pp.pp-lab .pp-wd .pp-wh.pp-wl{align-items:flex-start;padding-left:1.5mm}
+.pp.pp-lab .pp-wd .pp-wh.pp-wt{justify-content:flex-start;padding-top:0}
 .pp .pp-pr b{font-weight:700}
 .pp .pp-e{background:repeating-linear-gradient(135deg,#F1EDE0 0 1.2mm,#E2DCC8 1.2mm 2.4mm)}
 .pp.pp-lab .pp-c{display:grid;grid-template-rows:1fr auto 9mm;justify-items:center;align-items:center;gap:0;padding:5mm 1mm .8mm}
