@@ -67,6 +67,8 @@ export function reserveNeed(doc: Doc, exam: ExamConfig): ReserveNeed {
   const marks = applyMarks(seatableEntries(doc, exam), examClasses(doc, exam), exam.subjects, rules);
   const overrides = new Map(examOverrides(doc, exam).map((o) => [o.code, o]));
   const name = new Map(exam.subjects.map((s) => [s.id, s.name]));
+  let firstBad: { need: number; who: string; exam: number; study: number } | null = null;
+  let best = { need: 0, who: '', exam: 0, study: 0 };
   for (const g of periodGroups(exam.subjects, examSubjectPeriods(exam, doc.settings))) {
     const ex = new Set<string>(); const st = new Set<string>();
     for (const m of marks) {
@@ -76,7 +78,11 @@ export function reserveNeed(doc: Doc, exam: ExamConfig): ReserveNeed {
       (m.mode === 'extra' ? ex : st).add(m.code);
     }
     const n = new Set([...ex, ...st]).size;
-    if (n > out.need) Object.assign(out, { need: n, who: g.subjectIds.map((id) => name.get(id) ?? id).join('、'), exam: ex.size, study: st.size });
+    const pick = { need: n, who: g.subjectIds.filter((id) => marks.some((m) => m.subjectId === id && !overrides.has(m.code))).map((id) => name.get(id) ?? id).join('、'), exam: ex.size, study: st.size };
+    // #263：不足時以「第一個放不下的節次」為準（與排座回報的第一個錯誤同一科），卡片與訊息才會點名同一科；夠用時取最多的一節
+    if (firstBad === null && n > out.avail) firstBad = pick;
+    if (n > best.need) best = pick;
   }
+  Object.assign(out, firstBad ?? best);
   return out;
 }
