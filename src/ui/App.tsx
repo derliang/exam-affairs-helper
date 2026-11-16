@@ -22,6 +22,7 @@ import { Step1 } from './pages/Step1';
 import { Step2 } from './pages/Step2';
 import { Step3 } from './pages/Step3';
 import { AstStep3 } from './ast/AstStep3';
+import { onAstPlanReady, setPlanDefer } from './ast/model';
 import { AstStep4 } from './ast/AstStep4';
 import { AstStep5 } from './ast/AstStep5';
 import { Step4 } from './pages/Step4';
@@ -213,10 +214,17 @@ export function pageName(r: Route, doc: Doc): string {
 }
 
 function Workspace(p: { route: Extract<Route, { page: 'step' }>; doc: Doc; onToRoster: (division: 'senior' | 'junior') => void; onToRooms: (division: 'senior' | 'junior') => void; onToSchool: () => void; onChange: (d: Doc) => void; onStep: (n: 1 | 2 | 3 | 4 | 5 | 6) => void; onFix: (n: 1 | 2 | 3 | 4 | 5 | 6) => void; onReserve: () => void; ret?: number | undefined; onRet: () => void; onExams: () => void }) {
+  // #249：分科 ③ 編輯座位時，排座統計延後到停手才重算；算完在這裡重畫（其他步驟永遠同步取得精確結果）
+  const [, setPlanTick] = useState(0);
+  useEffect(() => {
+    const off = onAstPlanReady(() => setPlanTick((n) => n + 1));
+    return () => { off(); setPlanDefer(false); };
+  }, []);
   const exam = p.doc.exams.find((e) => e.id === p.route.examId);
   if (!exam) {
     return <section><h2>{stepTitle(p.route.step)}</h2><EmptyState title="找不到這個模擬考" action={<Button kind="primary" onClick={p.onExams}>回模擬考列表</Button>}>它可能已被刪除，或資料夾換了。</EmptyState></section>;
   }
+  setPlanDefer(exam.kind === 'ast' && p.route.step === 3);
   const flow = flowOf(p.doc, exam, p.route.step);
   const step = p.route.step;
   return (
