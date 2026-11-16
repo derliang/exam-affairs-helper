@@ -216,6 +216,19 @@ describe('分科輸出：擋下與畫面', () => {
   }, 30000);
 });
 
+describe('分科 Word 產生進度（#270）', () => {
+  it('每個檔開始前回報「第幾個／共幾個／檔名」，輸出內容不受影響', async () => {
+    const { doc, exam } = fixture();
+    const o = astOutputs(doc, exam, astPlan(doc, exam)!);
+    const dir = new URL('../../export/fonts/', import.meta.url);
+    const fonts = async () => ({ fonts: { regular: new Uint8Array(readFileSync(new URL('NotoSansTC-Regular-big5.ttf', dir))), bold: new Uint8Array(readFileSync(new URL('NotoSansTC-Bold-core.ttf', dir))) }, has: () => true });
+    const seen: string[] = [];
+    const res = await runAstExport(o, ['ann', 'use'], 'word', 'B4', exam.name, fonts, (i, n, l) => seen.push(`${i}/${n}:${l}`));
+    expect(seen).toEqual(['0/2:班級公告', '1/2:每節教室用途表']);
+    expect(res).toHaveLength(2);
+  }, 30000);
+});
+
 describe('分科輸出：整合標籤兩倍寬（#216／D107）', () => {
   it('B4 6×8 欄併成 3×8、A3 8×7 併成 4×7；每張紙的標籤數不超過格數；大教室分張標「第 N／共 M 張」', () => {
     const { doc, exam } = fixture();
