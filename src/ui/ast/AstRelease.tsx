@@ -2,12 +2,12 @@
 import { useState } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
 import type { ExamConfig } from '../../data';
-import { diffSnap, exportVersions, finalize, parseVersions, phaseOf, publish, unfinalize } from '../../core/astD99/release';
+import { diffSnap, exportVersions, finalize, parseVersions, phaseOf, publish, unfinalize, versionsImportBlock } from '../../core/astD99/release';
 import { seatsOfPlan } from '../../core/astD99/refine';
 import { Alert, Badge, Button } from '../components';
 import { download } from '../pages/Step6';
 import { updateExam, type Doc } from '../store';
-import { astFinalizeBlockers, astPlan } from './model';
+import { astFinalizeBlockers, astFingerprint, astPlan, astSnapshotMismatch } from './model';
 import { astOutputs } from './output';
 
 const NAMES = ['規劃中', '確認定案', '已公告'] as const;
@@ -33,6 +33,7 @@ export function PhaseCard(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) =>
   const st = IDX[ph];
   const plan = astPlan(doc, exam);
   const blockers = astFinalizeBlockers(doc, exam, plan);
+  const mismatch = astSnapshotMismatch(exam, plan);
   const next = (exam.astVersions?.length ?? 0) + 1;
   const [why, setWhy] = useState('');
   const [err, setErr] = useState('');
@@ -48,11 +49,11 @@ export function PhaseCard(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) =>
   ][st]!;
   const doFinal = (): void => {
     if (!plan) return;
-    apply(finalize(exam, blockers, seatsOfPlan(plan.out, plan.input.slots.map((s) => s.id))));
+    apply(finalize(exam, blockers, seatsOfPlan(plan.out, plan.input.slots.map((s) => s.id)), astFingerprint(exam, plan)));
   };
   const doPublish = (): void => {
     if (!plan) return;
-    apply(publish(exam, plan.out, astOutputs(doc, exam, plan).version, new Date(), why), true);
+    apply(publish(exam, plan.out, astOutputs(doc, exam, plan).version, new Date(), why, mismatch), true);
   };
   return (
     <div class="card stack">
@@ -69,10 +70,11 @@ export function PhaseCard(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) =>
         </div>
       )}
       {st === 2 && <div class="field"><label class="label" for="ast-un">解除定案、修正的理由（必填）</label><input class="input" id="ast-un" value={why} placeholder="例：教室漏水，改用別間" onInput={(e) => setWhy(e.currentTarget.value)} /></div>}
+      {mismatch && <Alert tone="danger"><b>方案和定案當下不同：</b>{mismatch}</Alert>}
       {err && <Alert tone="danger">{err}</Alert>}
       <div class="row">
         {st === 0 && <Button kind="primary" disabled={blockers.length > 0 || !plan} onClick={doFinal}>確認定案</Button>}
-        {st === 1 && <><Button kind="primary" onClick={doPublish}>公告為第 {next} 版</Button><Button onClick={() => apply(unfinalize(exam, ''))}>解除定案</Button></>}
+        {st === 1 && <><Button kind="primary" disabled={!!mismatch} onClick={doPublish}>公告為第 {next} 版</Button><Button onClick={() => apply(unfinalize(exam, ''))}>解除定案</Button></>}
         {st === 2 && <Button onClick={() => apply(unfinalize(exam, why), true)}>解除定案、修正</Button>}
       </div>
     </div>
@@ -91,6 +93,8 @@ export function VersionCard(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) 
     if (!f) return;
     const r = parseVersions(await f.text());
     if (!r.ok) { setMsg({ tone: 'danger', text: r.error }); return; }
+    const why = versionsImportBlock(exam, r);
+    if (why) { setMsg({ tone: 'danger', text: why }); return; }
     const u = updateExam(doc, exam.id, { astVersions: r.versions, astFinalSeats: r.seats });
     if (u.ok) { setMsg({ tone: 'ok', text: `已匯入 ${r.versions.length} 個版本與 ${r.seats.length} 筆定案座位。` }); p.onChange(u.doc); }
   };

@@ -6,10 +6,13 @@ import { demoDoc } from '../repository';
 import { newExam, updateExam, type Doc } from '../store';
 import { checkPlan, codeOf } from '../../core/astD99/contract';
 import { buildCandidates, scheduleConflicts, scheduleNeedsApproval } from '../../core/astD99/schedule';
-import { estimateStudy, finalize, publish, unfinalize, diffSnap, exportVersions, parseVersions } from '../../core/astD99/release';
+import { estimateStudy, finalize, publish, unfinalize, diffSnap, exportVersions, parseVersions, versionsImportBlock } from '../../core/astD99/release';
+import { scheduleOf } from '../../core/periods';
+import { examEntries } from '../seating';
+import { ScheduleCard } from './AstSchedule';
 import { seatsOfPlan } from '../../core/astD99/refine';
-import { astBaseDays, astCandidates, astFinalizeBlockers, astInput, astPlan, astSlots } from './model';
-import { astOutputs } from './output';
+import { astBaseDays, astCandidates, astFinalizeBlockers, astFingerprint, astInput, astPlan, astSlots, astSnapshotMismatch, carrySource } from './model';
+import { astOutputBlockers, astOutputs } from './output';
 import { AstStep3 } from './AstStep3';
 import { AstStep4 } from './AstStep4';
 import { AstStep5 } from './AstStep5';
@@ -480,5 +483,119 @@ describe('分科 AST-3 畫面', () => {
     const f = patch(doc, exam, { astLocks: { seats: [{ slotId: 'p1', code: '0101', roomId: a.roomId, row: 6, depth: 6 }, { slotId: 'p1', code: '0102', roomId: a.roomId, row: 6, depth: 6 }] } });
     const bl = astFinalizeBlockers(f.doc, f.exam, astPlan(f.doc, f.exam));
     expect(finalize(f.exam, bl, []).ok).toBe(false);
+  });
+});
+
+// ───── 第三方稽核 #274～#281 回歸（全部假資料） ─────
+
+describe('第三方稽核回歸', () => {
+  const noop = () => undefined;
+  const finalOf = (f: { doc: Doc; exam: ExamConfig }) => {
+    const p = astPlan(f.doc, f.exam)!;
+    const r = finalize(f.exam, astFinalizeBlockers(f.doc, f.exam, p), seatsOfPlan(p.out, p.input.slots.map((s) => s.id)), astFingerprint(f.exam, p));
+    if (!r.ok) throw new Error(r.error);
+    return patch(f.doc, f.exam, r.patch);
+  };
+
+  it('#281 基準時程同節兩科有共同考生：擋定案、說明科目與人數；沒有共同考生同節則合法', () => {
+    const base = fixture();
+    const tbl = structuredClone(scheduleOf(base.doc.settings, 'ast'));
+    for (const day of tbl.days) for (const row of day) if (row.name.includes('化學')) row.samePrev = true;
+    const sameDoc: Doc = { ...base.doc, settings: { ...base.doc.settings, schedules: { ...(base.doc.settings.schedules ?? {}), ast: tbl } } };
+    expect(astSlots(sameDoc, base.exam).some((s) => s.subjectIds.includes('physics') && s.subjectIds.includes('chemistry'))).toBe(true);
+    const bl = astFinalizeBlockers(sameDoc, base.exam, astPlan(sameDoc, base.exam));
+    expect(bl.join('；')).toMatch(/同節兩科共同考生.*物理.*化學/);
+    // 沒人同時考兩科：不擋
+    const only = { ...sameDoc, examFiles: { ...sameDoc.examFiles, [base.exam.id]: { entries: examEntries(sameDoc, base.exam).map((e) => ({ ...e, subjectIds: e.subjectIds.filter((i) => i !== 'chemistry') })) } } };
+    expect(astFinalizeBlockers(only, base.exam, astPlan(only, base.exam)).join('；')).not.toContain('同節兩科');
+  });
+
+  it('#275 選定時程後新增考科：新考科沒排進時程要擋定案；名單有已不存在的考科也擋', () => {
+    const base = fixture();
+    const days = astBaseDays(base.doc, base.exam);
+    const sched = patch(base.doc, base.exam, { astSchedule: { cand: 'B', days, approved: true } });
+    expect(astFinalizeBlockers(sched.doc, sched.exam, astPlan(sched.doc, sched.exam))).toEqual([]);
+    const added = patch(sched.doc, sched.exam, { subjects: [...sched.exam.subjects, { id: 'extra', name: '地科' }] });
+    expect(astFinalizeBlockers(added.doc, added.exam, astPlan(added.doc, added.exam)).join('；')).toContain('考科「地科」沒有排進時程');
+    const dropped = patch(sched.doc, sched.exam, { subjects: sched.exam.subjects.filter((s) => s.id !== 'physics') });
+    const bl = astFinalizeBlockers(dropped.doc, dropped.exam, astPlan(dropped.doc, dropped.exam)).join('；');
+    expect(bl).toContain('已不存在的考科');
+    expect(bl).toContain('選了已不存在的考科');
+  });
+
+  it('#278 已選的候選按鈕停用（再按一次不會清掉核准與鎖定）；其他候選仍可設為草案', () => {
+    const { doc, exam } = fixture();
+    const days = astCandidates(doc, exam).find((c) => c.id === 'C')!.days;
+    const f = patch(doc, exam, { astSchedule: { cand: 'C', days, approved: true }, astApprovals: [{ slotId: 'p1', roomId: 'c1' }] });
+    const html = renderToString(<ScheduleCard doc={f.doc} exam={f.exam} onChange={noop} />);
+    expect(html).toMatch(/<button[^>]*disabled[^>]*>目前草案 ✓/);
+    expect(html).toMatch(/<button(?![^>]*disabled)[^>]*>設為草案/);
+  });
+
+  it('#274 定案後改名單／考科：方案指紋對不上，擋下載與公告；解除定案重新定案後恢復；舊資料不檢查', () => {
+    const f0 = fixture();
+    const fin = finalOf(f0);
+    expect(astSnapshotMismatch(fin.exam, astPlan(fin.doc, fin.exam))).toBeUndefined();
+    expect(astOutputBlockers(astPlan(fin.doc, fin.exam), true, astSnapshotMismatch(fin.exam, astPlan(fin.doc, fin.exam)))).toEqual([]);
+    const entries = examEntries(fin.doc, fin.exam).map((e, i) => (i === 0 ? { ...e, subjectIds: e.subjectIds.slice(0, 1) } : e));
+    const edited = { ...fin.doc, examFiles: { ...fin.doc.examFiles, [fin.exam.id]: { entries } } };
+    const m1 = astSnapshotMismatch(fin.exam, astPlan(edited, fin.exam));
+    expect(m1).toContain('定案之後');
+    expect(astOutputBlockers(astPlan(edited, fin.exam), true, m1)[0]!.text).toContain('定案之後');
+    const renamed = { ...fin.doc, examFiles: { ...fin.doc.examFiles, [fin.exam.id]: { entries: examEntries(fin.doc, fin.exam).map((e, i) => (i === 0 ? { ...e, name: '改名' } : e)) } } };
+    expect(astSnapshotMismatch(fin.exam, astPlan(renamed, fin.exam))).toBeTruthy();
+    const sub = patch(fin.doc, fin.exam, { subjects: fin.exam.subjects.map((s, i) => (i === 0 ? { ...s, name: '改科名' } : s)) });
+    expect(astSnapshotMismatch(sub.exam, astPlan(sub.doc, sub.exam))).toBeTruthy();
+    const p = astPlan(edited, fin.exam)!;
+    expect(publish(fin.exam, p.out, 'X', new Date(), '', m1).ok).toBe(false);
+    const un = unfinalize(fin.exam, '');
+    if (!un.ok) throw new Error(un.error);
+    const reopened = patch(edited, fin.exam, un.patch);
+    const again = finalOf(reopened);
+    expect(astSnapshotMismatch(again.exam, astPlan(again.doc, again.exam))).toBeUndefined();
+    const legacy = patch(fin.doc, fin.exam, { astFinalFp: undefined });
+    expect(astSnapshotMismatch(legacy.exam, astPlan(edited, legacy.exam))).toBeUndefined();
+  });
+
+  it('#276 版本清單匯入：別場考試、已公告、讓紀錄變少、舊檔覆寫既有紀錄都擋；同場備份可還原', () => {
+    const base = fixture();
+    const fin = finalOf(base);
+    const p = astPlan(fin.doc, fin.exam)!;
+    const pub = publish(fin.exam, p.out, 'V1', new Date('2026-09-02T00:00:00Z'));
+    if (!pub.ok) throw new Error(pub.error);
+    const ann = patch(fin.doc, fin.exam, pub.patch);
+    const mine = parseVersions(exportVersions(ann.exam));
+    if (!mine.ok) throw new Error(mine.error);
+    expect(mine.examId).toBe(ann.exam.id);
+    expect(versionsImportBlock(ann.exam, mine)).toContain('已公告');
+    const un = unfinalize(ann.exam, '修正');
+    if (!un.ok) throw new Error(un.error);
+    const plan = patch(ann.doc, ann.exam, un.patch).exam;
+    expect(versionsImportBlock(plan, mine)).toBe('');
+    expect(versionsImportBlock(plan, { versions: [], examId: plan.id })).toContain('會讓公告紀錄消失');
+    expect(versionsImportBlock(plan, { versions: mine.versions, examId: 'other-exam' })).toContain('別場考試');
+    expect(versionsImportBlock(plan, { versions: mine.versions })).toContain('沒有記錄來源考試');
+    expect(versionsImportBlock({ ...plan, astVersions: [] }, { versions: mine.versions })).toBe('');
+    const bad = JSON.parse(exportVersions(ann.exam));
+    bad.versions = [bad.versions[0], bad.versions[0]];
+    expect(parseVersions(JSON.stringify(bad)).ok).toBe(false);
+  });
+
+  it('#277 跨次沿用只用同學年度、姓名一致的定案座位', () => {
+    const a = fixture();
+    const fin = finalOf(patch(a.doc, a.exam, { schoolYear: 114 }));
+    const r = newExam(fin.doc, 'ast', '分科第二次', new Date('2026-10-01T02:00:00Z'));
+    if (!r.ok) throw new Error(r.error);
+    const second = r.doc.exams[r.doc.exams.length - 1]!;
+    const entries = examEntries(fin.doc, fin.exam);
+    const d2: Doc = { ...r.doc, examFiles: { ...r.doc.examFiles, [second.id]: { entries } } };
+    const on = patch(d2, second, { schoolYear: 115, astCarry: { on: true } });
+    expect(carrySource(on.doc, on.exam)).toBeUndefined();
+    const same = patch(on.doc, on.exam, { schoolYear: 114 });
+    expect(carrySource(same.doc, same.exam)!.seats.length).toBe(fin.exam.astFinalSeats!.length);
+    const renamed: Doc = { ...same.doc, examFiles: { ...same.doc.examFiles, [second.id]: { entries: entries.map((e, i) => (i === 0 ? { ...e, name: '另一人' } : e)) } } };
+    const cs = carrySource(renamed, same.exam)!;
+    expect(cs.excluded).toBe(1);
+    expect(cs.seats.some((s) => s.code === codeOf(entries[0]!))).toBe(false);
   });
 });

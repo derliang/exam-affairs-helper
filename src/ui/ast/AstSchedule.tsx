@@ -4,7 +4,7 @@ import type { ExamConfig } from '../../data';
 import type { CandId, Candidate } from '../../core/astD99/schedule';
 import { parseVersions } from '../../core/astD99/release';
 import { Alert, Badge, Button, More } from '../components';
-import { updateExam, type Doc } from '../store';
+import { examYear, updateExam, type Doc } from '../store';
 import { astCandidates, astInvigilators, astPlan, carrySource } from './model';
 
 const VERDICT: Record<Candidate['verdict'], { tone?: 'ok' | 'warn' | 'danger' | 'info'; text: string }> = {
@@ -23,6 +23,10 @@ export function ScheduleCard(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc)
   const patch = (x: Partial<ExamConfig>): void => { const r = updateExam(doc, exam.id, x); if (r.ok) p.onChange(r.doc); };
   // 換時程會讓時段 id 對不上，原本的核可與鎖定一併清掉（不會悄悄留著失效的鎖定）
   const choose = (c: Candidate): void => {
+    if (c.id === cur) return; // #278：再按已選的方案不是換時程，不可清掉核准與鎖定
+    const nLock = (exam.astLocks?.seats?.length ?? 0) + (exam.astLocks?.classes?.length ?? 0) + (exam.astLocks?.rooms?.length ?? 0);
+    const nApr = (exam.astApprovals?.length ?? 0) + (sched?.approved ? 1 : 0);
+    if (nLock + nApr > 0 && typeof window !== 'undefined' && typeof window.confirm === 'function' && !window.confirm(`換時程會清掉 ${nApr} 筆核可（含時程核准）與 ${nLock} 筆鎖定，因為時段會不同。確定要換嗎？`)) return;
     if (c.id === 'A') patch({ astSchedule: undefined, astApprovals: [], astLocks: undefined });
     else patch({ astSchedule: { cand: c.id, days: c.days }, astApprovals: [], astLocks: undefined });
   };
@@ -65,9 +69,9 @@ export function ScheduleCard(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc)
               )}
               <div class="row">
                 {c.id === 'A'
-                  ? <Button small kind={on ? 'primary' : 'default'} onClick={() => { if (!on) choose(c); }}>{on ? '目前使用 ✓' : '改回基準'}</Button>
+                  ? <Button small kind={on ? 'primary' : 'default'} onClick={() => choose(c)}>{on ? '目前使用 ✓' : '改回基準'}</Button>
                   : <>
-                      <Button small kind={on ? 'primary' : 'default'} disabled={c.verdict === 'infeasible'} onClick={() => choose(c)}>{on ? '目前草案 ✓' : '設為草案'}</Button>
+                      <Button small kind={on ? 'primary' : 'default'} disabled={c.verdict === 'infeasible' || on} onClick={() => choose(c)}>{on ? '目前草案 ✓' : '設為草案'}</Button>
                       {c.verdict !== 'infeasible' && <Button small disabled={!on} onClick={() => approve(c)} title={on ? undefined : '先設為草案'}>{on && sched?.approved ? '已核准（取消）' : '管理者核准'}</Button>}
                     </>}
               </div>
@@ -98,6 +102,7 @@ export function CarryCard(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) =>
     const r = parseVersions(await f.text());
     if (!r.ok) { setMsg(r.error); return; }
     if (r.seats.length === 0) { setMsg('這個檔案裡沒有定案座位。'); return; }
+    if (r.year !== undefined && r.year !== examYear(exam)) { setMsg(`這個檔案是 ${r.year} 學年度的，這場是 ${examYear(exam)} 學年度，不同學年度的班級座號不是同一批學生，不能沿用。`); return; }
     setMsg(`已匯入 ${r.seats.length} 筆上次定案座位。`);
     patch({ astCarry: { on: true, seats: r.seats } });
   };
@@ -110,8 +115,8 @@ export function CarryCard(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) =>
         <button type="button" class={`btn${on ? ' btn-primary' : ''}`} aria-pressed={on} onClick={() => patch({ astCarry: { on: !on, ...(exam.astCarry?.seats ? { seats: exam.astCarry.seats } : {}) } })}>{on ? '沿用上次定案 ✓' : '沿用上次定案'}</button>
       </div>
       {!on && <Alert tone="info">沒有開啟：這次的座位完全依本次的規則排。</Alert>}
-      {on && !src && <Alert tone="warn">找不到上次定案的座位：本機沒有已定案的分科考試，也沒有匯入檔。請匯入上次匯出的版本清單檔，或等這次定案後下次再用。</Alert>}
-      {on && src && <Alert tone="info"><b>上次定案：</b>{src.from}，共 {src.seats.length} 人；存在本機。</Alert>}
+      {on && !src && <Alert tone="warn">找不到上次定案的座位：本機沒有「同一學年度」已定案的分科考試，也沒有匯入檔。請匯入上次匯出的版本清單檔，或等這次定案後下次再用。</Alert>}
+      {on && src && <Alert tone="info"><b>上次定案：</b>{src.from}，共 {src.seats.length} 人；存在本機。{src.excluded ? `另有 ${src.excluded} 人姓名和上次不同（不是同一位學生），未沿用。` : ''}</Alert>}
       {on && (
         <div class="row"><label class="btn btn-sm">匯入上次定案座位<input type="file" accept=".json,application/json" hidden onChange={onFile} /></label>{exam.astCarry?.seats && <Button small kind="ghost" onClick={() => patch({ astCarry: { on: true } })}>改用本機的上次定案</Button>}{msg && <span class="small muted">{msg}</span>}</div>
       )}
