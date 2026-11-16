@@ -2,7 +2,7 @@ import { renderToString } from 'preact-render-to-string';
 import { describe, expect, it } from 'vitest';
 import type { Classroom } from '../data';
 import { RoomList } from './components/RoomList';
-import { duplicateRoom } from './rooms';
+import { addRooms, duplicateRoom } from './rooms';
 
 const room = (o: Partial<Classroom> = {}): Classroom => ({ id: 'room-1', name: '試場3', kind: 'class', rows: 7, depth: 7, seatCount: 48, disabled: ['7-7'], track: 'science', division: 'senior', ...o });
 
@@ -26,5 +26,18 @@ describe('教室複製與 B4 上限提示（#205）', () => {
     const html = renderToString(<RoomList rooms={[room({ rows: 6, depth: 8 })]} paper="B4" onChange={() => {}} onGoSchool={() => {}} />);
     expect(html).not.toContain('請改為 A3');
     expect(html).toContain('複製這間教室');
+  });
+  it('一次新增 N 間（#205）：名稱接續、id 不重複、上下限 1～20、國中部不能新增預備', () => {
+    const out = addRooms([room({ name: '試場1' })], 'class', 3, 'senior');
+    expect(out).toHaveLength(4);
+    expect(new Set(out.map((r) => r.id)).size).toBe(4);
+    expect(out.slice(1).map((r) => r.division)).toEqual(['senior', 'senior', 'senior']);
+    expect(addRooms([], 'class', 99)).toHaveLength(20);
+    expect(addRooms([], 'class', 0)).toHaveLength(1);
+    const j = [room()];
+    expect(addRooms(j, 'reserve', 3, 'junior')).toBe(j);
+  });
+  it('畫面：教室清單有「一次新增 6 間班級教室」', () => {
+    expect(renderToString(<RoomList rooms={[room()]} paper="B4" onChange={() => {}} />)).toContain('一次新增 6 間班級教室');
   });
 });
