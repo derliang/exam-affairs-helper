@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>模擬考設計系統 稿 v2.38</title>
+<title>模擬考設計系統 稿 v2.39</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -492,7 +492,7 @@ details.more{font-size:14px;color:var(--text-2)}details.more summary{cursor:poin
 </style>
 
 <div class="top">
-  <span class="brand">模擬考小幫手 設計系統 <span class="badge b-acc">稿 v2.38・2026-11-16</span></span>
+  <span class="brand">模擬考小幫手 設計系統 <span class="badge b-acc">稿 v2.39・2026-11-16</span></span>
   <nav class="toc" aria-label="目錄">
     <a href="#color">色彩</a><a href="#type">字型</a><a href="#base">間距圓角</a><a href="#comp">元件</a><a href="#steps">步驟導覽</a><a href="#special">專屬元件</a><a href="#ast">分科新模型</a><a href="#ast2">分科下一批</a><a href="#paper">座位表與標籤</a><a href="#paper36">輸出補強 v2.36</a><a href="#paper36b">名單與教室 v2.36</a><a href="#brandbar">品牌列</a><a href="#footer">頁尾</a><a href="#align">對位測試頁</a><a href="#open">待確認</a>
   </nav>
@@ -1394,7 +1394,7 @@ details.more{font-size:14px;color:var(--text-2)}details.more summary{cursor:poin
         <li>同天考兩科：「第一天 自然、數A」；跨天：「第一天 自然　第二天 數A」；放不下自動縮小字級，最小仍大於現況。</li>
         <li><b>（#216 的版式已被 v2.37「④-2 兩倍寬」取代，見下一張卡）</b>分科整合標籤（#216）：格內每行「第N天 科目　班座號　姓名」，同一個版式與字級規則；標題「1 天 2＝第 1 天時段二」難讀，改成各行直接寫「第N天 時段X 科目」，標題不再解釋縮寫。預備教室仍只寫「第○天 ○○科」不寫時段。</li></ul></div>
 
-    <div class="card" id="v237" style="margin-top:16px"><style>#v237 .g>div{overflow-x:auto;max-width:100%}#v237 .g>div>.cell{flex-shrink:0}</style><div class="lab">④-2 分科整合標籤改「兩倍寬」（#216，<b>稿 v2.38；3 人以上輪流一列已於 v2.38 改</b>；覆寫上一張卡中「整合標籤同一版式」的部分）</div>
+    <div class="card" id="v237" style="margin-top:16px"><style>#v237 .g>div{overflow-x:auto;max-width:100%}#v237 .g>div>.cell{flex-shrink:0}</style><div class="lab">④-2 分科整合標籤改「兩倍寬」（#216，<b>稿 v2.39；3 人以上輪流一列已於 v2.38 改</b>；覆寫上一張卡中「整合標籤同一版式」的部分）</div>
       <p class="small muted">使用者裁示（2026-11-15，調度員轉達）：分科整合標籤每張佔<b>兩格寬</b>，科目字放大，空間不夠只列科目；<b>只有分科整合標籤改</b>，學測／會考／預備教室標籤維持單格。以下 1mm＝4px、全部假資料。</p>
       <div class="v36 g" style="grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr))">
         <div><div class="small">B4（250×353mm）：每張 76.7×41.3mm（兩個舊格併成一張）。單人、4 科：左半編號與「班級｜姓名」、右半科目，空間夠就寫完整「第N天 時段X 科目」，約 10.5pt（舊版約 5.5pt）</div>
@@ -1427,6 +1427,15 @@ details.more{font-size:14px;color:var(--text-2)}details.more summary{cursor:poin
         <li><b>A3 格數（設計員定案，待審）</b>：A3 舊版是 7×7、每格 35mm 正方（沿用舊標籤，D74）。兩倍寬要成對，7 欄是奇數，只能每列放 3 張、浪費一欄（49→21 張）。改 <b>8 欄×7 列</b>：35mm 正方不變、兩格併一張＝70×35mm，每列 4 張、一張紙 28 張；寬度 280mm，左右各留約 8.5mm（大於一般印表機不可印邊界約 5mm）。B4 維持扣 10mm 邊界均分、6 欄併成 3 欄＝3×8＝24 張。</li>
         <li><b>被否決</b>：①只放大字、格數不變（使用者先選後改，改為兩倍寬）；②A3 維持 7 欄、每列 3 張（浪費整欄）；③一人一格不併格、但把科目改兩欄（B4 格寬 38mm，兩欄後每欄不到 19mm，字反而更小）。</li>
         <li><b>代價</b>：張數增加（座位 48 個時，B4 由 1 張紙變 2 張）；這是使用者要的取捨，列印前下載畫面要寫明「整合標籤每張兩格寬、共 N 張紙」。</li></ul></div>
+
+    <div class="card" id="v239" style="margin-top:16px"><div class="lab">④-3 預備／綜合教室 2 人輪流格改精簡版（#212 #220，<b>稿 v2.39，使用者已同意取捨</b>）</div>
+      <p class="small muted">窄格（約 24mm）寫完整「第二天 時段一 公民與社會」只剩 5pt，還把姓名擠小。改成：每人「班級｜姓名」一行＋科目併一行（依時間順序）；<b>不印編號行、不寫「第N天」</b>。單人考 2 個以上時段放不下時，同樣把科目併一行。假資料、1mm＝約 4px。</p>
+      <div class="v36 g" style="grid-template-columns:repeat(auto-fit,minmax(min(200px,100%),1fr))">
+        <div><div class="small">舊（姓名約 7pt、時程行 5pt）</div><div class="cell" style="width:150px;height:110px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0"><i class="co">7-1</i><b style="font-size:12px">1500</b><span style="font-size:7px;font-weight:700">溫 | 王小明</span><span style="font-size:5px;font-weight:700">第二天 時段一 公民與社會</span><b style="font-size:12px">1501</b><span style="font-size:7px;font-weight:700">溫 | 李大華</span><span style="font-size:5px;font-weight:700">第二天 時段一 公民與社會</span></div></div>
+        <div><div class="small">新（姓名約 10～12pt、科目 6～7pt）</div><div class="cell" style="width:150px;height:110px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0"><i class="co">7-1</i><b style="font-size:15px">溫 | 王小明</b><span style="font-size:10px;font-weight:700">物理、化學</span><b style="font-size:15px;margin-top:6px">溫 | 李大華</b><span style="font-size:10px;font-weight:700">公民與社會</span></div></div>
+      </div>
+      <ul class="sp"><li><b>規則</b>：2 人格一律精簡版；單人多時段放不下才併一行；單人單時段不變。姓名字級受格寬限制（班級名越長越小）。</li>
+        <li><b>取捨</b>：2 人格看不到四位數編號與「第N天」（科目名依時間順序）。列高極矮（約 14.7mm）時仍只有約 4.5pt，那要改座位頁的格高預算，需另決定。</li></ul></div>
 
     <div class="card" style="margin-top:16px"><div class="lab">⑤ 名單與統計表（#219、#220、#213、#214，<b>使用者已核可</b>）</div>
       <div class="v36 g" style="grid-template-columns:repeat(auto-fit,minmax(340px,1fr))">
