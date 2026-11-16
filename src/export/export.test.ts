@@ -436,7 +436,7 @@ describe('座位表頁首標籤換行與兩時段格（#247、#212）', () => {
     expect(nameLine.pt).toBeGreaterThanOrEqual(10); // 放寬高度後接近姓名上限 10.5pt
   });
 
-  it('#216 兩倍寬 wideLayout：單人左編號姓名、右科目（放不下只列科目）；2 人左右各一人；3 人以上合併', async () => {
+  it('#216 兩倍寬 wideLayout：單人左編號姓名、右科目（放不下只列科目）；2 人左右各一人；3 人以上每人一區（D108）', async () => {
     const { wideLayout } = await import('./index');
     const person = (code: string, n: number) => ({ code, classLabel: '溫', name: '王小明', sched: ['物理', '化學', '數甲', '生物', '歷史', '地理'].slice(0, n).map((s, i) => `第一天 時段${'一二三四五六'[i]} ${s}`), schedShort: ['物理', '化學', '數甲', '生物', '歷史', '地理'].slice(0, n) });
     const cell = (ps: ReturnType<typeof person>[]) => ({ coord: '1-1', seat: { row: 1, depth: 1 }, code: '', classLabel: '', name: '', colorBg: 'FFFFFF', colorLine: '222222', colorFg: '22201B', tags: [], marks: [], persons: ps });
@@ -452,8 +452,34 @@ describe('座位表頁首標籤換行與兩時段格（#247、#212）', () => {
     expect(six.right![0]!.runs[0]!.text).toBe('物理　化學');
     const two = wideLayout(cell([person('0101', 2), person('0202', 2)]), 36, 35, o);
     expect(two.left).toBeTruthy(); expect(two.right).toBeTruthy();
-    const many = wideLayout(cell([person('0101', 1), person('0202', 1), person('0303', 1)]), 36, 35, o);
-    expect(many.span!.map((l) => l.runs[0]!.text).join('')).toContain('3 人輪流');
+    // D108：3 人以上每人一區「班級｜姓名」加科目（只列科目、依時間順序），不寫「共N人輪流／見座位表下一頁」
+    const many = wideLayout(cell([person('0101', 1), person('0202', 2), person('0303', 1), person('0404', 2), person('0505', 1)]), 36, 35, o);
+    const txt = [...many.left!, ...many.right!].map((l) => l.runs.map((r) => r.text).join(''));
+    expect(txt.join('')).not.toMatch(/輪流|下一頁/);
+    expect(txt.filter((t) => t.includes('王小明'))).toHaveLength(5); // 5 人每人都有「班級｜姓名」
+    expect(txt.join('')).toContain('物理、化學'); // 科目依時間順序併一行
+    expect(Math.min(...[...many.left!, ...many.right!].map((l) => l.pt))).toBeGreaterThanOrEqual(7.5); // 5 人時字仍夠大
+    expect(many.left!.length).toBeGreaterThan(0); expect(many.right!.length).toBeGreaterThan(0);
+  });
+
+  it('#212 #220 兩人格在矮格（8 深位）改精簡版：不留編號行、科目併一行，姓名不縮到 4pt、整塊放得進格高', async () => {
+    const { personLayout } = await import('./index');
+    const mk = (ns: number) => ({
+      coord: '7－1', seat: { row: 7, depth: 1 }, code: '', classLabel: '', name: '', colorBg: '', colorLine: '', colorFg: '', tags: [], marks: [],
+      persons: ['王小明', '李大華'].map((name, i) => ({ code: `150${i}`, classLabel: '三自然15班', name, sched: Array.from({ length: ns }, (_, k) => `第${'一二三'[k]}天 時段${'一二三'[k]} 公民與社會`), schedShort: Array.from({ length: ns }, () => '歷史') })),
+    });
+    const o = { topPad: 4.5, codePt: 19, nameMax: 10.5, schedMax: 7 };
+    for (const ns of [1, 2]) {
+      const r = personLayout(mk(ns), 23.5, 20.66, o);
+      const texts = r.lines.map((l) => l.runs.map((x) => x.text).join(''));
+      expect(texts.some((t) => /^150\d$/.test(t))).toBe(false); // 編號行拿掉
+      expect(r.lines.filter((l) => l.pri).every((l) => l.pt >= 6)).toBe(true); // 姓名行不縮到 4～5pt
+      expect(r.total).toBeLessThanOrEqual(20.66 - 4.5 - 1 + 0.05); // 放得進格高，最後一行不被切
+      if (ns === 2) expect(texts.filter((t) => t.includes('、'))).toHaveLength(2); // 每人科目併成一行
+    }
+    // 格子夠高時維持完整版（有編號行）
+    const tall = personLayout(mk(1), 23.5, 32, o);
+    expect(tall.lines.map((l) => l.runs.map((x) => x.text).join('')).some((t) => /^150\d$/.test(t))).toBe(true);
   });
 
   it('#220 殘留：兩人各考 3～6 科（合計超過 4 行）時科目併成一行，整塊放得進格高、最後一行不被切', async () => {
@@ -469,8 +495,8 @@ describe('座位表頁首標籤換行與兩時段格（#247、#212）', () => {
         ],
       };
       const { lines, total } = personLayout(c, 24, h, { topPad: 4.5, codePt: 19, nameMax: 10.5, schedMax: 7 });
-      expect(lines).toHaveLength(6); // 每人：編號、班級｜姓名、一行科目
-      expect(lines[2]!.runs[0]!.text).toBe(names.join('、'));
+      expect(lines.length).toBeGreaterThanOrEqual(4); // 每人：（編號）、班級｜姓名、一行科目；矮格精簡版沒有編號行（#212）
+      expect(lines.filter((l) => l.runs[0]!.text === names.join('、'))).toHaveLength(2);
       expect(total).toBeLessThanOrEqual(h - 4.5 - 1 + 0.3);
     }
   });
