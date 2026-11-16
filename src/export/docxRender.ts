@@ -79,7 +79,13 @@ interface RunOpts {
   bold?: boolean;
   color?: string;
 }
+/**
+ * Word 輸出的全形空白（U+3000）改成三個一般空白：使用者的 Word 在標題（例「分科第6次(E6)　整合標籤」）
+ * 會把它顯示成方框（#216 備註）；一般空白每個字型都有。寬度約 0.7 個全形字，標題與清單的分隔仍看得出來。
+ */
+export const wordSafe = (text: string): string => text.replace(/　/g, '   ');
 function run(text: string, o: RunOpts, mode: BoldMode): TextRun {
+  text = wordSafe(text);
   const useBoldFamily = o.bold && mode === 'separate-family';
   const name = useBoldFamily ? FONT_BOLD : FONT;
   return new TextRun({
@@ -147,6 +153,7 @@ interface Run2 {
   font?: string;
 }
 function run2(text: string, o: Run2, mode: BoldMode): TextRun {
+  text = wordSafe(text);
   const base = run(text, { size: o.size, bold: o.bold, color: o.color }, mode);
   if (!o.spacing && !o.font) return base;
   const name = o.font ?? (o.bold && mode === 'separate-family' ? FONT_BOLD : FONT);
