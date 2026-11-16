@@ -96,10 +96,10 @@ export const phaseOf = (exam: Pick<ExamConfig, 'astPhase'>): NonNullable<ExamCon
 export const isFrozen = (exam: Pick<ExamConfig, 'astPhase'>): boolean => phaseOf(exam) !== 'planning';
 
 /** 確認定案：存下定案座位（跨次沿用的來源）；擋下的原因由呼叫端先算（待核可、排不進、衝突、時程未核准…） */
-export function finalize(exam: ExamConfig, blockers: readonly string[], seats: readonly PrevSeat[]): PhaseResult {
+export function finalize(exam: ExamConfig, blockers: readonly string[], seats: readonly PrevSeat[], fp?: string): PhaseResult {
   if (phaseOf(exam) !== 'planning') return { ok: false, error: '目前已經不是「規劃中」。' };
   if (blockers.length > 0) return { ok: false, error: `還不能定案：${blockers.join('；')}` };
-  return { ok: true, patch: { astPhase: 'final', astFinalSeats: [...seats] } };
+  return { ok: true, patch: { astPhase: 'final', astFinalSeats: [...seats], astFinalFp: fp } };
 }
 
 /** 解除定案、回到規劃中。已公告的要理由（R4：只加理由必填，不做權限）；理由留到下次公告寫進版本清單 */
@@ -112,8 +112,9 @@ export function unfinalize(exam: ExamConfig, reason: string): PhaseResult {
 }
 
 /** 公告（發布一版）：必須先定案；重新發布要理由。版本資料帶座位快照與同一個版本碼，標籤與班級公告永遠同一版 */
-export function publish(exam: ExamConfig, out: PlanOutput, code: string, now: Date, reason = ''): PhaseResult {
+export function publish(exam: ExamConfig, out: PlanOutput, code: string, now: Date, reason = '', mismatch?: string): PhaseResult {
   if (phaseOf(exam) !== 'final') return { ok: false, error: '要先「確認定案」才能公告。' };
+  if (mismatch) return { ok: false, error: mismatch };
   const versions = exam.astVersions ?? [];
   const why = (reason.trim() || exam.astReopenReason || '').trim();
   if (versions.length > 0 && !why) return { ok: false, error: '重新發布要填理由。' };
@@ -135,10 +136,10 @@ export function publish(exam: ExamConfig, out: PlanOutput, code: string, now: Da
 // ───── 匯出匯入（存本機、可匯出入；與上次定案座位一併保存） ─────
 
 export function exportVersions(exam: ExamConfig): string {
-  return JSON.stringify({ kind: 'mock-exam-ast-versions', v: 1, versions: exam.astVersions ?? [], finalSeats: exam.astFinalSeats ?? [] });
+  return JSON.stringify({ kind: 'mock-exam-ast-versions', v: 1, examId: exam.id, examName: exam.name, ...(exam.schoolYear !== undefined ? { year: exam.schoolYear } : {}), versions: exam.astVersions ?? [], finalSeats: exam.astFinalSeats ?? [] });
 }
 
-export function parseVersions(text: string): { ok: true; versions: AstVersion[]; seats: PrevSeat[] } | { ok: false; error: string } {
+export function parseVersions(text: string): { ok: true; versions: AstVersion[]; seats: PrevSeat[]; examId?: string; year?: number } | { ok: false; error: string } {
   let j: unknown;
   try { j = JSON.parse(text); } catch { return { ok: false, error: '不是有效的檔案（不是 JSON）。' }; }
   const o = j as { kind?: unknown; versions?: unknown; finalSeats?: unknown };
@@ -152,5 +153,21 @@ export function parseVersions(text: string): { ok: true; versions: AstVersion[];
     return !!s && typeof s.code === 'string' && typeof s.roomId === 'string' && typeof s.row === 'number' && typeof s.depth === 'number';
   };
   if (!o.versions.every(okV) || !o.finalSeats.every(okS)) return { ok: false, error: '版本檔內容不完整或格式不對。' };
-  return { ok: true, versions: o.versions as AstVersion[], seats: o.finalSeats as PrevSeat[] };
+  const ns = (o.versions as AstVersion[]).map((v) => v.n);
+  if (ns.some((n, i) => !Number.isInteger(n) || n < 1 || (i > 0 && n <= ns[i - 1]!))) return { ok: false, error: '版本檔的版本號不是由小到大、不重複的正整數。' };
+  const meta = j as { examId?: unknown; year?: unknown };
+  return { ok: true, versions: o.versions as AstVersion[], seats: o.finalSeats as PrevSeat[], ...(typeof meta.examId === 'string' ? { examId: meta.examId } : {}), ...(typeof meta.year === 'number' ? { year: meta.year } : {}) };
+}
+
+/**
+ * 版本清單匯入能不能套用到這場考試（#276）：已公告的不能直接覆寫（先解除定案）；檔案要是這場考試匯出的（來源考試編號相符；舊檔沒有編號時，
+ * 目前已有版本紀錄就不收）；不能讓現有的版本紀錄變少。回傳擋下的原因，空字串＝可以套用。
+ */
+export function versionsImportBlock(exam: ExamConfig, r: { versions: readonly AstVersion[]; examId?: string }): string {
+  if (phaseOf(exam) === 'announced') return '已公告的版本清單不能被匯入覆寫。要還原請先「解除定案、修正」並填理由。';
+  const have = exam.astVersions ?? [];
+  if (r.examId !== undefined && r.examId !== exam.id) return '這個檔案是別場考試匯出的，不能匯入到這場。';
+  if (r.examId === undefined && have.length > 0) return '這個舊版檔案沒有記錄來源考試，無法確認是這一場；目前已有版本紀錄，不能用它覆寫。';
+  if (r.versions.length < have.length) return `檔案只有 ${r.versions.length} 個版本，比目前的 ${have.length} 個少，匯入會讓公告紀錄消失，已擋下。`;
+  return '';
 }

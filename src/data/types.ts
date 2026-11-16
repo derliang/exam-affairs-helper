@@ -201,6 +201,8 @@ export interface ExamConfig {
   astVersions?: AstVersion[];
   /** 定案當下的座位（跨次沿用的來源；存本機、可匯出入） */
   astFinalSeats?: PrevSeat[];
+  /** 定案當下的方案指紋（#274）：之後方案和它不同就不能下載或公告；舊資料沒有就不檢查 */
+  astFinalFp?: string;
   /** 跨次座位沿用：開關與匯入的上次座位（沒匯入就找本機上一場有定案座位的分科考試） */
   astCarry?: { on: boolean; seats?: PrevSeat[] };
   subjects: Subject[];

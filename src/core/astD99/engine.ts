@@ -297,28 +297,36 @@ class Ctx {
     };
     const suffixCap: number[] = [];
     for (let i = R.length - 1, acc = 0; i >= 0; i--) suffixCap[i] = acc += R[i]!.seats.length;
-    const kmax = Math.min(R.length, kmin + 2);
-    for (let k = Math.max(1, kmin); k <= kmax && enumerated < MAX_ENUM; k++) {
-      const pick: Room[] = [];
-      const dfs = (start: number, cap: number): void => {
-        if (enumerated >= MAX_ENUM) return;
-        if (pick.length === k) {
-          if (cap >= examinees) consider(pick);
-          return;
-        }
-        for (let i = start; i <= R.length - (k - pick.length); i++) {
-          if (cap + suffixCap[i]! < examinees) return; // 後面全選也不夠
-          pick.push(R[i]!);
-          dfs(i + 1, cap + R[i]!.seats.length);
-          pick.pop();
-        }
-      };
-      dfs(0, 0);
-    }
+    // #279：kmin 只看總容量、沒算文理組限制，k 到 kmin+2 可能全部建不出方案；這時再往上多試幾間教室，直到有解或試完所有教室數
     const out: SlotPlan[] = [];
-    for (const t of top) {
-      const p = this.build(s, t.S.map((r) => r.idx));
-      if (p) out.push(p);
+    let lo = Math.max(1, kmin);
+    let hi = Math.min(R.length, kmin + 2);
+    for (;;) {
+      top.length = 0;
+      for (let k = lo; k <= hi && enumerated < MAX_ENUM; k++) {
+        const pick: Room[] = [];
+        const dfs = (start: number, cap: number): void => {
+          if (enumerated >= MAX_ENUM) return;
+          if (pick.length === k) {
+            if (cap >= examinees) consider(pick);
+            return;
+          }
+          for (let i = start; i <= R.length - (k - pick.length); i++) {
+            if (cap + suffixCap[i]! < examinees) return; // 後面全選也不夠
+            pick.push(R[i]!);
+            dfs(i + 1, cap + R[i]!.seats.length);
+            pick.pop();
+          }
+        };
+        dfs(0, 0);
+      }
+      for (const t of top) {
+        const p = this.build(s, t.S.map((r) => r.idx));
+        if (p) out.push(p);
+      }
+      if (out.length > 0 || hi >= R.length || enumerated >= MAX_ENUM) break;
+      lo = hi + 1;
+      hi = Math.min(R.length, hi + 2);
     }
     return out;
   }
