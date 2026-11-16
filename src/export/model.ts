@@ -348,7 +348,9 @@ export function personLayout(
     // 不再讓姓名縮到 4～5pt。字級仍受格寬限制，所以格寬決定姓名上限。
     const PTH = PT * 1.15;
     const natural = ps.reduce((a, p, i) => a + o.codePt * 0.5 * PTH + o.nameMax * 1.15 * PTH + p.sched.length * Math.min(o.schedMax, 7) * PTH + (i ? 1.5 : 0), 0);
-    const compact = natural > h - o.topPad - 1 && ps.every((q) => q.schedShort?.length === q.sched.length);
+    // 完整寫法的時程行在窄格（約 24mm）寫「第二天 時段二 公民與社會」只剩 5～6pt：連高度夠的時候也改精簡版，科目字才有約 7pt（#212）
+    const longest = ps.flatMap((q) => q.sched).reduce((a, t) => (t.length > a.length ? t : a), '');
+    const compact = (natural > h - o.topPad - 1 || (longest && fitW(longest, true, o.schedMax) < o.schedMax)) && ps.every((q) => q.schedShort?.length === q.sched.length);
     ps.forEach((p, i) => {
       if (!compact) lines.push({ runs: [{ text: p.code, bold: true }], pt: fitW(p.code, true, o.codePt * 0.5), gapBefore: i === 0 ? 0 : 1.5 });
       lines.push({ runs: [{ text: p.classLabel, bold: true }, { text: ' | ' }, { text: p.name }], pt: namePtFit(p.classLabel, p.name, w, o.nameMax * 1.15), gapBefore: compact ? (i === 0 ? 0 : 1.2) : 0.2, pri: true });
@@ -377,9 +379,13 @@ export function personLayout(
       lines.push({ runs: [{ text: p.classLabel, bold: true }, { text: ' | ' }, { text: p.name }], pt: Math.max(nameMin, Math.floor(npt * kCN * 2) / 2), gapBefore: 1.5 });
       for (const s of txts) lines.push({ runs: [{ text: s, bold: true }], pt: spt, gapBefore: 1 });
     } else {
+      // 單人多時段（#212）：每行一個時段放得下就照寫；放不下（編號、姓名被擠到 4～5pt）就科目併成一行「科目、科目」（依時間順序），把高度留給編號與姓名
+      const PTH1 = PT * 1.15;
+      const nat = o.codePt * PTH1 + npt * PTH1 + 1.5 + p.sched.reduce((a, t) => a + fitW(t, true, o.schedMax) * PTH1 + 1, 0);
+      const join = p.sched.length >= 2 && p.schedShort?.length === p.sched.length && nat > h - o.topPad - 1;
       lines.push({ runs: [{ text: p.code, bold: true }], pt: o.codePt, gapBefore: 0 });
       lines.push({ runs: [{ text: p.classLabel, bold: true }, { text: ' | ' }, { text: p.name }], pt: npt, gapBefore: 1.5 });
-      for (const s of p.sched) lines.push({ runs: [{ text: s, bold: true }], pt: fitW(s, true, o.schedMax), gapBefore: 1 });
+      for (const s of join ? [p.schedShort!.join('、')] : p.sched) lines.push({ runs: [{ text: s, bold: true }], pt: fitW(s, true, o.schedMax), gapBefore: 1 });
     }
   }
   const hOf = (pri: boolean, f: (pt: number) => number) => lines.filter((l) => !!l.pri === pri).reduce((a, l) => a + f(l.pt) * PT * 1.15, 0);
