@@ -22,7 +22,7 @@ const FILE_LABEL: Record<AstOutputKey, string> = { label: '整合標籤', seat: 
 const pagesOf = (o: AstOutputs, k: AstOutputKey): number => estimatePages(o, k);
 
 /** 把勾選的項目轉成輸出檔（Word 每項一個檔；PDF 合併成一個列印頁） */
-export async function runAstExport(o: AstOutputs, keys: AstOutputKey[], format: ExportFormat, paper: LabelPaper, examName: string, fonts: () => Promise<Loaded>): Promise<OutputFile[]> {
+export async function runAstExport(o: AstOutputs, keys: AstOutputKey[], format: ExportFormat, paper: LabelPaper, examName: string, fonts: () => Promise<Loaded>, onProgress?: (done: number, total: number, label: string) => void): Promise<OutputFile[]> {
   const meta = { generatedAt: new Date().toISOString(), dataVersion: o.version };
   const base = safeName(examName);
   const chosen = keys.filter((k) => pagesOf(o, k) > 0);
@@ -36,7 +36,8 @@ export async function runAstExport(o: AstOutputs, keys: AstOutputKey[], format: 
   const { renderDocx } = await import('../../export/docxRender');
   const opts = { fonts: env.fonts, ...meta };
   const out: OutputFile[] = [];
-  for (const k of chosen) {
+  for (const [i, k] of chosen.entries()) {
+    onProgress?.(i, chosen.length, FILE_LABEL[k]);
     // 每個檔之間讓出主執行緒，畫面才不會整個卡住（大班數時每個檔要數秒）
     await new Promise<void>((r) => setTimeout(r, 0));
     const data = await renderDocx(k === 'label' ? { label: o.label } : k === 'seat' ? { seat: o.seat } : { table: o[k] }, opts);
@@ -54,6 +55,8 @@ export function AstStep6(p: { doc: Doc; exam: ExamConfig; onGoStep: (n: 2 | 3 | 
   const [tab, setTab] = useState<Tab>('label');
   const [pi, setPi] = useState(0);
   const [busy, setBusy] = useState(false);
+  /** 產生進度（#270：真實資料約 150 人、多檔時要一分多鐘，每個檔的字型嵌入與壓縮最花時間） */
+  const [prog, setProg] = useState('');
   const [err, setErr] = useState('');
   const [results, setResults] = useState<OutputFile[] | null>(null);
   const hasList = examEntries(doc, exam).length > 0;
@@ -71,13 +74,13 @@ export function AstStep6(p: { doc: Doc; exam: ExamConfig; onGoStep: (n: 2 | 3 | 
 
   const go = async () => {
     if (!outs) return;
-    setBusy(true); setErr('');
+    setBusy(true); setErr(''); setProg('');
     try {
-      const res = await runAstExport(outs, keys, format, paper, exam.name, loader);
+      const res = await runAstExport(outs, keys, format, paper, exam.name, loader, (i, n, l) => setProg(`第 ${i + 1}／${n} 個檔：${l}`));
       for (const f of res.filter((x) => x.mime === 'text/html')) { if (!openPrintPage(f)) throw new Error('瀏覽器擋住了新視窗，請允許本網站開啟彈出視窗後再按一次。'); }
       await downloadMany(res.filter((x) => x.mime !== 'text/html'));
       setResults(res);
-    } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } finally { setBusy(false); }
+    } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } finally { setBusy(false); setProg(''); }
   };
 
   // 預覽：標籤＝某間考場的一張紙；其他＝某一頁
@@ -124,8 +127,9 @@ export function AstStep6(p: { doc: Doc; exam: ExamConfig; onGoStep: (n: 2 | 3 | 
         </div>
         <div class="row" style="justify-content:space-between">
           <span class="muted">{format === 'pdf' ? '將開啟 1 個列印頁' : `將下載 ${keys.filter((k) => outs && pagesOf(outs, k) > 0).length} 個檔案`}，共 <b class="num">{total}</b> 頁</span>
-          <button type="button" class="btn btn-primary btn-lg" disabled={!outs || planning || busy || keys.length === 0} onClick={go}>{busy ? '產生中…' : format === 'word' ? '下載 Word 文件' : '開啟列印頁（另存 PDF）'}</button>
+          <button type="button" class="btn btn-primary btn-lg" disabled={!outs || planning || busy || keys.length === 0} onClick={go}>{busy ? `產生中（${prog || '準備中'}）…` : format === 'word' ? '下載 Word 文件' : '開啟列印頁（另存 PDF）'}</button>
         </div>
+        {busy && format === 'word' && <p class="small muted" role="status">每個 Word 檔都要嵌入字型，資料多時整批可能要一到兩分鐘，請不要關閉或重新整理此頁。</p>}
         {err && <Alert tone="danger">{err}</Alert>}
         {results && (
           <div class="psec">
