@@ -427,8 +427,8 @@ describe('座位表頁首標籤換行與兩時段格（#247、#212）', () => {
         { code: '0206', classLabel: '良', name: '甲生206', sched: ['第一天 英文'] },
       ],
     };
-    const { lines } = personLayout(c, 23.5, 32, { topPad: 4.5, codePt: 19, nameMax: 10.5, schedMax: 7 }); // 預備教室座位格高度放寬到最多 32mm
-    const tight = personLayout(c, 23.5, 26, { topPad: 4.5, codePt: 19, nameMax: 10.5, schedMax: 7 }).lines[1]!.pt;
+    const { lines } = personLayout(c, 23.5, 32, { topPad: 4.5, codePt: 19, nameMax: 10.5, schedMax: 7, joinSched: true }); // 預備教室座位格高度放寬到最多 32mm
+    const tight = personLayout(c, 23.5, 26, { topPad: 4.5, codePt: 19, nameMax: 10.5, schedMax: 7, joinSched: true }).lines[1]!.pt;
     expect(tight).toBeGreaterThanOrEqual(7.5); // 即使只有 26mm 高，也比原本單行擠的 6.5pt 大
     expect(lines).toHaveLength(6); // 每人：編號、班級｜姓名、時程
     const nameLine = lines[1]!;
@@ -475,13 +475,34 @@ describe('座位表頁首標籤換行與兩時段格（#247、#212）', () => {
     expect(renderPrintHtml({ table: [t] }, meta)).toContain('　'); // 瀏覽器列印頁沒有方框問題，維持
   });
 
+  it('#212 真實資料複驗：學測預備教室格的 persons 帶 schedShort（單人多時段才會併一行）；時段多的座位表統計表改下一頁、座位格不再被壓到 15mm', async () => {
+    const { seatGeometry, personLayout } = await import('./index');
+    const f = makeFixture();
+    f.result.detaches = ['0105', '0106'].map((code, i) => ({ code, subjectId: i === 0 ? 'zh' : 'en', purpose: 'exam' as const, roomId: 'rv', seat: { row: 1, depth: 1 } }));
+    const pg = buildSeatPages(f).find((x) => x.slotMode)!;
+    for (const c of pg.cells.values()) for (const p of c.persons ?? []) expect(p.schedShort?.length).toBe(p.sched.length);
+    // 12 個時段（分科 E6）的統計表很高：舊算法座位格約 15mm；改統計表下一頁後座位格 ≥ 22mm
+    const rows = Array.from({ length: 13 }, (_, i) => ({ label: `第${i + 1}天 時段一　物理、化學`, per: [3, 2, 3, 2, 3, 2], total: 15 }));
+    const tall = { ...pg, rows: 7, depth: 8, stats: { ...pg.stats, table: { headLabel: '時段', classes: ['溫', '良', '恭', '儉', '勤', '誠'], rows } } };
+    const g = seatGeometry(tall);
+    expect(g.statsNext).toBe(true);
+    expect(g.ch).toBeGreaterThanOrEqual(22);
+    const two = { coord: '7－1', seat: { row: 7, depth: 1 }, code: '', classLabel: '', name: '', colorBg: '', colorLine: '', colorFg: '', tags: [], marks: [], persons: ['王小明', '李大華'].map((n, i) => ({ code: `150${i}`, classLabel: '溫', name: n, sched: ['第一天 物理', '第二天 化學'], schedShort: ['物理', '化學'] })) };
+    const r = personLayout(two, g.cw - 1.3, g.ch, { topPad: 4.5, codePt: 19, nameMax: 10.5, schedMax: 7, joinSched: true });
+    expect(Math.min(...r.lines.filter((l) => l.pri).map((l) => l.pt))).toBeGreaterThanOrEqual(9);
+    const xml = await (async () => { const { text } = await unzip(await renderDocx({ seat: [tall] }, { fonts, ...meta })); return text('word/document.xml'); })();
+    expect(xml).toContain('各班人數統計');
+    expect(xml).toContain('w:pageBreakBefore');
+    expect(renderPrintHtml({ seat: [tall] }, meta)).toContain('各班人數統計');
+  });
+
   it('#212 #220 兩人格在矮格（8 深位）改精簡版：不留編號行、科目併一行，姓名不縮到 4pt、整塊放得進格高', async () => {
     const { personLayout } = await import('./index');
     const mk = (ns: number) => ({
       coord: '7－1', seat: { row: 7, depth: 1 }, code: '', classLabel: '', name: '', colorBg: '', colorLine: '', colorFg: '', tags: [], marks: [],
       persons: ['王小明', '李大華'].map((name, i) => ({ code: `150${i}`, classLabel: '三自然15班', name, sched: Array.from({ length: ns }, (_, k) => `第${'一二三'[k]}天 時段${'一二三'[k]} 公民與社會`), schedShort: Array.from({ length: ns }, () => '歷史') })),
     });
-    const o = { topPad: 4.5, codePt: 19, nameMax: 10.5, schedMax: 7 };
+    const o = { topPad: 4.5, codePt: 19, nameMax: 10.5, schedMax: 7, joinSched: true };
     for (const ns of [1, 2]) {
       const r = personLayout(mk(ns), 23.5, 20.66, o);
       const texts = r.lines.map((l) => l.runs.map((x) => x.text).join(''));
@@ -513,7 +534,7 @@ describe('座位表頁首標籤換行與兩時段格（#247、#212）', () => {
           { code: '0206', classLabel: '良', name: '李大華', sched, schedShort: names },
         ],
       };
-      const { lines, total } = personLayout(c, 24, h, { topPad: 4.5, codePt: 19, nameMax: 10.5, schedMax: 7 });
+      const { lines, total } = personLayout(c, 24, h, { topPad: 4.5, codePt: 19, nameMax: 10.5, schedMax: 7, joinSched: true });
       expect(lines.length).toBeGreaterThanOrEqual(4); // 每人：（編號）、班級｜姓名、一行科目；矮格精簡版沒有編號行（#212）
       expect(lines.filter((l) => l.runs[0]!.text === names.join('、'))).toHaveLength(2);
       expect(total).toBeLessThanOrEqual(h - 4.5 - 1 + 0.3);
@@ -531,7 +552,7 @@ describe('座位表頁首標籤換行與兩時段格（#247、#212）', () => {
       ],
     };
     for (const [w, h] of [[22, 30], [24, 28], [30, 26], [22, 34]] as const) {
-      const { lines, total } = personLayout(c, w, h, { topPad: 4.5, codePt: 19, nameMax: 10.5, schedMax: 7 });
+      const { lines, total } = personLayout(c, w, h, { topPad: 4.5, codePt: 19, nameMax: 10.5, schedMax: 7, joinSched: true });
       expect(lines.reduce((n, l) => n + (l.n ?? 1), 0)).toBeGreaterThanOrEqual(8);
       expect(total).toBeLessThanOrEqual(h - 4.5 - 1 + 0.1);
       expect(Math.min(...lines.map((l) => l.pt))).toBeGreaterThanOrEqual(4);
@@ -547,7 +568,7 @@ describe('座位表頁首標籤換行與兩時段格（#247、#212）', () => {
         { code: '0206', classLabel: '良', name: '李大華', sched: ['第一天 英文'] },
       ],
     };
-    const o = { topPad: 4.5, codePt: 19, nameMax: 10.5, schedMax: 7 };
+    const o = { topPad: 4.5, codePt: 19, nameMax: 10.5, schedMax: 7, joinSched: true };
     for (const h of [30, 26]) {
       const { lines, total } = personLayout(c, 24, h, o);
       const names = lines.filter((l) => l.pri);
