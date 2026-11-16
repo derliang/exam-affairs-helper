@@ -115,6 +115,14 @@ export function addRoom(rooms: Classroom[], kind: Classroom['kind'], division: D
   return [...rooms, { id: `room-${n}`, name: `${base}${same}`, kind, rows: 5, depth: 6, seatCount: 30, division }];
 }
 
+/** 一次新增 count 間同類教室（#205；1～20 間），名稱尾數接續（試場4、試場5…） */
+export function addRooms(rooms: Classroom[], kind: Classroom['kind'], count: number, division: Division = 'senior', ctx?: RoomDivisionContext): Classroom[] {
+  const n = Math.max(1, Math.min(20, Math.floor(count) || 1));
+  let out = rooms;
+  for (let i = 0; i < n; i++) out = addRoom(out, kind, division, ctx);
+  return out;
+}
+
 /** 複製一間教室（#205）：排數、深位、不排座位、組別、部別全帶過去；名稱尾數遞增（試場3→試場4），沒有尾數就加 2；插在原教室後面 */
 export function duplicateRoom(rooms: Classroom[], id: string): Classroom[] {
   const i = rooms.findIndex((r) => r.id === id);
