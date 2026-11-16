@@ -48,7 +48,7 @@ function cellHtml(c: CellModel | undefined, w: number, h: number, mode: 'seat' |
   if (!c) return `<div class="pp-c pp-e" style="${size}"></div>`;
   if (c.persons) {
     // 預備教室／綜合教室／整合標籤（v2.36）：版式同一般標籤，格內每人一區；排法同 Word（model.personLayout）
-    const g = mode === 'label' ? { topPad: 5, codePt: b4 ? 33 : 31, nameMax: 18, schedMax: 11 } : { topPad: 4.5, codePt: 19, nameMax: 10.5, schedMax: 7 };
+    const g = mode === 'label' ? { topPad: 5, codePt: b4 ? 33 : 31, nameMax: 18, schedMax: 11 } : { topPad: 4.5, codePt: 19, nameMax: 10.5, schedMax: 7, joinSched: true };
     const { lines } = personLayout(c, w - (mode === 'label' ? 2 : 1.3), h, g);
     const ls = lines.map((l) => `<span class="pp-pr" style="font-size:${l.pt}pt;margin-top:${mm(l.gapBefore)}">${l.runs.map((r) => (r.bold ? `<b>${esc(r.text)}</b>` : esc(r.text))).join('')}</span>`).join('');
     return `<div class="pp-c pp-pe" style="${size};background:#fff"><i class="pp-co">${esc(c.coord)}</i><span class="pp-prs">${ls}</span></div>`;
@@ -69,7 +69,7 @@ function cellHtml(c: CellModel | undefined, w: number, h: number, mode: 'seat' |
 }
 
 function seatHtml(p: SeatPageModel, o: HtmlOptions): string {
-  const { cw, ch, st } = seatGeometry(p);
+  const { cw, ch, st, statsNext } = seatGeometry(p);
   const mode = p.detachStyle ? 'detach' : 'seat';
   let cells = '';
   for (let d = p.depth; d >= 1; d--) for (let r = 1; r <= p.rows; r++) cells += cellHtml(p.cells.get(`${r}-${d}`), cw, ch, mode);
@@ -86,8 +86,8 @@ function seatHtml(p: SeatPageModel, o: HtmlOptions): string {
 <div class="pp-chips">${chips}</div>
 <div class="pp-wrapg" style="margin-top:4mm"><div class="pp-ay" style="grid-template-rows:repeat(${p.depth},${mm(ch)})">${ay}</div><div><div class="pp-grid" style="grid-template-columns:repeat(${p.rows},${mm(cw)})">${cells}</div><div class="pp-ax" style="grid-template-columns:repeat(${p.rows},${mm(cw)})">${ax}</div></div></div>
 <div class="pp-bottom"><span class="l">${p.slotMode ? `已使用 ${p.cells.size} 格` : `共 ${p.stats.total} 人`}</span><span class="pp-pod">講臺</span><span></span></div>
-${p.slotMode ? `<div class="pp-sltip">${esc(SLOT_TIP)}</div>` : ''}${stHtml}
-<div class="pp-foot">${esc(footerText(o.generatedAt, o.dataVersion))}</div></section>`;
+${p.slotMode ? `<div class="pp-sltip">${esc(SLOT_TIP)}</div>` : ''}${statsNext ? '' : stHtml}
+<div class="pp-foot">${esc(footerText(o.generatedAt, o.dataVersion))}</div></section>${statsNext ? `<section class="sheet pp pp-seat" style="page:a4full;width:${SEAT_PAGE.w}mm;height:${SEAT_PAGE.h - 0.5}mm;padding:${SEAT_PAGE.padY}mm ${SEAT_PAGE.padX}mm"><div class="pp-hd"><div><div class="pp-h1">${esc(p.heading ?? p.examName)}</div><div class="pp-h2">各班人數統計</div></div><span class="pp-room">${esc(p.roomName)}</span></div><div style="margin-top:6mm">${stHtml}</div><div class="pp-foot">${esc(footerText(o.generatedAt, o.dataVersion))}</div></section>` : ''}`;
 }
 
 function labelHtml(p: LabelPageModel, o: HtmlOptions): string {

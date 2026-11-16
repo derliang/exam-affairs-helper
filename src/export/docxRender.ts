@@ -311,7 +311,7 @@ function cellParas(
 }
 
 /** 人員格（預備教室／綜合教室／整合標籤，v2.36）：版式同一般標籤，格內每人一區；排法見 model.personLayout */
-function personParas(c: CellModel, w: number, h: number, g: { topPad: number; coordPt: number; codePt: number; nameMax: number; schedMax: number }, mode: BoldMode): Paragraph[] {
+function personParas(c: CellModel, w: number, h: number, g: { topPad: number; coordPt: number; codePt: number; nameMax: number; schedMax: number; joinSched?: boolean }, mode: BoldMode): Paragraph[] {
   const { lines, total } = personLayout(c, w, h, g);
   const first = Math.max(0, (h - total) / 2 - g.topPad);
   return [
@@ -393,7 +393,7 @@ function pageFooter(opts: DocxOptions): Footer {
 
 function seatSection(page: SeatPageModel, opts: DocxOptions): ISectionOptions {
   const mode = opts.boldMode ?? 'embed-bold';
-  const { cw, ch, st } = seatGeometry(page);
+  const { cw, ch, st, statsNext } = seatGeometry(page);
   const innerW = SEAT_PAGE.w - 2 * SEAT_PAGE.padX;
   const axisW = 6.5;
   const tw = (mm: number) => mmToTwip(mm);
@@ -461,7 +461,7 @@ function seatSection(page: SeatPageModel, opts: DocxOptions): ISectionOptions {
           margins: { top: 0, bottom: 0, left: tw(0.5), right: tw(0.5) },
           shading: c ? { type: ShadingType.CLEAR, fill: pal!.bg, color: 'auto' } : HATCH_FILL,
           borders,
-          children: c ? (c.persons ? personParas(c, cw - 1.3, ch, { topPad: 4.5, coordPt: g.coordPt, codePt: 19, nameMax: 10.5, schedMax: 7 }, mode) : c.periodLines ? periodParas(c, cw - 1.3, ch, g.coordPt, mode) : cellParas(c, g, pal!.fg, mode)) : hatchParas(cw - 1.3, ch - 1.4),
+          children: c ? (c.persons ? personParas(c, cw - 1.3, ch, { topPad: 4.5, coordPt: g.coordPt, codePt: 19, nameMax: 10.5, schedMax: 7, joinSched: true }, mode) : c.periodLines ? periodParas(c, cw - 1.3, ch, g.coordPt, mode) : cellParas(c, g, pal!.fg, mode)) : hatchParas(cw - 1.3, ch - 1.4),
         }),
       );
     }
@@ -552,6 +552,8 @@ function seatSection(page: SeatPageModel, opts: DocxOptions): ISectionOptions {
       bottom,
       spacer(5),
       ...(page.slotMode ? [line([run2(SLOT_TIP, { size: 10, color: GRAY }, mode)], { h: 5.5, align: AlignmentType.LEFT }), spacer(2)] : []),
+      // 時段多、座位格會被壓得太矮時，統計表改放下一頁（#212）
+      ...(statsNext ? [new Paragraph({ pageBreakBefore: true, spacing: { before: 0, after: 0 }, children: [run2(`${page.heading ?? page.examName}　${page.roomName}　各班人數統計`, { size: 14, bold: true }, mode)] }), spacer(3)] : []),
       stTable,
       line([], { h: 0.35 }),
     ],
