@@ -124,7 +124,7 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
   const clsLabel = (no: number) => `第${String(no).padStart(2, '0')}班`;
   const perClass = classes.map((c) => ({ c, n: roster.filter((s) => s.classNo === c.no).length }));
   const filePick = (
-    <input ref={input} type="file" accept=".xlsx,.xls" hidden aria-label="選擇考試名單 Excel 檔"
+    <input ref={input} type="file" accept=".xlsx" hidden aria-label="選擇考試名單 Excel 檔"
       onChange={(e) => { const f = e.currentTarget.files?.[0]; e.currentTarget.value = ''; if (f) void onFile(f); }} />
   );
 
