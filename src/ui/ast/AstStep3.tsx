@@ -10,7 +10,7 @@ import { setClassTrack, updateExam, type Doc } from '../store';
 import { classColorVars } from '../colors';
 import { PhaseGuard } from './AstRelease';
 import { LeaveCard } from './AstLeave';
-import { astCapacity, astModeOf, astPlan, MODE_LABEL } from './model';
+import { astCapacity, astModeOf, astPlan, astPlanPending, MODE_LABEL } from './model';
 import { isSeatOff, resetStudyCapacity, rowDepthsOf, stepRowDepth, stepStudyCapacity, studyAdjust, toggleSeat } from './roomEdit';
 
 /** 座位圖編輯器：每排一個 −／＋（深位數可不同）、點座位停用／恢復（稿 v2.34 ③） */
@@ -161,6 +161,7 @@ export function AstStep3(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
           <h3>狀態檢核</h3>
           <p class="small muted">分科<b>每個時段各自排</b>：每個時段只排當時要考的人，教室每個時段可以換用途（考場或自習），同一時段同一間教室只能擇一。這裡檢查座位與自習空間夠不夠；精確的每個時段用途在 ⑤。</p>
         </div>
+        {astPlanPending() && <p class="small muted" role="status">自習空間統計更新中…（停止編輯後自動更新）</p>}
         {!capc.hasList && <Alert tone="info"><b>尚未匯入考試名單：</b>匯入後才能檢核座位與自習空間夠不夠。</Alert>}
         <div class="stats chkgrid">
           {check('理組考場座位', capc.science.seats, capc.science.need)}
