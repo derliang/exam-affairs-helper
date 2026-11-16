@@ -256,28 +256,45 @@ class Ctx {
     const spare = (r: Room): number => Math.max(0, r.studyCap - (nonExamByClass.get(r.classNo!) ?? 0));
     let homeless = 0;
     for (const [c, n] of nonExamByClass) if (!this.home.has(c)) homeless += n;
-    const mark = new Uint8Array(this.rooms.length);
+    // #249：列舉上限 20 萬次，過去每個組合都從頭掃一遍所有班級教室（O(組合數×教室數)）；
+    // 改成「放入／取出一間教室」時只更新累計值（O(1)），評分結果與舊算法逐位相同。
+    const dNeed = new Float64Array(this.rooms.length);
+    const dRoom = new Float64Array(this.rooms.length);
+    const dHomeExam = new Float64Array(this.rooms.length);
+    const dDisplaced = new Float64Array(this.rooms.length);
+    let need0 = homeless;
+    let room0 = 0;
+    for (const r of this.home.values()) {
+      need0 += homeOverflow(r);
+      const open = allowOther || approved.has(r.idx);
+      if (open) room0 += spare(r);
+      dNeed[r.idx] = -homeOverflow(r);
+      dDisplaced[r.idx] = nonExamByClass.get(r.classNo!) ?? 0;
+      dHomeExam[r.idx] = Math.min(examByClass.get(r.classNo!) ?? 0, r.seats.length);
+      dRoom[r.idx] = open ? -spare(r) : 0;
+    }
+    for (const r of reserveStudy) {
+      room0 += r.studyCap;
+      dRoom[r.idx] = (dRoom[r.idx] ?? 0) - r.studyCap;
+    }
+    // 累計值：放入一間教室時加上它的增量
+    let sNeed = need0;
+    let sRoom = room0;
+    let sHomeExam = 0;
+    let sDisplaced = 0;
+    let sFresh = 0;
+    const addRoom = (r: Room, sign: 1 | -1): void => {
+      sNeed += sign * dNeed[r.idx]!;
+      sRoom += sign * dRoom[r.idx]!;
+      sHomeExam += sign * dHomeExam[r.idx]!;
+      sDisplaced += sign * dDisplaced[r.idx]!;
+      if (!usedElsewhere.has(r.idx)) sFresh += sign;
+    };
     const quick = (S: Room[]): Vec => {
-      // 用可重複使用的旗標陣列代替每次新建 Set（列舉上限 20 萬次，這裡是最熱的地方）
-      for (const r of S) mark[r.idx] = 1;
-      let displaced = 0;
-      let need = homeless;
-      let homeExam = 0;
-      for (const r of this.home.values()) {
-        if (mark[r.idx]) {
-          displaced += nonExamByClass.get(r.classNo!) ?? 0;
-          homeExam += Math.min(examByClass.get(r.classNo!) ?? 0, r.seats.length);
-        } else need += homeOverflow(r);
-      }
-      need += displaced;
-      let room = 0;
-      for (const r of reserveStudy) if (!mark[r.idx]) room += r.studyCap;
-      for (const r of this.home.values()) if (!mark[r.idx] && (allowOther || approved.has(r.idx))) room += spare(r);
-      const overflow = Math.max(0, need - room);
-      const fresh = S.filter((r) => !usedElsewhere.has(r.idx)).length;
-      const leave = examinees - homeExam + displaced;
-      for (const r of S) mark[r.idx] = 0;
-      return this.input.mode === 'least-movement' ? [overflow, leave, fresh, displaced, S.length] : [overflow, fresh, displaced, S.length];
+      const need = sNeed + sDisplaced;
+      const overflow = Math.max(0, need - sRoom);
+      const leave = examinees - sHomeExam + sDisplaced;
+      return this.input.mode === 'least-movement' ? [overflow, leave, sFresh, sDisplaced, S.length] : [overflow, sFresh, sDisplaced, S.length];
     };
     const top: { v: Vec; S: Room[]; rk: number[] }[] = [];
     let enumerated = 0;
@@ -314,7 +331,9 @@ class Ctx {
           for (let i = start; i <= R.length - (k - pick.length); i++) {
             if (cap + suffixCap[i]! < examinees) return; // 後面全選也不夠
             pick.push(R[i]!);
+            addRoom(R[i]!, 1);
             dfs(i + 1, cap + R[i]!.seats.length);
+            addRoom(R[i]!, -1);
             pick.pop();
           }
         };

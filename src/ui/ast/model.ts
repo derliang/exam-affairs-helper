@@ -152,12 +152,53 @@ export interface AstPlan {
 
 const cache = new Map<string, AstPlan>();
 
+// ───── #249：③ 編輯座位時不在每次點擊都同步重跑引擎 ─────
+// 只改教室（座位、自習容量、勾選）而考生與時段沒變時，③ 先沿用上一份結果、停手 PLAN_DEBOUNCE_MS 之後才重算一次，
+// 重算完通知畫面更新；連點幾個座位只算最後一次。只有 ③ 開啟（setPlanDefer(true)），其他步驟照舊同步取得精確結果。
+const PLAN_DEBOUNCE_MS = 350;
+let deferOn = false;
+let lastPlan: { plan: AstPlan; people: string } | undefined;
+let pendingTimer: ReturnType<typeof setTimeout> | undefined;
+const readyListeners = new Set<() => void>();
+
+export const setPlanDefer = (on: boolean): void => { deferOn = on; };
+/** 延後重算還沒完成（畫面上的統計還是上一份） */
+export const astPlanPending = (): boolean => pendingTimer !== undefined;
+/** 延後重算完成時通知（回傳取消訂閱） */
+export function onAstPlanReady(f: () => void): () => void {
+  readyListeners.add(f);
+  return () => { readyListeners.delete(f); };
+}
+
 /** 跑引擎（同一份輸入只算一次）；沒有考生或沒有教室時回 undefined */
 export function runAstPlan(input: PlanInput): AstPlan | undefined {
   if (input.students.length === 0 || input.rooms.length === 0 || input.slots.length === 0) return undefined;
   const key = JSON.stringify(input);
+  const people = JSON.stringify([input.mode, input.students, input.slots]);
   const hit = cache.get(key);
-  if (hit) return hit;
+  if (hit) {
+    lastPlan = { plan: hit, people };
+    return hit;
+  }
+  if (deferOn && lastPlan) {
+    if (people === lastPlan.people) {
+      if (pendingTimer !== undefined) clearTimeout(pendingTimer);
+      pendingTimer = setTimeout(() => {
+        pendingTimer = undefined;
+        const was = deferOn;
+        deferOn = false;
+        try { runAstPlan(input); } finally { deferOn = was; }
+        for (const f of readyListeners) f();
+      }, PLAN_DEBOUNCE_MS);
+      return lastPlan.plan;
+    }
+  }
+  const plan = computeAstPlan(input, key);
+  lastPlan = { plan, people };
+  return plan;
+}
+
+function computeAstPlan(input: PlanInput, key: string): AstPlan {
   let out: PlanOutput | undefined;
   try {
     out = planD99(input);
