@@ -330,7 +330,7 @@ export function personLayout(
   c: CellModel,
   w: number,
   h: number,
-  o: { topPad: number; codePt: number; nameMax: number; schedMax: number; /** 整合標籤（#216）：單人多行時科目行優先放大到這個字級上限 */ schedBig?: number },
+  o: { topPad: number; codePt: number; nameMax: number; schedMax: number; /** 整合標籤（#216）：單人多行時科目行優先放大到這個字級上限 */ schedBig?: number; /** 座位表格（窄格）：單人多時段放不下時科目併一行（#212）；標籤格不用 */ joinSched?: boolean },
 ): { lines: PersonLine[]; total: number } {
   const ps = c.persons ?? [];
   const PT = 0.3528;
@@ -350,7 +350,7 @@ export function personLayout(
     const natural = ps.reduce((a, p, i) => a + o.codePt * 0.5 * PTH + o.nameMax * 1.15 * PTH + p.sched.length * Math.min(o.schedMax, 7) * PTH + (i ? 1.5 : 0), 0);
     // 完整寫法的時程行在窄格（約 24mm）寫「第二天 時段二 公民與社會」只剩 5～6pt：連高度夠的時候也改精簡版，科目字才有約 7pt（#212）
     const longest = ps.flatMap((q) => q.sched).reduce((a, t) => (t.length > a.length ? t : a), '');
-    const compact = (natural > h - o.topPad - 1 || (longest && fitW(longest, true, o.schedMax) < o.schedMax)) && ps.every((q) => q.schedShort?.length === q.sched.length);
+    const compact = !!o.joinSched && (natural > h - o.topPad - 1 || (longest && fitW(longest, true, o.schedMax) < o.schedMax)) && ps.every((q) => q.schedShort?.length === q.sched.length);
     ps.forEach((p, i) => {
       if (!compact) lines.push({ runs: [{ text: p.code, bold: true }], pt: fitW(p.code, true, o.codePt * 0.5), gapBefore: i === 0 ? 0 : 1.5 });
       lines.push({ runs: [{ text: p.classLabel, bold: true }, { text: ' | ' }, { text: p.name }], pt: namePtFit(p.classLabel, p.name, w, o.nameMax * 1.15), gapBefore: compact ? (i === 0 ? 0 : 1.2) : 0.2, pri: true });
@@ -382,7 +382,7 @@ export function personLayout(
       // 單人多時段（#212）：每行一個時段放得下就照寫；放不下（編號、姓名被擠到 4～5pt）就科目併成一行「科目、科目」（依時間順序），把高度留給編號與姓名
       const PTH1 = PT * 1.15;
       const nat = o.codePt * PTH1 + npt * PTH1 + 1.5 + p.sched.reduce((a, t) => a + fitW(t, true, o.schedMax) * PTH1 + 1, 0);
-      const join = p.sched.length >= 2 && p.schedShort?.length === p.sched.length && nat > h - o.topPad - 1;
+      const join = !!o.joinSched && p.sched.length >= 2 && p.schedShort?.length === p.sched.length && nat > h - o.topPad - 1;
       lines.push({ runs: [{ text: p.code, bold: true }], pt: o.codePt, gapBefore: 0 });
       lines.push({ runs: [{ text: p.classLabel, bold: true }, { text: ' | ' }, { text: p.name }], pt: npt, gapBefore: 1.5 });
       for (const s of join ? [p.schedShort!.join('、')] : p.sched) lines.push({ runs: [{ text: s, bold: true }], pt: fitW(s, true, o.schedMax), gapBefore: 1 });
@@ -519,6 +519,8 @@ function personsOf(cell: MergedCell, ctx: ReturnType<typeof ctxOf>): PersonModel
       classLabel: ctx.classes.get(p.classNo)?.name ?? String(p.classNo),
       name: ctx.students.get(code)?.name ?? ctx.entries.get(code)?.name ?? '',
       sched: [...days].map(([d, subs]) => (d === undefined ? subs.join('、') : `${dayName(d)} ${subs.join('、')}`)),
+      // 只列科目的精簡寫法（與 sched 逐行對應）：窄格放不下完整寫法時改用（#212）
+      schedShort: [...days].map(([, subs]) => subs.join('、')),
     };
   });
 }
@@ -928,14 +930,23 @@ export function chipRowCount(chips: readonly string[]): number {
   return rows;
 }
 
-export function seatGeometry(p: SeatPageModel): { cw: number; ch: number; st: ReturnType<typeof statRows> } {
+/**
+ * 座位格尺寸。時段版（預備／綜合教室）的統計表每時段一列，時段多（例如分科 12 列）就把座位格壓到約 15mm，
+ * 兩人格姓名只剩 4～5pt（#212）。座位格會因此低於 22mm 時，統計表改放下一頁（statsNext），座位圖用整頁高度（最高 32mm）。
+ */
+export function seatGeometry(p: SeatPageModel): { cw: number; ch: number; st: ReturnType<typeof statRows>; statsNext: boolean } {
   const innerW = SEAT_PAGE.w - 2 * SEAT_PAGE.padX;
   const cw = Math.min(p.slotMode ? 24.79 : 25, +((innerW - 6.5) / p.rows).toFixed(2));
   const st = statRows(p);
+  const base = 22 + 12 + 4 + 5 + 11 + 16 + (chipRowCount(p.chips) - 1) * 8.7;
+  const chOf = (fixed: number) => Math.min(p.slotMode ? 32 : 23, +((SEAT_PAGE.h - 2 * SEAT_PAGE.padY - fixed) / p.depth).toFixed(2));
   // 時段版：統計表（每時段一列）加一行格內說明（約 6mm）
-  const fixed = 22 + 12 + 4 + 5 + 11 + (p.slotMode ? 6 + 5 + statLayout(p).total : 5 + statLayout(p).total) + 16 + (chipRowCount(p.chips) - 1) * 8.7;
-  const ch = Math.min(p.slotMode ? 32 : 23, +((SEAT_PAGE.h - 2 * SEAT_PAGE.padY - fixed) / p.depth).toFixed(2));
-  return { cw, ch, st };
+  const withStats = chOf(base + (p.slotMode ? 6 + 5 + statLayout(p).total : 5 + statLayout(p).total));
+  if (p.slotMode && withStats < 22) {
+    const without = chOf(base + 6 + 5);
+    if (without > withStats) return { cw, ch: without, st, statsNext: true };
+  }
+  return { cw, ch: withStats, st, statsNext: false };
 }
 
 /** 標籤頁格子以外要留的高度（mm）：抬頭、注意事項框、頁尾。B4 的注意事項字較小 */
