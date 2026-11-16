@@ -15,8 +15,10 @@ import { toPlanRooms } from '../../core/astD99/rooms';
 import { refinePlan, type CarrySummary, type LockConflict } from '../../core/astD99/refine';
 import { buildCandidates, scheduleConflicts, scheduleNeedsApproval, type Candidate, type Days } from '../../core/astD99/schedule';
 import type { PrevSeat } from '../../data/types';
-import { examRooms, seatableEntries } from '../seating';
-import type { Doc } from '../store';
+import { examEntries, examRooms, seatableEntries } from '../seating';
+import { examYear, type Doc } from '../store';
+import { dataVersion } from '../../core/version';
+import { snapOf } from '../../core/astD99/release';
 
 export const MODE_LABEL: Record<PlanMode, string> = { 'fewest-rooms': '少教室優先', 'least-movement': '少移動優先' };
 export const astModeOf = (exam: ExamConfig): PlanMode => exam.astMode ?? 'fewest-rooms';
@@ -96,12 +98,23 @@ export function astBaseDays(doc: Doc, exam: ExamConfig): Days {
   return days.filter(Boolean);
 }
 
-/** 跨次沿用的來源：匯入的座位優先，沒有就找本機上一場有定案座位的分科考試（最近建立的） */
-export function carrySource(doc: Doc, exam: ExamConfig): { seats: PrevSeat[]; from: string } | undefined {
+/**
+ * 跨次沿用的來源：匯入的座位優先，沒有就找本機上一場有定案座位的分科考試（最近建立的）。
+ * #277：自動找來源只看「同一學年度」（D105 名冊按學年度分開，不同學年度的班級座號是不同的人）；
+ * 同學年度也要姓名一致才算同一位學生，姓名對不上的座位不沿用（excluded＝排除幾人）。
+ */
+export function carrySource(doc: Doc, exam: ExamConfig): { seats: PrevSeat[]; from: string; excluded?: number } | undefined {
   if (!exam.astCarry?.on) return undefined;
   if (exam.astCarry.seats?.length) return { seats: exam.astCarry.seats, from: '匯入的上次座位' };
-  const prev = doc.exams.filter((e) => e.id !== exam.id && e.kind === 'ast' && e.astFinalSeats?.length).sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
-  return prev ? { seats: prev.astFinalSeats!, from: prev.name } : undefined;
+  const year = examYear(exam);
+  const prev = doc.exams.filter((e) => e.id !== exam.id && e.kind === 'ast' && e.astFinalSeats?.length && examYear(e) === year).sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+  if (!prev) return undefined;
+  const nameOf = (e: ExamConfig) => new Map(examEntries(doc, e).map((x) => [codeOf(x), x.name]));
+  const was = nameOf(prev);
+  const now = nameOf(exam);
+  const seats = prev.astFinalSeats!.filter((s) => { const a = was.get(s.code); const b = now.get(s.code); return !a || !b || a === b; });
+  const excluded = prev.astFinalSeats!.length - seats.length;
+  return { seats, from: prev.name, ...(excluded ? { excluded } : {}) };
 }
 
 export function astInput(doc: Doc, exam: ExamConfig, mode: PlanMode = astModeOf(exam)): PlanInput {
@@ -279,8 +292,50 @@ export function astCandidates(doc: Doc, exam: ExamConfig): Candidate[] {
   return buildCandidates({ base: astBaseDays(doc, exam), subjectSets: astSubjectSets(doc, exam), seatsPerRoom: seats, invigilators: astInvigilators(exam) });
 }
 
-/** 目前選定的時程有沒有「同節兩科有共同考生」的衝突 */
-export const astScheduleConflicts = (doc: Doc, exam: ExamConfig) => (exam.astSchedule ? scheduleConflicts(exam.astSchedule.days, astSubjectSets(doc, exam)) : []);
+/** 目前實際生效的時程（基準 A 取節次表、B～D 取選定的時程）有沒有「同節兩科有共同考生」的衝突（#281：基準也要查，否則同節兩科的共同考生會被靜默只排一科） */
+export function astScheduleConflicts(doc: Doc, exam: ExamConfig) {
+  const days: Days = [];
+  for (const s of astSlots(doc, exam)) (days[s.day] ??= []).push([...s.subjectIds]);
+  return scheduleConflicts(days.filter(Boolean), astSubjectSets(doc, exam));
+}
+
+/**
+ * 考科與時程對不對得起來（#275）：每個目前的考科恰好出現在時程一次；時程裡不能有已不存在的科目；
+ * 名單裡每位考生選的科目都要是目前的考科。回傳要擋定案的說明（空＝沒問題）。
+ */
+export function astCoverageProblems(doc: Doc, exam: ExamConfig): string[] {
+  const out: string[] = [];
+  const name = new Map(exam.subjects.map((s) => [s.id, s.name]));
+  const seen = new Map<string, number>();
+  const unknown = new Set<string>();
+  for (const sl of astSlots(doc, exam)) for (const id of sl.subjectIds) { seen.set(id, (seen.get(id) ?? 0) + 1); if (!name.has(id)) unknown.add(id); }
+  const missing = exam.subjects.filter((s) => !seen.has(s.id)).map((s) => s.name);
+  const dup = exam.subjects.filter((s) => (seen.get(s.id) ?? 0) > 1).map((s) => s.name);
+  if (missing.length) out.push(`考科「${missing.join('、')}」沒有排進時程，請到 ④ 重選時程`);
+  if (dup.length) out.push(`考科「${dup.join('、')}」在時程裡出現不只一次`);
+  if (unknown.size) out.push('時程裡有已不存在的考科，請到 ④ 重選時程');
+  const bad = seatableEntries(doc, exam).filter((e) => e.subjectIds.some((id) => !name.has(id)));
+  if (bad.length) out.push(`有 ${bad.length} 位考生選了已不存在的考科，請到 ② 重新匯入名單`);
+  return out;
+}
+
+/**
+ * 定案快照指紋（#274）：排座輸入（考生、教室、時段、鎖定…；不含跨次沿用來源）、考科與考試名稱、方案座位。
+ * 定案時存下來；之後任何會改變這些的更動，指紋就對不上，⑥ 的下載與公告都會擋下，直到解除定案、重新定案。
+ */
+export function astFingerprint(exam: ExamConfig, plan: AstPlan): string {
+  const { carry: _c, ...input } = plan.input;
+  void _c;
+  return dataVersion({ i: input, s: exam.subjects, n: exam.name, o: snapOf(plan.out) });
+}
+
+/** 定案或公告後，目前的方案與定案當下不同時回傳說明（沒有定案指紋的舊資料不檢查） */
+export function astSnapshotMismatch(exam: ExamConfig, plan: AstPlan | undefined): string | undefined {
+  if (!exam.astPhase || exam.astPhase === 'planning' || !exam.astFinalFp || !plan) return undefined;
+  return astFingerprint(exam, plan) === exam.astFinalFp
+    ? undefined
+    : '定案之後，考試設定、考試名單、教室或座位被改過，目前的方案和定案當下不一樣，不能下載或公告。請先解除定案、確認內容，重新定案。';
+}
 
 /** 定案前還有哪些事沒處理（空＝可以定案） */
 export function astFinalizeBlockers(doc: Doc, exam: ExamConfig, plan: AstPlan | undefined): string[] {
@@ -292,6 +347,9 @@ export function astFinalizeBlockers(doc: Doc, exam: ExamConfig, plan: AstPlan | 
   if (plan.conflicts.length > 0) b.push(`有 ${plan.conflicts.length} 項鎖定衝突`);
   if (plan.errors.length > 0 && plan.pending.length === 0 && plan.unplaced === 0) b.push(`硬性限制有 ${plan.errors.length} 項不通過`);
   if (scheduleNeedsApproval(exam.astSchedule)) b.push('選的時程不是基準，要管理者核准');
-  if (astScheduleConflicts(doc, exam).length > 0) b.push('選的時程有同節兩科共同考生');
+  const nm = new Map(exam.subjects.map((x) => [x.id, x.name]));
+  const conf = astScheduleConflicts(doc, exam);
+  if (conf.length > 0) b.push(`選的時程有同節兩科共同考生：${conf.slice(0, 3).map((c) => `${c.slot} ${nm.get(c.a) ?? c.a}與${nm.get(c.b) ?? c.b}（${c.count} 人）`).join('、')}`);
+  b.push(...astCoverageProblems(doc, exam));
   return b;
 }

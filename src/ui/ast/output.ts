@@ -354,7 +354,8 @@ export function astOutputs(doc: Doc, exam: ExamConfig, plan: AstPlan, paper: Lab
 }
 
 /** 能不能出檔：方案要有、可行、沒有待核可／排不進／驗證不通過。回傳擋下的原因與要回哪一步 */
-export function astOutputBlockers(plan: AstPlan | undefined, hasList: boolean): { text: string; step: 2 | 3 | 5 }[] {
+export function astOutputBlockers(plan: AstPlan | undefined, hasList: boolean, mismatch?: string): { text: string; step: 2 | 3 | 5 }[] {
+  if (mismatch) return [{ text: mismatch, step: 5 }];
   if (!hasList) return [{ text: '還沒有考試名單，請先到 ② 匯入。', step: 2 }];
   if (!plan) return [{ text: '還沒有可排的方案：請先到 ③ 勾選班級教室。', step: 3 }];
   if (plan.infeasible) return [{ text: '座位不夠，排不出方案：請先到 ③ 補座位。', step: 3 }];
