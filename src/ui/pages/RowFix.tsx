@@ -1,7 +1,7 @@
 import { useState } from 'preact/hooks';
-import { Badge, Seg } from '../components';
+import { Badge } from '../components';
 
-export type RowMode = 'add' | 'edit' | 'skip';
+export type RowMode = 'add' | 'edit' | 'confirm' | 'skip';
 export interface RowFixValue { classNo: number; seatNo: number; name: string; schoolId?: string; groupCode?: string }
 
 /** 補上／修改時各欄的即時檢查（只看這一列自己；跨列的撞號、撞學號由父層用 error 帶回） */
@@ -10,7 +10,17 @@ export const checkRowValue = (v: { classNo: number; seatNo: number; name: string
     : !Number.isInteger(v.seatNo) || v.seatNo < 1 || v.seatNo > 99 ? '座號要是 1～99 的整數'
       : v.name.trim() === '' ? '姓名不能空白' : '';
 
-const MODE_TEXT: Record<RowMode, string> = { add: '手動補上（新增）', edit: '修改內容', skip: '略過' };
+const MODE_TEXT: Record<RowMode, string> = { add: '手動補上（新增）', edit: '修改內容', confirm: '確認無誤', skip: '不匯入這列' };
+const MODE_ICON: Record<'add' | 'edit' | 'confirm', string> = { add: '＋', edit: '✎', confirm: '✓' };
+
+/** G18：班別一律用真實班名（共用設定的班級名稱）；沒有名稱才寫「未命名班級（第 N 班）」 */
+export const classLabel = (no: number, classNames: readonly string[] = []): string => {
+  const n = (classNames[no - 1] ?? '').trim();
+  return n ? `${n}班` : `未命名班級（第 ${no} 班）`;
+};
+/** 把說明文字裡的「第 4 班」「班級 4 」換成真實班名 */
+export const humanizeClasses = (msg: string, classNames: readonly string[] = []): string =>
+  msg.replace(/第 (\d+) 班/g, (_, d) => classLabel(Number(d), classNames)).replace(/班級 (\d+) /g, (_, d) => `${classLabel(Number(d), classNames)} `);
 
 /**
  * G10：匯入名單遇到有問題的列時，逐列問使用者怎麼處理（學生名單與考試名單共用）。
@@ -26,7 +36,11 @@ export function RowFix(p: {
   groupCodes?: readonly string[];
   /** 父層算出的錯誤（撞座號、撞學號…） */
   error?: string;
-  onDecide: (d: { mode: 'add' | 'edit'; value: RowFixValue } | { mode: 'skip' } | null) => void;
+  /** 真實班名（依班級序號） */
+  classNames?: readonly string[];
+  /** 這類問題可「確認無誤」時給一句說明（缺姓名、學號重複）；不給＝不能確認無誤 */
+  confirmHint?: string;
+  onDecide: (d: { mode: 'add' | 'edit'; value: RowFixValue } | { mode: 'confirm' } | { mode: 'skip' } | null) => void;
 }) {
   const [mode, setMode] = useState<RowMode | null>(null);
   const [c, setC] = useState(p.draft.classNo === undefined ? '' : String(p.draft.classNo));
@@ -40,6 +54,7 @@ export function RowFix(p: {
   const pick = (m: RowMode) => {
     setMode(m);
     if (m === 'skip') p.onDecide({ mode: 'skip' });
+    else if (m === 'confirm') p.onDecide({ mode: 'confirm' });
     else emit(m, valueOf());
   };
   const edit = (next: Partial<{ c: string; s: string; n: string; sid: string; g: string }>) => {
@@ -53,17 +68,25 @@ export function RowFix(p: {
   };
   const editing = mode === 'add' || mode === 'edit';
   const msg = editing ? (local(valueOf()) || p.error || '') : '';
-  const done = mode === 'skip' || (editing && !msg);
+  const done = mode === 'skip' || mode === 'confirm' || (editing && !msg);
   return (
-    <div class="card stack" style="padding:10px;gap:8px;margin:6px 0">
+    <div class="card stack" data-rowfix={done ? 'done' : 'pending'} style={`padding:10px;gap:8px;margin:6px 0;border-left:4px solid ${done ? 'var(--ok-bar)' : 'var(--warn-bar)'}`}>
       <div class="row" style="gap:8px;flex-wrap:wrap">
         <Badge tone={done ? 'ok' : 'warn'}>{done && mode ? `已決定：${MODE_TEXT[mode]}` : '待處理'}</Badge>
         <b>{p.where}</b><span>{p.kindText}</span>
       </div>
-      <div class="small">{p.message.replace(/，已略過(這一列)?$/, '')}</div>
+      <div class="small">{humanizeClasses(p.message.replace(/，已略過(這一列)?$/, ''), p.classNames)}</div>
       <div class="muted small">原始檔這一列的內容：{p.cells.length ? p.cells.join('｜') : '（空白）'}</div>
-      <Seg<RowMode> label={`${p.where} 處理方式`} value={(mode ?? '') as RowMode} onChange={pick}
-        options={[{ value: 'add', label: MODE_TEXT.add }, { value: 'edit', label: MODE_TEXT.edit }, { value: 'skip', label: MODE_TEXT.skip }]} />
+      <div class="btnrow" role="group" aria-label={`${p.where} 處理方式`}>
+        {(['add', 'edit', ...(p.confirmHint ? ['confirm'] : [])] as ('add' | 'edit' | 'confirm')[]).map((m) => (
+          <button type="button" key={m} class="btn" aria-pressed={mode === m} onClick={() => pick(m)}
+            style={`min-height:44px;padding:0 14px;border:2px solid var(--accent);font-weight:600;${mode === m ? 'background:var(--accent);color:var(--accent-on)' : 'background:transparent;color:var(--accent-ink)'}`}>
+            <span aria-hidden="true">{mode === m ? '●' : MODE_ICON[m]}</span> {MODE_TEXT[m]}
+          </button>
+        ))}
+        <button type="button" aria-pressed={mode === 'skip'} onClick={() => pick('skip')}
+          style={`min-height:44px;background:none;border:0;cursor:pointer;text-decoration:underline;color:var(--muted,inherit);${mode === 'skip' ? 'font-weight:700' : ''}`}>{MODE_TEXT.skip}</button>
+      </div>
       {editing && (
         <div class="stack" style="gap:6px">
           <div class="btnrow">
@@ -80,6 +103,7 @@ export function RowFix(p: {
           <span class={msg ? 'field-msg' : 'hint'} role={msg ? 'alert' : undefined}>{msg || (mode === 'add' ? '補好後這一列會新增進名單。' : '改好後這一列會以修改後的內容加入名單。')}</span>
         </div>
       )}
+      {mode === 'confirm' && <span class="hint">{p.confirmHint}</span>}
       {mode === 'skip' && <span class="hint">這一列不會匯入。</span>}
     </div>
   );

@@ -13,17 +13,34 @@ const chars = new Set(readFileSync(new URL('NotoSansTC-Regular-big5.chars.txt', 
 const has = (ch: string) => chars.has(ch);
 
 describe('匯出規劃', () => {
-  it('全勾：座位表、標籤、抽離自習名單、預備教室座位表與標籤，各一個檔（抽離自習預設不勾）', () => {
+  it('G34 全勾：座位表一個檔、標籤一個檔（預備教室併在最後）、抽離自習名單獨立（預設不勾）', () => {
+    expect(defaultOptions().study).toBe(false);
     const files = planFiles(makeFixture(), { ...defaultOptions('B4'), study: true });
-    expect(files.map((f) => f.key)).toEqual(['seat', 'label', 'study', 'reserveSeat', 'reserveLabel']);
-    expect(files.map((f) => f.pages)).toEqual([2, 2, 1, 1, 1]);
+    expect(files.map((f) => f.key)).toEqual(['seat', 'label', 'study']);
+    expect(files.map((f) => f.pages)).toEqual([4, 3, 1]); // 座位表：2 間班級教室＋1 間預備教室＋1 頁自習參考座位（G32）；標籤沒有參考座位
     expect(files[0]!.name).toBe('測試模擬考-座位表.docx');
     expect(files[1]!.name).toBe('測試模擬考-標籤（B4）.docx');
   });
 
-  it('取消勾選就不產生；標籤沒勾則沒有預備教室標籤', () => {
-    const f = planFiles(makeFixture(), { ...defaultOptions('A3'), seat: false, label: false, study: false });
-    expect(f.map((x) => x.key)).toEqual(['reserveSeat', 'reserveLabel']); // 預備教室座位表與標籤是同一個勾選
+  it('取消勾選就不產生；不含預備教室時兩個檔都只有班級教室', () => {
+    expect(planFiles(makeFixture(), { ...defaultOptions('A3'), seat: false, label: false, study: false })).toEqual([]);
+    const f = planFiles(makeFixture(), { ...defaultOptions('A3'), reserve: false });
+    expect(f.map((x) => x.pages)).toEqual([2, 2]);
+  });
+
+  it('G34：預備教室頁排在最後、頁首標「預備教室」（Word 與列印頁都一樣）', async () => {
+    const out = await runExport(makeFixture(), { ...defaultOptions('B4') }, { fonts });
+    expect(out.map((f) => f.name.split('-')[1])).toEqual(['座位表.docx', '標籤（B4）.docx']);
+    for (const f of out) {
+      const z = await JSZip.loadAsync(f.data as Uint8Array);
+      const doc = await z.file('word/document.xml')!.async('string');
+      const at = doc.indexOf('預備教室');
+      expect(at).toBeGreaterThan(0);
+      expect(doc.lastIndexOf('預備教室')).toBeGreaterThan(doc.length * 0.5); // 在檔案後半
+    }
+    const pdf = await runExport(makeFixture(), { ...defaultOptions('B4'), format: 'pdf' }, { fonts });
+    const html = pdf[0]!.data as string;
+    expect(html.match(/<span class="pp-room"[^>]*>預備教室/g)!.length).toBe(3); // 座位表 2 頁（預備教室考試、自習參考座位）、標籤 1 頁
   });
 
   it('A3、B4 都是 7×7：標籤檔欄寬＝紙寬÷7，欄數＝教室排數', async () => {
@@ -39,7 +56,7 @@ describe('匯出規劃', () => {
 
   it('Word：每類一個 .docx，內含字型與頁尾版本碼', { timeout: 30000 }, async () => {
     const out = await runExport(makeFixture(), { ...defaultOptions('B4'), study: true }, { fonts });
-    expect(out.map((f) => f.name.split('-')[1])).toEqual(['座位表.docx', '標籤（B4）.docx', '抽離自習名單.docx', '預備教室座位表.docx', '預備教室標籤（B4）.docx']);
+    expect(out.map((f) => f.name.split('-')[1])).toEqual(['座位表.docx', '標籤（B4）.docx', '抽離自習名單.docx']);
     for (const f of out) {
       const z = await JSZip.loadAsync(f.data as Uint8Array);
       expect(Object.keys(z.files).filter((n) => n.startsWith('word/fonts/'))).toHaveLength(2);

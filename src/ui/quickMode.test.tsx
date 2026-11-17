@@ -87,7 +87,7 @@ describe('H7 快速模式進入條件', () => {
   });
 
   it('② 學生名單變了 → 退回，並說有幾筆差異', () => {
-    const d = doc({}, [...roster, { classNo: 1, seatNo: 4, name: '轉學生' }]);
+    const d = doc({}, [{ ...roster[0]!, name: '改名生' }, ...roster.slice(1)]);
     const r = quickCheck(d, cur(d));
     expect(fails(r)).toEqual(['roster']);
     expect(r.checks[1]!.text).toContain('1 筆差異');

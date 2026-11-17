@@ -10,6 +10,8 @@ import {
   isStale, overrideNotes, removeOverride, reseat, roomStatTable, unseatedFullyAbsent, seatingBlockers, setOverride, validationChecks, type StepNo,
 } from '../seating';
 import { roomCapacity } from '../rooms';
+import { studyCapacity } from '../capacity';
+import { shortText, StudyNeedDetail, StudySlotTable } from './StudyCapacityView';
 import type { Doc } from '../store';
 
 const PLACES = ['教務處', '圖書館', '輔導室'];
@@ -95,7 +97,12 @@ export function Step5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
     ...classRooms.map((r) => ({ value: r.id, label: `${r.name}${trackOf(r.track)}` })),
     ...reserveRooms.map((r) => ({ value: r.id, label: `${r.name}（預備）` })),
   ];
-  const checks = stale ? null : validationChecks(doc, exam, result);
+  // G31：自習容量與座位表驗證分開列；自習座位不足時整體不得顯示通過（與 ③④ 同一套 studyCapacity）
+  const sc = studyCapacity(doc, exam);
+  const studyCheck = sc.applicable
+    ? [{ title: '自習容量', ok: sc.ok && sc.homeOk, detail: sc.ok && sc.homeOk ? '每個時段自習的人都有座位（抽離自習在預備教室、其他不考的人在原班教室）' : `${shortText(sc) || sc.allocErrors[0] || '原班教室座位不足'}` }]
+    : [];
+  const checks = stale ? null : [...validationChecks(doc, exam, result).filter((c) => !c.title.startsWith('預備教室座位夠')), ...studyCheck];
   const pass = checks?.filter((c) => c.ok).length ?? 0;
   const allPass = !!checks && pass === checks.length;
   const classes = examClasses(doc, exam);
@@ -119,6 +126,7 @@ export function Step5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
         { label: '禁用', value: classRooms.reduce((a, r) => a + roomCapacity(r) - r.seatCount, 0) },
         { label: '教室', value: `${classRooms.length} 間` },
         ...(senior ? [{ label: '預備教室', value: `${rooms.length - classRooms.length} 間` }] : []),
+        ...(sc.applicable ? [{ label: '自習（最多同時）', value: sc.groups.reduce((m, g) => Math.max(m, g.studyCount + g.stay), 0), bad: !sc.ok || !sc.homeOk }] : []),
         { label: '驗證', value: stale ? '需重新排座' : allPass ? '通過' : '不通過', bad: !stale && !allPass },
       ]} />
   );
@@ -194,6 +202,15 @@ export function Step5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {sc.applicable && (
+        <div class="card stack">
+          <div><h3>各時段自習</h3><p class="small muted">不考的人也要有位子：被標 ✕ 的抽離自習去預備教室（有參考座位表，不出標籤），其他不考的人留在原班教室。</p></div>
+          <StudySlotTable sc={sc} classNames={new Map(classes.map((c) => [c.no, c.name]))} />
+          <StudyNeedDetail sc={sc} compact />
+          {!sc.ok && <div class="row"><Button onClick={() => p.onStep(3)}>前往 ③ 教室設定，增加預備教室或座位</Button></div>}
         </div>
       )}
 
