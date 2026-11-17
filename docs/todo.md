@@ -159,3 +159,5 @@
 - 一次只跑一個對話（額度吃緊）；每包審併完才放行下一包，放行前先量額度。
 - 審併 PR：到該對話 worktree 重跑 tsc／vitest；main 的 `node_modules` 過舊先 `npm ci`。
 - 版號：有使用者看得到的變更併 main 前要升 `package.json` 版本；純文件不用。
+
+> **G37 狀態（設計員 2026-11-17）：稿待審，稿 v2.50**（`docs/design/mockups/G37首次使用精靈稿.html`，成品 https://claude.ai/artifact/XHhqu9mDF2hzbbrQmGPfQm ，DESIGN 10.25）。G37 本文在 PR #314 分支，併入後請把本行併進該條。稿通過前不實作。
