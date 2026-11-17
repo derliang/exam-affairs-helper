@@ -23,10 +23,10 @@ describe('步驟③依部別列教室（校-33）', () => {
     expect(s).toContain('高一教室'); expect(s).toContain('備一');
     expect(s).not.toContain('國一教室');
   });
-  it('「新增預備教室」鈕在清單上方（標題下方）；國中部沒有預備教室鈕', () => {
+  it('「新增預備教室」鈕在清單下方（G22）；國中部沒有預備教室鈕', () => {
     const s = renderToString(<RoomList division="senior" rooms={rooms} paper="B4" onChange={noop} selected={[]} onSelect={noop} />);
     expect(s.indexOf('新增預備教室')).toBeGreaterThan(-1);
-    expect(s.indexOf('新增預備教室')).toBeLessThan(s.indexOf('高一教室'));
+    expect(s.indexOf('新增預備教室')).toBeGreaterThan(s.indexOf('高一教室'));
     expect(renderToString(<RoomList division="junior" rooms={rooms} paper="B4" onChange={noop} selected={[]} onSelect={noop} />)).not.toContain('新增預備教室');
   });
   it('已被本次考試勾選、卻屬於另一部別的舊資料仍列出（才關得掉，不藏著影響排座）', () => {
@@ -63,20 +63,20 @@ describe('步驟③依部別列教室（校-33）', () => {
 });
 
 describe('共用設定「教室清單」（校-43、校-50）', () => {
-  it('表格：名稱／類型／橫排×深位／可排座位；每間教室都有刪除；整列可點展開', () => {
+  it('表格：名稱／類型／橫排×深位／可排座位；只有預備教室有刪除；整列可點展開', () => {
     const html = renderToString(<RoomTable division="senior" rooms={rooms} paper="B4" onChange={noop} />);
     for (const h of ['>名稱<', '>類型<', '>橫排×深位<', '>可排座位<']) expect(html).toContain(h);
     expect(html).toContain('5×6');
     expect(html).toContain('rowtap');
     expect(html.match(/>編輯座位</g)).toHaveLength(2); // 高中部 2 間
-    expect(html.match(/>刪除</g)).toHaveLength(2); // G12：每間教室都有刪除（高中部 2 間）
+    expect(html.match(/>刪除</g)).toHaveLength(1); // G22：班級教室不能刪，只有預備教室（高中部 1 間）
     expect(html).not.toContain('國一教室');
   });
-  it('國中部：只有國中教室、沒有預備教室也沒有「新增預備教室」、每間教室仍可刪除', () => {
+  it('國中部：只有國中教室、沒有預備教室也沒有任何新增鈕、班級教室不能刪', () => {
     const html = renderToString(<RoomTable division="junior" rooms={rooms} paper="B4" onChange={noop} />);
     expect(html).toContain('國一教室'); expect(html).not.toContain('高一教室');
-    expect(html).not.toContain('新增預備教室'); expect(html.match(/>刪除</g)).toHaveLength(2);
-    expect(html).toContain('新增教室');
+    expect(html).not.toContain('新增預備教室'); expect(html).not.toContain('>刪除<');
+    expect(html).not.toContain('>新增教室<');
   });
   const doc = (): Doc => ({ ...demoDoc(), settings: { ...demoDoc().settings, classrooms: rooms } });
   it('部別切換：教室清單、學生名單、班級資料顯示；學校與表頭、選用功能不顯示', () => {

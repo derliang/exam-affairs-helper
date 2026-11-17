@@ -6,7 +6,7 @@ import { Alert, Badge, Button, ConfirmButton, More, Seg, StepHead } from '../com
 import { confirmCopy } from '../flow';
 import { layoutOf } from '../components/RoomList';
 import { AST_STEP_BLURBS } from '../nav';
-import { addRoom, labelSplitNote, newClassRoomIds, patchRoom, seatCap, seatLimitNote, seatLimits } from '../rooms';
+import { addRoom, labelSplitNote, newClassRoomIds, patchRoom, roomLimitsOf, seatCap, seatLimitNote, seatLimits } from '../rooms';
 import { setClassTrack, updateExam, type Doc } from '../store';
 import { classColorVars } from '../colors';
 import { PhaseGuard } from './AstRelease';
@@ -88,7 +88,7 @@ function RoomRow(p: {
         </div>
         <div class="row" style="flex-wrap:nowrap">
           <Button small {...(p.open ? { kind: 'primary' as const } : {})} onClick={p.onToggleOpen}>{p.open ? '收合座位圖' : '編輯座位圖'}</Button>
-          {p.ov && p.on && <Button small onClick={p.ov.onToggle}>{p.ov.open ? '收合本次座位' : p.ov.has ? '編輯本次座位' : '本次調整座位'}</Button>}
+          {p.ov && p.on && <Button small onClick={p.ov.onToggle}>{p.ov.open ? '收合本次座位' : p.ov.has ? '調整本次座位' : '調整本次座位'}</Button>}
           {p.ov?.has && p.on && <ConfirmButton small kind="default" copy={confirmCopy.restoreRoomOverride(r.name)} onConfirm={p.ov.onRestore}>還原成共用設定</ConfirmButton>}
           {adj.kind !== 'default' && <Button small kind="ghost" onClick={() => p.onChange(resetStudyCapacity(p.shared))}>自習容量還原</Button>}
         </div>
@@ -209,7 +209,7 @@ export function AstStep3(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
         <div class="roomlist stack" style="gap:8px">
           {reserves.map((r) => (
             <RoomRow key={r.id} room={effectiveRoom(exam, r)} shared={r} paper={paper} ov={ovOf(r)} badge={<span class="no rbadge" aria-hidden="true">綜</span>} open={open === r.id} onToggleOpen={() => setOpen(open === r.id ? null : r.id)}
-              onChange={(x) => upd(r.id, x)} cap={cap} maxDepth={lim.depth} on={selected.has(r.id)} onSwitch={(v) => toggleId(r.id, v)} switchLabel="本次可用" />
+              onChange={(x) => upd(r.id, x)} cap={roomLimitsOf('reserve').cap} maxDepth={roomLimitsOf('reserve').depth} on={selected.has(r.id)} onSwitch={(v) => toggleId(r.id, v)} switchLabel="本次可用" />
           ))}
           {reserves.length === 0 && <p class="small muted">還沒有綜合教室。分科有人被徵用原班、不考的人要有地方自習時，請新增並勾選。</p>}
         </div>
