@@ -4,7 +4,7 @@
  * 座位表與標籤的樣式照設計系統成品頁「座位表與標籤」稿件（docs/design/mockups/設計系統.html #paper）：
  * 改這裡的版面要同步改稿件，反之亦然。
  */
-import { footerText, isSpecial, labelBoxMm, labelGrid, labelGridSize, labelNotePt, landscapeFit, namePtFit, PAPER_MM, periodLineFontPt, personLayout, rotationPage, wideLayout, type PersonLine, SEAT_PAGE, seatGeometry, statLayout, SLOT_TIP, type CellModel, type LabelPageModel, type ListPageModel, type SeatPageModel, type TablePageModel } from './model';
+import { roomShown, footerText, isSpecial, labelBoxMm, labelGrid, labelGridSize, labelNotePt, landscapeFit, namePtFit, PAPER_MM, periodLineFontPt, personLayout, rotationPage, wideLayout, type PersonLine, SEAT_PAGE, seatGeometry, statLayout, SLOT_TIP, type CellModel, type LabelPageModel, type ListPageModel, type SeatPageModel, type TablePageModel } from './model';
 
 export interface HtmlOptions {
   generatedAt: string;
@@ -82,12 +82,12 @@ function seatHtml(p: SeatPageModel, o: HtmlOptions): string {
     .map((r) => `<tr><td>${esc(r.label)}</td>${r.per.map((n) => `<td>${n}</td>`).join('')}<td class="t">${r.total}</td></tr>`)
     .join('')}</tbody></table>`;
   return `<section class="sheet pp pp-seat" style="page:a4full;width:${SEAT_PAGE.w}mm;height:${SEAT_PAGE.h - 0.5}mm;padding:${SEAT_PAGE.padY}mm ${SEAT_PAGE.padX}mm">
-<div class="pp-hd"><div><div class="pp-h1">${esc(p.heading ?? p.examName)}</div>${p.heading ? '' : '<div class="pp-h2">座位表</div>'}</div><span class="pp-room">${esc(p.roomName)}</span></div>
+<div class="pp-hd"><div><div class="pp-h1">${esc(p.heading ?? p.examName)}</div>${p.heading ? '' : '<div class="pp-h2">座位表</div>'}</div><span class="pp-room">${esc(roomShown(p))}</span></div>
 <div class="pp-chips">${chips}</div>
 <div class="pp-wrapg" style="margin-top:4mm"><div class="pp-ay" style="grid-template-rows:repeat(${p.depth},${mm(ch)})">${ay}</div><div><div class="pp-grid" style="grid-template-columns:repeat(${p.rows},${mm(cw)})">${cells}</div><div class="pp-ax" style="grid-template-columns:repeat(${p.rows},${mm(cw)})">${ax}</div></div></div>
 <div class="pp-bottom"><span class="l">${p.slotMode ? `已使用 ${p.cells.size} 格` : `共 ${p.stats.total} 人`}</span><span class="pp-pod">講臺</span><span></span></div>
 ${p.slotMode ? `<div class="pp-sltip">${esc(SLOT_TIP)}</div>` : ''}${statsNext ? '' : stHtml}
-<div class="pp-foot">${esc(footerText(o.generatedAt, o.dataVersion))}</div></section>${statsNext ? `<section class="sheet pp pp-seat" style="page:a4full;width:${SEAT_PAGE.w}mm;height:${SEAT_PAGE.h - 0.5}mm;padding:${SEAT_PAGE.padY}mm ${SEAT_PAGE.padX}mm"><div class="pp-hd"><div><div class="pp-h1">${esc(p.heading ?? p.examName)}</div><div class="pp-h2">各班人數統計</div></div><span class="pp-room">${esc(p.roomName)}</span></div><div style="margin-top:6mm">${stHtml}</div><div class="pp-foot">${esc(footerText(o.generatedAt, o.dataVersion))}</div></section>` : ''}`;
+<div class="pp-foot">${esc(footerText(o.generatedAt, o.dataVersion))}</div></section>${statsNext ? `<section class="sheet pp pp-seat" style="page:a4full;width:${SEAT_PAGE.w}mm;height:${SEAT_PAGE.h - 0.5}mm;padding:${SEAT_PAGE.padY}mm ${SEAT_PAGE.padX}mm"><div class="pp-hd"><div><div class="pp-h1">${esc(p.heading ?? p.examName)}</div><div class="pp-h2">各班人數統計</div></div><span class="pp-room">${esc(roomShown(p))}</span></div><div style="margin-top:6mm">${stHtml}</div><div class="pp-foot">${esc(footerText(o.generatedAt, o.dataVersion))}</div></section>` : ''}`;
 }
 
 function labelHtml(p: LabelPageModel, o: HtmlOptions): string {
@@ -107,7 +107,7 @@ function labelHtml(p: LabelPageModel, o: HtmlOptions): string {
     : '';
   const cls = layout.paper.toLowerCase();
   return `<section class="sheet pp pp-lab ${cls}" style="page:${cls};width:${paper.w}mm;height:${paper.h - 0.5}mm;padding:${margin}mm ${mm(padX)}">
-<div class="pp-hd" style="margin-bottom:3mm"><div><div class="pp-h1">${esc((p.heading ?? `${p.examName}　標籤`) + (p.flipNotes?.length ? `　（${p.flipNotes.join('；')}）` : ''))}</div></div><span class="pp-room" style="font-size:12pt;padding:1mm 4mm">${esc(p.roomName)}</span></div>
+<div class="pp-hd" style="margin-bottom:3mm"><div><div class="pp-h1">${esc((p.heading ?? `${p.examName}　標籤`) + (p.flipNotes?.length ? `　（${p.flipNotes.join('；')}）` : ''))}</div></div><span class="pp-room" style="font-size:12pt;padding:1mm 4mm">${esc(roomShown(p))}</span></div>
 <div class="pp-grid" style="grid-template-columns:repeat(${gs.cols * (layout.wide ? 2 : 1)},${mm(cell.w)})">${cells}</div>
 ${noteHtml}
 <div class="pp-foot">${esc(footerText(o.generatedAt, o.dataVersion))}</div></section>`;

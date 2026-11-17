@@ -36,34 +36,42 @@ describe('G7 本次考科副標與實際可否編輯一致', () => {
   });
 });
 
-describe('G12 新增教室／每間教室可刪除', () => {
+describe('G22 班級教室跟名冊走：不能新增、只有預備教室與舊教室可刪', () => {
   const rooms = [
     { id: 'a', name: '甲班', kind: 'class' as const, rows: 5, depth: 6, seatCount: 30, division: 'senior' as const, track: 'science' as const },
     { id: 'b', name: '乙班', kind: 'class' as const, rows: 5, depth: 6, seatCount: 30, division: 'senior' as const, track: 'liberal' as const },
     { id: 'p', name: '預備一', kind: 'reserve' as const, rows: 4, depth: 4, seatCount: 16, division: 'senior' as const },
   ];
-  it('步驟③ 教室卡片：每間都有刪除；按鈕與欄位標籤不再寫「班級教室」', () => {
-    for (const junior of [false, true]) {
-      const html = renderToString(<RoomList rooms={junior ? rooms.slice(0, 2) : rooms} paper="B4" onChange={noop} junior={junior} />);
-      expect(html.match(/>刪除</g)).toHaveLength(junior ? 2 : 3);
-      expect(html).toContain('新增教室');
-      expect(html).toContain('一次新增 6 間教室');
-      expect(html).not.toContain('班級教室');
-    }
+  const classes = [{ name: '甲班', colorIndex: 1, division: 'senior', track: 'science' as const }, { name: '乙班', colorIndex: 2, division: 'senior', track: 'liberal' as const }];
+  it('步驟③：只有「新增預備教室」，沒有「新增教室」「一次新增 N 間」；有對應班級的班級教室沒有刪除', () => {
+    const html = renderToString(<RoomList rooms={rooms} paper="B4" onChange={noop} classes={classes} division="senior" selected={['a']} onSelect={noop} />);
+    expect(html).toContain('新增預備教室');
+    expect(html).not.toContain('>新增教室<');
+    expect(html).not.toContain('一次新增');
+    expect(html.match(/>刪除</g)).toHaveLength(1); // 只有預備一
   });
-  it('步驟③（有勾選開關）：刪除按鈕走「本次移除／連共用一起刪」兩段式，每間仍有刪除', () => {
-    const html = renderToString(<RoomList rooms={rooms} paper="B4" onChange={noop} selected={['a']} onSelect={noop} />);
-    expect(html.match(/>刪除</g)).toHaveLength(3);
-    expect(html).not.toContain('班級教室');
+  it('步驟③：名冊已沒有這個班的舊班級教室，標示並可刪（從本次考試移除）', () => {
+    const html = renderToString(<RoomList rooms={rooms} paper="B4" onChange={noop} classes={classes.slice(0, 1)} division="senior" selected={['a', 'b']} onSelect={noop} />);
+    expect(html).toContain('名冊已沒有這個班');
+    expect(html.match(/>刪除</g)).toHaveLength(2);
   });
-  it('共用設定教室清單：班級教室也有刪除；沒有「班級教室」字樣', () => {
-    const html = renderToString(<RoomTable division="senior" rooms={rooms} paper="B4" onChange={noop} />);
-    expect(html.match(/>刪除</g)).toHaveLength(3);
-    expect(html).not.toContain('班級教室');
+  it('國中部（會考）：沒有任何新增鈕，也沒有預備教室', () => {
+    const html = renderToString(<RoomList rooms={rooms.slice(0, 2)} paper="B4" onChange={noop} junior classes={classes} selected={['a']} onSelect={noop} />);
+    expect(html).not.toContain('新增預備教室');
+    expect(html).not.toContain('>新增教室<');
+    expect(html).not.toContain('>刪除<');
   });
-  it('國中部空清單的提示也改稱「新增教室」', () => {
+  it('共用設定教室清單：只有「新增預備教室」；班級教室不能刪、預備教室可刪；沒有「班級教室」字樣', () => {
+    const html = renderToString(<RoomTable division="senior" rooms={rooms} paper="B4" onChange={noop} classes={classes} />);
+    expect(html.match(/>刪除</g)).toHaveLength(1);
+    expect(html).toContain('新增預備教室');
+    expect(html).not.toContain('>新增教室<');
+    expect(html).not.toContain('一次新增');
+  });
+  it('國中部空清單的提示：班級教室依名冊帶出，沒有新增鈕', () => {
     const html = renderToString(<RoomTable division="junior" rooms={[]} paper="B4" onChange={noop} />);
-    expect(html).toContain('請按下方「新增教室」');
+    expect(html).toContain('依名冊的班級自動帶出');
+    expect(html).not.toContain('新增');
   });
 });
 
@@ -97,14 +105,15 @@ describe('分科也套用同一組規則（通則）', () => {
   });
 });
 
-describe('G12 步驟③ 三種類型的教室卡片都有刪除', () => {
-  it('學測、會考：Step3 每間教室有刪除；分科的教室刪除在共用設定清單', async () => {
+describe('G22 步驟③ 學測、會考的教室區都只有「新增預備教室」', () => {
+  it('學測、會考：Step3 沒有「新增教室」；分科的綜合教室在 AstStep3', async () => {
     const { Step3 } = await import('./pages/Step3');
     for (const kind of ['gsat', 'bcct'] as const) {
       const { doc, exam } = docWith(kind);
       const html = renderToString(<Step3 doc={doc} exam={exam} onChange={noop} />);
-      expect(html, kind).toContain('新增教室');
-      expect(html, kind).not.toContain('新增班級教室');
+      expect(html.includes('新增預備教室'), kind).toBe(kind === 'gsat'); // 會考（國中部）沒有預備教室
+      expect(html, kind).not.toContain('>新增教室<');
+      expect(html, kind).not.toContain('一次新增');
     }
   });
 });

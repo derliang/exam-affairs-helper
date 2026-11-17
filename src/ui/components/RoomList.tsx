@@ -4,11 +4,35 @@ import { effectiveRoom, roomDivision, seatLabel } from '../../data';
 import { Alert, Badge, Button, ConfirmButton, Modal, Seg, Stepper, Switch } from './index';
 import { confirmCopy, UNDO_HINT } from '../flow';
 import { classColorVars } from '../colors';
-import { addRoom, addRooms, clickSeat, duplicateRoom, fillDefaultTracks, isSeatActive, patchRoom, removeRoom, labelSplitNote, resize, roomCapacity, seatCap, seatLimitNote, seatLimits, setRoomDivision, setRoomTrack } from '../rooms';
+import { addRoom, clickSeat, duplicateRoom, fillDefaultTracks, isSeatActive, patchRoom, removeRoom, labelSplitNote, resize, roomCapacity, roomLimitsOf, seatLimitNote, setRoomDivision, setRoomTrack } from '../rooms';
+
+/** G22：班級教室＝名冊班級（跟名冊走、不能手動新增或刪除）；沒有對應班級的班級教室是「名冊已沒有這個班」的舊教室 */
+export const isOrphanClassRoom = (r: Classroom, classes?: { name: string }[]): boolean =>
+  r.kind === 'class' && !!classes && !classes.some((c) => c.name === r.name);
+
+/** G21：座位配置小縮圖（講臺在下，深位 1 在最下列；不排的格子淡掉）。純示意，不可點 */
+function SeatThumb(p: { room: Classroom }) {
+  const { room } = p;
+  const depths = Array.from({ length: room.depth }, (_, i) => room.depth - i);
+  const rows = Array.from({ length: room.rows }, (_, i) => i + 1);
+  return (
+    <span class="seatthumb" aria-hidden="true" style={{ gridTemplateColumns: `repeat(${room.rows}, 5px)` }}>
+      {depths.flatMap((d) => rows.map((rw) => <i key={`${rw}-${d}`} class={isSeatActive(room, { row: rw, depth: d }) ? '' : 'off'} />))}
+    </span>
+  );
+}
+
+/** 「＋」停用原因：到上限時寫在欄位下方（G21） */
+const limitReason = (r: Classroom, key: 'rows' | 'depth'): string | null => {
+  const l = roomLimitsOf(r.kind);
+  return r[key] >= l[key] ? `${key === 'rows' ? '橫排' : '深位'}已達上限 ${l[key]}` : null;
+};
 
 /**
- * 教室清單與座位表編輯（步驟③與設定頁共用，D69②）：每間一列，點該列或「編輯座位表」就在列下展開，可收合。
- * 座位只能多不能少；點哪個座位，哪個就不排（可任意指定）；座位上限依標籤紙（D74）。
+ * 步驟③教室清單（G21，稿 v2.43）：一間一列表格——列入開關＋名稱｜座位配置（縮圖＋排×深位）｜座位統計｜組別｜操作；
+ * 點該列或「編輯座位」在列下展開（橫排、深位、座位圖）。G22：班級教室跟名冊班級走，不能新增、不能刪；只能新增預備教室。
+ * G25：「編輯座位」單一入口，編輯器上方選套用範圍（只這次考試／共用設定）。
+ * 座位上限：班級教室 7×7、預備教室 7 排×8 深位（G30）。
  */
 export function RoomList(p: {
   rooms: Classroom[]; paper: LabelPaper; onChange: (r: Classroom[]) => void;
@@ -20,21 +44,22 @@ export function RoomList(p: {
   classes?: { name: string; colorIndex: number; division?: string; track?: Track }[];
   /** 步驟③ 國中部會考：沒有文理組（不顯示組別）、沒有抽離（不列預備教室）；高中部與設定頁不傳 */
   junior?: boolean;
-  /** 校-33：只列這個部別的教室、新增的教室標上這個部別（國中部沒有預備教室）；不傳＝不分部別（舊用法） */
+  /** 校-33：只列這個部別的教室、新增的教室標上這個部別（國中部沒有預備教室） */
   division?: Division;
   /** 推斷舊教室部別要看的各次考試（沒標部別的舊資料才用得到） */
   exams?: Pick<ExamConfig, 'division' | 'classroomIds'>[];
   /** 到 B4 上限時提示裡的連結：去共用設定「學校與表頭」改標籤預設紙張 */
   onGoSchool?: () => void;
-  /** 步驟③：本次考試專用的座位配置覆寫（#210）；有傳 onOverride 才顯示「本次調整座位」 */
+  /** 步驟③：本次考試專用的座位配置覆寫（#210）；有傳 onOverride 才能選「只這次考試」 */
   overrides?: Record<string, RoomSeatLayout> | undefined;
   onOverride?: (roomId: string, layout: RoomSeatLayout | null) => void;
 }) {
   const [open, setOpen] = useState<string | null>(null);
-  const cap = seatCap(p.paper);
-  const lim = seatLimits(p.paper);
+  /** 編輯座位的套用範圍（G25）：預設共用設定；這間已有本次專用配置就從「只這次考試」開始 */
+  const [scope, setScope] = useState<'exam' | 'shared'>('shared');
   const junior = p.junior ?? p.division === 'junior';
   const ctx = { classes: p.classes ?? [], exams: p.exams ?? [] };
+  const classesOfDiv = p.classes?.filter((c) => !p.division || c.division === p.division);
   // 校-33：只列這個部別的教室；已被本次勾選、卻屬於另一部別的舊資料照樣列出，才關得掉，不會藏著影響排座
   const shown = p.rooms.filter((r) => !(junior && r.kind === 'reserve')
     && (!p.division || roomDivision(r, ctx) === p.division || !!p.selected?.includes(r.id)));
@@ -45,59 +70,103 @@ export function RoomList(p: {
     if (filled !== p.rooms) p.onChange(filled);
   }, [p.rooms, p.classes]);
   const upd = (id: string, f: (r: Classroom) => Classroom) => p.onChange(patchRoom(p.rooms, id, (r) => stamp(f(r))));
-  const addRow = (
-    <div class="btnrow">
-      <Button onClick={() => p.onChange(addRoom(p.rooms, 'class', p.division ?? 'senior', ctx))}>新增教室</Button>
-      {!junior && <Button onClick={() => p.onChange(addRoom(p.rooms, 'reserve', p.division ?? 'senior', ctx))}>新增預備教室</Button>}
-      <BulkAdd onAdd={(n) => p.onChange(addRooms(p.rooms, 'class', n, p.division ?? 'senior', ctx))} />
-    </div>
-  );
+  const openEditor = (id: string, hasOv: boolean, canOv: boolean) => {
+    if (open === id) return setOpen(null);
+    setScope(canOv && hasOv ? 'exam' : 'shared');
+    setOpen(id);
+  };
   return (
     <div class="rw">
-      <p class="muted small">座位上限：每間最多 {lim.rows} 排×{lim.depth} 深位、{cap} 座；超過 7×7 的舊教室標籤無法對應，請縮小。點「▸ 編輯座位」調整座位排列。</p>
-      {addRow}
-      {shown.map((shared) => {
-        const on = p.selected?.includes(shared.id) ?? false;
-        const hasOv = !!p.overrides?.[shared.id];
-        const canOv = !!p.onOverride && on;
-        // 有本次專用配置時，這一列顯示的座位數字以本次為準（列上的名稱、組別仍是共用教室的）
-        const r = effectiveRoom({ roomOverrides: p.overrides }, shared);
-        const examKey = `${shared.id}#exam`;
-        const isOpen = open === shared.id;
-        const isOvOpen = open === examKey;
-        return (
-          <div key={r.id} class="rw">
-            <div class={`roomrow${p.selected && !on ? ' off' : ''}${isOpen ? ' on' : ''}${r.kind === 'class' && !junior ? ' hastrack' : ' notrack'}`} onClick={() => setOpen(isOpen ? null : r.id)}>
-              {p.selected && p.onSelect ? (
-                <Switch label={r.kind === 'class' ? '列為考場' : '列為預備'} ariaLabel={`${r.kind === 'class' ? '列為考場' : '列為預備'}：${r.name}`} checked={on}
-                  onChange={(v) => p.onSelect!(v ? [...p.selected!, r.id] : p.selected!.filter((x) => x !== r.id))} />
-              ) : <RoomBadge room={r} index={shown.indexOf(r)} classes={p.classes} />}
-              <div class="field"><label class="small" for={`rn-${r.id}`}>{r.kind === 'class' ? '教室' : '預備教室'}</label>
-                <input id={`rn-${r.id}`} class="input" value={r.name} onClick={(e) => e.stopPropagation()} onChange={(e) => upd(r.id, (x) => ({ ...x, name: e.currentTarget.value.trim() || x.name }))} /></div>
-              <div class="field" onClick={(e) => e.stopPropagation()}><span class="label">橫排（左右）</span><Stepper label="橫排" value={r.rows} max={lim.rows} onChange={(n) => upd(r.id, (x) => resize(x, { rows: n }, cap, lim))} /></div>
-              <div class="field" onClick={(e) => e.stopPropagation()}><span class="label">深位（前後）</span><Stepper label="深位" value={r.depth} max={lim.depth} onChange={(n) => upd(r.id, (x) => resize(x, { depth: n }, cap, lim))} /></div>
-              {r.kind === 'class' && !junior && (
-                <div class="field" onClick={(e) => e.stopPropagation()}><span class="label">組別（高中部必選）</span>
-                  <Seg<Track> label={`${r.name}組別`} value={(r.track ?? '') as Track} options={[{ value: 'science', label: '理組' }, { value: 'liberal', label: '文組' }]}
-                    onChange={(t) => upd(r.id, (x) => setRoomTrack(x, t))} />
-                  {!r.track && <span class="hint">⚠ 還沒指定，高中部排座會被擋下</span>}</div>
-              )}
-              <div class="info">{hasOv && <Badge tone="info">本次專用</Badge>}座位 <b>{roomCapacity(r)}</b>・不排 <b>{roomCapacity(r) - r.seatCount}</b>・可排 <b>{r.seatCount}</b>{r.kind === 'reserve' ? <><br />預備教室，不計入教室座位合計</> : (!junior && r.track ? <><br />{r.track === 'science' ? '理組' : '文組'}</> : null)}</div>
-              <div class="btnrow" onClick={(e) => e.stopPropagation()}>
-                <Button small onClick={() => setOpen(isOpen ? null : r.id)}>{isOpen ? '▾ 收合座位' : '▸ 編輯座位'}</Button>
-                <Button small onClick={() => p.onChange(duplicateRoom(p.rooms, r.id))}>複製這間教室</Button>
-                {canOv && <Button small onClick={() => setOpen(isOvOpen ? null : examKey)}>{isOvOpen ? '▾ 收合本次座位' : hasOv ? '編輯本次座位' : '本次調整座位'}</Button>}
-                {canOv && hasOv && <ConfirmButton small kind="default" copy={confirmCopy.restoreRoomOverride(r.name)} onConfirm={() => { p.onOverride!(r.id, null); if (isOvOpen) setOpen(null); }}>還原成共用設定</ConfirmButton>}
-                {p.selected && p.onSelect
-                  ? <RoomRemove name={r.name} inThis={on} inUse={!!p.inUse?.(r.id)} onThis={() => p.onSelect!(p.selected!.filter((x) => x !== r.id))} onShared={() => p.onChange(removeRoom(p.rooms, r.id))} />
-                  : <ConfirmButton small copy={confirmCopy.deleteRoom(r.name, !!p.inUse?.(r.id))} onConfirm={() => p.onChange(removeRoom(p.rooms, r.id))}>刪除</ConfirmButton>}
-              </div>
-            </div>
-            {isOpen && <SeatGrid paper={p.paper} room={shared} cap={cap} lim={lim} onClose={() => setOpen(null)} onChange={(x) => upd(r.id, () => x)} />}
-            {isOvOpen && canOv && <SeatGrid paper={p.paper} room={r} cap={cap} lim={lim} steppers examOnly onClose={() => setOpen(null)} onChange={(x) => p.onOverride!(r.id, layoutOf(x))} />}
-          </div>
-        );
-      })}
+      <p class="muted small">座位上限：班級教室最多 7 排×7 深位（49 座）；預備教室最多 7 排×8 深位（56 座）。點「編輯座位」調整座位排列。</p>
+      <div class="scroll">
+        <table class="t compact roomtable">
+          <thead><tr><th>教室</th><th>座位配置</th><th>座位統計</th>{!junior && <th>組別</th>}<th>操作</th></tr></thead>
+          <tbody>
+            {shown.map((shared, idx) => {
+              const on = p.selected?.includes(shared.id) ?? false;
+              const hasOv = !!p.overrides?.[shared.id];
+              const canOv = !!p.onOverride && on;
+              // 有本次專用配置時，這一列顯示的座位數字以本次為準（列上的名稱、組別仍是共用教室的）
+              const r = effectiveRoom({ roomOverrides: p.overrides }, shared);
+              const isOpen = open === shared.id;
+              const orphan = isOrphanClassRoom(r, classesOfDiv);
+              const isReserve = r.kind === 'reserve';
+              const swLabel = isReserve ? '列為預備' : '列為考場';
+              const lim = roomLimitsOf(r.kind);
+              const examScope = isOpen && scope === 'exam' && canOv;
+              const editing = examScope ? r : shared;
+              const reasons = isOpen ? [limitReason(editing, 'rows'), limitReason(editing, 'depth')].filter(Boolean) : [];
+              return [
+                <tr key={shared.id} class={`rowtap${isOpen ? ' open' : ''}${p.selected && !on ? ' off' : ''}`} aria-expanded={isOpen} onClick={() => openEditor(shared.id, hasOv, canOv)}>
+                  <td>
+                    <div class="row" style="flex-wrap:nowrap;gap:10px">
+                      {p.selected && p.onSelect ? (
+                        <Switch label={swLabel} ariaLabel={`${swLabel}：${r.name}`} checked={on}
+                          onChange={(v) => p.onSelect!(v ? [...p.selected!, r.id] : p.selected!.filter((x) => x !== r.id))} />
+                      ) : <RoomBadge room={r} index={idx} classes={p.classes} />}
+                      <div class="field"><label class="small" for={`rn-${r.id}`}>{isReserve ? '預備教室' : '教室'}</label>
+                        <input id={`rn-${r.id}`} class="input" value={r.name} onClick={(e) => e.stopPropagation()} onChange={(e) => upd(r.id, (x) => ({ ...x, name: e.currentTarget.value.trim() || x.name }))} />
+                        {orphan && <span class="hint">名冊已沒有這個班</span>}</div>
+                    </div>
+                  </td>
+                  <td><div class="row" style="flex-wrap:nowrap;gap:8px"><SeatThumb room={r} /><span><b>{r.rows}</b> 排×<b>{r.depth}</b> 深位{hasOv && <> <Badge tone="info">本次專用</Badge></>}</span></div></td>
+                  <td class="info">座位 <b>{roomCapacity(r)}</b>・不排 <b>{roomCapacity(r) - r.seatCount}</b>・可排 <b>{r.seatCount}</b>{isReserve ? <><br />預備教室，不計入教室座位合計</> : null}</td>
+                  {!junior && (
+                    <td onClick={(e) => e.stopPropagation()}>
+                      {r.kind === 'class' ? (
+                        <>
+                          <Seg<Track> label={`${r.name}組別`} value={(r.track ?? '') as Track} options={[{ value: 'science', label: '理組' }, { value: 'liberal', label: '文組' }]}
+                            onChange={(t) => upd(r.id, (x) => setRoomTrack(x, t))} />
+                          {!r.track && <span class="hint">⚠ 還沒指定，高中部排座會被擋下</span>}
+                        </>
+                      ) : <span class="muted small">—</span>}
+                    </td>
+                  )}
+                  <td onClick={(e) => e.stopPropagation()}>
+                    <div class="row" style="flex-wrap:nowrap;gap:6px">
+                      <Button small {...(isOpen ? { kind: 'primary' as const } : {})} onClick={() => openEditor(shared.id, hasOv, canOv)}>{isOpen ? '▾ 收合座位' : '▸ 編輯座位'}</Button>
+                      {(isReserve || orphan) && (
+                        <details class="moremenu"><summary aria-label={`${r.name} 更多操作`}>⋯</summary>
+                          <div class="menu stack" style="gap:6px">
+                            {isReserve && <Button small onClick={() => p.onChange(duplicateRoom(p.rooms, r.id))}>複製這間教室</Button>}
+                            {p.selected && p.onSelect
+                              ? <RoomRemove name={r.name} inThis={on} inUse={!!p.inUse?.(r.id)} onThis={() => p.onSelect!(p.selected!.filter((x) => x !== r.id))} onShared={() => p.onChange(removeRoom(p.rooms, r.id))} />
+                              : <ConfirmButton small copy={confirmCopy.deleteRoom(r.name, !!p.inUse?.(r.id))} onConfirm={() => p.onChange(removeRoom(p.rooms, r.id))}>刪除</ConfirmButton>}
+                          </div>
+                        </details>
+                      )}
+                    </div>
+                  </td>
+                </tr>,
+                isOpen && (
+                  <tr key={`${shared.id}-edit`} class="editrow"><td colSpan={junior ? 4 : 5}>
+                    {canOv ? (
+                      <div class="stack" style="gap:6px;margin-bottom:8px">
+                        <div class="row"><span class="label">套用範圍</span>
+                          <Seg<'exam' | 'shared'> label={`${r.name}套用範圍`} value={scope} options={[{ value: 'exam', label: '只這次考試' }, { value: 'shared', label: '共用設定（所有考試）' }]} onChange={setScope} /></div>
+                        <p class="small muted">{examScope ? '只改這次考試：共用設定的教室不變，其他考試不受影響。' : '改共用設定：用到這間教室的所有考試都會跟著變。'}</p>
+                        {hasOv && (
+                          <div><ConfirmButton small kind="default" copy={confirmCopy.restoreRoomOverride(r.name)} onConfirm={() => { p.onOverride!(r.id, null); setScope('shared'); }}>還原成共用設定</ConfirmButton></div>
+                        )}
+                      </div>
+                    ) : null}
+                    <SeatGrid paper={p.paper} room={editing} lim={lim} cap={lim.cap} steppers {...(examScope ? { examOnly: true } : {})} onClose={() => setOpen(null)}
+                      onChange={(x) => (examScope ? p.onOverride!(r.id, layoutOf(x)) : upd(r.id, () => x))} />
+                    {reasons.length > 0 && <p class="small hint">{reasons.join('；')}。</p>}
+                  </td></tr>
+                ),
+              ];
+            })}
+            {shown.length === 0 && <tr><td colSpan={junior ? 4 : 5} class="muted">還沒有教室。班級教室依名冊的班級自動帶出，請先匯入學生名單。</td></tr>}
+          </tbody>
+        </table>
+      </div>
+      {!junior && (
+        <div class="btnrow">
+          <Button onClick={() => p.onChange(addRoom(p.rooms, 'reserve', p.division ?? 'senior', ctx))}>＋ 新增預備教室</Button>
+          <span class="small muted">班級教室跟著名冊班級走，不能手動新增；手動新增的都是預備教室（抽離用，座位另計）。</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -115,15 +184,13 @@ export function RoomTable(p: {
   onGoSchool?: () => void;
 }) {
   const [open, setOpen] = useState<string | null>(null);
-  const cap = seatCap(p.paper);
-  const lim = seatLimits(p.paper);
   const junior = p.division === 'junior';
   const ctx = { classes: p.classes ?? [], exams: p.exams ?? [] };
   const shown = p.rooms.filter((r) => roomDivision(r, ctx) === p.division && !(junior && r.kind === 'reserve'));
   const upd = (id: string, f: (r: Classroom) => Classroom) => p.onChange(patchRoom(p.rooms, id, (r) => { const x = f(r); return x.division ? x : { ...x, division: p.division }; }));
   return (
     <div class="stack">
-      <p class="muted small">座位上限：每間最多 {lim.rows} 排×{lim.depth} 深位、{cap} 座；超過 7×7 的舊教室標籤無法對應，請縮小。點「編輯座位」調整座位排列。</p>
+      <p class="muted small">座位上限：班級教室最多 7 排×7 深位（49 座）；預備教室最多 7 排×8 深位（56 座）。點「編輯座位」調整座位排列。</p>
       <Alert tone="info"><b>所屬部別</b>決定這間教室在高中部或國中部的清單出現。舊資料讀進來時程式會依內容推斷；推斷錯了，直接在這一欄改，改完馬上換到另一個部別的清單。</Alert>
       <div class="scroll">
         <table class="t compact nw">
@@ -149,22 +216,20 @@ export function RoomTable(p: {
                   <td onClick={(e) => e.stopPropagation()}>
                     <div class="row" style="flex-wrap:nowrap">
                       <Button small {...(isOpen ? { kind: 'primary' as const } : {})} onClick={toggle}>{isOpen ? '收合座位' : '編輯座位'}</Button>
-                      <Button small onClick={() => p.onChange(duplicateRoom(p.rooms, r.id))}>複製</Button>
-                      <ConfirmButton small copy={confirmCopy.deleteRoom(r.name, !!p.inUse?.(r.id))} onConfirm={() => p.onChange(removeRoom(p.rooms, r.id))}>刪除</ConfirmButton>
+                      {r.kind === 'reserve' && <Button small onClick={() => p.onChange(duplicateRoom(p.rooms, r.id))}>複製</Button>}
+                      {(r.kind === 'reserve' || isOrphanClassRoom(r, p.classes?.filter((c) => c.division === p.division))) && <ConfirmButton small copy={confirmCopy.deleteRoom(r.name, !!p.inUse?.(r.id))} onConfirm={() => p.onChange(removeRoom(p.rooms, r.id))}>刪除</ConfirmButton>}
                     </div>
                   </td>
                 </tr>,
-                isOpen && <tr key={`${r.id}-edit`} class="editrow"><td colSpan={6}><SeatGrid paper={p.paper} room={r} cap={cap} lim={lim} steppers onClose={() => setOpen(null)} onChange={(x) => upd(r.id, () => x)} /></td></tr>,
+                isOpen && <tr key={`${r.id}-edit`} class="editrow"><td colSpan={6}><SeatGrid paper={p.paper} room={r} cap={roomLimitsOf(r.kind).cap} lim={roomLimitsOf(r.kind)} steppers onClose={() => setOpen(null)} onChange={(x) => upd(r.id, () => x)} /></td></tr>,
               ];
             })}
-            {shown.length === 0 && <tr><td colSpan={6} class="muted">{junior ? '國中部還沒有教室，請按下方「新增教室」。' : '高中部還沒有教室。'}</td></tr>}
+            {shown.length === 0 && <tr><td colSpan={6} class="muted">還沒有教室。班級教室依名冊的班級自動帶出，請先匯入學生名單。</td></tr>}
           </tbody>
         </table>
       </div>
       <div class="row">
-        <Button onClick={() => p.onChange(addRoom(p.rooms, 'class', p.division, ctx))}>新增教室</Button>
-        {!junior && <Button onClick={() => p.onChange(addRoom(p.rooms, 'reserve', p.division, ctx))}>新增預備教室</Button>}
-        <BulkAdd onAdd={(n) => p.onChange(addRooms(p.rooms, 'class', n, p.division, ctx))} />
+        {!junior && <Button onClick={() => p.onChange(addRoom(p.rooms, 'reserve', p.division, ctx))}>＋ 新增預備教室</Button>}
       </div>
     </div>
   );
@@ -201,17 +266,6 @@ function RoomRemove(p: { name: string; inThis: boolean; inUse: boolean; onThis: 
   );
 }
 
-/** 一次新增 N 間教室（#205）：先選間數再按鈕；新增後可逐間改排數，或用「複製這間教室」 */
-function BulkAdd(p: { onAdd: (n: number) => void }) {
-  const [n, setN] = useState(6);
-  return (
-    <span class="row" style="flex-wrap:nowrap;gap:6px">
-      <Stepper label="一次新增間數" value={n} max={20} onChange={setN} />
-      <Button onClick={() => p.onAdd(n)}>一次新增 {n} 間教室</Button>
-    </span>
-  );
-}
-
 /** 教室列前的圓圈：名稱與某班相同＝該班縮寫＋代表色；其他班級教室＝編號；預備教室＝「備」（不再寫莫名的「班」） */
 function RoomBadge(p: { room: Classroom; index: number; classes?: { name: string; colorIndex: number }[] }) {
   const cls = p.room.kind === 'class' ? p.classes?.find((c) => c.name === p.room.name) : undefined;
@@ -232,8 +286,8 @@ function SeatGrid(p: { room: Classroom; paper: LabelPaper; cap: number; lim: { r
   const rows = Array.from({ length: room.rows }, (_, i) => i + 1);
   return (
     <div class="roomedit prev">
-      <div class="row" style="justify-content:space-between"><div><h4>{p.examOnly ? <><Badge tone="info">本次專用</Badge>編輯本次座位表：</> : '編輯座位表：'}{room.name}</h4>
-        <p class="small muted">橫排 {room.rows} × 深位 {room.depth} ＝ {roomCapacity(room)} 個座位，可排 {room.seatCount}、不排 {roomCapacity(room) - room.seatCount}。一間教室最多 {p.lim.rows} 排×{p.lim.depth} 深位（{p.cap} 個座位）。座位只能多、不能少；不納入預備教室。{p.examOnly ? '這裡的調整只用在這次考試，不會改動共用教室清單。' : ''}</p>
+      <div class="row" style="justify-content:space-between"><div><h4>{p.examOnly ? <><Badge tone="info">本次專用</Badge>調整本次座位表：</> : '編輯座位表：'}{room.name}</h4>
+        <p class="small muted">橫排 {room.rows} × 深位 {room.depth} ＝ {roomCapacity(room)} 個座位，可排 {room.seatCount}、不排 {roomCapacity(room) - room.seatCount}。這類教室最多 {p.lim.rows} 排×{p.lim.depth} 深位（{p.cap} 個座位）。{p.examOnly ? '這裡的調整只用在這次考試，不會改動共用教室清單。' : ''}</p>
         {seatLimitNote(room) && <p class="small muted">{seatLimitNote(room)}</p>}
         {labelSplitNote(room, p.paper) && <p class="small hint">{labelSplitNote(room, p.paper)}</p>}</div>
         <Button small onClick={p.onClose}>收合</Button></div>
