@@ -713,7 +713,7 @@ function tableSection(page: TablePageModel, opts: DocxOptions): ISectionOptions 
   const columnWidths = page.widths.map((f) => Math.floor((contentW * f) / sum));
   const nHead = page.headGroups ? 2 : 1;
   const fit = land ? landscapeFit(page.rows.length + (page.totalRow ? 1 : 0), nHead, page.emWidths ? sum : undefined) : { rowMm: 9, pt: 10.5 };
-  const mk = (texts: string[], kind: 'head' | 'body' | 'total', kinds?: ('exam' | 'study' | undefined)[]) =>
+  const mk = (texts: string[], kind: 'head' | 'body' | 'total', kinds?: ('exam' | 'study' | 'multi' | undefined)[]) =>
     new TableRow({
       tableHeader: kind === 'head',
       cantSplit: true,
@@ -726,10 +726,10 @@ function tableSection(page: TablePageModel, opts: DocxOptions): ISectionOptions 
             borders: allBorders(thin('808080')),
             shading:
               kind === 'body'
-                ? kinds?.[i] === 'study' ? { type: ShadingType.CLEAR, fill: 'D9D9D9', color: 'auto' } : undefined
+                ? kinds?.[i] === 'study' ? { type: ShadingType.CLEAR, fill: 'D9D9D9', color: 'auto' } : kinds?.[i] === 'multi' ? { type: ShadingType.CLEAR, fill: 'FFF4C2', color: 'auto' } : undefined
                 : { type: ShadingType.CLEAR, fill: kind === 'head' ? 'EEEEEE' : 'F4F4F4', color: 'auto' },
             margins: { top: land ? 10 : 40, bottom: land ? 10 : 40, left: 60, right: 60 },
-            children: [para([run(t, { size: fit.pt, bold: kind !== 'body' || kinds?.[i] === 'exam' }, mode)], land && kind !== 'body' ? AlignmentType.CENTER : AlignmentType.LEFT, land ? { spacing: { before: 0, after: 0, line: Math.round(fit.pt * 20 * 1.25), lineRule: LineRuleType.EXACT } } : {})],
+            children: [para([run(t, { size: fit.pt, bold: kind !== 'body' || kinds?.[i] === 'exam' || kinds?.[i] === 'multi' }, mode)], land && kind !== 'body' ? AlignmentType.CENTER : AlignmentType.LEFT, land ? { spacing: { before: 0, after: 0, line: Math.round(fit.pt * 20 * 1.25), lineRule: LineRuleType.EXACT } } : {})],
           }),
       ),
     });
