@@ -6,7 +6,7 @@ describe('頁尾元件', () => {
   it('顯示程式名稱、版本、預發布標示與版權', () => {
     const html = renderToString(<Footer version="0.1.0-beta.1" buildDate="2026-11-08" />);
     expect(html).toContain('<footer');
-    expect(html).toContain('模擬考小幫手');
+    expect(html).toContain('考務小幫手');
     expect(html).toContain('v0.1.0-beta.1');
     expect(html).toContain('pf-pre');
     expect(html).toContain('© 版權所有');

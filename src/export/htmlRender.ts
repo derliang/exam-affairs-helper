@@ -235,5 +235,5 @@ export function renderPrintHtml(pages: HtmlPages, o: HtmlOptions): string {
     ...(pages.table ?? []).map((t) => tableHtml(t, o)),
   ];
   if (body.length === 0) throw new Error('沒有可輸出的頁面');
-  return `<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>模擬考小幫手輸出</title><style>${CSS}${o.extraCss ?? ''}</style></head><body>${body.join('\n')}</body></html>`;
+  return `<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>考務小幫手輸出</title><style>${CSS}${o.extraCss ?? ''}</style></head><body>${body.join('\n')}</body></html>`;
 }
