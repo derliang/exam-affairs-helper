@@ -982,3 +982,20 @@ details.more{font-size:14px;color:var(--text-2)}details.more summary{cursor:poin
   .ws .side-r .stepdock .btn{width:auto;flex:1 1 140px;white-space:normal}
   .ws:has(.stepdock){padding-bottom:110px}
 }
+
+/* G21 第 3 步教室表格（批次 B）：縮圖、更多選單 */
+.roomtable td{vertical-align:middle}
+.roomtable .info{font-size:13px;color:var(--text-2);font-variant-numeric:tabular-nums}
+.roomtable tr.off>td:not(:first-child){opacity:.55}
+.seatthumb{display:inline-grid;gap:1px;padding:3px;border:1px solid var(--line-2);border-radius:var(--r-sm,4px);background:var(--surface);flex:none;align-self:center}
+.seatthumb i{width:5px;height:5px;border-radius:1px;background:var(--accent)}
+.seatthumb i.off{background:var(--line-2);opacity:.5}
+.moremenu{position:relative}
+.moremenu>summary{list-style:none;cursor:pointer;min-width:36px;height:32px;display:grid;place-items:center;border:1px solid var(--line-2);border-radius:var(--r-md);background:var(--surface);font-weight:700}
+.moremenu>summary::-webkit-details-marker{display:none}
+.moremenu .menu{position:absolute;right:0;top:36px;z-index:5;min-width:150px;padding:8px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);box-shadow:0 4px 14px rgba(0,0,0,.15)}
+.roomtable{min-width:780px}
+.roomtable td{white-space:nowrap}
+.roomtable td .field{min-width:130px}
+.roomtable td .info,.roomtable td.info{white-space:normal;min-width:130px}
+.roomtable tr.editrow td{white-space:normal}
