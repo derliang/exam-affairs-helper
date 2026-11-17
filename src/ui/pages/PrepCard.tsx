@@ -4,12 +4,14 @@
  * 下半＝合併標籤（範例）：每座位一張、每節一行、印節次＋科目＋班座號、不印時間。
  */
 import type { ExamConfig } from '../../data';
+import { ReserveLabelSample } from './LabelSample';
 import { detachPreview, reserveModeOf } from '../seating';
 import { updateExam, type Doc } from '../store';
 
 export function PrepCard(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => void }) {
   const { doc, exam } = p;
   const m = reserveModeOf(exam);
+  const paper = exam.labelLayout.paper; // G26：範例跟著標籤預設紙張
   const set = (v: 'peer' | 'proctor') => {
     const r = updateExam(doc, exam.id, { reserveSeatMode: v });
     if (r.ok) p.onChange(r.doc);
@@ -59,13 +61,9 @@ export function PrepCard(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
       </div>
       <div class="psec">
         <div class="stack">
-          <div><h4 class="sh">合併標籤（範例）</h4><p class="small muted">預備教室每個座位一張。同一個座位在不同節由不同人使用時，各節列在同一張，只貼一次；每節一行、同字級，印「節次＋科目＋班座號」，不印時間。抽離自習不排座位、不印標籤，只出名單。</p></div>
-          <div class="plbls">
-            <div class="plbl"><div class="plh"><span>備一</span><span>座位 1-1</span></div><div class="pl"><small>第二天 時段一</small><span>歷史　勤 07</span></div></div>
-            <div class="plbl"><div class="plh"><span>備一</span><span>座位 1-2</span></div><div class="pl"><small>第一天 時段一</small><span>物理　勇 12</span></div><div class="pl"><small>第二天 時段三</small><span>數乙　勇 12</span></div></div>
-            <div class="plbl"><div class="plh"><span>備一</span><span>座位 2-1</span></div><div class="pl"><small>第一天 時段二</small><span>化學　誠 03</span></div><div class="pl"><small>第二天 時段二</small><span>地理　勤 21</span></div></div>
-          </div>
-          <p class="small muted">第 2 張：同一個人（勇班 12 號）跨節坐同一格。第 3 張：兩個不同的人共用同一格。</p>
+<div><h4 class="sh">合併標籤（範例）</h4><p class="small muted">預備教室每個座位一張，版式與一般標籤相同（右上角座標、格內每人一區：班級座號、姓名、第幾天考什麼科目）。同一個座位在不同節由不同人使用時，列在同一張、只貼一次。下面是用實際輸出的程式畫出的 3 張範例（假資料，{paper}）。抽離自習不排座位、不印標籤，只出名單。</p></div>
+          <ReserveLabelSample paper={paper} />
+          <p class="small muted">第 2 張：同一個人（勇班 12 號）跨天坐同一格。第 3 張：兩個不同的人共用同一格。預備教室的標籤併在「標籤」檔案的最後，頁首標「預備教室」。</p>
         </div>
       </div>
     </div>

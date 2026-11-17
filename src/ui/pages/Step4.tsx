@@ -3,6 +3,8 @@ import { Alert, Badge, Button, More, Seg, StepHead } from '../components';
 import { detachPreview, examEntries, examRooms, groupTable, markRows, needsMarks, setMarkChoice, type MarkRow, type StepNo } from '../seating';
 import { subjectShort } from '../../core/subjectShort';
 import { updateExam, type Doc } from '../store';
+import { studyCapacity } from '../capacity';
+import { StudyNeedDetail } from './StudyCapacityView';
 
 const TRACK: Record<Track, string> = { science: '理組', liberal: '文組' };
 
@@ -10,6 +12,8 @@ const TRACK: Record<Track, string> = { science: '理組', liberal: '文組' };
 const NoBreakList = (p: { items: string[] }) => (
   <>{p.items.map((x, i) => <span key={x}>{i > 0 && <>、<wbr /></>}<span class="nb">{x}</span></span>)}</>
 );
+
+const moreSide = (r: MarkRow): boolean => (r.mode === 'mark-absent' && r.notTaking > r.taking) || (r.mode === 'mark-extra' && r.taking > r.notTaking);
 
 function markText(r: MarkRow): string {
   if (r.mode === 'mark-absent') return `X${subjectShort(r.subjectName)}（不考的 ${r.notTaking} 人）`;
@@ -21,7 +25,7 @@ function markText(r: MarkRow): string {
 function StateBadge(p: { r: MarkRow }) {
   if (p.r.state === 'undecided') return <Badge tone="warn">接近一半</Badge>;
   if (p.r.state === 'locked') return <Badge>已手動指定</Badge>;
-  return <Badge tone="ok">已採用系統建議（可改）</Badge>;
+  return <Badge tone="ok">系統建議</Badge>;
 }
 
 /** ④ 標示與抽離規則（DESIGN 10.4、原型 v4）：組別對照表 → 各科標示（接近一半由使用者選並鎖定，D12）→ 抽離人數 */
@@ -69,7 +73,7 @@ export function Step4(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
         : (
           <Alert tone="ok">
             {rows.some((r) => r.state === 'auto')
-              ? <><b>已採用系統建議（可改）。</b>沒有接近一半的科目；下表標「系統建議」的 {rows.filter((r) => r.state === 'auto').length} 項是程式依「標少數」自動採用的，不用逐項確認就能排座，想換標法可直接在表中改選。</>
+              ? <><b>已採用系統建議。</b>沒有接近一半的科目；下表標「系統建議」的 {rows.filter((r) => r.state === 'auto').length} 項是程式依「標少數」自動採用的，不用逐項確認就能排座；要換標法，按該列「標示方式」的按鈕就能改（改完該列變「已手動指定」，可按「改回系統建議」）。</>
               : <>沒有需要標示的科目，可以前往排座。</>}
           </Alert>
         )}
@@ -99,37 +103,33 @@ export function Step4(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
           : (
             <div class="scroll">
               <table class="t compact">
-                <thead><tr><th>組</th><th>科目</th><th>考</th><th>不考</th><th>座位表標示</th><th>狀態</th></tr></thead>
+                <thead><tr><th>組</th><th>科目</th><th>考</th><th>不考</th><th>標示方式</th><th>座位表標示與狀態</th></tr></thead>
                 <tbody>
                   {shown.map((r) => (
                     <tr key={`${r.track}/${r.subjectId}`}>
                       <td>{r.track ? TRACK[r.track] : '全部'}</td><td><b>{r.subjectName}</b></td>
-                      <td class="n">{r.taking}</td><td class="n">{r.notTaking}</td><td>{markText(r)}</td><td><StateBadge r={r} /></td>
+                      <td class="n">{r.taking}</td><td class="n">{r.notTaking}</td>
+                      <td>
+                        <Seg<MarkMode | ''>
+                          label={`${r.track ? TRACK[r.track] : ''}${r.subjectName}標示方式`}
+                          value={r.mode ?? ''}
+                          onChange={(v) => choose(r, v || undefined)}
+                          options={[
+                            { value: 'mark-absent', label: '✕ 標不考的' },
+                            { value: 'mark-extra', label: '＋ 標考的' },
+                            { value: 'none', label: '不標' },
+                          ]}
+                        />
+                        {r.state === 'locked' && <div><Button kind="ghost" small onClick={() => choose(r, undefined)}>改回系統建議</Button></div>}
+                        {moreSide(r) && <p class="small errnote">標的是人數較多的一邊（{r.mode === 'mark-absent' ? `不考 ${r.notTaking} 人` : `考 ${r.taking} 人`}），標示會變多、抽離的人也變多；建議標少數那一邊。仍可照你的選擇。</p>}
+                      </td>
+                      <td>{markText(r)}<br /><StateBadge r={r} /></td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           )}
-        {rows.filter((r) => r.nearHalf).map((r) => (
-          <div class="stack" style="gap:8px" key={`near-${r.track}/${r.subjectId}`}>
-            <Alert tone={r.state === 'undecided' ? 'warn' : 'info'}>
-              <b>{r.track ? TRACK[r.track] : ''}「{r.subjectName}」：</b>考 {r.taking} 人、不考 {r.notTaking} 人，接近一半。請選要標哪一邊，選完就以你的選擇為準（可隨時改回自動判斷），不由程式替你決定。{r.state === 'locked' && r.mode && <><br />已手動指定：標「{r.mode === 'mark-absent' ? 'X' : '＋'}{subjectShort(r.subjectName)}」。</>}
-            </Alert>
-            <div class="btnrow">
-              <Seg<MarkMode | ''>
-                label={`${r.track ? TRACK[r.track] : ''}${r.subjectName}要標哪一邊`}
-                value={r.state === 'locked' && r.mode ? r.mode : ''}
-                onChange={(v) => choose(r, v || undefined)}
-                options={[
-                  { value: 'mark-absent', label: `標「X${subjectShort(r.subjectName)}」不考的 ${r.notTaking} 人` },
-                  { value: 'mark-extra', label: `標「＋${subjectShort(r.subjectName)}」考的 ${r.taking} 人` },
-                ]}
-              />
-              {r.state === 'locked' && <Button kind="ghost" small onClick={() => choose(r, undefined)}>改回自動判斷</Button>}
-            </div>
-          </div>
-        ))}
       </div>
 
       <div class="psec">
@@ -137,7 +137,7 @@ export function Step4(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
         {!preview.ok
           ? (
             <Alert tone="danger" action={<Button onClick={() => p.onStep(3)}>前往 ③ 教室設定</Button>}>
-              <b>抽離排不下：</b>{preview.errors.join('；')}。<br />請到 ③ 多勾一間預備教室、加大預備教室的座位，或回上面改標示的方式。
+              <b>抽離排不下：</b>{preview.errors.join('；')}。<br />請到 ③ 多勾一間預備教室、加大預備教室的座位，或回上面改標示的方式。（這裡與 ③ 教室設定的「預備教室需求」是同一組數字。）
             </Alert>
           )
           : (
@@ -162,6 +162,7 @@ export function Step4(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
               </table>
             </div>
           )}
+        <StudyNeedDetail sc={studyCapacity(doc, exam)} compact />
         {exam.kind === 'gsat' && <p class="small muted">國文標示整個一起：國綜、國寫兩節一起抽離（節次見共用設定「節次與時長」）。</p>}
         <div class="row"><Button onClick={() => p.onStep(5)}>查看預備教室與抽離</Button></div>
       </div>
