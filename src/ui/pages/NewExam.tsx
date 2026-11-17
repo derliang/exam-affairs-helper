@@ -2,6 +2,8 @@ import { useState } from 'preact/hooks';
 import type { ExamKind, Semester } from '../../data';
 import { Alert, Button, PageHead } from '../components';
 import { checkExamName } from '../flow';
+import { confirmEnv, envReport } from '../env';
+import { EnvCard } from './EnvCard';
 import { defaultSemester, newExam, nextRound, previousExam, schoolYear, suggestExamName, type Doc } from '../store';
 
 const CN = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
@@ -13,7 +15,13 @@ const TYPES: { kind: ExamKind; level: string; title: string; subj: string; soon?
 ];
 
 /** 新增模擬考整頁三段式：1 選類型、2 基本資料、3 預設設定（沿用上一次同類型） */
-export function NewExam(p: { doc: Doc; onCancel: () => void; onCreate: (d: Doc, examId: string) => void; now?: () => Date }) {
+export function NewExam(p: {
+  doc: Doc; onCancel: () => void; onCreate: (d: Doc, examId: string) => void; now?: () => Date;
+  /** G37：按「確認使用」把環境快照存進共用設定 */
+  onEnv?: (d: Doc) => void;
+  /** G37：跳去共用設定修改環境（有「← 回到」導覽） */
+  onGoSettings?: (tab: 'roster' | 'classes' | 'school' | 'rooms' | 'sched', division: 'senior' | 'junior') => void;
+}) {
   const now = p.now ?? (() => new Date());
   const [kind, setKind] = useState<ExamKind>('gsat');
   const [name, setName] = useState(() => suggestExamName(p.doc, 'gsat', (p.now ?? (() => new Date()))()));
@@ -34,6 +42,9 @@ export function NewExam(p: { doc: Doc; onCancel: () => void; onCreate: (d: Doc, 
   const yearNum = Number(yearText);
   const yearOk = Number.isInteger(yearNum) && yearNum >= 90 && yearNum <= 200;
   const hasRound = kind !== 'bcct';
+  // G37：環境確認是步驟 1 的門——沒確認（琥珀）或缺必要設定（紅）都不能建立
+  const envRep = envReport(p.doc, kind, hasRound ? round : undefined);
+  const envOk = envRep.state === 'confirmed';
   const rounds = Array.from({ length: Math.max(4, round) }, (_, i) => i + 1);
   const onYear = (v: string) => {
     setYearText(v);
@@ -57,7 +68,7 @@ export function NewExam(p: { doc: Doc; onCancel: () => void; onCreate: (d: Doc, 
     if (!semEdited) setSemester(defaultSemester(k));
   };
   const submit = () => {
-    if (!check.ok || !yearOk) return;
+    if (!check.ok || !yearOk || !envOk) return;
     const t = now();
     const year = Number(yearText);
     const r = newExam(p.doc, kind, name, t, { semester, year, ...(kind === 'gsat' ? { round } : {}), ...(prev ? { prev } : {}) });
@@ -118,6 +129,10 @@ export function NewExam(p: { doc: Doc; onCancel: () => void; onCreate: (d: Doc, 
           </div>
         </div>
 
+        <EnvCard doc={p.doc} kind={kind} round={hasRound ? round : undefined}
+          onConfirm={() => p.onEnv?.(confirmEnv(p.doc, kind, hasRound ? round : undefined, now()))}
+          {...(p.onGoSettings ? { onGoSettings: (tab: 'roster' | 'classes' | 'school' | 'rooms' | 'sched') => p.onGoSettings!(tab, isJ ? 'junior' : 'senior') } : {})} />
+
         <div class="psec"><div class="lab">3　預設設定</div>
           {prev
             ? <Alert tone="info" noIcon><b>會帶入「{prev.name}」的設定</b>：學生名單、教室、{isJ ? '' : '標示與抽離規則、'}名稱以外的選項。每一步都能再改，改了不影響舊的模擬考。</Alert>
@@ -129,7 +144,8 @@ export function NewExam(p: { doc: Doc; onCancel: () => void; onCreate: (d: Doc, 
         {err && <Alert tone="danger">{err}</Alert>}
         <div class="btnrow" style="justify-content:flex-end">
           <Button onClick={p.onCancel}>取消</Button>
-          <Button kind="primary" disabled={!check.ok || !yearOk} onClick={submit}>建立並開始</Button>
+          {!envOk && <span class="small muted" role="status">先確認上面「本次使用的環境」才能建立</span>}
+          <Button kind="primary" disabled={!check.ok || !yearOk || !envOk} onClick={submit}>建立並開始</Button>
         </div>
       </div>
     </section>

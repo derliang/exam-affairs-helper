@@ -15,6 +15,8 @@ import { scrollPageTop, backLabel, goBack, guardNav, goTo, initialNav, pushTo, s
 import { Exams } from './pages/Exams';
 import { NewExam } from './pages/NewExam';
 import { Init } from './pages/Init';
+import { EnvWizard } from './pages/EnvWizard';
+import { WIZARD_STEPS } from './env';
 import { Copyright } from './pages/Copyright';
 import { Privacy } from './pages/Privacy';
 import { Lookup } from './pages/Lookup';
@@ -88,13 +90,16 @@ export function App() {
   }, []);
 
   // 資料夾授權後載入；每次變更存檔
-  const load = async () => {
+  // 回傳是否為全新資料夾（G37：沒有設定檔的新資料夾才自動進首次使用精靈；既有資料夾只靠列表橫幅）
+  const load = async (): Promise<boolean> => {
     const raw = await repo.load();
     const d = migrateRosterYear(withDefaults(raw));
     setHist(newHistory(d));
     setWarning(fsRepo?.lastWarning());
     if (d !== raw) void repo.save(d); // 全新資料夾：把預設班級存下來
+    return d !== raw && !raw.settings.env && raw.exams.length === 0;
   };
+  const afterLoad = (fresh: boolean) => go(fresh ? { page: 'wizard', step: 1 } : { page: 'exams' });
   const edit = (d0: Doc) => {
     const d = stampModified(hist.present, d0, new Date());
     setHist((h) => commit(h, d, describeChange(h.present, d))); setStaleNote(undefined); void repo.save(d);
@@ -102,8 +107,9 @@ export function App() {
   // 更換／重新連結／搬到新位置（G16、G24）完成：需要時讀入新資料夾；帶著暫存修改過去的不重讀（重讀會蓋掉畫面上的修改）
   const folderDone = async (res: { carried: boolean; reload: boolean }) => {
     setFolderDlg(null); setWarning(undefined);
-    if (res.reload) { try { await load(); } catch { setWarning('新資料夾已選定，但讀取資料失敗，請改選別的資料夾或重新整理頁面。'); } }
-    if (!hadFolder.current && fsRepo?.hasFolder()) go({ page: 'exams' });
+    let fresh = false;
+    if (res.reload) { try { fresh = await load(); } catch { setWarning('新資料夾已選定，但讀取資料失敗，請改選別的資料夾或重新整理頁面。'); } }
+    if (!hadFolder.current && fsRepo?.hasFolder()) afterLoad(fresh);
   };
   // 放棄找不到資料夾裡未存的修改：丟掉暫存、回到選擇資料夾畫面（可重新連結或選別的）
   const discardPending = () => {
@@ -167,7 +173,7 @@ export function App() {
   const barFrom = { route: r, label: pageName(r, hist.present) };
   const barItems: AppBarItem[] = [
     { id: 'init', label: '資料夾設定', current: r.page === 'init', onClick: () => go({ page: 'init' }) },
-    { id: 'exams', label: '模擬考列表', current: ['exams', 'new', 'step', 'reconcile', 'override', 'reserve'].includes(r.page), disabled: !hasFolder, onClick: () => go({ page: 'exams' }) },
+    { id: 'exams', label: '模擬考列表', current: ['exams', 'new', 'wizard', 'step', 'reconcile', 'override', 'reserve'].includes(r.page), disabled: !hasFolder, onClick: () => go({ page: 'exams' }) },
     ...(hasFolder ? enabledNav({ settings: hist.present.settings }).map((n) => ({ id: n.id, label: n.label, current: r.page === n.route.page, onClick: () => go2(n.route, barFrom) })) : []),
     { id: 'features', label: '選用功能', current: inSettings && r.tab === 'features', disabled: !hasFolder, onClick: () => toSettings({ page: 'settings', tab: 'features' }) },
     { id: 'settings', label: '共用設定', current: inSettings && r.tab !== 'features', disabled: !hasFolder, onClick: () => toSettings({ page: 'settings', ...(lastExam && r.page === 'step' ? { division: lastExam.division } : {}) }) },
@@ -204,12 +210,13 @@ export function App() {
         {staleNote && r.page !== 'init' && <div style="margin-bottom:12px"><Alert tone="warn">{staleNote}</Alert></div>}
         {r.page === 'privacy' && <Privacy {...(backLabel(gnav) ? { backLabel: backLabel(gnav)! } : {})} onBack={() => (gnav.back.length ? back() : go({ page: hasFolder ? 'exams' : 'init' }))} onCopyright={() => go2({ page: 'copyright' }, { route: r, label: pageName(r, hist.present) })} />}
         {r.page === 'copyright' && <Copyright onPrivacy={() => go2({ page: 'privacy' }, { route: r, label: pageName(r, hist.present) })} {...(backLabel(gnav) ? { backLabel: backLabel(gnav)! } : {})} onBack={() => (gnav.back.length ? back() : go({ page: hasFolder ? 'exams' : 'init' }))} />}
-        {r.page === 'init' && <Init repo={repo} fsSupported={fsSupported} {...(fsRepo ? { fs: fsRepo } : {})} doc={hist.present} missing={folderMissing} onDialog={openFolderDlg} onBack={() => go({ page: 'exams' })} onRestore={fsRepo ? async () => { const ok = await fsRepo.restore(); setRestoreTick((n) => n + 1); return ok; } : undefined} onDone={async () => { await load(); go({ page: 'exams' }); }} />}
+        {r.page === 'init' && <Init repo={repo} fsSupported={fsSupported} {...(fsRepo ? { fs: fsRepo } : {})} doc={hist.present} missing={folderMissing} onDialog={openFolderDlg} onBack={() => go({ page: 'exams' })} onRestore={fsRepo ? async () => { const ok = await fsRepo.restore(); setRestoreTick((n) => n + 1); return ok; } : undefined} onDone={async () => { afterLoad(await load()); }} />}
         {folderMissing && fsRepo && r.page !== 'init' && <div style="margin-bottom:12px"><FolderLostAlert name={fsRepo.folderName?.() ?? ''} pending={fsRepo.pendingCount()} onRelink={() => openFolderDlg('relink')} onChange={() => openFolderDlg('change')} onDiscard={() => openFolderDlg('discard')} onSettings={() => go2({ page: 'init' }, { route: r, label: pageName(r, hist.present) })} /></div>}
         {saveErr && !folderMissing && <div style="margin-bottom:12px"><Alert tone="danger" action={<Button small onClick={retrySave}>重試存檔</Button>}>最新的修改還沒有存進資料夾（{saveErr}）。請確認資料夾仍可寫入後按「重試存檔」；在存妥之前請不要關閉頁面。</Alert></div>}
         {warning && r.page !== 'init' && <div style="margin-bottom:12px"><Alert tone="warn">{warning}</Alert></div>}
-        {r.page === 'exams' && <Exams doc={hist.present} folder={repo.folderName?.()} onOpen={(examId) => { openExam(examId); go({ page: 'step', examId, step: 1 }); }} onNew={() => go({ page: 'new' })} onSettings={() => go2({ page: 'settings' }, { route: r, label: pageName(r, hist.present) })} onChangeFolder={() => go2({ page: 'init' }, { route: r, label: pageName(r, hist.present) })} {...(folderMissing ? { listError: <FolderListError onRelink={() => openFolderDlg('relink')} /> } : {})} onArchive={(id) => archiveExam(id, true)} onRestore={(id) => archiveExam(id, false)} onDelete={removeExam} />}
-        {r.page === 'new' && <NewExam doc={hist.present} onCancel={() => go({ page: 'exams' })} onCreate={(d, examId) => { edit(d); go({ page: 'step', examId, step: 1 }); }} />}
+        {r.page === 'exams' && <Exams doc={hist.present} folder={repo.folderName?.()} onEnv={() => go({ page: 'wizard', step: 1 })} onOpen={(examId) => { openExam(examId); go({ page: 'step', examId, step: 1 }); }} onNew={() => go({ page: 'new' })} onSettings={() => go2({ page: 'settings' }, { route: r, label: pageName(r, hist.present) })} onChangeFolder={() => go2({ page: 'init' }, { route: r, label: pageName(r, hist.present) })} {...(folderMissing ? { listError: <FolderListError onRelink={() => openFolderDlg('relink')} /> } : {})} onArchive={(id) => archiveExam(id, true)} onRestore={(id) => archiveExam(id, false)} onDelete={removeExam} />}
+        {r.page === 'new' && <NewExam doc={hist.present} onCancel={() => go({ page: 'exams' })} onCreate={(d, examId) => { edit(d); go({ page: 'step', examId, step: 1 }); }} onEnv={edit} onGoSettings={(tab, division) => go2({ page: 'settings', tab, division }, { route: r, label: pageName(r, hist.present) })} />}
+        {r.page === 'wizard' && <EnvWizard doc={hist.present} step={r.step ?? 1} onStep={(step) => { setNav((s) => ({ ...s, route: { page: 'wizard', step } })); scrollPageTop(); }} onChange={edit} onGoSettings={(tab, division) => go2({ page: 'settings', tab, division }, { route: r, label: pageName(r, hist.present) })} onFinish={() => go({ page: 'exams' })} />}
         {r.page === 'lookup' && <Lookup doc={hist.present} examId={r.examId} crumbs={pathCrumbs} onGoStep={(examId, step) => go({ page: 'step', examId, step })} onExams={() => go({ page: 'exams' })} />}
         {r.page === 'settings' && <Settings doc={hist.present} onChange={edit} tab={r.tab} onTab={(tab) => setNav((s) => (s.route.page === 'settings' ? { ...s, route: { ...s.route, tab } } : s))} {...(r.division ? { division: r.division } : {})} />}
         {r.page === 'step' && <Workspace route={r} doc={stepDoc} onToRooms={(division) => go2({ page: 'settings', tab: 'rooms', division }, { route: r, label: pageName(r, hist.present) })} onToSchool={() => go2({ page: 'settings', tab: 'school' }, { route: r, label: pageName(r, hist.present) })} onToRoster={(division) => go2({ page: 'settings', tab: 'roster', division }, { route: r, label: pageName(r, hist.present) })} onChange={edit} onStep={(step) => go({ page: 'step', examId: r.examId, step })} onFix={(step) => go2({ page: 'step', examId: r.examId, step }, { route: r, label: pageName(r, hist.present) })} onReserve={() => go({ page: 'reserve', examId: r.examId })} ret={retStep} onRet={back} onExams={() => go({ page: 'exams' })} onRestore={(id) => archiveExam(id, false)} />}
@@ -228,6 +235,7 @@ export function pageName(r: Route, doc: Doc): string {
   switch (r.page) {
     case 'exams': return '模擬考列表';
     case 'new': return '新增模擬考';
+    case 'wizard': { const n = r.step ?? 1; return n >= 6 ? '首次設定 總覽' : `首次設定 第 ${n} 步 ${WIZARD_STEPS[n - 1]?.name ?? ''}`; }
     case 'settings': return '共用設定';
     case 'init': return '資料夾設定';
     case 'lookup': return '考生查詢';
