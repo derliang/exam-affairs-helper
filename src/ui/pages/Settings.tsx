@@ -57,7 +57,7 @@ type Props = { doc: Doc; onChange: (d: Doc) => void; division: Division };
 function Rooms({ doc, onChange, division, onGoSchool }: Props & { onGoSchool?: () => void }) {
   return (
     <div class="card stack">
-      <div><h3>教室清單（{division === 'junior' ? '國中部' : '高中部'}）</h3><p class="small muted">維護常用的班級教室與預備教室；每次模擬考從這裡用開關選出並自動帶入上次的選擇，可修改。座位表在這裡也能編輯，和模擬考 ③ 是同一個編輯畫面。</p></div>
+      <div><h3>教室清單（{division === 'junior' ? '國中部' : '高中部'}）</h3><p class="small muted">維護常用的教室與預備教室；每次模擬考從這裡用開關選出並自動帶入上次的選擇，可修改。座位表在這裡也能編輯，和模擬考 ③ 是同一個編輯畫面。</p></div>
       <RoomTable division={division} classes={doc.settings.classes} exams={doc.exams} inUse={(id) => doc.exams.some((e) => e.classroomIds.includes(id))} rooms={doc.settings.classrooms} paper={doc.settings.defaultLabelPaper} {...(onGoSchool ? { onGoSchool } : {})}
         onChange={(classrooms) => onChange({ ...doc, settings: { ...doc.settings, classrooms } })} />
     </div>

@@ -10,7 +10,7 @@ import { StepSide, hasSide } from './pages/StepSide';
 import { Alert, Button, EmptyState, PageHead, StepNav, StepNextContext, SummaryBar, UndoGroup } from './components';
 import { enabledNav, enabledStepPanels, FeatureContext } from './features';
 import { flowOf, nextAction } from './flow';
-import { backLabel, goBack, guardNav, goTo, initialNav, pushTo, stepTitle, type NavState, type Route } from './nav';
+import { scrollPageTop, backLabel, goBack, guardNav, goTo, initialNav, pushTo, stepTitle, type NavState, type Route } from './nav';
 import { Exams } from './pages/Exams';
 import { NewExam } from './pages/NewExam';
 import { Init } from './pages/Init';
@@ -220,6 +220,8 @@ function Workspace(p: { route: Extract<Route, { page: 'step' }>; doc: Doc; onToR
     const off = onAstPlanReady(() => setPlanTick((n) => n + 1));
     return () => { off(); setPlanDefer(false); };
   }, []);
+  // G4：換步驟（下一步按鈕、左側步驟列、待處理的「前往處理」、返回）一律回到頁面頂端；同一步內編輯不會觸發
+  useEffect(() => { scrollPageTop(); }, [p.route.examId, p.route.step]);
   const exam = p.doc.exams.find((e) => e.id === p.route.examId);
   if (!exam) {
     return <section><h2>{stepTitle(p.route.step)}</h2><EmptyState title="找不到這個模擬考" action={<Button kind="primary" onClick={p.onExams}>回模擬考列表</Button>}>它可能已被刪除，或資料夾換了。</EmptyState></section>;

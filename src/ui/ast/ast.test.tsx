@@ -188,7 +188,7 @@ describe('⑤ 時段教室與座位', () => {
     expect(plan.pending.length).toBeGreaterThan(0);
     const html = renderToString(<AstStep5 doc={doc} exam={exam} onChange={noop} onStep={noop} />);
     for (const s of ['自習容量不足', '程式建議：改用', '核可此方案', '調高自習容量／改設定', '未經你核可不會採用']) expect(html).toContain(s);
-    expect(flowOf(doc, exam, 5).issues.some((i) => i.step === 5 && i.text.includes('替代方案待核可'))).toBe(true);
+    expect(flowOf(doc, exam, 5).allIssues.some((i) => i.step === 5 && i.text.includes('替代方案待核可'))).toBe(true);
     // 逐一核可
     let cur = doc; let e = exam;
     for (let i = 0; i < 20; i++) {
@@ -241,12 +241,12 @@ describe('流程（步驟欄、摘要列）', () => {
     const f = flowOf(doc, exam, 1);
     expect(f.steps.slice(2, 5).map((s) => s.state)).toEqual(['done', 'done', 'done']);
     expect(f.summary.spare).toBeGreaterThanOrEqual(0);
-    expect(f.issues.filter((i) => i.step >= 3 && i.step <= 5)).toEqual([]);
+    expect(f.allIssues.filter((i) => i.step >= 3 && i.step <= 5)).toEqual([]);
   });
   it('座位不夠時 ③ 擋下並寫明缺幾個', () => {
     const { doc, exam } = fixture(60);
     const f = flowOf(doc, exam, 1);
-    expect(f.issues.some((i) => i.step === 3 && i.level === 'block' && /還差/.test(i.text))).toBe(true);
+    expect(f.allIssues.some((i) => i.step === 3 && i.level === 'block' && /還差/.test(i.text))).toBe(true);
   });
 });
 

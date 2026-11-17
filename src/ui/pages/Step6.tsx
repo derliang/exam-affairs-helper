@@ -84,11 +84,11 @@ function PreviewCard(p: { prepared: Extract<ReturnType<typeof prepareExport>, { 
   const kinds: { value: PreviewKind; label: string }[] = [{ value: 'label', label: '標籤' }, { value: 'seat', label: '座位表' }, ...(p.pickupOn ? [{ value: 'pickup' as const, label: '領卷清單' }] : []), ...(p.attendanceOn ? [{ value: 'attendance' as const, label: '出缺席記錄表' }] : [])];
   const cap = kind === 'label'
     ? `${p.paper === 'A3' ? 'A3（297×420 mm）・7 排 × 7 深位 ＝ 49 格' : 'B4（250×353 mm）・6 排 × 8 深位 ＝ 48 格'}・格子大小固定，不隨人數變；用不到的格子空白；教室比一張紙大時自動分成多張。`
-    : kind === 'seat' ? 'A4 座位表，每頁附該教室的考生統計；實際檔案每間班級教室一頁。' : kind === 'attendance' ? 'A4 出缺席記錄表，每間教室至少一頁（人多接下一頁），照座位順序，留各科打勾欄。' : 'A4 領卷清單，每間教室一頁，列出每科試卷與答案卡份數。';
+    : kind === 'seat' ? 'A4 座位表，每頁附該教室的考生統計；實際檔案每間教室一頁。' : kind === 'attendance' ? 'A4 出缺席記錄表，每間教室至少一頁（人多接下一頁），照座位順序，留各科打勾欄。' : 'A4 領卷清單，每間教室一頁，列出每科試卷與答案卡份數。';
   return (
     <div class="card stack" style="margin-top:12px">
       <div class="row" style="justify-content:space-between">
-        <div><h3>預覽</h3><p class="small muted">{room ? room.name : '沒有班級教室'}</p></div>
+        <div><h3>預覽</h3><p class="small muted">{room ? room.name : '沒有教室'}</p></div>
         <div class="row"><Seg<PreviewKind> label="預覽類型" value={kind} onChange={setKind} options={kinds} /></div>
       </div>
       {rooms.length > 1 && (
@@ -232,7 +232,7 @@ export function Step6(p: {
           <div class="row"><FormatPick<ExportFormat> label="格式" value={o.format} onChange={(v) => set({ format: v })} options={['word', 'pdf']} /></div>
         </div>
         <div class="stack">
-          {ck('seat', '座位表（A4）', '合併成一個檔案，每間班級教室一頁；每頁附該教室的考生統計')}
+          {ck('seat', '座位表（A4）', '合併成一個檔案，每間教室一頁；每頁附該教室的考生統計')}
           {/* 稿 v2.22（校-47）：選用項穿插在核心項之間——座位表、領卷清單、出缺席記錄表、對位測試頁、標籤 */}
           {orderedExtras.map((x) => (
             <label key={x.key} class="check" style="align-items:flex-start">
@@ -240,7 +240,7 @@ export function Step6(p: {
               <span><b>{x.title}</b><br /><span class="small muted">{x.sub}</span></span>
             </label>
           ))}
-          {ck('label', '標籤', '合併成一個檔案，每間班級教室一張紙；標籤格大小固定，白底' + (junior ? '' : '；不考、加考、抽離的標籤用淡黃底'))}
+          {ck('label', '標籤', '合併成一個檔案，每間教室一張紙；標籤格大小固定，白底' + (junior ? '' : '；不考、加考、抽離的標籤用淡黃底'))}
           <div class="field" style="margin-left:30px">
             <span class="label">標籤紙張（只有標籤可選；座位表與名單固定 A4）</span>
             <div class="row"><Seg<LabelPaper> label="標籤紙張" value={o.paper} onChange={(v) => set({ paper: v })} options={[{ value: 'B4', label: 'B4（一般，6×8）' }, { value: 'A3', label: 'A3（大尺寸，7×7）' }]} /></div>

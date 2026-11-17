@@ -29,7 +29,7 @@ describe('D-1 教室組別（理組／文組）', () => {
     const exam = d.exams[0]!;
     expect(d.settings.classrooms.every((r) => !r.track)).toBe(true);
     const flow = flowOf(d, exam, 3);
-    const issue = flow.issues.find((i) => i.step === 3 && i.text.includes('理組／文組'));
+    const issue = flow.allIssues.find((i) => i.step === 3 && i.text.includes('理組／文組'));
     expect(issue?.fix).toBe('去 ③ 指定理組／文組');
     expect(flow.steps.find((s) => s.no === 4)!.state).not.toBe('done');
     expect(nextAction(flow, 3)).toMatchObject({ kind: 'go', pending: {} });

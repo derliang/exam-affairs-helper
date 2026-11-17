@@ -5,11 +5,14 @@ import { PageHead, StepNav } from './components';
 
 const noop = () => {};
 describe('共用頁首', () => {
-  it('有路徑：路徑列最後一個是目前頁；標題卡右側「已儲存／復原／共用設定」成組', () => {
+  it('有路徑：路徑列只列來源頁；標題卡右側「已儲存／復原／共用設定」成組', () => {
     const html = renderToString(<PageHead crumbs={[{ label: '模擬考列表', onClick: noop }]} title="甲考試" badge="學測第一次" status="已儲存到資料夾"><button>共用設定</button></PageHead>);
     expect(html).toContain('class="crumbs"');
     expect(html).toContain('>模擬考列表</button>');
-    expect(html).toContain('aria-current="page">甲考試');
+    // G2：路徑末尾不再重複目前頁名稱，名稱只出現在 h1
+    expect(html).not.toContain('aria-current="page"');
+    expect(html.split('甲考試').length - 1).toBe(1);
+    expect(html).toContain('<h1>甲考試</h1>');
     expect(html).toContain('ph-cap');
     expect(html).toContain('已儲存到資料夾');
     expect(html).toContain('共用設定');

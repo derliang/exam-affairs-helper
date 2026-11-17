@@ -113,7 +113,7 @@ export function Step3(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
             <div>
               <h3>教室與座位</h3>
               <p class="small muted">每間教室一列，打開開關就列入本次考試。</p>
-              <More title="說明：座位表與教室來源">{senior ? '預備教室座位另計，不計入班級教室合計。' : ''}教室清單是所有模擬考共用的：修改教室會影響其他使用這間教室的模擬考；只想改這次考試的座位，請用「本次調整座位」。</More>
+              <More title="說明：座位表與教室來源">{senior ? '預備教室座位另計，不計入教室座位合計。' : ''}教室清單是所有模擬考共用的：修改教室會影響其他使用這間教室的模擬考；只想改這次考試的座位，請用「本次調整座位」。</More>
             </div>
             {p.onToRooms && <Button onClick={p.onToRooms}>到共用設定看教室清單</Button>}
           </div>

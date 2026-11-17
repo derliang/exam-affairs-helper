@@ -41,7 +41,10 @@ export interface Flow {
   /** 考試類型（分科的 ③④⑤ 名稱不同） */
   kind?: string;
   steps: FlowStep[];
+  /** 摘要列要提醒的事（G5）：只含「目前步驟之前」的步驟，依步驟編號排序；後面還沒做的步驟不提醒 */
   issues: FlowIssue[];
+  /** 全部問題（不分目前在哪一步）：「下一步」旁的前置提示與 flowOf 的判斷用 */
+  allIssues: FlowIssue[];
   summary: FlowSummary;
 }
 
@@ -81,12 +84,12 @@ export function flowOf(doc: Doc, exam: ExamConfig, current: StepNo): Flow {
   } else {
     // ③ 教室
     const classRooms = rooms.filter((r) => r.kind === 'class');
-    if (classRooms.length === 0) add({ step: 3, text: '③ 還沒有選班級教室', fix: '去 ③ 勾選教室', level: 'block' });
+    if (classRooms.length === 0) add({ step: 3, text: '③ 還沒有選教室', fix: '去 ③ 勾選教室', level: 'block' });
     else if (students > 0 && checkSeats(classSeats, students).level === 'block') {
       add({ step: 3, text: `③ 座位 ${classSeats} 少於考生 ${students}，還差 ${students - classSeats} 個`, fix: '去 ③ 增加座位', level: 'block', need: students, have: classSeats, lack: students - classSeats });
     }
     const noTrack = roomsMissingTrack(classRooms, exam.division);
-    if (noTrack.length) add({ step: 3, text: `③ 班級教室「${noTrack.map((r) => r.name).join('、')}」還沒指定理組／文組，排座時分不出誰坐哪間`, fix: '去 ③ 指定理組／文組', level: 'block' });
+    if (noTrack.length) add({ step: 3, text: `③ 教室「${noTrack.map((r) => r.name).join('、')}」還沒指定理組／文組，排座時分不出誰坐哪間`, fix: '去 ③ 指定理組／文組', level: 'block' });
     s3 = classRooms.length > 0 && spare >= 0 && noTrack.length === 0;
 
     // ④ 標示與抽離
@@ -126,13 +129,15 @@ export function flowOf(doc: Doc, exam: ExamConfig, current: StepNo): Flow {
       add({ step: no, text: `${'①②③④'[no - 1]} ${names[no - 1]}尚未完成`, fix: '前往處理', level: 'warn', todo: true });
     }
   }
-  issues.sort((a, b) => Number(!!a.todo) - Number(!!b.todo) || (a.todo ? a.step - b.step : 0));
-  return { kind: exam.kind, steps, issues, summary: { students, seats: classSeats, spare: spareOverride ?? spare, warnings: issues.length } };
+  // G5：依步驟編號排序（同一步內真問題在前、「尚未完成」在後）；摘要列只提醒目前步驟之前的步驟
+  issues.sort((a, b) => a.step - b.step || Number(!!a.todo) - Number(!!b.todo));
+  const shown = issues.filter((i) => i.step < current);
+  return { kind: exam.kind, steps, issues: shown, allIssues: issues, summary: { students, seats: classSeats, spare: spareOverride ?? spare, warnings: shown.length } };
 }
 
 /** 進入 target 之前，有哪些 block 問題在它前面（⑥ 之前還要 ⑤ 本身完成） */
 export function prerequisites(flow: Flow, target: StepNo): FlowIssue[] {
-  return flow.issues.filter((i) => i.level === 'block' && i.step < target);
+  return flow.allIssues.filter((i) => i.level === 'block' && i.step < target);
 }
 
 /** 「下一步」：永遠可以按（D47：六步可隨意跳）；前面還有沒做完的事就在旁邊標示原因，不禁止 */

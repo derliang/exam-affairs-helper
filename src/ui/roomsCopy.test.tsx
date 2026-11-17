@@ -37,7 +37,7 @@ describe('教室複製與 B4 上限提示（#205）', () => {
     const j = [room()];
     expect(addRooms(j, 'reserve', 3, 'junior')).toBe(j);
   });
-  it('畫面：教室清單有「一次新增 6 間班級教室」', () => {
-    expect(renderToString(<RoomList rooms={[room()]} paper="B4" onChange={() => {}} />)).toContain('一次新增 6 間班級教室');
+  it('畫面：教室清單有「一次新增 6 間教室」', () => {
+    expect(renderToString(<RoomList rooms={[room()]} paper="B4" onChange={() => {}} />)).toContain('一次新增 6 間教室');
   });
 });
