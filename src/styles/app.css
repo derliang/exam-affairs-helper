@@ -1030,3 +1030,23 @@ details.more{font-size:14px;color:var(--text-2)}details.more summary{cursor:poin
 .roomtable td .field{min-width:130px}
 .roomtable td .info,.roomtable td.info{white-space:normal;min-width:130px}
 .roomtable tr.editrow td{white-space:normal}
+
+/* G37 環境確認（稿 v2.50）：只用既有 tokens；狀態不靠顏色，圖形＋文字＋左邊條 */
+.envone{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:10px 12px;border:1px solid var(--line);border-left:6px solid var(--ok-bar);border-radius:var(--r-md);background:var(--surface)}
+.envone .envsum{flex:1 1 220px;min-width:0;font-size:14px;color:var(--text-2)}
+.envrows,.envchg{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.envchg{padding:8px 12px;border:1px dashed var(--warn-bar);border-radius:var(--r-md);font-size:14px}
+.envrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:8px 12px;border:1px solid var(--line);border-left-width:6px;border-radius:var(--r-md);background:var(--surface);min-height:44px}
+.envrow.e-ok{border-left-color:var(--ok-bar)}
+.envrow.e-warn{border-left-style:solid;border-left-color:var(--warn-bar);border-style:dashed dashed dashed solid}
+.envrow.e-bad{border-left-color:var(--danger);background:var(--danger-soft);border-width:2px 2px 2px 8px}
+.envmk{font-weight:700;width:1.4em;text-align:center}
+.envlab{font-weight:600;min-width:7.5em}
+.envtext{flex:1 1 200px;min-width:0;font-size:14px;color:var(--text-2)}
+.envsched{display:grid;gap:6px;margin:0}
+.envsched>div{display:flex;flex-wrap:wrap;gap:4px 12px}
+.envsched dt{font-weight:600;min-width:4em}
+.envsched dd{margin:0;color:var(--text-2)}
+.t tr.bad td{background:var(--danger-soft)}
+ul.plain{margin:4px 0 0;padding-left:1.2em}
+@media (max-width:480px){.envrow .btn{min-height:44px}.envlab{min-width:0;flex-basis:100%}}
