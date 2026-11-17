@@ -83,3 +83,11 @@ describe('出缺席記錄表（H5）', () => {
     expect(foot).toContain(f.result.dataVersion);
   }, 30000);
 });
+
+describe('頁數估計（#299）', () => {
+  it('人多的教室估多頁，至少每間一頁', async () => {
+    const { estimateAttendancePages } = await import('./attendance');
+    const t = (n: number) => ({ rows: Array.from({ length: n }, () => []) }) as never;
+    expect(estimateAttendancePages([t(0), t(22), t(23), t(47)])).toBe(1 + 1 + 2 + 3);
+  });
+});

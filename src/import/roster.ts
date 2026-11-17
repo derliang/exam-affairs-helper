@@ -30,6 +30,9 @@ function parseTall(rows: readonly (readonly string[])[], h: number, opts: Roster
     const classNo = col.classNo === undefined ? null : parseClassNo(r[col.classNo] ?? '', opts.classNames);
     if (!name || seatNo === null || classNo === null) {
       if (name && (seatNo !== null || classNo !== null)) issues.push({ row: i + 1, message: '班級或座號無法辨識，已略過' });
+      else if (!name && seatNo !== null) {
+        issues.push({ row: i + 1, message: `${classNo === null ? '' : `班級 ${classNo} `}座號 ${seatNo} 沒有姓名，已略過` });
+      }
       continue;
     }
     const key = `${classNo}-${seatNo}`;
@@ -87,6 +90,10 @@ function parseWide(rows: readonly (readonly string[])[], h: number, opts: Roster
       const r = rows[i] ?? [];
       const name = (r[nameCol] ?? '').trim();
       const seatNo = parseSeatNo(r[sc] ?? '');
+      if (!name && seatNo !== null) {
+        issues.push({ row: i + 1, message: `第 ${classNo} 班座號 ${seatNo} 沒有姓名，已略過` });
+        continue;
+      }
       if (!name || seatNo === null) continue;
       const s: Student = { classNo, seatNo, name };
       const id = idCol < 0 ? '' : (r[idCol] ?? '').trim();
@@ -137,6 +144,10 @@ function parseBlocks(rows: readonly (readonly string[])[], title: { row: number;
       const r = rows[i] ?? [];
       const name = (r[start + 2] ?? '').trim();
       const seatNo = parseSeatNo(r[start + 1] ?? '');
+      if (!name && seatNo !== null) {
+        issues.push({ row: i + 1, message: `第 ${classNo} 班座號 ${seatNo} 沒有姓名，已略過` });
+        continue;
+      }
       if (!name || seatNo === null) continue;
       const s: Student = { classNo, seatNo, name };
       const id = normalizeCell(r[start] ?? '');

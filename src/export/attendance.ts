@@ -14,6 +14,11 @@ import type { ExportInput, TablePageModel } from './model';
 const BLANK = '';
 const NOT_TAKEN = '—';
 
+/** 直式 A4、每列 9mm：實測（#299）一頁約放 22 列考生，人多的教室會接下一頁；每間教室至少 1 頁 */
+export const ATTENDANCE_ROWS_PER_PAGE = 22;
+export const estimateAttendancePages = (pages: readonly TablePageModel[]): number =>
+  pages.reduce((n, p) => n + Math.max(1, Math.ceil(p.rows.length / ATTENDANCE_ROWS_PER_PAGE)), 0);
+
 export function buildAttendancePages(input: ExportInput): TablePageModel[] {
   const { exam, settings, result, entries, students } = input;
   const rooms = exam.classroomIds
