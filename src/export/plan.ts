@@ -28,7 +28,7 @@ export interface ExportOptions {
   paper: LabelPaper;
   /** 抽離自習名單（每科一頁，A4）；國中部沒有 */
   study: boolean;
-  /** 預備教室座位表（A4）；勾標籤時一併產生預備教室標籤 */
+  /** 座位表、標籤檔是否含預備教室頁（併在最後，頁首標「預備教室」；G34） */
   reserve: boolean;
 }
 
@@ -42,7 +42,7 @@ export const defaultOptions = (paper: LabelPaper = 'B4'): ExportOptions => ({
 });
 
 export interface PlannedFile {
-  key: 'seat' | 'label' | 'study' | 'reserveSeat' | 'reserveLabel';
+  key: 'seat' | 'label' | 'study';
   name: string;
   desc: string;
   pages: number;
@@ -52,43 +52,53 @@ interface Parts {
   seat?: SeatPageModel[];
   label?: LabelPageModel[];
   study?: ListPageModel[];
-  reserveSeat?: SeatPageModel[];
-  reserveLabel?: LabelPageModel[];
 }
 
 /** 檔名不能含的字元換成底線 */
 export const safeName = (s: string): string => s.replace(/[\\/:*?"<>|]/g, '_').trim() || '模擬考';
 
-/** 把勾選轉成版面模型；標籤紙張依選項覆蓋考試設定的格數（D74） */
+/** 預備教室頁（有 tag）排在班級教室之後（G34、稿 v2.43 第 27 題）；不含預備教室時拿掉 */
+export function placeReserveLast<T extends { tag?: string }>(pages: T[], includeReserve: boolean): T[] {
+  const cls = pages.filter((x) => !x.tag);
+  return includeReserve ? [...cls, ...pages.filter((x) => x.tag)] : cls;
+}
+
+/**
+ * 把勾選轉成版面模型；標籤紙張依選項覆蓋考試設定的格數（D74）。
+ * G34：座位表一個檔、標籤一個檔，預備教室頁併在各自檔案的最後、頁首標「預備教室」；抽離自習名單獨立、預設不勾。
+ */
 export function buildParts(input: ExportInput, o: ExportOptions): Parts {
   const withPaper: ExportInput = { ...input, exam: { ...input.exam, labelLayout: defaultLabelLayout(o.paper) } };
   const parts: Parts = {};
-  if (o.seat) parts.seat = buildSeatPages(withPaper, 'class');
-  if (o.label) parts.label = buildLabelPages(withPaper, 'class');
+  if (o.seat) {
+    const pg = placeReserveLast([...buildSeatPages(withPaper, 'class'), ...buildSeatPages(withPaper, 'reserve')], o.reserve);
+    if (pg.length) parts.seat = pg;
+  }
+  if (o.label) {
+    const pg = placeReserveLast([...buildLabelPages(withPaper, 'class'), ...buildLabelPages(withPaper, 'reserve')], o.reserve);
+    if (pg.length) parts.label = pg;
+  }
   if (o.study) {
     const l = buildStudyLists(withPaper);
     if (l.length) parts.study = l;
   }
-  if (o.reserve) {
-    const rs = buildSeatPages(withPaper, 'reserve');
-    if (rs.length) parts.reserveSeat = rs;
-    // 稿 v2.22（校-46）：預備教室是一個勾選，座位表與標籤一起產生
-    const rl = buildLabelPages(withPaper, 'reserve');
-    if (rl.length) parts.reserveLabel = rl;
-  }
   return parts;
 }
+
+const roomCount = (pages: { tag?: string }[]) => ({ cls: pages.filter((x) => !x.tag).length, res: pages.filter((x) => x.tag).length });
+const split = (pages: { tag?: string }[], unit: string, tail = '') => {
+  const c = roomCount(pages);
+  return `${pages.length} ${unit}（${c.cls} 間班級教室${c.res ? `＋${c.res} 間預備教室，排在最後` : ''}${tail}）`;
+};
 
 export function planFiles(input: ExportInput, o: ExportOptions): PlannedFile[] {
   const parts = buildParts(input, o);
   const ext = o.format === 'word' ? 'docx' : 'pdf';
   const base = safeName(input.exam.name);
   const out: PlannedFile[] = [];
-  if (parts.seat) out.push({ key: 'seat', name: `${base}-座位表.${ext}`, desc: `${parts.seat.length} 頁（每間班級教室一頁，A4）`, pages: parts.seat.length });
-  if (parts.label) out.push({ key: 'label', name: `${base}-標籤（${o.paper}）.${ext}`, desc: `${parts.label.length} 張紙（每間班級教室一張，${o.paper}）`, pages: parts.label.length });
+  if (parts.seat) out.push({ key: 'seat', name: `${base}-座位表.${ext}`, desc: split(parts.seat, '頁', '，A4'), pages: parts.seat.length });
+  if (parts.label) out.push({ key: 'label', name: `${base}-標籤（${o.paper}）.${ext}`, desc: split(parts.label, '張紙', `，${o.paper}`), pages: parts.label.length });
   if (parts.study) out.push({ key: 'study', name: `${base}-抽離自習名單.${ext}`, desc: `${parts.study.length} 頁（每科一頁，A4）`, pages: parts.study.length });
-  if (parts.reserveSeat) out.push({ key: 'reserveSeat', name: `${base}-預備教室座位表.${ext}`, desc: `${parts.reserveSeat.length} 頁（每間預備教室一頁，時段版，A4）`, pages: parts.reserveSeat.length });
-  if (parts.reserveLabel) out.push({ key: 'reserveLabel', name: `${base}-預備教室標籤（${o.paper}）.${ext}`, desc: `${parts.reserveLabel.length} 張紙（${o.paper}）`, pages: parts.reserveLabel.length });
   return out;
 }
 
@@ -115,7 +125,7 @@ export function preflight(input: ExportInput, o: ExportOptions, st: PreflightSta
   if (st.stale) issues.push({ level: 'block', text: '需要重新排座：名單或設定在排座之後改過，舊座位表上的座位可能已經不對。請回 ⑤ 重新排座，再回來下載。' });
   if ((st.unresolvedDiffs ?? 0) > 0) issues.push({ level: 'block', text: `② 還有 ${st.unresolvedDiffs} 筆考試名單與學生名單的差異沒處理（例如新增、缺少或資料不同的考生）。請回 ② 逐筆選擇處理方式，處理完再下載。` });
   else if ((st.unappliedDiffs ?? 0) > 0) issues.push({ level: 'block', text: `② 的 ${st.unappliedDiffs} 筆差異已選好處理方式，但還沒按「套用 ${st.unappliedDiffs} 筆核對結果」，名單還沒更新。請先回 ② 按「套用」，再回來下載。` });
-  if (!o.seat && !o.label && !o.study && !o.reserve) issues.push({ level: 'block', text: '還沒勾選要下載的內容：請在下方至少勾選座位表、標籤、抽離自習名單或預備教室其中一項。' });
+  if (!o.seat && !o.label && !o.study) issues.push({ level: 'block', text: '還沒勾選要下載的內容：請在下方至少勾選座位表、標籤或抽離自習名單其中一項。' });
   try {
     buildParts(input, o);
   } catch (e) {
@@ -161,8 +171,8 @@ export async function runExport(
   if (o.format === 'pdf') {
     const html = renderPrintHtml(
       {
-        seat: [...(parts.seat ?? []), ...(parts.reserveSeat ?? [])],
-        label: [...(parts.label ?? []), ...(parts.reserveLabel ?? [])],
+        seat: parts.seat,
+        label: parts.label,
         list: parts.study,
       },
       meta,
@@ -185,9 +195,7 @@ export async function runExport(
     const pages =
       f.key === 'seat' ? { seat: parts.seat }
       : f.key === 'label' ? { label: parts.label }
-      : f.key === 'study' ? { list: parts.study }
-      : f.key === 'reserveSeat' ? { seat: parts.reserveSeat }
-      : { label: parts.reserveLabel };
+      : { list: parts.study };
     out.push({ name: f.name, mime: DOCX_MIME, data: await renderDocx(pages, opts), desc: f.desc, pages: f.pages });
   }
   return out;

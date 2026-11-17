@@ -263,9 +263,10 @@ export function StepHead(p: { title: string; children?: ComponentChildren; /** �
 }
 
 /**
- * G6：隨時可見的「完成此步」操作區（桌機在右側欄頂端、平板與手機固定在畫面底部，見 app.css .stepdock）。
+ * G6／G33：隨時可見的前後導覽（桌機在右側欄頂端、平板與手機固定在畫面底部，見 app.css .stepdock）。
+ * 後退永遠在左（次要）、前進永遠在右（主要），按鈕只寫短字，步驟名稱放在按鈕下方小字。
  * 永遠可按；這一步或前面還有事沒做完時，旁邊說明原因，事後在摘要列「待處理」提醒，不停用。
- * 最後一步（⑥）的按鈕是「完成，回模擬考列表」。
+ * 沒有「完成此步」：完成狀態由資料算出，按「下一步」就是繼續。第 1 步左側留空；最後一步（⑥）右鍵是「完成 ✓」（回列表），與下載按鈕分開。
  */
 export function StepDock(p: { action: NextAction; current: StepNo; prev?: { to: StepNo; name: string } | undefined; onGo: (step: StepNo) => void; onExams: () => void }) {
   const a = p.action;
@@ -273,11 +274,15 @@ export function StepDock(p: { action: NextAction; current: StepNo; prev?: { to: 
   return (
     <div class="stepdock" role="region" aria-label="步驟操作">
       {a.kind === 'go' && a.pending && <div class="dock-note" role="status"><b>這一步還有項目沒處理</b><span>{a.pending.reason}。仍可前往下一步，事後會在「待處理」提醒。</span></div>}
-      <div class="dock-row">
-        {last
-          ? <Button kind="primary" onClick={p.onExams}>完成，回模擬考列表</Button>
-          : <Button kind="primary" onClick={() => p.onGo(a.kind === 'go' ? a.to : p.current)}>{a.kind === 'go' ? a.label : ''} →</Button>}
-        {p.prev && <Button onClick={() => p.onGo(p.prev!.to)}>‹ 上一步：{p.prev.name}</Button>}
+      <div class="dock-nav">
+        <div class="dock-cell dock-prev">
+          {p.prev && <><Button onClick={() => p.onGo(p.prev!.to)}>‹ 上一步</Button><span class="dock-sub">{p.prev.name}</span></>}
+        </div>
+        <div class="dock-cell dock-next">
+          {last
+            ? <><Button kind="primary" onClick={p.onExams}>完成 ✓</Button><span class="dock-sub">回模擬考列表</span></>
+            : <><Button kind="primary" onClick={() => p.onGo(a.kind === 'go' ? a.to : p.current)}>下一步 ›</Button><span class="dock-sub">{a.kind === 'go' ? a.name : ''}</span></>}
+        </div>
       </div>
     </div>
   );

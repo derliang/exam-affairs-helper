@@ -12,17 +12,35 @@ export interface DirFS {
   listDirs(dir: string): Promise<string[]>;
   /** 刪除檔案；不存在不報錯 */
   remove(path: string): Promise<void>;
+  /** 資料夾本身還在嗎（G16）：被刪除、改名或移走回 false；其他讀取錯誤不當成「不見了」 */
+  exists(): Promise<boolean>;
+  /** 列出所有檔案的相對路徑（遞迴；G24 搬到新位置用） */
+  listAll(): Promise<string[]>;
 }
 
-export function createMemoryFS(initial: Record<string, string> = {}): DirFS & { files: Map<string, string> } {
+/** 瀏覽器回報「找不到檔案或資料夾」（根資料夾被刪除、改名或移動時，寫入與列舉都會丟這個） */
+export const isNotFound = (e: unknown): boolean =>
+  typeof e === 'object' && e !== null && (e as { name?: string }).name === 'NotFoundError';
+
+const notFound = () => new DOMException('A requested file or directory could not be found at the time an operation was processed.', 'NotFoundError');
+
+/** 記憶體實作；`gone.value = true` 模擬根資料夾被刪除（之後所有操作丟 NotFoundError，與瀏覽器一致） */
+export function createMemoryFS(initial: Record<string, string> = {}): DirFS & { files: Map<string, string>; gone: { value: boolean } } {
   const files = new Map(Object.entries(initial));
+  const gone = { value: false };
+  const chk = () => { if (gone.value) throw notFound(); };
   return {
     files,
-    readText: async (p) => files.get(p) ?? null,
+    gone,
+    exists: async () => !gone.value,
+    listAll: async () => { chk(); return [...files.keys()].sort(); },
+    readText: async (p) => { chk(); return files.get(p) ?? null; },
     writeText: async (p, t) => {
+      chk();
       files.set(p, t);
     },
     listDirs: async (dir) => {
+      chk();
       const prefix = dir ? `${dir}/` : '';
       const out = new Set<string>();
       for (const k of files.keys()) {
@@ -35,6 +53,7 @@ export function createMemoryFS(initial: Record<string, string> = {}): DirFS & { 
       return [...out].sort();
     },
     remove: async (p) => {
+      chk();
       files.delete(p);
     },
   };
@@ -58,7 +77,26 @@ export function createHandleFS(root: Dir): DirFS {
     }
     return { dir, name };
   };
+  const collect = async (dir: Dir, prefix: string, out: string[]): Promise<void> => {
+    for await (const [name, h] of dir as unknown as AsyncIterable<[string, FileSystemHandle]>) {
+      if (h.kind === 'directory') await collect(h as Dir, `${prefix}${name}/`, out);
+      else out.push(`${prefix}${name}`);
+    }
+  };
   return {
+    async exists() {
+      try {
+        for await (const _ of root as unknown as AsyncIterable<unknown>) { void _; break; }
+        return true;
+      } catch (e) {
+        return !isNotFound(e);
+      }
+    },
+    async listAll() {
+      const out: string[] = [];
+      await collect(root, '', out);
+      return out.sort();
+    },
     async readText(path) {
       const loc = await walk(path, false);
       if (!loc) return null;

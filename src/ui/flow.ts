@@ -143,7 +143,7 @@ export function prerequisites(flow: Flow, target: StepNo): FlowIssue[] {
 /** 「下一步」：永遠可以按（D47：六步可隨意跳）；前面還有沒做完的事就在旁邊標示原因，不禁止 */
 export type NextAction =
   | { kind: 'none' }
-  | { kind: 'go'; to: StepNo; label: string; pending?: { reason: string; fix: string; fixStep: StepNo } };
+  | { kind: 'go'; to: StepNo; label: string; /** 下一步的名稱（含編號），G33 放在按鈕下方小字 */ name: string; pending?: { reason: string; fix: string; fixStep: StepNo } };
 
 /** 「下一步」按鈕：不擋人；前置有問題只標示缺什麼並給一鍵跳轉（擋下的只有 ⑤ 排座與 ⑥ 下載本身，D47） */
 export function nextAction(flow: Flow, current: StepNo): NextAction {
@@ -151,15 +151,16 @@ export function nextAction(flow: Flow, current: StepNo): NextAction {
   // 會考沒有 ④（標「不需要」）：③ 的下一步直接是 ⑤（稿 v2.15 NEXT）
   let to = (current + 1) as StepNo;
   if (flow.steps.find((s) => s.no === to)?.state === 'skip' && to < 6) to = (to + 1) as StepNo;
-  const label = `完成此步，前往 ${'①②③④⑤⑥'[to - 1]} ${stepNamesOf(flow.kind)[to - 1]}`;
+  const name = `${'①②③④⑤⑥'[to - 1]} ${stepNamesOf(flow.kind)[to - 1]}`;
+  const label = `前往 ${name}`; // G33：沒有「完成此步」；完成狀態由資料算出，按下一步不需另外標記
   // 前面的步驟（含目前這步）還有 block 問題就標示；進 ⑥ 時 ⑤ 本身也要完成
   const need = prerequisites(flow, to);
   const first = need[0];
   if (first) {
     const more = need.length > 1 ? `（另有 ${need.length - 1} 項）` : '';
-    return { kind: 'go', to, label, pending: { reason: `${first.text}${more}`, fix: first.fix, fixStep: first.step } };
+    return { kind: 'go', to, label, name, pending: { reason: `${first.text}${more}`, fix: first.fix, fixStep: first.step } };
   }
-  return { kind: 'go', to, label };
+  return { kind: 'go', to, label, name };
 }
 
 /** G6：上一步（會考的 ④ 標「不需要」，跳過）；第 1 步沒有上一步 */

@@ -4,7 +4,8 @@ import { Alert, Badge, Button, More, Seg, StepHead } from '../components';
 import { RoomList } from '../components/RoomList';
 import { PrepCard } from './PrepCard';
 import { classRoomRows, missingClassRooms, syncClassRooms } from '../classRooms';
-import { classCapacity, reserveCheck, reserveNeed } from '../capacity';
+import { classCapacity, reserveCheck, reserveNeed, studyCapacity } from '../capacity';
+import { StudyNeedDetail } from './StudyCapacityView';
 import { newClassRoomIds, roomsMissingTrack } from '../rooms';
 import { examEntries, examRooms, seatableEntries } from '../seating';
 import { setClassTrack, updateExam, type Doc } from '../store';
@@ -29,7 +30,8 @@ export function Step3(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
   const missing = roomsMissingTrack(examRooms(doc, exam), exam.division);
   const reserve = reserveCheck(doc, exam);
   const need = reserveNeed(doc, exam);
-  const prepBad = need.need > need.avail || reserve.tone === 'warn';
+  const sc = studyCapacity(doc, exam);
+  const prepBad = !sc.ok;
   const roster = doc.rosters[exam.division];
   const classes = doc.settings.classes.filter((c) => c.division === exam.division);
   const noTrack = roster.length === 0 ? 0 : classes.filter((c) => !c.track).length;
@@ -80,18 +82,14 @@ export function Step3(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
               <div class={`chk${prepBad ? ' bad' : ''}`}>
                 <small>預備教室座位</small><strong>{need.avail}</strong>
                 <span class="sub">需要 {need.need}・已列入 {need.on}／{need.total} 間</span>
-                <Badge tone={prepBad ? 'danger' : 'ok'}>{prepBad ? `不足 ${Math.max(1, need.need - need.avail)}` : need.need === 0 ? '不需要' : '夠用'}</Badge>
+                <Badge tone={prepBad ? 'danger' : 'ok'}>{prepBad ? `不足 ${Math.max(1, sc.worst?.short ?? 1)}` : need.need === 0 ? '不需要' : '夠用'}</Badge>
               </div>
             )}
           </div>
         )}
         <div class="stack" style="gap:6px">
           {lines.map((l) => <p key={l.label} class={`small${l.ok ? ' muted' : ' errnote'}`}>{l.ok ? <><b>{l.label}：</b>{l.detail}</> : l.message}</p>)}
-          {senior && hasList && (prepBad
-            ? <p class="small errnote"><b>預備教室座位不足：</b>{need.on === 0 ? '還沒有把任何預備教室「列為預備」。' : ''}{need.need > need.avail ? `最多的一節「${need.who}」要 ${need.need} 個座位（抽離考試 ${need.exam} 人要排座位、抽離自習 ${need.study} 人不用排座位但座位要夠），已列為預備的教室只有 ${need.avail} 個，還缺 ${need.need - need.avail} 個。請打開預備教室的「列為預備」或增加座位。` : `上方「需要 ${need.need}」是各節加總的估算；實際逐科分配時，${reserve.detail ?? reserve.message}`}</p>
-            : need.need === 0
-              ? <p class="small muted">目前沒有抽離考試或抽離自習，不需要預備教室。</p>
-              : <p class="small muted">預備教室容量夠用（同一節各科的抽離人數加總再比容量）：最多的一節「{need.who}」要 {need.need} 個（抽離考試 {need.exam}、抽離自習 {need.study}），已列為預備的教室有 {need.avail} 個座位。</p>)}
+          {senior && hasList && <StudyNeedDetail sc={sc} onAdd={(ids) => setIds([...exam.classroomIds, ...ids])} {...(p.onToRooms ? { onNewRoom: p.onToRooms } : {})} />}
         </div>
         {missing.length > 0 && <Alert tone="danger"><b>高中部排座要先指定教室的組別。</b>「{missing.map((r) => r.name).join('、')}」還沒選理組或文組，請在下面該列的「組別」按鈕選一個（預備教室不用選）。</Alert>}
         {!senior && <Alert tone={reserve.tone}>{reserve.message}</Alert>}
@@ -120,8 +118,8 @@ export function Step3(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
           <div class="row" style="justify-content:space-between">
             <div>
               <h3>教室與座位</h3>
-              <p class="small muted">每班的班級教室已依學生名單自動帶出，只要調整座位配置；預備教室、特殊教室可用「新增教室」手動加。</p>
-              <More title="說明：座位表與教室來源">{senior ? '預備教室座位另計，不計入教室座位合計。' : ''}教室清單是所有模擬考共用的：修改教室會影響其他使用這間教室的模擬考；只想改這次考試的座位，請用「本次調整座位」。</More>
+              <p class="small muted">每班的班級教室已依學生名單自動帶出，只要調整座位配置；班級教室跟名冊班級走、不能手動新增；手動新增的只有預備教室。</p>
+              <More title="說明：座位表與教室來源">{senior ? '預備教室座位另計，不計入教室座位合計。' : ''}教室清單是所有模擬考共用的：修改教室會影響其他使用這間教室的模擬考；只想改這次考試的座位，請在「編輯座位」上方選「只這次考試」。</More>
             </div>
             {p.onToRooms && <Button onClick={p.onToRooms}>到共用設定看教室清單</Button>}
           </div>

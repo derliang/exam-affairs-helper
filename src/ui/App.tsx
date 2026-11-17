@@ -31,7 +31,10 @@ import { Step5 } from './pages/Step5';
 import { Step6 } from './pages/Step6';
 import { AstStep6 } from './ast/AstStep6';
 import { ReservePage } from './pages/ReservePage';
-import { createFsRepository, isFsAccessSupported, SwitchBlockedError } from '../data';
+import { createFsRepository, encode, isFsAccessSupported } from '../data';
+import { downloadBytes } from './download';
+import { DiscardDialog, FolderDialog, FolderListError, FolderLostAlert, type FolderMode } from './pages/FolderUi';
+import { formatModified } from './examList';
 import { createMemoryRepository, emptyDoc, withDefaults, type Repository } from './repository';
 import { deleteExam, examLabel, setExamArchived, stampModified, type Doc } from './store';
 import { activateForExam, migrateRosterYear } from './rosterYears';
@@ -61,11 +64,27 @@ export function App() {
   const [warning, setWarning] = useState<string | undefined>();
   // 存檔失敗要看得見（#58）：存檔佇列的狀態，錯誤時顯示警示與重試
   const [saveErr, setSaveErr] = useState<string | undefined>();
-  useEffect(() => repo.onSaveStatus?.((s) => setSaveErr(s.state === 'error' ? s.message : undefined)), []);
+  // G16：根資料夾不見了（被刪除、改名或移動）是另一種錯誤，重試不會成功，要給「重新連結／更換／放棄」出路
+  const [folderMissing, setFolderMissing] = useState(false);
+  const [folderDlg, setFolderDlg] = useState<FolderMode | 'discard' | null>(null);
+  const hadFolder = useRef(false);
+  const [, setRestoreTick] = useState(0);
+  useEffect(() => repo.onSaveStatus?.((s) => { setSaveErr(s.state === 'error' ? s.message : undefined); setFolderMissing(s.state === 'error' && !!s.missing); }), []);
+  // 切回這個分頁時確認資料夾還在，不等到存檔失敗才發現
+  useEffect(() => {
+    const chk = () => { if (document.visibilityState !== 'hidden') void fsRepo?.checkFolder(); };
+    window.addEventListener('focus', chk); document.addEventListener('visibilitychange', chk);
+    return () => { window.removeEventListener('focus', chk); document.removeEventListener('visibilitychange', chk); };
+  }, []);
   const retrySave = () => { void repo.retrySave?.(); };
+  const openFolderDlg = (m: FolderMode | 'discard') => { hadFolder.current = repo.hasFolder(); setFolderDlg(m); };
+  const downloadBackup = () => {
+    const stamp = formatModified(new Date().toISOString()).replace(/\D/g, '');
+    downloadBytes(`模擬考小幫手-備份-${stamp}.json`, new TextEncoder().encode(encode(hist.present)), 'application/json');
+  };
   // 重開頁面：能靜默還原上次資料夾就直接進列表（瀏覽器要求重新授權時留在初始化頁，由使用者按鈕）
   useEffect(() => {
-    void (async () => { if (fsRepo && (await fsRepo.restore())) { await load(); go({ page: 'exams' }); } })();
+    void (async () => { if (fsRepo && (await fsRepo.restore())) { await load(); go({ page: 'exams' }); } else setRestoreTick((n) => n + 1); })();
   }, []);
 
   // 資料夾授權後載入；每次變更存檔
@@ -80,18 +99,17 @@ export function App() {
     const d = stampModified(hist.present, d0, new Date());
     setHist((h) => commit(h, d, describeChange(h.present, d))); setStaleNote(undefined); void repo.save(d);
   };
-  // 更換資料夾：新資料夾授權成功才切換並載入；失敗明示「仍使用原資料夾」；使用者取消視窗不算錯誤（#69）
-  const changeFolder = async () => {
-    const old = repo.folderName?.() ?? '';
-    const still = old ? `仍使用原資料夾「${old}」。` : '';
-    try {
-      if (!(await repo.chooseFolder())) { setWarning(`沒有取得新資料夾的讀寫授權，資料夾沒有切換，${still || '請再試一次。'}`); return; }
-    } catch (e) {
-      if (e instanceof DOMException && e.name === 'AbortError') return;
-      setWarning(e instanceof SwitchBlockedError ? e.message : `無法使用這個資料夾，${still || '請改選別的資料夾。'}`);
-      return;
-    }
-    try { await load(); } catch { setWarning('新資料夾已選定，但讀取資料失敗，請改選別的資料夾或重新整理頁面。'); }
+  // 更換／重新連結／搬到新位置（G16、G24）完成：需要時讀入新資料夾；帶著暫存修改過去的不重讀（重讀會蓋掉畫面上的修改）
+  const folderDone = async (res: { carried: boolean; reload: boolean }) => {
+    setFolderDlg(null); setWarning(undefined);
+    if (res.reload) { try { await load(); } catch { setWarning('新資料夾已選定，但讀取資料失敗，請改選別的資料夾或重新整理頁面。'); } }
+    if (!hadFolder.current && fsRepo?.hasFolder()) go({ page: 'exams' });
+  };
+  // 放棄找不到資料夾裡未存的修改：丟掉暫存、回到選擇資料夾畫面（可重新連結或選別的）
+  const discardPending = () => {
+    fsRepo?.release();
+    setHist(newHistory(emptyDoc())); setFolderMissing(false); setSaveErr(undefined); setWarning(undefined); setFolderDlg(null);
+    go({ page: 'init' });
   };
   // G1：封存／還原／刪除模擬考；只動 App 內資料，不碰使用者已下載的檔案
   const archiveExam = (id: string, archived: boolean) => { const r = setExamArchived(hist.present, id, archived); if (r.ok) edit(r.doc); };
@@ -186,10 +204,11 @@ export function App() {
         {staleNote && r.page !== 'init' && <div style="margin-bottom:12px"><Alert tone="warn">{staleNote}</Alert></div>}
         {r.page === 'privacy' && <Privacy {...(backLabel(gnav) ? { backLabel: backLabel(gnav)! } : {})} onBack={() => (gnav.back.length ? back() : go({ page: hasFolder ? 'exams' : 'init' }))} onCopyright={() => go2({ page: 'copyright' }, { route: r, label: pageName(r, hist.present) })} />}
         {r.page === 'copyright' && <Copyright onPrivacy={() => go2({ page: 'privacy' }, { route: r, label: pageName(r, hist.present) })} {...(backLabel(gnav) ? { backLabel: backLabel(gnav)! } : {})} onBack={() => (gnav.back.length ? back() : go({ page: hasFolder ? 'exams' : 'init' }))} />}
-        {r.page === 'init' && <Init repo={repo} fsSupported={fsSupported} onRestore={fsRepo ? () => fsRepo.restore() : undefined} onDone={async () => { await load(); go({ page: 'exams' }); }} />}
-        {saveErr && <div style="margin-bottom:12px"><Alert tone="danger" action={<Button small onClick={retrySave}>重試存檔</Button>}>最新的修改還沒有存進資料夾（{saveErr}）。請確認資料夾仍可寫入後按「重試存檔」；在存妥之前請不要關閉頁面。</Alert></div>}
+        {r.page === 'init' && <Init repo={repo} fsSupported={fsSupported} {...(fsRepo ? { fs: fsRepo } : {})} doc={hist.present} missing={folderMissing} onDialog={openFolderDlg} onBack={() => go({ page: 'exams' })} onRestore={fsRepo ? async () => { const ok = await fsRepo.restore(); setRestoreTick((n) => n + 1); return ok; } : undefined} onDone={async () => { await load(); go({ page: 'exams' }); }} />}
+        {folderMissing && fsRepo && r.page !== 'init' && <div style="margin-bottom:12px"><FolderLostAlert name={fsRepo.folderName?.() ?? ''} pending={fsRepo.pendingCount()} onRelink={() => openFolderDlg('relink')} onChange={() => openFolderDlg('change')} onDiscard={() => openFolderDlg('discard')} onSettings={() => go2({ page: 'init' }, { route: r, label: pageName(r, hist.present) })} /></div>}
+        {saveErr && !folderMissing && <div style="margin-bottom:12px"><Alert tone="danger" action={<Button small onClick={retrySave}>重試存檔</Button>}>最新的修改還沒有存進資料夾（{saveErr}）。請確認資料夾仍可寫入後按「重試存檔」；在存妥之前請不要關閉頁面。</Alert></div>}
         {warning && r.page !== 'init' && <div style="margin-bottom:12px"><Alert tone="warn">{warning}</Alert></div>}
-        {r.page === 'exams' && <Exams doc={hist.present} folder={repo.folderName?.()} onOpen={(examId) => { openExam(examId); go({ page: 'step', examId, step: 1 }); }} onNew={() => go({ page: 'new' })} onSettings={() => go2({ page: 'settings' }, { route: r, label: pageName(r, hist.present) })} onChangeFolder={() => void changeFolder()} onArchive={(id) => archiveExam(id, true)} onRestore={(id) => archiveExam(id, false)} onDelete={removeExam} />}
+        {r.page === 'exams' && <Exams doc={hist.present} folder={repo.folderName?.()} onOpen={(examId) => { openExam(examId); go({ page: 'step', examId, step: 1 }); }} onNew={() => go({ page: 'new' })} onSettings={() => go2({ page: 'settings' }, { route: r, label: pageName(r, hist.present) })} onChangeFolder={() => go2({ page: 'init' }, { route: r, label: pageName(r, hist.present) })} {...(folderMissing ? { listError: <FolderListError onRelink={() => openFolderDlg('relink')} /> } : {})} onArchive={(id) => archiveExam(id, true)} onRestore={(id) => archiveExam(id, false)} onDelete={removeExam} />}
         {r.page === 'new' && <NewExam doc={hist.present} onCancel={() => go({ page: 'exams' })} onCreate={(d, examId) => { edit(d); go({ page: 'step', examId, step: 1 }); }} />}
         {r.page === 'lookup' && <Lookup doc={hist.present} examId={r.examId} crumbs={pathCrumbs} onGoStep={(examId, step) => go({ page: 'step', examId, step })} onExams={() => go({ page: 'exams' })} />}
         {r.page === 'settings' && <Settings doc={hist.present} onChange={edit} tab={r.tab} onTab={(tab) => setNav((s) => (s.route.page === 'settings' ? { ...s, route: { ...s.route, tab } } : s))} {...(r.division ? { division: r.division } : {})} />}
@@ -197,6 +216,8 @@ export function App() {
         {r.page === 'reserve' && <ReservePage doc={hist.present} examId={r.examId} crumbs={reserveCrumbs(r.examId)} onGoStep={(step) => go({ page: 'step', examId: r.examId, step })} onExams={() => go({ page: 'exams' })} />}
         {(r.page === 'reconcile' || r.page === 'override') && <section><h2>{r.page}</h2><p class="muted">施工中</p></section>}
       </main>
+      {folderDlg && folderDlg !== 'discard' && fsRepo && <FolderDialog mode={folderDlg} fs={fsRepo} pending={fsRepo.pendingCount()} onBackup={downloadBackup} onClose={() => setFolderDlg(null)} onDone={(res) => void folderDone(res)} />}
+      {folderDlg === 'discard' && fsRepo && <DiscardDialog pending={fsRepo.pendingCount()} lost={undoSteps(hist).slice(0, fsRepo.pendingCount()).map((u) => u.label)} onBackup={downloadBackup} onConfirm={discardPending} onClose={() => setFolderDlg(null)} />}
       <Footer onCopyright={() => r.page !== 'copyright' && go2({ page: 'copyright' }, { route: r, label: pageName(r, hist.present) })} onPrivacy={() => r.page !== 'privacy' && go2({ page: 'privacy' }, { route: r, label: pageName(r, hist.present) })} />
     </FeatureContext.Provider>
   );
@@ -208,6 +229,7 @@ export function pageName(r: Route, doc: Doc): string {
     case 'exams': return '模擬考列表';
     case 'new': return '新增模擬考';
     case 'settings': return '共用設定';
+    case 'init': return '資料夾設定';
     case 'lookup': return '考生查詢';
     case 'copyright': return '使用授權';
     case 'privacy': return '隱私權政策';

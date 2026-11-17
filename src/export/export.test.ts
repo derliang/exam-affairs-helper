@@ -43,7 +43,9 @@ describe('頁尾（D66）', () => {
 describe('版面模型', () => {
   it('座位表：每間班級教室一頁，預備教室一間一頁（時段版，稿 v2.28）', () => {
     const pages = buildSeatPages(makeFixture());
-    expect(pages.map((p) => !!p.slotMode)).toEqual([false, false, true]);
+    // G32：預備教室考試頁（時段版）之後多一頁抽離自習「參考座位」
+    expect(pages.map((p) => !!p.slotMode)).toEqual([false, false, true, false]);
+    expect(pages[3]!.title).toContain("參考座位");
     expect(pages[0]!.cells.get('1-1')!.code).toBe('0101');
     expect(pages[2]!.title).toContain('座位表（時段版）');
     expect(pages[2]!.cells.size).toBe(2);
@@ -151,7 +153,7 @@ describe('Word 輸出（D44/D45）', () => {
     expect(ft).not.toContain(FONT_BOLD);
     const doc = await text('word/document.xml');
     expect([...doc.matchAll(/<w:pgSz w:w="(\d+)" w:h="(\d+)"/g)].map((m) => [m[1], m[2]])).toEqual(
-      Array(3).fill([String(mmToTwip(210)), String(mmToTwip(297))]),
+      Array(4).fill([String(mmToTwip(210)), String(mmToTwip(297))]),
     );
     expect(doc).toContain('第4排');
     expect(doc).toContain('0101');

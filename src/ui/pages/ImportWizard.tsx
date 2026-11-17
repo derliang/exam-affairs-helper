@@ -5,7 +5,7 @@ import {
   buildEntries, diffEntries, GROUP_TABLES, IGNORE, prefillMapping, rememberMapping, scanExamSheet,
   type ExamScan, type ReviewItem, type RowDecision, type SavedMarkMap, type ScanOptions, type Sheet,
 } from '../../import';
-import { Alert, Badge, Button, StatsBar } from '../components';
+import { Alert, Badge, Button } from '../components';
 import { FIELD_LABEL, SUBJECT_ID_MAP } from '../step2';
 import { RowFix } from './RowFix';
 
@@ -139,14 +139,15 @@ export function ImportWizard(p: {
       {scan.review.length > 0 && (
         <>
           <h4 style="margin-top:16px">③ 待確認資料（{res.pendingReview.length} 筆待處理／共 {scan.review.length} 筆）</h4>
-          <p class="muted small">這些列程式無法確定，不會被默默略過。請逐列決定：<b>手動補上（新增）</b>、<b>修改內容</b>或<b>略過</b>；全部決定完才能確認匯入。</p>
+          <p class="muted small">這些列程式無法確定，不會被默默略過。請逐列決定：<b>手動補上（新增）</b>、<b>修改內容</b>、<b>確認無誤</b>（只有缺少姓名的列可以：保留為空位，不建立考生）或<b>不匯入這列</b>；全部決定完才能確認匯入。</p>
           {scan.review.map((it) => (
-            <RowFix key={`${sheetIx}-${it.row}`} where={`工作表「${p.sheets[sheetIx]?.name ?? ''}」第 ${it.row} 列`} kindText={KIND_TEXT[it.kind]} message={it.message} cells={it.cells} draft={it.draft}
+            <RowFix key={`${sheetIx}-${it.row}`} where={`工作表「${p.sheets[sheetIx]?.name ?? ''}」第 ${it.row} 列`} kindText={KIND_TEXT[it.kind]} message={it.message} cells={it.cells} draft={it.draft} classNames={p.classNames}
+              {...(it.kind === 'no-name' ? { confirmHint: '這一列保留為空位，不會建立考生。' } : {})}
               {...(it.kind === 'bad-group' ? { groupCodes: Object.keys(opts.groupTable ?? {}) } : {})}
               onDecide={(d) => setRowDec((r) => {
                 const n = { ...r };
                 if (!d) delete n[it.row];
-                else n[it.row] = d.mode === 'skip' ? { action: 'skip' } : { action: 'fix', classNo: d.value.classNo, seatNo: d.value.seatNo, name: d.value.name, ...(d.value.groupCode ? { groupCode: d.value.groupCode } : {}) };
+                else n[it.row] = d.mode === 'skip' || d.mode === 'confirm' ? { action: 'skip' } : { action: 'fix', classNo: d.value.classNo, seatNo: d.value.seatNo, name: d.value.name, ...(d.value.groupCode ? { groupCode: d.value.groupCode } : {}) };
                 return n;
               })} />
           ))}
@@ -163,21 +164,24 @@ export function ImportWizard(p: {
       )}
 
       <h4 style="margin-top:16px">④ 匯入預覽</h4>
-      <StatsBar items={[
-        { label: '將匯入考生', value: res.entries.length },
-        { label: '新增', value: diff.added.length },
-        { label: '變更', value: diff.changed.length },
-        { label: '移除', value: diff.removed.length, bad: diff.removed.length > 0 },
-        { label: '不變', value: diff.unchanged },
-      ]} />
-      {p.previous && p.previous.length > 0 && <p class="muted small" style="margin-top:8px">和目前的考試名單（{p.previous.length} 人）相比。確認匯入後可用「復原」回到匯入前。</p>}
-      {diff.changed.length > 0 && <details style="margin-top:8px"><summary>查看 {diff.changed.length} 筆變更</summary>
+      <div data-stats="oneline" class="row" style="gap:6px 20px;flex-wrap:wrap;align-items:baseline" aria-label="匯入統計">
+        {[
+          { label: '報名考生', value: res.entries.length, bad: false },
+          { label: '新報名', value: diff.added.length, bad: false },
+          { label: '改報名內容', value: diff.changed.length, bad: false },
+          { label: '取消報名', value: diff.removed.length, bad: diff.removed.length > 0 },
+          { label: '沒變', value: diff.unchanged, bad: false },
+          ...(res.markStats.total > 0 ? [{ label: '標示已套用', value: res.markStats.applied, bad: false }] : []),
+        ].map((i) => <span key={i.label} class={i.bad ? 'bad' : ''} style={`white-space:nowrap${i.bad ? ';color:var(--danger-ink,#a33)' : ''}`}>{i.label} <strong style="font-size:20px">{i.value}</strong></span>)}
+      </div>
+      {p.previous && p.previous.length > 0 && <p class="muted small" style="margin-top:8px">和目前的考試名單（{p.previous.length} 人報名）相比。確認匯入後可用「復原」回到匯入前。</p>}
+      {diff.changed.length > 0 && <details style="margin-top:8px"><summary>查看 {diff.changed.length} 筆改報名內容</summary>
         <table class="t"><thead><tr><th>班級-座號</th><th>姓名</th><th>變動</th><th>科目（前→後）</th></tr></thead><tbody>
           {diff.changed.slice(0, 50).map((c) => <tr key={c.code}><td>{c.code}</td><td>{c.after.name}</td><td>{c.fields.map((f) => ({ name: '姓名', subjects: '科目', group: '組別', examNo: '應試編號' })[f]).join('、')}</td>
             <td>{c.fields.includes('subjects') ? `${c.before.subjectIds.map(name).join('、') || '無'} → ${c.after.subjectIds.map(name).join('、') || '無'}` : '—'}</td></tr>)}
         </tbody></table></details>}
-      {diff.removed.length > 0 && <div style="margin-top:8px"><Alert tone="warn">本次名單將移除 {diff.removed.length} 人。請先確認是否漏列考生。</Alert></div>}
-      <p class="muted small" style="margin-top:8px">標示統計：有 {res.markStats.total} 筆標示、已套用 {res.markStats.applied} 筆、略過 {res.markStats.skipped} 筆{res.markStats.unreadable > 0 ? `（其中 ${res.markStats.unreadable} 筆看不懂）` : ''}。</p>
+      {diff.removed.length > 0 && <div style="margin-top:8px"><Alert tone="warn">有 {diff.removed.length} 人取消報名（只是從這次考試名單拿掉，不會刪除學生）。請先確認是否漏列考生。</Alert></div>}
+      {res.markStats.total > 0 && <p class="muted small" style="margin-top:8px">標示統計：有 {res.markStats.total} 筆標示、已套用 {res.markStats.applied} 筆、略過 {res.markStats.skipped} 筆{res.markStats.unreadable > 0 ? `（其中 ${res.markStats.unreadable} 筆看不懂）` : ''}。</p>}
       {res.skippedByUser > 0 && <p class="muted small">已略過 {res.skippedByUser} 筆，不會匯入。</p>}
 
       <div class="btnrow" style="margin-top:12px">

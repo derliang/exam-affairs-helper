@@ -98,7 +98,7 @@ export function syncDiffs(doc: Doc): Doc {
     const f = files[e.id];
     if (!f?.entries) continue;
     // 名單與班級用該考試學年度的那一份（沒有自己的資料就退回目前這份，#208）
-    const fresh = refreshDiffs(rosterFor(doc, e)[e.division], f.entries, e.participation, f.diffs ?? [], diffOptions(viewForYear(doc, examYear(e)), e));
+    const fresh = refreshDiffs(rosterFor(doc, e)[e.division], f.entries, 'partial', f.diffs ?? [], diffOptions(viewForYear(doc, examYear(e)), e));
     if (!diffsStale(f.diffs ?? [], fresh)) continue;
     files = { ...files, [e.id]: { ...f, diffs: fresh } };
   }

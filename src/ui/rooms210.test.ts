@@ -28,7 +28,7 @@ describe('G14 提示文字', () => {
     expect(labelSplitNote({ ...base, rows: 7, depth: 7, seatCount: 49 })).toBeNull();
   });
   it('到上限提示', () => {
-    expect(seatLimitNote({ ...base, rows: 7 })).toBe('排最多 7、深位最多 7（標籤上限 7×7）。');
+    expect(seatLimitNote({ ...base, rows: 7 })).toBe('排最多 7、深位最多 7（班級教室上限 7×7）。');
     expect(seatLimitNote(base)).toBeNull();
   });
 });
