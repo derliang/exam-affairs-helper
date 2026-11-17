@@ -19,6 +19,7 @@
 | 決定記錄（D 編號：已定、暫定、退役、未決） | [decisions.md](decisions.md) |
 | 範例檔歸納的規則 | [sample-analysis.md](sample-analysis.md) |
 | 補考擴充：功能、流程、需求、檢核與對帳、給設計員的畫面清單（2026-11-17） | [makeup-spec.md](makeup-spec.md)；決定 D113～D122；原話見 [requirements.md](requirements.md)〈七〉；待辦 [todo.md](todo.md) H 區 |
+| 補考調度計畫（施工包、順序、現況） | [dispatch/補考調度計畫.md](dispatch/補考調度計畫.md) |
 | 補考歷史資料（105～107 學年）歸納的規則 | [makeup-sample-analysis.md](makeup-sample-analysis.md) |
 | 分科模擬考規格 | [ast-spec.md](ast-spec.md)（分科座位新模型以 decisions D99 為準） |
 | 正式考試日程、節次與時長 | [exam-schedule.md](exam-schedule.md)（程式內建時段表的來源） |
