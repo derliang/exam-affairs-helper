@@ -13,6 +13,8 @@ import { download, downloadMany, kb, openPrintPage, wordNoticeText } from '../pa
 import { phaseOf } from '../../core/astD99/release';
 import { PhaseCard, VersionCard } from './AstRelease';
 import { astPlan, astSnapshotMismatch } from './model';
+import { gateOf, reconcile, stampNow } from '../reconcile';
+import { ReconcilePanel } from '../pages/ReconcilePanel';
 import { AST_OUTPUT_ITEMS, astOutputBlockers, astOutputs, estimatePages, type AstOutputKey, type AstOutputs } from './output';
 
 type Loaded = { fonts: FontData; has: (ch: string) => boolean };
@@ -53,6 +55,7 @@ export function AstStep6(p: { doc: Doc; exam: ExamConfig; onGoStep: (n: 2 | 3 | 
   const [format, setFormat] = useState<ExportFormat>('word');
   const [paper, setPaper] = useState<LabelPaper>('B4');
   const [on, setOn] = useState<Record<AstOutputKey, boolean>>({ label: true, seat: true, ann: true, use: true, reg: true, study: true });
+  const [withRef, setWithRef] = useState(true); // G36：含自習參考座位頁（預設勾）
   const [tab, setTab] = useState<Tab>('label');
   const [pi, setPi] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -65,8 +68,8 @@ export function AstStep6(p: { doc: Doc; exam: ExamConfig; onGoStep: (n: 2 | 3 | 
   const blockers = astOutputBlockers(plan, hasList, astSnapshotMismatch(exam, plan));
   const built = useMemo((): { ok: true; o: AstOutputs } | { ok: false; error: string } | undefined => {
     if (!plan || blockers.length > 0) return undefined;
-    try { return { ok: true, o: astOutputs(doc, exam, plan, paper) }; } catch (e) { return { ok: false, error: e instanceof Error ? e.message : String(e) }; }
-  }, [doc, exam, plan, paper, blockers.length]);
+    try { return { ok: true, o: astOutputs(doc, exam, plan, paper, withRef) }; } catch (e) { return { ok: false, error: e instanceof Error ? e.message : String(e) }; }
+  }, [doc, exam, plan, paper, withRef, blockers.length]);
   const outs = built?.ok ? built.o : undefined;
   const loader = p.loadFonts ?? (async () => (await import('../../export/fontLoader')).loadFonts());
   const planning = phaseOf(exam) === 'planning';
@@ -100,14 +103,21 @@ export function AstStep6(p: { doc: Doc; exam: ExamConfig; onGoStep: (n: 2 | 3 | 
   }, [outs, tab, idx, paper]);
   const tabs: { value: Tab; label: string }[] = [{ value: 'label', label: '標籤' }, { value: 'ann', label: '班級公告' }, { value: 'reg', label: '試務清冊' }, { value: 'study', label: '自習名單' }];
   const nFiles = keys.filter((k) => outs && pagesOf(outs, k) > 0).length;
-  const noDl = !outs || planning || keys.length === 0;
-  const noDlWhy = !outs ? '還不能下載，請先處理上方的問題。' : planning ? '規劃中只能預覽，請先確認定案。' : '尚未勾選任何下載內容，請先在上方勾選。';
+  // G35 考前對帳：進入第 6 步與資料變動後自動重算，另有「重新對帳」；紅燈擋下載、琥珀須逐項確認
+  const [recheck, setRecheck] = useState(0);
+  const [ack, setAck] = useState('');
+  const rec = useMemo(() => reconcile(doc, exam, outs), [doc, exam, outs, recheck]);
+  const at = useMemo(() => stampNow(), [rec]);
+  const gate = gateOf(rec, ack);
+  const noDl = !outs || planning || keys.length === 0 || gate.why !== '';
+  const noDlWhy = gate.why && outs && !planning && keys.length > 0 ? gate.why : !outs ? '還不能下載，請先處理上方的問題。' : planning ? '規劃中只能預覽，請先確認定案。' : '尚未勾選任何下載內容，請先在上方勾選。';
   const overRooms = roomsOverLabel(exam.classroomIds.map((id) => doc.settings.classrooms.find((c) => c.id === id)).filter((c): c is NonNullable<typeof c> => !!c));
   const total = keys.reduce((a, k) => a + (outs ? pagesOf(outs, k) : 0), 0);
 
   return (
     <section class="stack">
       <StepHead title="⑥ 下載" blurb={AST_STEP_BLURBS[5]} />
+      <ReconcilePanel r={rec} gate={gate} acked={gate.warns.length > 0 && ack === gate.fingerprint} at={at} busy={busy} onRecheck={() => setRecheck((n) => n + 1)} onGo={(n) => p.onGoStep(n)} onConfirmDownload={(fp, fmt) => { setAck(fp); void go(fmt); }} />
       {blockers.map((b) => (
         <Alert key={b.text} tone="danger" action={<Button small kind="primary" onClick={() => p.onGoStep(b.step)}>{b.step === 2 ? '去 ② 考試名單' : b.step === 3 ? '去 ③ 教室' : '去 ⑤ 看方案'}</Button>}><b>還不能下載：</b>{b.text}</Alert>
       ))}
@@ -118,6 +128,10 @@ export function AstStep6(p: { doc: Doc; exam: ExamConfig; onGoStep: (n: 2 | 3 | 
 
       <div class="card stack">
         <div><h3>下載內容</h3><p class="small muted">每一類合併成一個多頁檔案。座位一律寫「排－深位」；標籤與清冊不印鐘點，也不排監考人力。{hasExamNo ? '名單有匯入應試編號，標籤、公告與清冊都會印。' : '名單沒有匯入應試編號，所以不印這一欄。'}</p></div>
+        <label class="check" style="align-items:flex-start">
+          <input type="checkbox" checked={withRef} onChange={(e) => { setWithRef(e.currentTarget.checked); setResults(null); }} />
+          <span><b>含自習參考座位頁</b><br /><span class="small muted">不考的人（自習）也排參考座位，放在座位表檔案最後；只供檢核座位夠不夠、可照坐，不印標籤。取消則不出這些頁。</span></span>
+        </label>
         <div class="stack">
           {AST_OUTPUT_ITEMS.map((i) => (
             <label key={i.key} class="check" style="align-items:flex-start">

@@ -1,10 +1,11 @@
 import type { ComponentChildren } from 'preact';
 import { useState } from 'preact/hooks';
 import type { ExamConfig } from '../../data';
-import { Badge, Button, EmptyState, Modal, More, PageHead } from '../components';
+import { Alert, Badge, Button, EmptyState, Modal, More, PageHead } from '../components';
 import { rosterChanged } from '../rosterIO';
 import { examFullyAbsent, examHeadcount, examLevel, examProgress, formatModified, sortExams } from '../examList';
 import { examLabel, lastModified, examYear, type Doc } from '../store';
+import { envBanner } from '../env';
 
 /** 模擬考列表（DESIGN 10.x）：頁首 h1＋資料夾 chip，每列有六格進度條、學年與人數、最後修改；依最後修改由新到舊 */
 /** 刪除考試前的確認（G1）：寫明會刪什麼、不會動什麼，並要輸入考試名稱才能刪 */
@@ -26,13 +27,18 @@ export function DeleteExamModal(p: { exam: ExamConfig; onConfirm: () => void; on
 }
 
 export function Exams(p: {
-  doc: Doc; folder?: string; onOpen: (examId: string) => void; onNew: () => void; onSettings: () => void; onChangeFolder: () => void;
+  doc: Doc; folder?: string;
+  /** G37：開首次使用精靈（橫幅按鈕）；沒給就不顯示橫幅 */
+  onEnv?: () => void;
+  onOpen: (examId: string) => void; onNew: () => void; onSettings: () => void; onChangeFolder: () => void;
   /** 封存、還原、刪除（G1）；沒給就不顯示該按鈕 */
   /** G16：資料夾找不到時取代列表的錯誤狀態（不顯示「還沒有模擬考」） */
   listError?: ComponentChildren;
   onArchive?: (examId: string) => void; onRestore?: (examId: string) => void; onDelete?: (examId: string) => void;
 }) {
   const [del, setDel] = useState<ExamConfig | null>(null);
+  const [envHide, setEnvHide] = useState(false);
+  const banner = p.onEnv && !p.listError ? envBanner(p.doc) : 'none';
   const all = sortExams(p.doc.exams);
   const exams = all.filter((e) => !e.archived);
   const archived = all.filter((e) => e.archived);
@@ -70,6 +76,17 @@ export function Exams(p: {
         <Button onClick={p.onSettings}>共用設定</Button>
         <Button kind="primary" onClick={p.onNew}>新增模擬考</Button>
       </PageHead>
+      {banner !== 'none' && !(banner === 'changed' && envHide) && (
+        <div style="margin-bottom:12px" data-env-banner={banner}>
+          <Alert tone="warn" action={banner === 'changed'
+            ? <span class="row"><Button small onClick={() => setEnvHide(true)}>知道了</Button><Button small kind="primary" onClick={p.onEnv}>查看環境設定</Button></span>
+            : <Button kind="primary" onClick={p.onEnv}>{banner === 'skipped' ? '繼續首次設定' : '開始首次設定'}</Button>}>
+            {banner === 'never' && <><b>我們還沒確認過環境</b>：節次表、教室、班級、標籤紙張還是程式預設，先花 3 分鐘看過。</>}
+            {banner === 'skipped' && <><b>你先略過了首次設定</b>：環境尚未確認；新增考試時仍會請你確認。</>}
+            {banner === 'changed' && <><b>共用設定在上次確認後有變動</b>：下次新增考試時會請你重新確認。</>}
+          </Alert>
+        </div>
+      )}
       {p.listError ? p.listError : all.length === 0 ? (
         <EmptyState title="還沒有模擬考" action={<Button kind="primary" onClick={p.onNew}>新增模擬考</Button>}>按「新增模擬考」開始。</EmptyState>
       ) : (
