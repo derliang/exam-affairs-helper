@@ -221,7 +221,8 @@ describe('G14 標籤：每格＝紙寬÷7、紙高÷7，排列同座位表（學
 describe('G15 ⑥ 下載：Word、PDF 各一顆按鈕，沒有格式選擇', () => {
   it('不能下載的原因（過期、有擋下項目、沒勾內容）；可以下載時為空', () => {
     expect(downloadGate({ stale: true, blocked: true, nothing: true })).toContain('過期');
-    expect(downloadGate({ stale: false, blocked: true, nothing: true })).toContain('必須處理');
+    expect(downloadGate({ stale: false, blocked: true, nothing: false })).toContain('必須處理');
+    expect(downloadGate({ stale: false, blocked: true, nothing: true })).toContain('尚未勾選'); // 全沒勾時先說沒勾
     expect(downloadGate({ stale: false, blocked: false, nothing: true })).toContain('尚未勾選');
     expect(downloadGate({ stale: false, blocked: false, nothing: false })).toBe('');
   });
