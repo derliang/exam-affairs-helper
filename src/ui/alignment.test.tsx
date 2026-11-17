@@ -40,11 +40,15 @@ describe('列印對位測試頁：尺寸與邊距數值', () => {
     expect(alignmentSpec('B4')).toMatchObject({ widthMm: 250, heightMm: 353, marginMm: 10 });
     expect(alignmentSpec('A3')).toMatchObject({ widthMm: 297, heightMm: 420, marginMm: 10 });
   });
-  it('標籤格線：A3 7×7 每格 35mm 正方、B4 6×8、A4 沒有', () => {
-    expect(alignmentSpec('A3').labels).toEqual({ cols: 7, rows: 7, cellW: 35, cellH: 35 });
+  it('標籤格線：A3、B4 都是 7×7，每格＝紙寬÷7、紙高÷7，A4 沒有', () => {
+    const a3 = alignmentSpec('A3').labels!;
+    expect([a3.cols, a3.rows]).toEqual([7, 7]);
+    expect(a3.cellW).toBeCloseTo(297 / 7, 5);
+    expect(a3.cellH).toBeCloseTo(420 / 7, 5);
     const b4 = alignmentSpec('B4').labels!;
-    expect([b4.cols, b4.rows]).toEqual([6, 8]);
-    expect(b4.cellW).toBeCloseTo((250 - 20) / 6, 5);
+    expect([b4.cols, b4.rows]).toEqual([7, 7]);
+    expect(b4.cellW).toBeCloseTo(250 / 7, 5);
+    expect(b4.cellH).toBeCloseTo(353 / 7, 5);
     expect(alignmentSpec('A4').labels).toBeUndefined();
   });
   it('列印頁：三頁各一，具名 @page 紙張尺寸與零邊界，SVG 以 mm 為單位', () => {
@@ -66,6 +70,6 @@ describe('列印對位測試頁：尺寸與邊距數值', () => {
   it('標籤格線只出現在 B4、A3（A4 單頁不含虛線格）', () => {
     const only = (p: 'A4' | 'B4') => renderAlignmentHtml({ generatedAt: '2026-11-08T00:00:00Z', dataVersion: 'T1' }, [p]);
     expect(only('A4')).not.toContain('標籤格');
-    expect(only('B4')).toContain('標籤格 6×8');
+    expect(only('B4')).toContain('標籤格 7×7');
   });
 });

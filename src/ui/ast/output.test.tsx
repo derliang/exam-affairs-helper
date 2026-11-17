@@ -183,11 +183,15 @@ describe('分科輸出：擋下與畫面', () => {
     // AST-3：規劃中只能預覽、不能下載（D101②）；定案後才通過
     const draft = renderToString(<AstStep6 doc={doc} exam={exam} onGoStep={noop} />);
     expect(draft).toContain('規劃中：只能預覽，不能下載正式檔');
-    expect(draft).toMatch(/<button[^>]*btn-lg[^>]*disabled/);
+    expect(draft).toMatch(/btn-fmt[^>]*disabled/);
+    expect(draft).toContain('規劃中只能預覽');
     const fin = updateExam(doc, exam.id, { astPhase: 'final' });
     if (!fin.ok) throw new Error();
     const html = renderToString(<AstStep6 doc={fin.doc} exam={fin.doc.exams.find((x) => x.id === exam.id)!} onGoStep={noop} />);
-    expect(html).not.toMatch(/<button[^>]*btn-lg[^>]*disabled/);
+    expect(html).not.toMatch(/btn-fmt[^>]*disabled/);
+    expect(html).toContain('下載 Word');
+    expect(html).toContain('下載 PDF（開啟列印頁）');
+    expect(html).not.toContain('role="radiogroup"'); // G15：沒有格式選擇
     for (const t of ['整合標籤', '班級公告', '每節教室用途表', '每科試務清冊', '自習教室名單與布置標籤工作表', '方案通過驗證']) expect(html).toContain(t);
     const u = updateExam(doc, exam.id, { classroomIds: [] });
     if (!u.ok) throw new Error();
@@ -230,29 +234,43 @@ describe('分科 Word 產生進度（#270）', () => {
 });
 
 describe('分科輸出：整合標籤兩倍寬（#216／D107）', () => {
-  it('B4 6×8 欄併成 3×8、A3 8×7 併成 4×7；每張紙的標籤數不超過格數；大教室分張標「第 N／共 M 張」', () => {
+  it('整合標籤 2 格寬（D113）：一頁橫向最多 3 張、縱向最多 7 張；格子依座位表排列；排數超過 3 分頁標「第 N／共 M 張」', () => {
     const { doc, exam } = fixture();
     const plan = astPlan(doc, exam)!;
-    for (const [paper, per] of [['B4', 24], ['A3', 28]] as const) {
+    for (const paper of ['B4', 'A3'] as const) {
       const o = astOutputs(doc, exam, plan, paper);
       expect(o.label.every((p) => p.layout.wide === true)).toBe(true);
-      expect(o.label.every((p) => p.layout.cols === (paper === 'B4' ? 6 : 8) && p.layout.rows === (paper === 'B4' ? 8 : 7))).toBe(true);
-      expect(o.label.every((p) => p.cells.length <= per)).toBe(true);
+      expect(o.label.every((p) => p.layout.cols === 6 && p.layout.rows === 7)).toBe(true);
+      expect(o.label.every((p) => p.grid && p.grid.cols <= 3 && p.grid.rows <= 7)).toBe(true);
+      expect(o.label.every((p) => p.cells.length <= 21)).toBe(true);
       const multi = o.label.filter((p) => p.part);
       expect(multi.length).toBeGreaterThan(0);
       expect(multi.every((p) => /（第 [0-9]+／[0-9]+ 張）$/.test(p.roomName))).toBe(true);
       // 一張標籤＝一個座位：總張數與方案的座位數一致
-      expect(o.label.reduce((n, p) => n + p.cells.length, 0)).toBe(new Set(plan.out.exams.map((e) => `${e.roomId}:${e.row}-${e.depth}`)).size);
+      expect(o.label.reduce((n, p) => n + p.cells.length, 0)).toBe(new Set(plan.out.exams.map((e) => e.roomId + ':' + e.row + '-' + e.depth)).size);
     }
   });
-  it('Word：兩倍寬標籤表格欄數是實體欄數（B4 6、A3 8），A3 左右邊界 8.5mm、每欄 35mm', async () => {
+  it('整合標籤：超過 7×7 的教室不輸出標籤（D113）', () => {
+    const { doc, exam } = fixture();
+    const big = doc.settings.classrooms.find((r) => r.kind === 'class')!;
+    const o0 = astOutputs(doc, exam, astPlan(doc, exam)!);
+    expect(o0.label.some((p) => p.roomName.startsWith(big.name))).toBe(true);
+    const d2 = { ...doc, settings: { ...doc.settings, classrooms: doc.settings.classrooms.map((r) => (r.id === big.id ? { ...r, rows: 8, seatCount: 8 * r.depth, disabled: undefined } : r)) } };
+    const p2 = astPlan(d2, exam);
+    expect(p2).toBeTruthy();
+    expect(astOutputs(d2, exam, p2!).label.some((p) => p.roomName.startsWith(big.name + '　'))).toBe(false);
+  });
+  it('Word：兩倍寬標籤表格欄數是實體欄數（每張 2 欄），欄寬＝紙寬÷7', async () => {
     const { doc, exam } = fixture();
     const o = astOutputs(doc, exam, astPlan(doc, exam)!, 'A3');
     const res = await runAstExport(o, ['label'], 'word', 'A3', '分科', async () => ({ fonts: { regular: new Uint8Array(readFileSync(new URL('../../export/fonts/NotoSansTC-Regular-big5.ttf', import.meta.url))), bold: new Uint8Array(readFileSync(new URL('../../export/fonts/NotoSansTC-Bold-core.ttf', import.meta.url))) }, has: () => true }));
     const xml = await (await JSZip.loadAsync(res[0]!.data as Uint8Array)).file('word/document.xml')!.async('string');
-    expect(xml).toContain('w:gridCol w:w="1984"'); // 35mm＝1984 twip
-    expect((xml.match(/w:gridCol w:w="1984"/g) ?? []).length).toBeGreaterThanOrEqual(8); // 每頁標籤表 8 欄
-    expect(xml).toMatch(/w:left="482"/); // 8.5mm＝482 twip
+    const col = Math.floor((297 / 7 * 1440) / 25.4);
+    expect((xml.match(new RegExp('w:gridCol w:w="' + col + '"', 'g')) ?? []).length).toBeGreaterThanOrEqual(2);
+    const grids = [...xml.matchAll(/<w:tblGrid>(.*?)<\/w:tblGrid>/g)].map((m) => [...m[1]!.matchAll(/w:w="(\d+)"/g)].map((x) => Number(x[1])));
+    const g = grids.filter((w) => w.length >= 2 && w.length % 2 === 0 && w.every((x) => x === col));
+    expect(g.length).toBeGreaterThan(0);
+    expect(g.every((w) => w.length <= 6)).toBe(true); // 一頁最多 3 張＝6 欄
   });
 });
 

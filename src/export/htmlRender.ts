@@ -4,7 +4,7 @@
  * 座位表與標籤的樣式照設計系統成品頁「座位表與標籤」稿件（docs/design/mockups/設計系統.html #paper）：
  * 改這裡的版面要同步改稿件，反之亦然。
  */
-import { footerText, isSpecial, labelBoxMm, labelGrid, landscapeFit, namePtFit, PAPER_MM, periodLineFontPt, personLayout, rotationPage, wideLayout, type PersonLine, SEAT_PAGE, seatGeometry, statLayout, SLOT_TIP, type CellModel, type LabelPageModel, type ListPageModel, type SeatPageModel, type TablePageModel } from './model';
+import { footerText, isSpecial, labelBoxMm, labelGrid, labelGridSize, labelNotePt, landscapeFit, namePtFit, PAPER_MM, periodLineFontPt, personLayout, rotationPage, wideLayout, type PersonLine, SEAT_PAGE, seatGeometry, statLayout, SLOT_TIP, type CellModel, type LabelPageModel, type ListPageModel, type SeatPageModel, type TablePageModel } from './model';
 
 export interface HtmlOptions {
   generatedAt: string;
@@ -31,7 +31,7 @@ function cornersHtml(c: CellModel): string {
 /** 兩倍寬整合標籤（稿 v2.37／D107）：一張佔兩格；單人左半編號姓名、右半科目；2 人左右各一人；3 人以上合併一格。排法同 Word（model.wideLayout） */
 function wideHtml(c: CellModel | undefined, w: number, h: number, b4: boolean): string {
   const size = `width:${mm(w * 2)};height:${mm(h)}`;
-  if (!c) return `<div class="pp-c pp-e" style="${size};grid-column:span 2"></div>`;
+  if (!c) return `<div class="pp-c pp-bl" style="${size};grid-column:span 2"></div>`;
   const lay = wideLayout(c, w - 1.5, h, { topPad: 5, codePt: b4 ? 33 : 31, nameMax: 18, subjMax: b4 ? 20 : 16 });
   const spans = (ls: PersonLine[]): string => ls.map((l) => `<span class="pp-pr" style="font-size:${l.pt}pt;margin-top:${mm(l.gapBefore)}">${l.runs.map((r) => (r.bold ? `<b>${esc(r.text)}</b>` : esc(r.text))).join('')}</span>`).join('');
   const co = `<i class="pp-co">${esc(c.coord)}</i>`;
@@ -45,7 +45,7 @@ function wideHtml(c: CellModel | undefined, w: number, h: number, b4: boolean): 
 /** 一格：座位表用班級色（抽離考試用柔和單色），標籤用白底，有標示的標籤格用淺黃 */
 function cellHtml(c: CellModel | undefined, w: number, h: number, mode: 'seat' | 'detach' | 'label', b4 = true): string {
   const size = `width:${mm(w)};height:${mm(h)}`;
-  if (!c) return `<div class="pp-c pp-e" style="${size}"></div>`;
+  if (!c) return `<div class="pp-c ${mode === 'label' ? 'pp-bl' : 'pp-e'}" style="${size}"></div>`;
   if (c.persons) {
     // 預備教室／綜合教室／整合標籤（v2.36）：版式同一般標籤，格內每人一區；排法同 Word（model.personLayout）
     const g = mode === 'label' ? { topPad: 5, codePt: b4 ? 33 : 31, nameMax: 18, schedMax: 11 } : { topPad: 4.5, codePt: 19, nameMax: 10.5, schedMax: 7, joinSched: true };
@@ -91,22 +91,24 @@ ${p.slotMode ? `<div class="pp-sltip">${esc(SLOT_TIP)}</div>` : ''}${statsNext ?
 }
 
 function labelHtml(p: LabelPageModel, o: HtmlOptions): string {
-  const margin = o.labelMarginMm ?? 10;
+  const margin = o.labelMarginMm ?? 3;
   const { layout } = p;
   const paper = PAPER_MM[layout.paper];
   // 稿件：格高最多 35mm，格子下方才留得出注意事項與頁尾（Word 版待下一步對齊後再共用）
-  const cell = labelBoxMm(layout, margin, p.notes.length);
+  const gs = labelGridSize(p);
+  const cell = labelBoxMm(layout, gs.rows);
   const cells = labelGrid(p)
     .map((m) => (layout.wide ? wideHtml(m, cell.w, cell.h, layout.paper === 'B4') : cellHtml(m, cell.w, cell.h, 'label', layout.paper === 'B4')))
     .join('');
   const padX = cell.padX;
-  const noteHtml = p.notes.length
-    ? `<div class="pp-note"><h4>注意事項：</h4>${p.notes.map((l) => `<div>${l.map((s) => (s.bold ? `<b>${esc(s.text)}</b>` : esc(s.text))).join('')}</div>`).join('')}</div>`
+  const notePt = labelNotePt(layout, gs.rows, p.notes.length, layout.paper === 'B4' ? 13 : 20);
+  const noteHtml = notePt
+    ? `<div class="pp-note" style="margin-top:3mm;font-size:${notePt}pt;line-height:1.5;padding:2mm 4mm"><h4 style="font-size:${notePt + 1}pt;margin-bottom:1mm">注意事項：</h4>${p.notes.map((l) => `<div>${l.map((s) => (s.bold ? `<b>${esc(s.text)}</b>` : esc(s.text))).join('')}</div>`).join('')}</div>`
     : '';
   const cls = layout.paper.toLowerCase();
   return `<section class="sheet pp pp-lab ${cls}" style="page:${cls};width:${paper.w}mm;height:${paper.h - 0.5}mm;padding:${margin}mm ${mm(padX)}">
 <div class="pp-hd" style="margin-bottom:3mm"><div><div class="pp-h1">${esc((p.heading ?? `${p.examName}　標籤`) + (p.flipNotes?.length ? `　（${p.flipNotes.join('；')}）` : ''))}</div></div><span class="pp-room" style="font-size:12pt;padding:1mm 4mm">${esc(p.roomName)}</span></div>
-<div class="pp-grid" style="grid-template-columns:repeat(${layout.cols},${mm(cell.w)})">${cells}</div>
+<div class="pp-grid" style="grid-template-columns:repeat(${gs.cols * (layout.wide ? 2 : 1)},${mm(cell.w)})">${cells}</div>
 ${noteHtml}
 <div class="pp-foot">${esc(footerText(o.generatedAt, o.dataVersion))}</div></section>`;
 }
@@ -195,6 +197,7 @@ footer { font-size: 8pt; color: #555; text-align: right; margin-top: 3mm }
 .pp.pp-lab .pp-wd .pp-wh.pp-wl{align-items:flex-start;padding-left:1.5mm}
 .pp.pp-lab .pp-wd .pp-wh.pp-wt{justify-content:flex-start;padding-top:0}
 .pp .pp-pr b{font-weight:700}
+.pp .pp-c.pp-bl{border:none;background:none}
 .pp .pp-e{background:repeating-linear-gradient(135deg,#F1EDE0 0 1.2mm,#E2DCC8 1.2mm 2.4mm)}
 .pp.pp-lab .pp-c{display:grid;grid-template-rows:1fr auto 9mm;justify-items:center;align-items:center;gap:0;padding:5mm 1mm .8mm}
 .pp.pp-lab .pp-no{align-self:end;margin-bottom:2.6mm;font-size:31pt}.pp.pp-lab .pp-nm{font-size:15pt}.pp.pp-lab .pp-mk{font-size:12pt}.pp.pp-lab .pp-co{font-size:9pt}

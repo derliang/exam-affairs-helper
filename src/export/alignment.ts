@@ -34,7 +34,7 @@ export function alignmentSpec(paper: AlignPaper): AlignSpec {
   const spec: AlignSpec = { paper, widthMm: w, heightMm: h, marginMm: ALIGN_MARGIN_MM, scaleBarMm: SCALE_BAR_MM };
   if (paper !== 'A4') {
     const layout = defaultLabelLayout(paper);
-    const c = labelCellMm(layout, ALIGN_MARGIN_MM);
+    const c = labelCellMm(layout, 0); // 對位用整張紙的 7×7（紙高÷7）
     spec.labels = { cols: layout.cols, rows: layout.rows, cellW: c.w, cellH: c.h };
   }
   return spec;
@@ -56,8 +56,8 @@ function sheetSvg(spec: AlignSpec, footer: string): string {
   if (spec.labels) {
     const { cols, rows, cellW, cellH } = spec.labels;
     const d = ' stroke-dasharray="2 1.5"';
-    for (let c = 0; c <= cols; c++) p.push(line(m + c * cellW, m, m + c * cellW, m + rows * cellH, ACCENT, 0.35, d));
-    for (let r = 0; r <= rows; r++) p.push(line(m, m + r * cellH, m + cols * cellW, m + r * cellH, ACCENT, 0.35, d));
+    for (let c = 0; c <= cols; c++) p.push(line(c * cellW, 0, c * cellW, rows * cellH, ACCENT, 0.35, d));
+    for (let r = 0; r <= rows; r++) p.push(line(0, r * cellH, cols * cellW, r * cellH, ACCENT, 0.35, d));
   }
   // 對角線與中心十字
   p.push(line(0, 0, W, H, DANGER, 0.25, ' stroke-dasharray="4 2"'), line(W, 0, 0, H, DANGER, 0.25, ' stroke-dasharray="4 2"'));

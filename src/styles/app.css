@@ -316,6 +316,9 @@ section>header p{color:var(--text-2);max-width:72ch}
 .logo svg{width:34px;height:34px;display:block}
 .folder-chip{display:inline-flex;gap:8px;align-items:center;background:var(--sunken);border:1px solid var(--line);border-radius:var(--r-sm);padding:6px 12px;font-family:ui-monospace,Consolas,monospace;font-size:13px}
 .exam-list{display:grid;gap:12px}
+.exam-sec{font-size:18px;margin:16px 0 8px;display:flex;align-items:baseline;gap:6px}
+.exam-arch{background:var(--sunken)}
+.archived-banner{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--sunken)}
 .exam{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto;gap:14px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:14px 16px;box-shadow:var(--shadow-1)}
 .exam h3{font-size:18px}
 .exam .meta{display:flex;gap:6px 10px;flex-wrap:wrap;align-items:center;margin-top:6px;color:var(--text-3);font-size:13px}

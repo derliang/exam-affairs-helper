@@ -89,10 +89,10 @@ describe('更新考試', () => {
   });
 });
 
-describe('新考試的標籤格數（D74）', () => {
-  it('跟著預設紙張：B4 6 欄×8 列、A3 7×7', () => {
+describe('新考試的標籤格數（D113）', () => {
+  it('B4、A3 預設都是 7×7', () => {
     const now = new Date('2026-01-01T00:00:00Z');
-    for (const [paper, cols, rows] of [['B4', 6, 8], ['A3', 7, 7]] as const) {
+    for (const [paper, cols, rows] of [['B4', 7, 7], ['A3', 7, 7]] as const) {
       const d = demoDoc();
       d.settings = { ...d.settings, defaultLabelPaper: paper };
       const r = newExam(d, 'gsat', '學測第一次', now);

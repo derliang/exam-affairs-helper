@@ -26,15 +26,15 @@ describe('匯出規劃', () => {
     expect(f.map((x) => x.key)).toEqual(['reserveSeat', 'reserveLabel']); // 預備教室座位表與標籤是同一個勾選
   });
 
-  it('A3 預設 7×7，B4 預設 6×8：標籤檔格數跟著紙張走', async () => {
+  it('A3、B4 都是 7×7：標籤檔欄寬＝紙寬÷7，欄數＝教室排數', async () => {
     const a3 = await runExport(makeFixture(), { ...defaultOptions('A3'), seat: false, study: false, reserve: false }, { fonts });
     expect(a3).toHaveLength(1);
     const z = await JSZip.loadAsync(a3[0]!.data as Uint8Array);
     const doc = await z.file('word/document.xml')!.async('string');
-    expect(doc).toContain(`w:w="${Math.round((297 * 1440) / 25.4)}"`);
-    // 每頁有抬頭表（2 欄）、格子表（7 欄）、注意事項框（1 欄）；格子表 2 頁
+    expect(doc).toContain('w:w="' + Math.floor((297 / 7 * 1440) / 25.4) + '"');
+    // 每頁有抬頭表（2 欄）、格子表（教室 4 排＝4 欄）、注意事項框（1 欄）；格子表 2 頁
     const grids = [...doc.matchAll(/<w:tblGrid>(.*?)<\/w:tblGrid>/g)].map((m) => [...m[1]!.matchAll(/<w:gridCol /g)].length);
-    expect(grids.filter((n) => n === 7)).toHaveLength(2);
+    expect(grids.filter((n) => n === 4)).toHaveLength(2);
   });
 
   it('Word：每類一個 .docx，內含字型與頁尾版本碼', { timeout: 30000 }, async () => {

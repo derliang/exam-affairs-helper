@@ -27,6 +27,7 @@ function examLabel(prev: Doc['exams'], next: Doc['exams']): string | undefined {
   const i = next.findIndex((e, k) => !same(e, prev[k]));
   const a = prev[i]; const b = next[i];
   if (!a || !b) return '修改模擬考';
+  if (!!a.archived !== !!b.archived) return b.archived ? '封存模擬考' : '還原模擬考';
   if (a.name !== b.name) return '修改考試名稱';
   if (!same(a.subjects, b.subjects)) return '修改考科表';
   if (a.participation !== b.participation) return '修改參加方式';

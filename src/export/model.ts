@@ -110,8 +110,10 @@ export interface LabelPageModel {
   notes: NoteLine[];
   /** 該科不考人數超過一半時改標「有考」者的說明 */
   flipNotes?: string[];
-  /** 依座位順序，長度 ≤ cols*rows；其餘格空白 */
+  /** 依座位順序；沒人的位置不印格子 */
   cells: CellModel[];
+  /** 本張的格子數（D113）：欄＝排、列＝深位，依教室座位表；沒給就用 layout */
+  grid?: { cols: number; rows: number };
   /** 教室超出一張標籤紙時自動分張（#210）：本張左下角的座位（排、深位，預設 1、1），與「第 N／共 M 張」 */
   origin?: { row: number; depth: number };
   part?: { n: number; of: number };
@@ -183,22 +185,22 @@ export const PAPER_MM: Record<LabelPaper | 'A4', { w: number; h: number }> = {
 };
 export const mmToTwip = (mm: number): number => Math.round((mm * 1440) / 25.4);
 
-/** 標籤預設格數（D74）：A3 7×7（35mm 正方）、B4 6 排×8 深位 */
+/** 標籤格數（D113 取代 D74／D107）：B4、A3 都是 7×7；每格＝紙寬÷7、紙高÷7。一般標籤 7 欄，整合標籤（分科）每張佔 2 欄、一頁橫向最多 3 張 */
+export const LABEL_GRID_MAX = 7;
 export function defaultLabelLayout(paper: LabelPaper): LabelLayout {
-  return paper === 'A3' ? { paper, cols: 7, rows: 7 } : { paper, cols: 6, rows: 8 };
+  return { paper, cols: LABEL_GRID_MAX, rows: LABEL_GRID_MAX };
 }
 
-/** 分科整合標籤（稿 v2.37／D107）：每張兩倍寬。B4 6 欄×8 列併成 3×8；A3 8 欄×7 列（35mm 正方）併成 4×7 */
+/** 分科整合標籤（D113）：每張標籤 2 格寬（紙寬÷7×2），一頁橫向 3 張（佔 6 格）、縱向 7 張 */
 export function wideLabelLayout(paper: LabelPaper): LabelLayout {
-  return paper === 'A3' ? { paper, cols: 8, rows: 7, wide: true } : { paper, cols: 6, rows: 8, wide: true };
+  return { paper, cols: 6, rows: LABEL_GRID_MAX, wide: true };
 }
 
-/** A3 的 7×7 是固定 35mm 正方（沿用舊標籤，D74）；其他格數由紙張扣邊界後均分。
- * 均分時高度多扣 3mm：Word 表格後一定要有一個段落，不預留會多出空白頁。 */
-export function labelCellMm(layout: LabelLayout, marginMm: number): { w: number; h: number } {
-  if (layout.paper === 'A3' && ((layout.cols === 7 && layout.rows === 7) || (layout.wide && layout.cols === 8 && layout.rows === 7))) return { w: 35, h: 35 };
+/** 標籤格尺寸（D113）：寬＝紙寬÷7，高＝紙高÷7。標題與頁尾要佔約 22mm，滿 7 列的頁面格高只好扣掉這段（待列印實測） */
+export const LABEL_PAGE_FIXED_MM = 22;
+export function labelCellMm(layout: LabelLayout, gridRows = LABEL_GRID_MAX): { w: number; h: number } {
   const p = PAPER_MM[layout.paper];
-  return { w: (p.w - 2 * marginMm) / layout.cols, h: (p.h - 2 * marginMm - 3) / layout.rows };
+  return { w: p.w / LABEL_GRID_MAX, h: gridRows >= LABEL_GRID_MAX ? (p.h - LABEL_PAGE_FIXED_MM) / LABEL_GRID_MAX : p.h / LABEL_GRID_MAX };
 }
 
 interface Ctx {
@@ -679,10 +681,14 @@ export function splitLabelTiles<T extends { seat: { row: number; depth: number }
   return tiles;
 }
 
-/** 標籤頁的格子陣列（由左到右、由上到下，長度 cols×rows）：依座位位置放，沒人的位置是 undefined */
+/** 標籤頁格子陣列的大小（以「張」為單位）：有 grid 就用 grid（依座位表的排×深位），否則用 layout */
+export function labelGridSize(p: LabelPageModel): { cols: number; rows: number } {
+  return p.grid ?? { cols: p.layout.wide ? p.layout.cols / 2 : p.layout.cols, rows: p.layout.rows };
+}
+
+/** 標籤頁的格子陣列（由左到右、由上到下，長度 cols×rows）：依座位位置放，沒有人的位置是 undefined */
 export function labelGrid(p: LabelPageModel): (CellModel | undefined)[] {
-  const rows = p.layout.rows;
-  const cols = p.layout.wide ? p.layout.cols / 2 : p.layout.cols; // 兩倍寬：一張標籤佔兩欄，陣列以「張」為單位
+  const { cols, rows } = labelGridSize(p);
   const g: (CellModel | undefined)[] = Array.from({ length: cols * rows }, () => undefined);
   for (const c of p.cells) {
     const col = c.seat.row - (p.origin?.row ?? 1);
@@ -692,6 +698,9 @@ export function labelGrid(p: LabelPageModel): (CellModel | undefined)[] {
   return g;
 }
 
+/** 教室座位超過 7×7，標籤無法對應（D113）：不輸出該教室的標籤，請使用者縮小 */
+export const roomTooBigForLabel = (r: { rows: number; depth: number }): boolean => r.rows > LABEL_GRID_MAX || r.depth > LABEL_GRID_MAX;
+
 /** 標籤：每間教室一張紙，位置同座位表（見 labelGrid）。超出格數丟錯 */
 export function buildLabelPages(input: ExportInput, scope: Scope = 'all'): LabelPageModel[] {
   const ctx = ctxOf(input);
@@ -699,12 +708,12 @@ export function buildLabelPages(input: ExportInput, scope: Scope = 'all'): Label
   const pages: LabelPageModel[] = [];
   for (const id of scope === 'reserve' ? [] : input.exam.classroomIds) {
     const room = input.settings.classrooms.find((c) => c.id === id);
-    if (!room) continue;
+    if (!room || roomTooBigForLabel(room)) continue;
     const mine = input.result.assignments
       .filter((a) => a.classroomId === id)
       .sort((a, b) => a.row - b.row || a.depth - b.depth);
     if (mine.length === 0) continue;
-    const tiles = splitLabelTiles(mine.map((a) => ({ seat: { row: a.row, depth: a.depth }, a })), layout);
+    const tiles = [{ origin: { row: 1, depth: 1 }, cells: mine.map((a) => ({ seat: { row: a.row, depth: a.depth }, a })) }];
     tiles.forEach((t, i) => {
       const suffix = tiles.length > 1 ? `（第 ${i + 1}／${tiles.length} 張）` : '';
       pages.push({
@@ -714,9 +723,9 @@ export function buildLabelPages(input: ExportInput, scope: Scope = 'all'): Label
         ...(input.labelHeading?.trim() ? { heading: input.labelHeading.trim() } : {}),
         roomName: room.name + suffix,
         layout,
+        grid: { cols: room.rows, rows: room.depth },
         notes: labelNoteLines(input.settings.labelNotes),
         cells: t.cells.map((x) => makeCell(x.a.code, x.a, ctx)),
-        ...(tiles.length > 1 ? { origin: t.origin, part: { n: i + 1, of: tiles.length } } : {}),
       });
     });
     const lp = pages[pages.length - 1]!;
@@ -730,9 +739,9 @@ export function buildLabelPages(input: ExportInput, scope: Scope = 'all'): Label
     for (const roomId of [...new Set(order)]) {
       const seats = byRoom.get(roomId);
       const room = input.settings.classrooms.find((c) => c.id === roomId);
-      if (!seats || !room) continue;
+      if (!seats || !room || roomTooBigForLabel(room)) continue;
       const list = [...seats.values()].sort((a, b) => a.seat.row - b.seat.row || a.seat.depth - b.seat.depth);
-      const tiles = splitLabelTiles(list, layout);
+      const tiles = [{ origin: { row: 1, depth: 1 }, cells: list }];
       tiles.forEach((t, i) => {
       const suffix = tiles.length > 1 ? `（第 ${i + 1}／${tiles.length} 張）` : '';
       pages.push({
@@ -742,8 +751,8 @@ export function buildLabelPages(input: ExportInput, scope: Scope = 'all'): Label
         ...(input.labelHeading?.trim() ? { heading: input.labelHeading.trim() } : {}),
         roomName: `${room.name}　抽離考試${suffix}`,
         layout,
+        grid: { cols: room.rows, rows: room.depth },
         notes: labelNoteLines(input.settings.labelNotes),
-        ...(tiles.length > 1 ? { origin: t.origin, part: { n: i + 1, of: tiles.length } } : {}),
         cells: t.cells.map((x) => ({
           coord: seatLabel(x.seat),
           seat: { row: x.seat.row, depth: x.seat.depth },
@@ -949,24 +958,18 @@ export function seatGeometry(p: SeatPageModel): { cw: number; ch: number; st: Re
   return { cw, ch: withStats, st, statsNext: false };
 }
 
-/** 標籤頁格子以外要留的高度（mm）：抬頭、注意事項框、頁尾。B4 的注意事項字較小 */
-function labelReserveMm(paper: LabelPaper, noteLines: number): number {
-  const header = 15;
-  const note = noteLines === 0 ? 0 : paper === 'B4' ? 5 + 6 + 8.6 + 1 + noteLines * 8 : 8 + 10 + 13.6 + 2 + noteLines * 12.35;
-  const footer = 14;
-  return header + note + footer;
+/** 標籤格尺寸（D113）：寬＝紙寬÷7、高＝紙高÷7（滿 7 列時扣標題頁尾）；左右不留邊 */
+export function labelBoxMm(layout: LabelLayout, gridRows = LABEL_GRID_MAX): { w: number; h: number; padX: number } {
+  const c = labelCellMm(layout, gridRows);
+  return { w: c.w, h: c.h, padX: 0 };
 }
 
-/** 標籤格尺寸：格高最多 35mm，而且要讓下方的注意事項與頁尾放得下（B4 排 8 列時會比 35mm 矮）；左右邊界讓整排置中 */
-export function labelBoxMm(layout: LabelLayout, margin: number, noteLines = 3): { w: number; h: number; padX: number } {
-  const paper = PAPER_MM[layout.paper];
-  const base = labelCellMm(layout, margin);
-  const w = base.w;
-  const fit = Math.floor(((paper.h - margin - labelReserveMm(layout.paper, noteLines)) / layout.rows) * 10) / 10;
-  const h = Math.min(35, base.h, fit);
-  // 兩倍寬 A3：8 欄×35mm＝280mm，左右各留約 8.5mm（大於一般印表機不可印邊界）
-  const side = +((paper.w - layout.cols * w) / 2).toFixed(2);
-  return { w, h, padX: layout.wide && layout.paper === 'A3' ? side : Math.max(margin, side) };
+/** 格子下方剩的高度放得下注意事項時回傳字級（pt），放不下回 0（不印）。字級最多 maxPt，縮到不足 8pt 就不印 */
+export function labelNotePt(layout: LabelLayout, gridRows: number, noteLines: number, maxPt: number): number {
+  if (noteLines === 0) return 0;
+  const left = PAPER_MM[layout.paper].h - LABEL_PAGE_FIXED_MM - gridRows * labelBoxMm(layout, gridRows).h - 6;
+  const pt = Math.min(maxPt, Math.floor((left - 4) / ((noteLines + 1) * 0.3528 * 1.5)));
+  return pt >= 8 ? pt : 0;
 }
 
 /** 估字寬（em）：中日韓全形 1、其他 0.55 */
