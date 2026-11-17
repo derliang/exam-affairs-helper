@@ -163,6 +163,8 @@ export interface LabelLayout {
 export interface ExamConfig {
   id: string;
   name: string;
+  /** 已封存（G1）：列表收進「已封存」區，可查看與下載但不能編輯；要編輯先還原。沒設＝進行中 */
+  archived?: boolean;
   kind: ExamKind;
   division: Division;
   semester: Semester;

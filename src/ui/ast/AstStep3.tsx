@@ -33,7 +33,7 @@ function SeatEditor(p: { room: Classroom; cap: number; maxDepth: number; onChang
   return (
     <div class="aed">
       {p.examOnly && <div><Badge tone="info">本次專用</Badge> <span class="small muted">編輯本次座位圖：這裡的調整只用在這次考試，不會改動共用教室清單。</span></div>}
-      <div class="small muted">每一排的深位數可以不同（用 − ＋ 調整）；點座位可停用或恢復，停用的座位不排人。沒有座位的地方（該排深位比較少）也畫成斜線。座位上限：最多 {p.cap} 個座位、每排最多 {p.maxDepth} 個深位；比標籤紙大時，標籤會自動分張。{seatLimitNote(room) ? seatLimitNote(room) : ''}</div>
+      <div class="small muted">每一排的深位數可以不同（用 − ＋ 調整）；點座位可停用或恢復，停用的座位不排人。沒有座位的地方（該排深位比較少）也畫成斜線。座位上限：最多 {p.cap} 個座位、每排最多 {p.maxDepth} 個深位；超過 7×7 的舊教室標籤無法對應，請縮小。{seatLimitNote(room) ? seatLimitNote(room) : ''}</div>
       {labelSplitNote(room, p.paper) && <div class="small hint">{labelSplitNote(room, p.paper)}</div>}
       <div class="aedgrid" style={{ gridTemplateColumns: cols }}>
         {depths.map((d, i) => (
@@ -220,7 +220,7 @@ export function AstStep3(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
         <div class="row" style="justify-content:space-between">
           <div>
             <h3>教室與座位圖</h3>
-            <p class="small muted">座位圖可以每排深位數不同、可停用個別座位；要留空就停用座位，不另做「隔排、隔位」規則。<b>自習容量預設等於可排座位</b>，可以手動調高，程式不會自己調大。座位上限：每間最多 8 排×8 深位、56 座（與標籤紙脫鉤；比標籤紙大時標籤自動分張）。</p>
+            <p class="small muted">座位圖可以每排深位數不同、可停用個別座位；要留空就停用座位，不另做「隔排、隔位」規則。<b>自習容量預設等於可排座位</b>，可以手動調高，程式不會自己調大。座位上限：每間最多 7 排×7 深位、49 座（與標籤 7×7 一致）。</p>
             <More title="說明：教室清單與勾選">教室清單是所有模擬考共用的：修改座位圖與自習容量會影響其他使用這間教室的模擬考。「列入本次」沿用原有的勾選，沒列入的教室不會被排考試或自習。</More>
           </div>
           {p.onToRooms && <Button onClick={p.onToRooms}>到共用設定看教室清單</Button>}
