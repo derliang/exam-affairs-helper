@@ -8,10 +8,12 @@ import { defaultSemester, newExam, nextRound, previousExam, schoolYear, suggestE
 
 const CN = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
 
-const TYPES: { kind: ExamKind; level: string; title: string; subj: string; soon?: boolean }[] = [
+/** kind 省略＝佔位卡（補考即將推出）：不是 ExamKind，不能選、不進 tab 順序 */
+const TYPES: { kind?: ExamKind; level: string; title: string; subj: string; soon?: boolean }[] = [
   { kind: 'gsat', level: '高中部', title: '學測模擬考', subj: '國、英、數（第 3 次起分數 A、數 B）、自然、社會' },
   { kind: 'ast', level: '高中部', title: '分科模擬考', subj: '數學甲、數學乙、物理、化學、生物、歷史、地理、公民與社會；每科都是選考，國英不加考' },
   { kind: 'bcct', level: '國中部', title: '會考模擬考', subj: '國文、英語閱讀、英語聽力、數學、社會、自然、寫作測驗（固定七科），不分文理組、沒有選考' },
+  { level: '高中部、國中部', title: '補考', subj: '為缺考的學生另排場次、座位與標籤', soon: true },
 ];
 
 /** 新增模擬考整頁三段式：1 選類型、2 基本資料、3 預設設定（沿用上一次同類型） */
@@ -85,16 +87,17 @@ export function NewExam(p: {
         <div class="card stack"><div class="lab">1　選類型</div>
           <div class="typegrid">
             {TYPES.map((t) => {
-              const on = !t.soon && kind === t.kind;
+              const k = t.kind;
+              const on = !t.soon && k !== undefined && kind === k;
               return (
-                <button type="button" key={t.kind} class="tcard" aria-pressed={on} disabled={t.soon} aria-disabled={t.soon} onClick={() => pick(t.kind)}>
+                <button type="button" key={t.title} class="tcard" {...(t.soon ? { 'aria-describedby': 'soon-note', title: `${t.title}功能即將推出` } : { 'aria-pressed': on })} disabled={t.soon} aria-disabled={t.soon} onClick={() => { if (k && !t.soon) pick(k); }}>
                   <span class="lv">{t.level}</span><strong>{t.title}</strong><span class="subj">{t.subj}</span>
-                  {t.soon ? <span class="tick badge b-soon">尚未開放</span> : on ? <span class="tick badge b-acc">已選</span> : null}
+                  {t.soon ? <span class="tick badge b-soon">即將推出</span> : on ? <span class="tick badge b-acc">已選</span> : null}
                 </button>
               );
             })}
           </div>
-          <p class="small muted">高中部：學測、分科；國中部：會考。</p>
+          <p class="small muted" id="soon-note">高中部：學測、分科；國中部：會考。補考即將推出，現在還不能選。</p>
 
         <div class="psec"><div class="lab">2　基本資料</div>
           {/* G17：兩欄對齊——「學年度｜學期」「名稱｜對象」各一列，「次別」整列、說明在格子下方跨整行；手機單欄 */}

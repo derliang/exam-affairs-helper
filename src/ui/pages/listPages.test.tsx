@@ -41,8 +41,8 @@ describe('新增模擬考整頁', () => {
   it('三段式：選類型、基本資料、預設設定', () => {
     for (const t of ['1　選類型', '2　基本資料', '3　預設設定', '建立並開始', '返回路徑']) expect(html).toContain(t);
   });
-  it('三張類型卡，分科可選、學測已選', () => {
-    expect((html.match(/class="tcard"/g) ?? []).length).toBe(3);
+  it('四張類型卡（含補考佔位），分科可選、學測已選', () => {
+    expect((html.match(/class="tcard"/g) ?? []).length).toBe(4);
     expect(html).not.toContain('尚未開放');
     expect(html).toContain('已選');
   });

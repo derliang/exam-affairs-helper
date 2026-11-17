@@ -794,8 +794,8 @@ export async function renderDocx(pages: DocxPages, opts: DocxOptions): Promise<U
   for (const t of pages.table ?? []) sections.push(tableSection(t, opts));
   if (sections.length === 0) throw new Error('沒有可輸出的頁面');
   const doc = new Document({
-    creator: '模擬考小幫手',
-    title: '模擬考小幫手輸出',
+    creator: '考務小幫手',
+    title: '考務小幫手輸出',
     // docx 9.15 原生支援 bold 面（寫成同家族的 embedBold）；舊做法把 Bold 當另一個家族
     fonts:
       mode === 'embed-bold'
