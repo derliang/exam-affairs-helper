@@ -51,7 +51,7 @@ export interface FeatureUi {
 export const BUILTIN_FEATURES: FeatureDef[] = [
   { id: 'pickup-list', name: '領卷清單（含對卷）', desc: '每間教室、每科要領幾份試卷與答案卡，領卷時照表點數核對。', scope: 'all' },
   { id: 'student-lookup', name: '考生查詢', desc: '輸入考生編號、座號、學號或姓名，查他每一科在哪間教室、哪個座位。', scope: 'all' },
-  { id: 'attendance-sheet', name: '出缺席記錄表', desc: '每間教室一頁，照座位順序列出考生，留打勾欄，考試當天點名用。', scope: 'all' },
+  { id: 'attendance-sheet', name: '出缺席記錄表', desc: '每間教室至少一頁（人多接下一頁），照座位順序列出考生，留打勾欄，考試當天點名用。', scope: 'all' },
   { id: 'print-alignment', name: '列印對位測試頁', desc: '正式列印前先印測試頁（A4、B4、A3 各一頁），確認 100% 縮放與邊界沒有被印表機裁掉。', scope: 'all' },
   { id: 'bcct-quick-mode', name: '會考快速模式', desc: '沿用上次會考的設定；貼上新名單、四項檢查都過時會自動排座，看過檢核後再下載。只用於會考。', scope: 'bcct' },
 ];

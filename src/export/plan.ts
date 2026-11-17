@@ -15,6 +15,7 @@ import {
   type SeatPageModel,
 } from './model';
 import type { FontData } from './docxRender';
+import { hasPua } from '../import/pua';
 import { renderPrintHtml } from './htmlRender';
 
 export type ExportFormat = 'word' | 'pdf';
@@ -123,7 +124,7 @@ export function preflight(input: ExportInput, o: ExportOptions, st: PreflightSta
   if (o.format === 'word') {
     const miss = findMissingChars(input, hasChar);
     if (miss.length) {
-      const shown = miss.slice(0, 8).map((m) => `${String(m.classNo).padStart(2, '0')}${String(m.seatNo).padStart(2, '0')} 的「${m.ch}」`).join('、');
+      const shown = miss.slice(0, 8).map((m) => `${String(m.classNo).padStart(2, '0')}${String(m.seatNo).padStart(2, '0')} 的${hasPua(m.ch) ? `造字區碼位 U+${m.ch.charCodeAt(0).toString(16).toUpperCase()}` : `「${m.ch}」`}`).join('、');
       issues.push({
         level: 'warn',
         text: `${miss.length} 個罕用字不在內嵌字型內（${shown}${miss.length > 8 ? '…' : ''}）。仍可下載，但 Word 會改用該電腦的字型顯示這些字；下載後請開檔確認，必要時手動改字型。`,

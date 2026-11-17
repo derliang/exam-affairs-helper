@@ -211,3 +211,42 @@ describe('學生名單：區塊標題版式（假資料）', () => {
     expect(two.classTracks).toBeUndefined();
   });
 });
+
+describe('姓名空白的列不可靜默略過（#297）', () => {
+  it('寬表：有座號沒姓名 → issue；全空列靜默', () => {
+    const r = parseRoster([
+      ['學號', '座號', '姓名', '學號', '座號', '姓名'],
+      ['T1', '1', '測試甲', 'U1', '1', '測試丙'],
+      ['', '2', '', 'U2', '2', '測試丁'],
+      ['', '', '', '', '', ''],
+    ]);
+    expect(r.layout).toBe('wide');
+    expect(r.students).toHaveLength(3);
+    expect(r.issues.map((i) => i.message)).toEqual(['第 1 班座號 2 沒有姓名，已略過']);
+  });
+  it('區塊版式：帳號與座號有值、姓名空白 → issue', () => {
+    const r = parseRoster([
+      ['初三溫', '', '', '註', '帳號', '初三良', '', '', '註', '帳號'],
+      ['2000001', '5', '測試丁', '', 'd@example.test', '', '', '', '', ''],
+      ['', '6', '', '', 'x@example.test', '', '', '', '', ''],
+    ], { classNames: NAMES });
+    expect(r.layout).toBe('blocks');
+    expect(r.issues.map((i) => i.message)).toEqual(['第 1 班座號 6 沒有姓名，已略過']);
+  });
+  it('直式表：有座號沒姓名 → issue', () => {
+    const r = parseRoster([['班級', '座號', '姓名'], ['01', '1', '測試甲'], ['01', '2', ''], ['', '', '']]);
+    expect(r.students).toHaveLength(1);
+    expect(r.issues).toHaveLength(1);
+    expect(r.issues[0]!.message).toContain('座號 2 沒有姓名');
+  });
+});
+
+describe('造字區字元（#298）', () => {
+  it('puaCodes／showPua 寫出碼位', async () => {
+    const { hasPua, puaCodes, showPua } = await import('./pua');
+    expect(hasPua('甲')).toBe(true);
+    expect(hasPua('甲乙')).toBe(false);
+    expect(puaCodes('甲')).toEqual(['U+E391', 'U+E5E1']);
+    expect(showPua('甲')).toBe('甲〔U+E391〕');
+  });
+});
