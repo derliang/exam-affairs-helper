@@ -171,24 +171,30 @@ export function RoomTable(p: {
 }
 
 /**
- * 步驟③的教室刪除（G12，使用者 2026-11-17 裁示）：預設只從「本次考試」移除；要連共用設定一起刪，得另按第二顆（危險色）並寫明影響。
+ * 步驟③的教室刪除（G12，使用者 2026-11-17 裁示）：預設只從「本次考試」移除；確認視窗內勾選「同時從共用設定刪除」（預設不勾）才連共用清單一起刪，並警告影響。
  * 這間教室沒列入本次時，沒有「本次移除」可做，只剩從共用設定刪除。
  */
 function RoomRemove(p: { name: string; inThis: boolean; inUse: boolean; onThis: () => void; onShared: () => void }) {
   const [open, setOpen] = useState(false);
-  const close = () => setOpen(false);
+  // 沒列入本次時沒有「本次移除」可做，只能從共用設定刪除（此時勾選固定成立）
+  const [alsoShared, setAlsoShared] = useState(false);
+  const shared = alsoShared || !p.inThis;
+  const close = () => { setOpen(false); setAlsoShared(false); };
   return (
     <>
       <Button small kind="danger" onClick={() => setOpen(true)}>刪除</Button>
       {open && (
         <Modal title={`刪除「${p.name}」？`} onClose={close}
-          actions={<>
-            <Button onClick={close}>取消</Button>
-            {p.inThis && <Button kind="primary" onClick={() => { close(); p.onThis(); }}>只從本次考試移除</Button>}
-            <Button kind="danger" onClick={() => { close(); p.onShared(); }}>同時從共用設定刪除</Button>
-          </>}>
-          <p>{p.inThis ? '「只從本次考試移除」不會動到共用教室清單與其他模擬考；之後可再用開關列回。' : '這間教室目前沒有列入本次考試，只能從共用設定刪除。'}</p>
-          <p class="small muted" style="margin-top:8px">「同時從共用設定刪除」會讓所有模擬考都少這間教室{p.inUse ? '，已選用它的模擬考排座結果可能因此過期' : ''}。{UNDO_HINT}</p>
+          actions={<><Button onClick={close}>取消</Button><Button kind="danger" onClick={() => { close(); if (shared) p.onShared(); else p.onThis(); }}>{shared ? '刪除（含共用設定）' : '從本次考試移除'}</Button></>}>
+          <p>{p.inThis ? '預設只從「本次考試」移除這間教室，不動共用教室清單，也不影響其他模擬考；之後可用開關再列回。' : '這間教室目前沒有列入本次考試，只能從共用設定刪除。'}</p>
+          {p.inThis && (
+            <label class="chk" style="display:flex;gap:8px;align-items:flex-start;margin-top:10px">
+              <input type="checkbox" checked={alsoShared} onChange={(e) => setAlsoShared(e.currentTarget.checked)} />
+              <span>同時從共用設定刪除（<b>會影響其他考試</b>）</span>
+            </label>
+          )}
+          {shared && <Alert tone="warn">共用設定刪除後，所有模擬考都會少這間教室{p.inUse || p.inThis ? '；已選用它的模擬考排座結果可能因此過期' : ''}。</Alert>}
+          <p class="small muted" style="margin-top:8px">{UNDO_HINT}</p>
         </Modal>
       )}
     </>

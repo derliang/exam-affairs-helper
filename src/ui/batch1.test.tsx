@@ -96,3 +96,15 @@ describe('分科也套用同一組規則（通則）', () => {
     expect(html).not.toContain('班級教室與座位圖');
   });
 });
+
+describe('G12 步驟③ 三種類型的教室卡片都有刪除', () => {
+  it('學測、會考：Step3 每間教室有刪除；分科的教室刪除在共用設定清單', async () => {
+    const { Step3 } = await import('./pages/Step3');
+    for (const kind of ['gsat', 'bcct'] as const) {
+      const { doc, exam } = docWith(kind);
+      const html = renderToString(<Step3 doc={doc} exam={exam} onChange={noop} />);
+      expect(html, kind).toContain('新增教室');
+      expect(html, kind).not.toContain('新增班級教室');
+    }
+  });
+});
