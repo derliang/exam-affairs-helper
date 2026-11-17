@@ -107,7 +107,7 @@ function PreviewCard(p: { prepared: Extract<ReturnType<typeof prepareExport>, { 
 
 /** 兩顆下載鈕（Word、PDF）停用的原因（G15）；可以下載回空字串 */
 export function downloadGate(o: { stale: boolean; blocked: boolean; nothing: boolean }): string {
-  return o.stale ? '排座已過期，請先重新排座。' : o.blocked ? '上方還有必須處理的問題，處理後才能下載。' : o.nothing ? '尚未勾選任何下載內容，請先在上方勾選。' : '';
+  return o.stale ? '排座已過期，請先重新排座。' : o.nothing ? '尚未勾選任何下載內容，請先在上方勾選。' : o.blocked ? '上方還有必須處理的問題，處理後才能下載。' : '';
 }
 
 export const kb = (n: number) => (n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
@@ -168,7 +168,7 @@ export function Step6(p: {
   const overRooms = roomsOverLabel(exam.classroomIds.map((id) => p.doc.settings.classrooms.find((c) => c.id === id)).filter((c): c is NonNullable<typeof c> => !!c));
   const files = prepared.ok && !blocked && !mainNone ? planFiles(prepared.input, o) : [];
 
-  const noDlWhy = downloadGate({ stale, blocked, nothing: files.length === 0 && chosenExtras.length === 0 });
+  const noDlWhy = downloadGate({ stale, blocked, nothing: chosenExtras.length === 0 && (mainNone || (!blocked && files.length === 0)) });
   const noDl = noDlWhy !== '';
   const go = async (fmt: ExportFormat) => {
     if (!prepared.ok) return;
