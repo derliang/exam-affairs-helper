@@ -157,7 +157,7 @@ export function RoomList(p: {
                 ),
               ];
             })}
-            {shown.length === 0 && <tr><td colSpan={junior ? 4 : 5} class="muted">還沒有教室。班級教室依名冊的班級自動帶出，請先匯入學生名單。</td></tr>}
+            {shown.length === 0 && <tr><td colSpan={junior ? 4 : 5} class="muted">還沒有教室。班級教室依名冊的班級自動帶出：還沒匯入學生名單請先匯入；已匯入就按上方「依名冊帶出班級教室」。</td></tr>}
           </tbody>
         </table>
       </div>
@@ -224,7 +224,7 @@ export function RoomTable(p: {
                 isOpen && <tr key={`${r.id}-edit`} class="editrow"><td colSpan={6}><SeatGrid paper={p.paper} room={r} cap={roomLimitsOf(r.kind).cap} lim={roomLimitsOf(r.kind)} steppers onClose={() => setOpen(null)} onChange={(x) => upd(r.id, () => x)} /></td></tr>,
               ];
             })}
-            {shown.length === 0 && <tr><td colSpan={6} class="muted">還沒有教室。班級教室依名冊的班級自動帶出，請先匯入學生名單。</td></tr>}
+            {shown.length === 0 && <tr><td colSpan={6} class="muted">還沒有教室。班級教室依名冊的班級自動帶出：還沒匯入學生名單請先匯入；已匯入就按上方「依名冊帶出班級教室」。</td></tr>}
           </tbody>
         </table>
       </div>

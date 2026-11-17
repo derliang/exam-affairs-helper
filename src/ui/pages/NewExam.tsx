@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import type { ExamKind, Semester } from '../../data';
 import { Alert, Button, PageHead } from '../components';
 import { checkExamName } from '../flow';
@@ -17,26 +17,43 @@ const TYPES: { kind?: ExamKind; level: string; title: string; subj: string; soon
 ];
 
 /** 新增模擬考整頁三段式：1 選類型、2 基本資料、3 預設設定（沿用上一次同類型） */
+/**
+ * #344：新增頁還沒建立前的草稿（類型與已填欄位）。去共用設定改環境再回來時由 App 帶回，不重設。
+ * 「…Edited」記使用者是否自己改過，沒改過的欄位換類型時仍跟著推算。
+ */
+export interface NewExamDraft {
+  kind: ExamKind; name: string; edited: boolean; semester: Semester; semEdited: boolean;
+  yearText: string; round: number; roundEdited: boolean;
+}
+
 export function NewExam(p: {
   doc: Doc; onCancel: () => void; onCreate: (d: Doc, examId: string) => void; now?: () => Date;
+  /** #344：上次離開時的草稿（從共用設定「← 回到」時帶回）；沒有就從預設開始 */
+  draft?: NewExamDraft | undefined;
+  /** #344：草稿每次變動都回報，讓 App 在離開本頁後仍保留 */
+  onDraft?: (d: NewExamDraft) => void;
   /** G37：按「確認使用」把環境快照存進共用設定 */
   onEnv?: (d: Doc) => void;
   /** G37：跳去共用設定修改環境（有「← 回到」導覽） */
   onGoSettings?: (tab: 'roster' | 'classes' | 'school' | 'rooms' | 'sched', division: 'senior' | 'junior') => void;
 }) {
   const now = p.now ?? (() => new Date());
-  const [kind, setKind] = useState<ExamKind>('gsat');
-  const [name, setName] = useState(() => suggestExamName(p.doc, 'gsat', (p.now ?? (() => new Date()))()));
+  const d0 = p.draft;
+  const [kind, setKind] = useState<ExamKind>(d0?.kind ?? 'gsat');
+  const [name, setName] = useState(() => d0?.name ?? suggestExamName(p.doc, 'gsat', now()));
   // 使用者沒自己改過名稱時，換類型就跟著換建議名稱
-  const [edited, setEdited] = useState(false);
-  const [semester, setSemester] = useState<Semester>(defaultSemester('gsat'));
+  const [edited, setEdited] = useState(d0?.edited ?? false);
+  const [semester, setSemester] = useState<Semester>(d0?.semester ?? defaultSemester('gsat'));
   // 使用者沒自己改過學期時，換類型就跟著換預設學期（D91）
-  const [semEdited, setSemEdited] = useState(false);
+  const [semEdited, setSemEdited] = useState(d0?.semEdited ?? false);
   // 學年度預設依今天算，可改（補登過去學年的考試，#211）；使用者沒改過就不鎖定
-  const [yearText, setYearText] = useState(() => String(schoolYear(now())));
+  const [yearText, setYearText] = useState(() => d0?.yearText ?? String(schoolYear(now())));
   // 次別（G3）：學測、分科在這裡決定；沒自己改過就跟著類型與學年度推算
-  const [round, setRound] = useState(() => nextRound(p.doc, 'gsat', (p.now ?? (() => new Date()))()));
-  const [roundEdited, setRoundEdited] = useState(false);
+  const [round, setRound] = useState(() => d0?.round ?? nextRound(p.doc, 'gsat', now()));
+  const [roundEdited, setRoundEdited] = useState(d0?.roundEdited ?? false);
+  useEffect(() => {
+    p.onDraft?.({ kind, name, edited, semester, semEdited, yearText, round, roundEdited });
+  }, [kind, name, edited, semester, semEdited, yearText, round, roundEdited]);
   const [err, setErr] = useState('');
   const check = checkExamName(p.doc, name);
   const prev = previousExam(p.doc, kind);

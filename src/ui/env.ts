@@ -25,6 +25,8 @@ export interface EnvLine {
   problem?: string;
   /** 琥珀時：上次確認的內容 */
   before?: string;
+  /** 不擋建立的提醒（#343：某班人數超過班級教室上限，但同組座位總數夠） */
+  note?: string;
 }
 export interface EnvChange { label: string; before: string; after: string }
 export interface EnvReport {
@@ -54,7 +56,17 @@ function schedLine(doc: Doc, key: ScheduleKey): Omit<EnvLine, 'tone'> {
 
 const studentsOf = (doc: Doc, division: Division, classNo: number): number => doc.rosters[division].filter((s) => s.classNo === classNo).length;
 
-function classLines(doc: Doc, division: Division): EnvLine[] {
+const TRACK_LABEL: Record<string, string> = { science: '理組', liberal: '文組', none: '未設組別' };
+
+/**
+ * 教室與座位的檢查口徑（#343）：
+ * - 學測、會考（seatExam）是把同組（高中部依文理組、國中部全體）的學生合起來排進同組的班級教室，
+ *   所以只有「同組學生總數 > 同組班級教室座位總數」才是真的排不下（紅燈，擋建立）。
+ * - 分科依各科報名人數排考場（班級教室＋預備教室），只有「部別學生總數 > 全部教室座位」才擋。
+ * - 單一班級人數超過自己教室座位（例如 50 人、班級教室上限 7×7＝49）只是提醒，不擋：多出的人會坐到同組其他教室的空位。
+ * kind 省略（首次設定精靈）時用學測、會考的口徑。
+ */
+function classLines(doc: Doc, division: Division, kind?: ExamKind): EnvLine[] {
   const name = DIV_LABEL[division];
   const withStu = doc.settings.classes.filter((c) => c.division === division).map((c) => ({ c, n: studentsOf(doc, division, c.no) })).filter((x) => x.n > 0);
   const total = withStu.reduce((s, x) => s + x.n, 0);
@@ -67,19 +79,48 @@ function classLines(doc: Doc, division: Division): EnvLine[] {
     return [classes, { key: `rooms:${division}`, label: '教室與座位', text: '還沒有學生名單，所以沒有班級教室可帶入', sig: 'empty', tone: 'bad', problem: '還沒有學生名單，所以沒有班級教室可帶入' }];
   }
   // 沒有班級教室的班級，之後會依人數自動帶出預設座位（G11），所以用「將會有的座位」算，確認後自動補教室也不會讓快照變動
-  let seats = 0; let short: string | undefined;
+  let seats = 0;
   const sig: unknown[] = [];
+  const over: string[] = [];
+  const groups = new Map<string, { n: number; s: number }>();
   for (const x of withStu) {
     const room: Classroom | undefined = rooms.find((r) => r.kind === 'class' && r.name === x.c.name);
     const s = room ? room.seatCount : (() => { const g = defaultSeatGrid(x.n); return g.rows * g.depth; })();
     seats += s; sig.push([x.c.name, s]);
-    if (s < x.n && !short) short = `「${x.c.name}」教室座位 ${s}，學生 ${x.n}，座位不足`;
+    if (s < x.n) over.push(`「${x.c.name}」${x.n} 人、教室座位 ${s}`);
+    const gk = division === 'junior' ? 'all' : (x.c.track ?? 'none');
+    const g = groups.get(gk) ?? { n: 0, s: 0 };
+    groups.set(gk, { n: g.n + x.n, s: g.s + s });
   }
   const reserve = division === 'senior' ? rooms.filter((r) => r.kind === 'reserve') : [];
   for (const r of reserve) sig.push(['reserve', r.name, r.seatCount]);
+  let short: string | undefined;
+  if (kind === 'ast') {
+    const all = seats + reserve.reduce((a, r) => a + r.seatCount, 0);
+    if (total > all) short = `${name}學生 ${total} 人，教室座位共 ${all} 個，還差 ${total - all} 個；請到教室清單新增預備教室`;
+  } else {
+    for (const [gk, g] of groups) {
+      if (g.n <= g.s) continue;
+      const who = division === 'junior' ? name : `${name}${TRACK_LABEL[gk] ?? gk}`;
+      short = `${who}學生 ${g.n} 人，班級教室座位共 ${g.s} 個，還差 ${g.n - g.s} 個；請到教室清單加大班級教室座位（每間最多 7×7）`;
+      break;
+    }
+  }
+  const note = !short && over.length
+    ? `${over.join('、')}，座位比人數少（班級教室最多 7×7＝49 座）。${kind === 'ast' ? '分科依各科報名人數排考場，不受影響。' : '排座時多出的人會坐到同組其他班級教室的空位，不影響建立；要讓同班坐在一起，可到教室清單調整座位或新增預備教室。'}`
+    : undefined;
   const text = `班級教室 ${withStu.length} 間・座位 ${seats}${division === 'senior' ? `・預備教室 ${reserve.length} 間` : ''}`;
-  const roomLine: EnvLine = { key: `rooms:${division}`, label: '教室與座位', text, sig: JSON.stringify(sig), tone: short ? 'bad' : 'ok', ...(short ? { problem: short } : {}) };
+  const roomLine: EnvLine = { key: `rooms:${division}`, label: '教室與座位', text, sig: JSON.stringify(sig), tone: short ? 'bad' : 'ok', ...(short ? { problem: short } : {}), ...(note ? { note } : {}) };
   return [classes, roomLine];
+}
+
+/** #343：名冊有學生、但共用教室清單還沒有對應班級教室的班級名稱 */
+export function classesWithoutRoom(doc: Doc, division: Division): string[] {
+  const ctx = { classes: doc.settings.classes, exams: doc.exams };
+  return doc.settings.classes
+    .filter((c) => c.division === division && studentsOf(doc, division, c.no) > 0)
+    .filter((c) => !doc.settings.classrooms.some((r) => r.kind === 'class' && r.name === c.name && roomDivision(r, ctx) === division))
+    .map((c) => c.name);
 }
 
 function schoolLine(doc: Doc): EnvLine {
@@ -97,7 +138,7 @@ function schoolLine(doc: Doc): EnvLine {
 export function envLinesFor(doc: Doc, kind: ExamKind, round?: number): EnvLine[] {
   const raw: EnvLine[] = [
     { ...schedLine(doc, scheduleKeyOf(kind, round)), tone: 'ok' },
-    ...classLines(doc, kindDivision(kind)),
+    ...classLines(doc, kindDivision(kind), kind),
     schoolLine(doc),
   ];
   return raw;
