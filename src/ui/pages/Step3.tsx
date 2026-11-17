@@ -1,15 +1,23 @@
+import { useEffect } from 'preact/hooks';
 import type { ExamConfig, RoomSeatLayout, Track } from '../../data';
 import { Alert, Badge, Button, More, Seg, StepHead } from '../components';
 import { RoomList } from '../components/RoomList';
 import { PrepCard } from './PrepCard';
+import { classRoomRows, missingClassRooms, syncClassRooms } from '../classRooms';
 import { classCapacity, reserveCheck, reserveNeed } from '../capacity';
 import { newClassRoomIds, roomsMissingTrack } from '../rooms';
 import { examEntries, examRooms, seatableEntries } from '../seating';
 import { setClassTrack, updateExam, type Doc } from '../store';
 
 /** ③ 教室設定：標題卡、狀態檢核卡（理組／文組分列＋預備教室）、班級（文理組）卡、教室與座位卡（原型 v3） */
-export function Step3(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => void; onToRooms?: () => void; onToSchool?: () => void }) {
+export function Step3(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => void; onToRooms?: () => void; onToSchool?: () => void; onToRoster?: () => void }) {
   const { doc, exam } = p;
+  // G11：進到本步驟時，本次還沒選任何教室、名單又有班級，就依班級自動帶出班級教室（已有選用的不動，使用者刪掉的不會被偷偷加回來）
+  const lackRooms = missingClassRooms(doc, exam);
+  const rosterCount = doc.rosters[exam.division].length;
+  useEffect(() => {
+    if (exam.classroomIds.length === 0 && lackRooms > 0) p.onChange(syncClassRooms(doc, exam));
+  }, [exam.id, exam.classroomIds.length, lackRooms]);
   const rooms = doc.settings.classrooms;
   const senior = exam.division === 'senior';
   const { lines, noList, seats } = classCapacity(doc, exam);
@@ -112,11 +120,17 @@ export function Step3(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
           <div class="row" style="justify-content:space-between">
             <div>
               <h3>教室與座位</h3>
-              <p class="small muted">每間教室一列，打開開關就列入本次考試。</p>
+              <p class="small muted">每班的班級教室已依學生名單自動帶出，只要調整座位配置；預備教室、特殊教室可用「新增教室」手動加。</p>
               <More title="說明：座位表與教室來源">{senior ? '預備教室座位另計，不計入教室座位合計。' : ''}教室清單是所有模擬考共用的：修改教室會影響其他使用這間教室的模擬考；只想改這次考試的座位，請用「本次調整座位」。</More>
             </div>
             {p.onToRooms && <Button onClick={p.onToRooms}>到共用設定看教室清單</Button>}
           </div>
+          {rosterCount === 0 && (
+            <Alert tone="info" action={p.onToRoster && <Button small onClick={p.onToRoster}>到學生名單</Button>}><b>還沒有學生名單：</b>匯入學生名單後，會依班級自動帶出每班的班級教室。</Alert>
+          )}
+          {rosterCount > 0 && lackRooms > 0 && exam.classroomIds.length > 0 && (
+            <Alert tone="warn" action={<Button small kind="primary" onClick={() => p.onChange(syncClassRooms(doc, exam))}>依班級補齊教室</Button>}>有 {lackRooms} 個班級還沒有列入本次考試的班級教室：{classRoomRows(doc, exam).filter((r) => !r.inExam).map((r) => r.cls.name).join('、')}。</Alert>
+          )}
           <RoomList {...(p.onToSchool ? { onGoSchool: p.onToSchool } : {})} junior={!senior} division={exam.division} exams={doc.exams} classes={doc.settings.classes} rooms={rooms} paper={doc.settings.defaultLabelPaper} onChange={setRooms} selected={exam.classroomIds} onSelect={setIds} overrides={exam.roomOverrides} onOverride={setOverride} />
         </div>
       </div>

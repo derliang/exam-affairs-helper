@@ -1,4 +1,5 @@
-import { useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
+import { missingClassRooms, syncClassRooms } from '../classRooms';
 import type { Classroom, ExamConfig, LabelPaper, RoomSeatLayout, Track } from '../../data';
 import { effectiveRoom, rowDepthOf, roomDivision, studyCapacityOf } from '../../data';
 import { Alert, Badge, Button, ConfirmButton, More, Seg, StepHead } from '../components';
@@ -102,6 +103,11 @@ function RoomRow(p: {
 export function AstStep3(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => void; onToRooms?: () => void; onStep?: (n: 5) => void }) {
   const { doc, exam } = p;
   const [open, setOpen] = useState<string | null>(null);
+  // G11：本次還沒選任何教室、名單有班級，就依班級自動帶出班級教室（同一般考試的 ③）
+  const lackRooms = missingClassRooms(doc, exam);
+  useEffect(() => {
+    if (exam.classroomIds.length === 0 && lackRooms > 0) p.onChange(syncClassRooms(doc, exam));
+  }, [exam.id, exam.classroomIds.length, lackRooms]);
   const paper = doc.settings.defaultLabelPaper;
   const cap = seatCap(paper);
   const lim = seatLimits(paper);

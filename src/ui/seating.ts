@@ -217,6 +217,16 @@ export function reseat(doc: Doc, exam: ExamConfig, now: string): Result<Doc> & {
   return { ok: true, doc: withFiles(doc, exam.id, { result: r.result }), warnings: r.warnings };
 }
 
+/**
+ * G13 自動排座：前置條件齊備（沒有擋下項目）、這次考試從沒排過（沒有結果）才排一次；
+ * 其他情況一律回 undefined（不動）——已有結果（含過期）不自動重排，手動調整與個別覆寫都不會被蓋掉。
+ * 排座是固定規則、沒有亂數，同一份資料每次結果相同。
+ */
+export function autoSeat(doc: Doc, exam: ExamConfig, now: string): ReturnType<typeof reseat> | undefined {
+  if (examResult(doc, exam) || seatingBlockers(doc, exam).length > 0) return undefined;
+  return reseat(doc, exam, now);
+}
+
 /** 個別覆寫（D23、D26）：一人一筆，重設會取代 */
 export function setOverride(doc: Doc, exam: ExamConfig, o: SingleOverride): Result<Doc> {
   const location = o.location.trim();

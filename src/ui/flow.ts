@@ -51,7 +51,7 @@ export interface Flow {
 const STEPS: StepNo[] = [1, 2, 3, 4, 5, 6];
 
 /** 左側步驟欄每項第二行的短語（稿 v2.22） */
-export const STEP_BLURBS = ['類型、次別、考科', '匯入、比對、參加者', '橫排、深位、預備教室', '組別對照表', '班級色、驗證、統計', 'Word、PDF'] as const;
+export const STEP_BLURBS = ['考科', '匯入、比對、參加者', '橫排、深位、預備教室', '組別對照表', '班級色、驗證、統計', 'Word、PDF'] as const;
 
 /** 算出目前考試的整體流程狀態；current 是正在看的步驟（顯示成「目前」） */
 export function flowOf(doc: Doc, exam: ExamConfig, current: StepNo): Flow {
@@ -160,6 +160,15 @@ export function nextAction(flow: Flow, current: StepNo): NextAction {
     return { kind: 'go', to, label, pending: { reason: `${first.text}${more}`, fix: first.fix, fixStep: first.step } };
   }
   return { kind: 'go', to, label };
+}
+
+/** G6：上一步（會考的 ④ 標「不需要」，跳過）；第 1 步沒有上一步 */
+export function prevStepOf(flow: Flow, current: StepNo): { to: StepNo; name: string } | undefined {
+  if (current <= 1) return undefined;
+  let to = (current - 1) as StepNo;
+  if (flow.steps.find((s) => s.no === to)?.state === 'skip' && to > 1) to = (to - 1) as StepNo;
+  const name = flow.steps.find((s) => s.no === to)?.name ?? '';
+  return { to, name: `${'①②③④⑤⑥'[to - 1]} ${name}` };
 }
 
 /** 摘要列「待處理 X」點下去要去哪：第一個 block 問題的步驟，沒有就回 undefined */
