@@ -261,3 +261,44 @@ describe('④ #199 診斷', () => {
     expect(renderToString(<AstStep4 doc={noHome} exam={exam} onChange={noop} onStep={noop} />)).toContain('沒有可留的原班教室');
   });
 });
+
+describe('G23 分科：不考任何科、每節自習的人算進容量（不排考試座位）', () => {
+  /** 把每班座號 1、2 改成完全不報名任何科 */
+  function withNoSubject(f: { doc: Doc; exam: ExamConfig }, nos = [1, 2]) {
+    const files = f.doc.examFiles![f.exam.id]!;
+    const entries = files.entries!.map((e) => (nos.includes(e.seatNo) ? { ...e, subjectIds: [] } : e));
+    return { doc: { ...f.doc, examFiles: { ...f.doc.examFiles, [f.exam.id]: { ...files, entries } } } as Doc, exam: f.exam };
+  }
+
+  it('全部不報名的人進規劃：每個時段都有自習去處，但沒有考試座位', () => {
+    const f = withNoSubject(fixture());
+    const plan = astPlan(f.doc, f.exam)!;
+    expect(plan.input.students.length).toBe(72);
+    const code = '0101';
+    expect(plan.out.exams.some((e) => e.code === code)).toBe(false);
+    const slots = astSlots(f.doc, f.exam);
+    for (const s of slots) expect(plan.out.study.some((x) => x.slotId === s.id && x.code === code)).toBe(true);
+    expect(plan.unplaced).toBe(0);
+  });
+
+  it('astCapacity 回報不考者人數與全體座位', () => {
+    const c = astCapacity(withNoSubject(fixture()).doc, withNoSubject(fixture()).exam);
+    expect(c.studyOnly).toBe(12);
+    expect(c.everyone.people).toBe(72);
+    expect(c.everyone.seats).toBe(6 * 49 + 12);
+  });
+
+  it('全班都不報名：第 3 步仍檢核，且畫面說明他們不排考試座位', () => {
+    const f = withNoSubject(fixture(12), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+    const html = renderToString(<AstStep3 doc={f.doc} exam={f.exam} onChange={noop} />);
+    expect(html).toContain('全體座位（含自習者）');
+    expect(html).toContain('不考任何科、每節自習');
+  });
+
+  it('綜合教室容量不足時警告（自習者多、綜合教室小、不允許去他班）', () => {
+    const f = withNoSubject(fixture(12, 1), [1, 2, 3, 4, 5, 6]);
+    const c = astCapacity(f.doc, f.exam);
+    expect(c.studyOnly).toBe(36);
+    expect(c.study.capacity).toBe(1);
+  });
+});
