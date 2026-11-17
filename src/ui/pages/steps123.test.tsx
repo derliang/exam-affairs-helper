@@ -94,7 +94,7 @@ describe('步驟② 考試名單', () => {
   it('尚未匯入：warn 狀態 alert＋「匯入本次考試名單」、誰會參加、各班人數、名單比對、共用學生名單', () => {
     const { doc, second } = twoGsat();
     const html = renderToString(<Step2 doc={doc} exam={second} onChange={noop} onToRoster={noop} />);
-    for (const t of ['還沒有匯入本次考試名單', '匯入本次考試名單', '誰會參加', '全部學生參加', '只有部分學生參加', '各班人數', '合計', '考試名單', '修改高三學生名單']) expect(html).toContain(t);
+    for (const t of ['還沒有匯入本次考試名單', '匯入本次考試名單', '學生名單＝全體學生', '各班人數', '合計', '考試名單', '修改高三學生名單']) expect(html).toContain(t);
   });
   it('已匯入且全部一致：ok alert＋「再匯入一次」', () => {
     const { doc, second } = twoGsat();

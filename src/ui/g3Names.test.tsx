@@ -192,7 +192,7 @@ describe('G10 匯入名單有問題的列：逐列決定，不默默略過', () 
   });
   it('逐列處理介面：位置、原始內容、三個選項，沒有「稍後處理」', () => {
     const html = renderToString(<RowFix where="工作表「名冊」第 3 列" kindText="缺少姓名" message="班級 1 座號 2 沒有姓名，已略過" cells={['01', '2', 'S2']} draft={{ classNo: 1, seatNo: 2, name: '' }} withSchoolId onDecide={noop} />);
-    for (const t of ['工作表「名冊」第 3 列', '缺少姓名', '01｜2｜S2', '手動補上（新增）', '修改內容', '略過', '待處理']) expect(html).toContain(t);
+    for (const t of ['工作表「名冊」第 3 列', '缺少姓名', '01｜2｜S2', '手動補上（新增）', '修改內容', '不匯入這列', '待處理']) expect(html).toContain(t);
     expect(html).not.toContain('稍後');
   });
 });
