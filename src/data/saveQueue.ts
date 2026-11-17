@@ -2,7 +2,7 @@
  * 單一持久化佇列（#58）：同一資料夾的存檔一次只跑一個，連續操作只保留最新快照（合併），
  * 保證最後一次 enqueue 的快照最後寫入；寫入失敗不丟棄，保留到重試或被更新的快照取代。
  */
-export type SaveStatus = { state: 'idle' | 'saving' } | { state: 'error'; message: string };
+export type SaveStatus = { state: 'idle' | 'saving' } | { state: 'error'; message: string; /** 根資料夾不見了（被刪除、改名或移動；G16）：重試不會成功，要重新連結或更換資料夾 */ missing?: boolean };
 
 /** 換資料夾時舊資料夾還有未存妥的變更 */
 export class SwitchBlockedError extends Error {
@@ -20,12 +20,20 @@ export interface SaveQueue<T> {
   retry(): Promise<boolean>;
   isIdle(): boolean;
   status(): SaveStatus;
+  /** 尚未存妥的最新快照（G16：換資料夾時帶到新資料夾，或交給使用者下載備份）；沒有回 undefined */
+  peek(): T | undefined;
+  /** 自上次成功存檔以來累計的修改次數（只算排進佇列的次數） */
+  pendingCount(): number;
+  /** 最近一次存妥的時間 */
+  lastSavedAt(): Date | undefined;
 }
 
 export function createSaveQueue<T>(write: (snapshot: T) => Promise<void>, onStatus: (s: SaveStatus) => void = () => {}): SaveQueue<T> {
   let pending: { v: T } | null = null;
   let running: Promise<void> | null = null;
   let current: SaveStatus = { state: 'idle' };
+  let dirty = 0;
+  let savedAt: Date | undefined;
   const set = (s: SaveStatus) => { current = s; onStatus(s); };
 
   const loop = async () => {
@@ -46,7 +54,7 @@ export function createSaveQueue<T>(write: (snapshot: T) => Promise<void>, onStat
     }
     running = null; // 與上面的 while 之間沒有 await，enqueue 不會插進來而漏掉
     if (failure !== undefined) set({ state: 'error', message: failure instanceof Error ? failure.message : String(failure) });
-    else set({ state: 'idle' });
+    else { dirty = 0; savedAt = new Date(); set({ state: 'idle' }); }
   };
   const start = () => {
     if (!running) running = loop();
@@ -56,10 +64,13 @@ export function createSaveQueue<T>(write: (snapshot: T) => Promise<void>, onStat
     return pending === null;
   };
   return {
-    enqueue(snapshot) { pending = { v: snapshot }; start(); },
+    enqueue(snapshot) { pending = { v: snapshot }; dirty++; start(); },
     flush,
     async retry() { if (pending) start(); return flush(); },
     isIdle: () => !running && pending === null,
     status: () => current,
+    peek: () => pending?.v,
+    pendingCount: () => dirty,
+    lastSavedAt: () => savedAt,
   };
 }

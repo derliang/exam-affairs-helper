@@ -974,11 +974,41 @@ details.more{font-size:14px;color:var(--text-2)}details.more summary{cursor:poin
 .stepdock .dock-note{display:grid;gap:2px;font-size:.85em;color:var(--text-2,inherit)}
 .stepdock .dock-note b{color:var(--warn-ink,inherit)}
 .stepdock .btn{width:100%;justify-content:center}
+/* G33：左＝上一步（次要）、右＝下一步（主要），固定兩欄；第 1 步左欄留空，下一步仍在右 */
+.stepdock .dock-nav{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start}
+.stepdock .dock-cell{display:grid;gap:4px;justify-items:stretch;min-width:0}
+.stepdock .dock-sub{font-size:12px;line-height:1.35;color:var(--text-2,inherit);text-align:center;overflow-wrap:anywhere}
 @media (max-width:1060px){
   .ws .side-r{grid-column:1/-1}
   .ws .side-r .stepdock{position:fixed;left:0;right:0;bottom:0;z-index:30;border-radius:0;border-inline:0;border-bottom:0;padding:10px max(16px,env(safe-area-inset-left,0px)) calc(10px + env(safe-area-inset-bottom,0px));grid-template-columns:1fr;max-height:40vh;overflow:auto}
   .ws .side-r .stepdock{box-sizing:border-box;width:100%}
-  .ws .side-r .stepdock .dock-row{display:flex;gap:8px;flex-wrap:wrap;flex-direction:row-reverse}
-  .ws .side-r .stepdock .btn{width:auto;flex:1 1 140px;white-space:normal}
+  .ws .side-r .stepdock .btn{white-space:normal}
   .ws:has(.stepdock){padding-bottom:110px}
 }
+
+/* G17：新增模擬考「基本資料」兩欄對齊；次別是多列格子（不橫向捲動），說明跨整行 */
+.newgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 20px;align-items:start}
+.newgrid-wide{grid-column:1/-1}
+.roundgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}
+.rbtn{font:inherit;font-weight:700;min-height:44px;padding:0 10px;border:1px solid var(--line-2);border-radius:var(--r-sm);background:var(--surface);color:var(--text-2);cursor:pointer}
+.rbtn:hover{border-color:var(--accent-line,var(--accent))}
+.rbtn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-on)}
+.rbtn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+@media (max-width:640px){.newgrid{grid-template-columns:minmax(0,1fr)}.roundgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* G16／G24：資料夾找不到的警告、目前資料夾卡片、對話內的選項與進度條 */
+.folder-acts{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start}
+@media (max-width:560px){.alert>.folder-acts{grid-column:2;justify-self:start}}
+.fileopt{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);cursor:pointer;margin-top:8px}
+.fileopt input{margin-top:4px;flex:none;width:18px;height:18px;accent-color:var(--accent)}
+.progbar{height:10px;border-radius:999px;background:var(--sunken);border:1px solid var(--line);overflow:hidden;margin:10px 0}
+.progbar>i{display:block;height:100%;background:var(--accent);transition:width .15s}
+.folder-card dl.folder-facts{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;margin:0}
+.folder-facts dt{color:var(--text-2);font-weight:700;font-size:13px}
+.folder-facts dd{margin:0}
+.folder-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.folder-act{display:grid;gap:6px;align-content:start;padding:12px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface)}
+.folder-act .btn{justify-self:start}
+@media (max-width:820px){.folder-actions{grid-template-columns:minmax(0,1fr)}}
+.folder-lost-card{border-color:var(--danger-line,var(--line))}
+.empty.folder-lost-empty{display:grid;gap:10px}
