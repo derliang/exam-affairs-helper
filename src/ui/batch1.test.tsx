@@ -51,6 +51,11 @@ describe('G12 新增教室／每間教室可刪除', () => {
       expect(html).not.toContain('班級教室');
     }
   });
+  it('步驟③（有勾選開關）：刪除按鈕走「本次移除／連共用一起刪」兩段式，每間仍有刪除', () => {
+    const html = renderToString(<RoomList rooms={rooms} paper="B4" onChange={noop} selected={['a']} onSelect={noop} />);
+    expect(html.match(/>刪除</g)).toHaveLength(3);
+    expect(html).not.toContain('班級教室');
+  });
   it('共用設定教室清單：班級教室也有刪除；沒有「班級教室」字樣', () => {
     const html = renderToString(<RoomTable division="senior" rooms={rooms} paper="B4" onChange={noop} />);
     expect(html.match(/>刪除</g)).toHaveLength(3);

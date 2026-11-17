@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'preact/hooks';
 import type { Classroom, Division, ExamConfig, LabelPaper, RoomSeatLayout, Track } from '../../data';
 import { effectiveRoom, roomDivision, seatLabel } from '../../data';
-import { Alert, Badge, Button, ConfirmButton, Seg, Stepper, Switch } from './index';
-import { confirmCopy } from '../flow';
+import { Alert, Badge, Button, ConfirmButton, Modal, Seg, Stepper, Switch } from './index';
+import { confirmCopy, UNDO_HINT } from '../flow';
 import { classColorVars } from '../colors';
 import { addRoom, addRooms, clickSeat, duplicateRoom, fillDefaultTracks, isSeatActive, patchRoom, removeRoom, labelSplitNote, resize, roomCapacity, seatCap, seatLimitNote, seatLimits, setRoomDivision, setRoomTrack } from '../rooms';
 
@@ -88,7 +88,9 @@ export function RoomList(p: {
                 <Button small onClick={() => p.onChange(duplicateRoom(p.rooms, r.id))}>複製這間教室</Button>
                 {canOv && <Button small onClick={() => setOpen(isOvOpen ? null : examKey)}>{isOvOpen ? '▾ 收合本次座位' : hasOv ? '編輯本次座位' : '本次調整座位'}</Button>}
                 {canOv && hasOv && <ConfirmButton small kind="default" copy={confirmCopy.restoreRoomOverride(r.name)} onConfirm={() => { p.onOverride!(r.id, null); if (isOvOpen) setOpen(null); }}>還原成共用設定</ConfirmButton>}
-                <ConfirmButton small copy={confirmCopy.deleteRoom(r.name, !!p.selected?.includes(r.id) || !!p.inUse?.(r.id))} onConfirm={() => p.onChange(removeRoom(p.rooms, r.id))}>刪除</ConfirmButton>
+                {p.selected && p.onSelect
+                  ? <RoomRemove name={r.name} inThis={on} inUse={!!p.inUse?.(r.id)} onThis={() => p.onSelect!(p.selected!.filter((x) => x !== r.id))} onShared={() => p.onChange(removeRoom(p.rooms, r.id))} />
+                  : <ConfirmButton small copy={confirmCopy.deleteRoom(r.name, !!p.inUse?.(r.id))} onConfirm={() => p.onChange(removeRoom(p.rooms, r.id))}>刪除</ConfirmButton>}
               </div>
             </div>
             {isOpen && <SeatGrid paper={p.paper} room={shared} cap={cap} lim={lim} onClose={() => setOpen(null)} onChange={(x) => upd(r.id, () => x)} />}
@@ -165,6 +167,31 @@ export function RoomTable(p: {
         <BulkAdd onAdd={(n) => p.onChange(addRooms(p.rooms, 'class', n, p.division, ctx))} />
       </div>
     </div>
+  );
+}
+
+/**
+ * 步驟③的教室刪除（G12，使用者 2026-11-17 裁示）：預設只從「本次考試」移除；要連共用設定一起刪，得另按第二顆（危險色）並寫明影響。
+ * 這間教室沒列入本次時，沒有「本次移除」可做，只剩從共用設定刪除。
+ */
+function RoomRemove(p: { name: string; inThis: boolean; inUse: boolean; onThis: () => void; onShared: () => void }) {
+  const [open, setOpen] = useState(false);
+  const close = () => setOpen(false);
+  return (
+    <>
+      <Button small kind="danger" onClick={() => setOpen(true)}>刪除</Button>
+      {open && (
+        <Modal title={`刪除「${p.name}」？`} onClose={close}
+          actions={<>
+            <Button onClick={close}>取消</Button>
+            {p.inThis && <Button kind="primary" onClick={() => { close(); p.onThis(); }}>只從本次考試移除</Button>}
+            <Button kind="danger" onClick={() => { close(); p.onShared(); }}>同時從共用設定刪除</Button>
+          </>}>
+          <p>{p.inThis ? '「只從本次考試移除」不會動到共用教室清單與其他模擬考；之後可再用開關列回。' : '這間教室目前沒有列入本次考試，只能從共用設定刪除。'}</p>
+          <p class="small muted" style="margin-top:8px">「同時從共用設定刪除」會讓所有模擬考都少這間教室{p.inUse ? '，已選用它的模擬考排座結果可能因此過期' : ''}。{UNDO_HINT}</p>
+        </Modal>
+      )}
+    </>
   );
 }
 
