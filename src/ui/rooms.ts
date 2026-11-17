@@ -10,6 +10,15 @@ import { roomTooBigForLabel } from '../export/model';
 export const MAX_ROOM_ROWS = 7;
 export const MAX_ROOM_DEPTH = 7;
 export const MAX_ROOM_SEATS = 49;
+/** G30（使用者 2026-11-17 裁示）：預備教室上限放寬為 7 排（橫排）×8 深位＝56 座；班級教室維持 7×7 */
+export const MAX_RESERVE_DEPTH = 8;
+export const MAX_RESERVE_SEATS = MAX_ROOM_ROWS * MAX_RESERVE_DEPTH;
+
+/** 這一類教室的排、深位上限與總座位上限（班級教室 7×7＝49；預備教室 7×8＝56） */
+export const roomLimitsOf = (kind: Classroom['kind']): { rows: number; depth: number; cap: number } =>
+  kind === 'reserve'
+    ? { rows: MAX_ROOM_ROWS, depth: MAX_RESERVE_DEPTH, cap: MAX_RESERVE_SEATS }
+    : { rows: MAX_ROOM_ROWS, depth: MAX_ROOM_DEPTH, cap: MAX_ROOM_SEATS };
 
 export function seatCap(_paper?: LabelPaper): number {
   return MAX_ROOM_SEATS;
@@ -112,14 +121,6 @@ export function addRoom(rooms: Classroom[], kind: Classroom['kind'], division: D
   return [...rooms, { id: `room-${n}`, name: `${base}${same}`, kind, rows: 5, depth: 6, seatCount: 30, division }];
 }
 
-/** 一次新增 count 間同類教室（#205；1～20 間），名稱尾數接續（試場4、試場5…） */
-export function addRooms(rooms: Classroom[], kind: Classroom['kind'], count: number, division: Division = 'senior', ctx?: RoomDivisionContext): Classroom[] {
-  const n = Math.max(1, Math.min(20, Math.floor(count) || 1));
-  let out = rooms;
-  for (let i = 0; i < n; i++) out = addRoom(out, kind, division, ctx);
-  return out;
-}
-
 /** 複製一間教室（#205）：排數、深位、不排座位、組別、部別全帶過去；名稱尾數遞增（試場3→試場4），沒有尾數就加 2；插在原教室後面 */
 export function duplicateRoom(rooms: Classroom[], id: string): Classroom[] {
   const i = rooms.findIndex((r) => r.id === id);
@@ -137,13 +138,16 @@ export function duplicateRoom(rooms: Classroom[], id: string): Classroom[] {
 
 /** 教室超過 7×7 時的提示（G14／D113）；不超過回 null */
 export function labelSplitNote(r: Classroom, _paper?: LabelPaper): string | null {
+  // 預備教室上限是 7×8（G30）；標籤另設計（批次 E），這裡不叫使用者縮小
+  if (r.kind === 'reserve') return r.rows > MAX_ROOM_ROWS || r.depth > MAX_RESERVE_DEPTH ? `這間教室是 ${r.rows} 排×${r.depth} 深位，超過預備教室上限 7×8，請縮小。` : null;
   return roomTooBigForLabel(r) ? `這間教室是 ${r.rows} 排×${r.depth} 深位，超過 7×7，標籤無法對應，請縮小。縮小前這間教室不會輸出標籤。` : null;
 }
 
 /** 到達編輯上限時的提示（稿 v2.36 #210）；沒到回 null */
 export function seatLimitNote(r: Classroom): string | null {
-  return r.rows >= MAX_ROOM_ROWS || r.depth >= MAX_ROOM_DEPTH || roomCapacity(r) >= MAX_ROOM_SEATS
-    ? `排最多 ${MAX_ROOM_ROWS}、深位最多 ${MAX_ROOM_DEPTH}（標籤上限 7×7）。` : null;
+  const l = roomLimitsOf(r.kind);
+  return r.rows >= l.rows || r.depth >= l.depth || roomCapacity(r) >= l.cap
+    ? `排最多 ${l.rows}、深位最多 ${l.depth}（${r.kind === 'reserve' ? '預備教室上限 7×8' : '班級教室上限 7×7'}）。` : null;
 }
 
 /** 屬於某部別的教室（保留原順序）；沒給推斷資料時，沒標部別的教室當高中部 */

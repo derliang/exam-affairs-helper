@@ -1,3 +1,4 @@
+import type { ComponentChildren } from 'preact';
 import { useState } from 'preact/hooks';
 import type { ExamConfig } from '../../data';
 import { Badge, Button, EmptyState, Modal, More, PageHead } from '../components';
@@ -27,6 +28,8 @@ export function DeleteExamModal(p: { exam: ExamConfig; onConfirm: () => void; on
 export function Exams(p: {
   doc: Doc; folder?: string; onOpen: (examId: string) => void; onNew: () => void; onSettings: () => void; onChangeFolder: () => void;
   /** 封存、還原、刪除（G1）；沒給就不顯示該按鈕 */
+  /** G16：資料夾找不到時取代列表的錯誤狀態（不顯示「還沒有模擬考」） */
+  listError?: ComponentChildren;
   onArchive?: (examId: string) => void; onRestore?: (examId: string) => void; onDelete?: (examId: string) => void;
 }) {
   const [del, setDel] = useState<ExamConfig | null>(null);
@@ -67,7 +70,7 @@ export function Exams(p: {
         <Button onClick={p.onSettings}>共用設定</Button>
         <Button kind="primary" onClick={p.onNew}>新增模擬考</Button>
       </PageHead>
-      {all.length === 0 ? (
+      {p.listError ? p.listError : all.length === 0 ? (
         <EmptyState title="還沒有模擬考" action={<Button kind="primary" onClick={p.onNew}>新增模擬考</Button>}>按「新增模擬考」開始。</EmptyState>
       ) : (
         <>
