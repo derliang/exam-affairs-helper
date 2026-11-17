@@ -14,7 +14,7 @@ export function AppBar(p: { version: string; items: AppBarItem[]; theme: Theme; 
   const [open, setOpen] = useState(false);
   return (
     <header class={`appbar${open ? ' open' : ''}`} id="appbar">
-      <button type="button" class="ab-brand" disabled={p.homeDisabled} aria-label="模擬考小幫手，回模擬考列表" onClick={() => { setOpen(false); p.onHome(); }}>
+      <button type="button" class="ab-brand" disabled={p.homeDisabled} aria-label="考務小幫手，回模擬考列表" onClick={() => { setOpen(false); p.onHome(); }}>
         <span class="ab-logo" aria-hidden="true">
           <svg viewBox="0 0 34 34" fill="none">
             {[0, 1, 2].flatMap((r) => [0, 1, 2].map((c) => (
@@ -22,7 +22,7 @@ export function AppBar(p: { version: string; items: AppBarItem[]; theme: Theme; 
             )))}
           </svg>
         </span>
-        模擬考小幫手<span class="ab-ver" title="目前版本">{p.version}</span>
+        考務小幫手<span class="ab-ver" title="目前版本">{p.version}</span>
       </button>
       <nav class="ab-nav" id="abnav" aria-label="主要導覽">
         {p.items.map((it) => (

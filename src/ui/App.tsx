@@ -82,7 +82,7 @@ export function App() {
   const openFolderDlg = (m: FolderMode | 'discard') => { hadFolder.current = repo.hasFolder(); setFolderDlg(m); };
   const downloadBackup = () => {
     const stamp = formatModified(new Date().toISOString()).replace(/\D/g, '');
-    downloadBytes(`模擬考小幫手-備份-${stamp}.json`, new TextEncoder().encode(encode(hist.present)), 'application/json');
+    downloadBytes(`考務小幫手-備份-${stamp}.json`, new TextEncoder().encode(encode(hist.present)), 'application/json');
   };
   // 重開頁面：能靜默還原上次資料夾就直接進列表（瀏覽器要求重新授權時留在初始化頁，由使用者按鈕）
   useEffect(() => {
