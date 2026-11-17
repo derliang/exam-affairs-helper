@@ -31,14 +31,15 @@ export function parseExamWorkbook(sheets: readonly Sheet[], exam: ExamConfig, cl
   return { ...res, entries, droppedSubjects: dropped };
 }
 
-/** 學生名單：多張工作表時取人數最多者 */
+/** 學生名單：多張工作表時取人數最多者（人數相同則取有問題列較多者）；回報讀的是哪一張工作表 */
 export function parseRosterWorkbook(sheets: readonly Sheet[], classNames: readonly string[]): RosterResult {
   let best: RosterResult | null = null;
   for (const s of sheets) {
-    const r = parseRoster(s.rows, { classNames });
-    if (!best || r.students.length > best.students.length) best = r;
+    const r = { ...parseRoster(s.rows, { classNames }), sheetName: s.name };
+    const score = (x: RosterResult) => x.students.length + x.problems.length;
+    if (!best || score(r) > score(best)) best = r;
   }
-  return best ?? { students: [], issues: [{ row: 0, message: '檔案裡沒有工作表' }], layout: 'unknown' };
+  return best ?? { students: [], issues: [{ row: 0, message: '檔案裡沒有工作表' }], problems: [], layout: 'unknown' };
 }
 
 export const FIELD_LABEL: Record<string, string> = {

@@ -7,6 +7,7 @@ import {
 } from '../../import';
 import { Alert, Badge, Button, StatsBar } from '../components';
 import { FIELD_LABEL, SUBJECT_ID_MAP } from '../step2';
+import { RowFix } from './RowFix';
 
 const KIND_TEXT: Record<ReviewItem['kind'], string> = { 'bad-id': '班級／座號無法辨識', 'no-name': '缺少姓名', dup: '班級與座號重複', 'bad-group': '未知組別代碼' };
 
@@ -138,10 +139,16 @@ export function ImportWizard(p: {
       {scan.review.length > 0 && (
         <>
           <h4 style="margin-top:16px">③ 待確認資料（{res.pendingReview.length} 筆待處理／共 {scan.review.length} 筆）</h4>
-          <p class="muted small">這些列程式無法確定，不會被默默略過。請修正後套用，或明確選擇略過。</p>
+          <p class="muted small">這些列程式無法確定，不會被默默略過。請逐列決定：<b>手動補上（新增）</b>、<b>修改內容</b>或<b>略過</b>；全部決定完才能確認匯入。</p>
           {scan.review.map((it) => (
-            <ReviewRow key={it.row} item={it} decision={rowDec[it.row]} groupCodes={Object.keys(opts.groupTable ?? {})}
-              onDecide={(d) => setRowDec((r) => { const n = { ...r }; if (d) n[it.row] = d; else delete n[it.row]; return n; })} />
+            <RowFix key={`${sheetIx}-${it.row}`} where={`工作表「${p.sheets[sheetIx]?.name ?? ''}」第 ${it.row} 列`} kindText={KIND_TEXT[it.kind]} message={it.message} cells={it.cells} draft={it.draft}
+              {...(it.kind === 'bad-group' ? { groupCodes: Object.keys(opts.groupTable ?? {}) } : {})}
+              onDecide={(d) => setRowDec((r) => {
+                const n = { ...r };
+                if (!d) delete n[it.row];
+                else n[it.row] = d.mode === 'skip' ? { action: 'skip' } : { action: 'fix', classNo: d.value.classNo, seatNo: d.value.seatNo, name: d.value.name, ...(d.value.groupCode ? { groupCode: d.value.groupCode } : {}) };
+                return n;
+              })} />
           ))}
         </>
       )}
@@ -177,35 +184,6 @@ export function ImportWizard(p: {
         <Button onClick={p.onCancel}>取消匯入</Button>
         <Button kind="primary" disabled={!res.ready} onClick={() => p.onDone(res.entries, remember ? rememberMapping(scan.groups, mapping, p.saved) : p.saved)}>確認匯入 {res.entries.length} 人（取代本次名單）</Button>
         {reasons.length > 0 && <span class="hint">尚有待處理項目：{reasons.join('；')}</span>}
-      </div>
-    </div>
-  );
-}
-
-function ReviewRow(p: { item: ReviewItem; decision?: RowDecision; groupCodes: string[]; onDecide: (d: RowDecision | null) => void }) {
-  const { item } = p;
-  const [c, setC] = useState(item.draft.classNo === undefined ? '' : String(item.draft.classNo));
-  const [s, setS] = useState(item.draft.seatNo === undefined ? '' : String(item.draft.seatNo));
-  const [n, setN] = useState(item.draft.name);
-  const [g, setG] = useState(item.draft.groupCode ?? '');
-  const ok = Number(c) > 0 && Number.isInteger(Number(c)) && Number(s) > 0 && Number.isInteger(Number(s)) && n.trim() !== '' && (item.kind !== 'bad-group' || p.groupCodes.includes(g.charAt(0).toUpperCase()));
-  const done = p.decision;
-  return (
-    <div class="card" style="padding:8px;margin:6px 0">
-      <div><Badge tone={done ? 'ok' : 'warn'}>{done ? (done.action === 'skip' ? '已略過' : '已修正') : '待處理'}</Badge> 第 {item.row} 列・{KIND_TEXT[item.kind]}：{item.message}</div>
-      <div class="muted small">Excel 原始內容：{item.cells.filter(Boolean).join('｜')}</div>
-      <div class="btnrow" style="margin-top:6px">
-        <input class="input" style="width:72px" aria-label="班級" inputMode="numeric" value={c} onInput={(e) => setC(e.currentTarget.value)} />
-        <input class="input" style="width:72px" aria-label="座號" inputMode="numeric" value={s} onInput={(e) => setS(e.currentTarget.value)} />
-        <input class="input" style="width:120px" aria-label="姓名" value={n} onInput={(e) => setN(e.currentTarget.value)} />
-        {item.kind === 'bad-group' && (
-          <select class="input" aria-label="組別" value={g} onChange={(e) => setG(e.currentTarget.value)}>
-            <option value="">— 選組別 —</option>{p.groupCodes.map((k) => <option key={k} value={k}>{k}</option>)}
-          </select>
-        )}
-        <Button small kind="primary" disabled={!ok} onClick={() => p.onDecide({ action: 'fix', classNo: Number(c), seatNo: Number(s), name: n.trim(), ...(g ? { groupCode: g } : {}) })}>確認修正</Button>
-        <Button small kind={done?.action === 'skip' ? 'primary' : 'default'} onClick={() => p.onDecide({ action: 'skip' })}>略過此筆</Button>
-        {done && <Button small onClick={() => p.onDecide(null)}>重新處理</Button>}
       </div>
     </div>
   );
