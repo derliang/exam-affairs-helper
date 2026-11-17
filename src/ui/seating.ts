@@ -462,3 +462,9 @@ export function groupTable(doc: Doc, exam: ExamConfig): { code: string; count: n
     return { code, count, subjectIds: list[0]![1].ids, differing: count - list[0]![1].n, science: trackN.get(code)?.science ?? 0, liberal: trackN.get(code)?.liberal ?? 0 };
   });
 }
+
+/** 目前名單與設定算出的排座版本碼（對帳 M-7：與排座結果存的版本碼比對）；沒有結果時回 undefined */
+export function currentSeatingVersion(doc: Doc, exam: ExamConfig): string | undefined {
+  const r = examResult(doc, exam);
+  return r ? seatingVersion(seatingInputOf(viewForYear(doc, examYear(exam)), exam, r.generatedAt)) : undefined;
+}

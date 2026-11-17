@@ -1050,3 +1050,28 @@ details.more{font-size:14px;color:var(--text-2)}details.more summary{cursor:poin
 .t tr.bad td{background:var(--danger-soft)}
 ul.plain{margin:4px 0 0;padding-left:1.2em}
 @media (max-width:480px){.envrow .btn{min-height:44px}.envlab{min-width:0;flex-basis:100%}}
+/* G35 考前對帳（稿 v2.47，DESIGN 10.25）：燈號＝圖示＋文字，不只靠顏色；沿用既有 tokens */
+.row.sb{justify-content:space-between}
+.rc-lamp{display:inline-flex;gap:4px;align-items:center;font-weight:700;font-size:13px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);white-space:nowrap}
+.rc-lamp.rc-big{font-size:14px;padding:4px 12px}
+.rc-pass{background:var(--ok-soft);color:var(--ok-ink);border-color:var(--ok-line)}
+.rc-warn{background:var(--warn-soft);color:var(--warn-ink);border-color:var(--warn-line)}
+.rc-fail{background:var(--danger-soft);color:var(--danger-ink);border-color:var(--danger-line)}
+.rc-na{background:var(--sunken);color:var(--text-2)}
+.rc-legend{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.rc-list{display:grid;gap:8px}
+.rc-row{display:grid;grid-template-columns:minmax(150px,1.1fr) 2fr auto;gap:8px 14px;align-items:start;padding:10px 12px;border:1px solid var(--line);border-left-width:5px;border-radius:var(--r-md);background:var(--surface)}
+.rc-row-pass{border-left-color:var(--ok-bar)}.rc-row-warn{border-left-color:var(--warn-bar)}.rc-row-fail{border-left-color:var(--danger)}.rc-row-na{border-left-style:dashed}
+.rc-name{display:flex;flex-direction:column;gap:4px;align-items:flex-start}
+.rc-tri{display:flex;gap:18px;flex-wrap:wrap}
+.rc-tri>div{display:flex;flex-direction:column}.rc-tri b{font-size:18px}
+.rc-more{background:none;border:0;color:var(--accent);font-weight:700;cursor:pointer;padding:4px 6px}
+.rc-detail{grid-column:1/-1;display:grid;gap:6px;padding-top:6px;border-top:1px dashed var(--line)}
+.rc-issue{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.rc-table .rc-bad td,.rc-pcard.rc-bad{background:var(--danger-soft)}
+.rc-cards{display:none;gap:8px}
+.rc-pcard{border:1px solid var(--line);border-radius:var(--r-md);padding:10px 12px;display:grid;gap:4px}
+@media (max-width:640px){
+  .rc-row{grid-template-columns:1fr}
+  .rc-table{display:none}.rc-cards{display:grid}
+}
