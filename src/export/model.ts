@@ -22,6 +22,8 @@ import {
 } from '../data';
 import { roomStats, specialOf, type RoomStats } from '../core/stats';
 import { dayName, examSubjectPeriods, slotName } from '../core/periods';
+import { periodGroups } from '../core/detach';
+import { studyReference } from '../core/studyRef';
 import { classColor } from './colors';
 
 export interface ExportInput {
@@ -666,8 +668,57 @@ export function buildSeatPages(input: ExportInput, scope: Scope = 'all'): SeatPa
         ...(() => { const r = rotationRows(seats, ctx); return r ? { rotation: r } : {}; })(),
       });
     }
+    pages.push(...studyReferencePages(input, ctx, rooms));
   }
   return pages;
+}
+
+/**
+ * 抽離自習「參考座位」座位表（G32，修訂 D7）：每個時段、每間排了自習的預備教室一頁，
+ * 標題寫「參考座位，非考試座位」；只出座位表、不出標籤；含在座位表檔案裡（預備教室考試頁之後）。
+ */
+function studyReferencePages(input: ExportInput, ctx: Ctx, rooms: Map<string, Classroom>): SeatPageModel[] {
+  const periods = examSubjectPeriods(input.exam, input.settings);
+  const groups = periodGroups(input.exam.subjects, periods);
+  const reserve = [...rooms.values()].filter((r) => r.kind === 'reserve');
+  const out: SeatPageModel[] = [];
+  for (const ref of studyReference(groups, input.result.detaches, reserve)) {
+    const room = rooms.get(ref.roomId);
+    if (!room) continue;
+    const g = groups[ref.group]!;
+    const when = [...new Set(g.subjectIds.flatMap((id) => (periods.get(id) ?? []).map((sp) => (sp.slot ? `${dayName(sp.day ?? 0)} ${slotName(sp.slot)}` : `第 ${sp.period} 節`))))].join('、');
+    const subj = ref.subjectIds.map((id) => ctx.subjectName.get(id) ?? id).join('、');
+    const cells = new Map<string, CellModel>();
+    const per = new Map<number, number>();
+    for (const [code, seat] of ref.seats) {
+      const c = { ...makeCell(code, seat, ctx), tags: [], marks: [] };
+      cells.set(`${seat.row}-${seat.depth}`, c);
+      const no = Number(code.slice(0, 2));
+      per.set(no, (per.get(no) ?? 0) + 1);
+    }
+    const nos = [...per.keys()].sort((a, b) => a - b);
+    out.push({
+      kind: 'seat',
+      title: `${input.exam.name}　${room.name}　自習參考座位（非考試座位）`,
+      examName: input.exam.name,
+      ...(input.seatHeading?.trim() ? { heading: input.seatHeading.trim() } : {}),
+      roomName: `${room.name}　參考座位`,
+      tag: PREP_TAG,
+      chips: ['參考座位，非考試座位', `自習 ${ref.seats.size} 人`, ...(when ? [when] : []), subj],
+      detachStyle: true,
+      rows: room.rows,
+      depth: room.depth,
+      cells,
+      usable: usableOf(room),
+      stats: {
+        perClass: nos.map((n) => ({ className: ctx.classes.get(n)?.name ?? String(n), count: per.get(n)! })),
+        total: ref.seats.size,
+        perSubject: [],
+        table: { classes: nos.map((n) => ctx.classes.get(n)?.name ?? String(n)), rows: [{ label: '自習人數', per: nos.map((n) => per.get(n)!), total: ref.seats.size }] },
+      },
+    });
+  }
+  return out;
 }
 
 /**

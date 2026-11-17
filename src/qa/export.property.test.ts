@@ -62,7 +62,7 @@ describe('輸出版面模型與排座結果逐筆一致', () => {
       checked++;
       const { input } = x;
       const nameOf = new Map(input.students.map((s) => [studentCode(s.classNo, s.seatNo), s.name]));
-      const seatPages = buildSeatPages(input);
+      const seatPages = buildSeatPages(input).filter((q) => !q.title.includes('參考座位'));
       const mainPages = seatPages.filter((p) => !p.slotMode);
 
       // INV-13 每間有人的班級教室一頁；頁上格子＝該教室的 assignments，座標、編號、姓名逐筆相同；總數＝考生數
@@ -131,7 +131,7 @@ describe('輸出版面模型與排座結果逐筆一致', () => {
       if (!x || x.input.result.assignments.length === 0) continue;
       checked++;
       const { input } = x;
-      const seat = buildSeatPages(input);
+      const seat = buildSeatPages(input).filter((q) => !q.title.includes('參考座位'));
       const label = buildLabelPages(input);
       const list = buildDetachList(input);
       const expected = new Map<string, number>();
@@ -165,7 +165,7 @@ describe('姓名來源不同步的保險（缺陷 F-1 回歸）', () => {
     expect(x).toBeTruthy();
     const input = { ...x.input, students: [] };
     // 預備教室時段版（稿 v2.28）只印科目＋班座號、不印姓名，不在此檢查
-    for (const p of buildSeatPages(input).filter((q) => !q.slotMode)) for (const c of p.cells.values()) expect(c.name, c.code).not.toBe('');
+    for (const p of buildSeatPages(input).filter((q) => !q.slotMode && !q.title.includes('參考座位'))) for (const c of p.cells.values()) expect(c.name, c.code).not.toBe('');
     // 預備教室合併標籤（D94-5）只印節次＋科目＋班座號、不印姓名，不在此檢查
     for (const p of buildLabelPages(input)) for (const c of p.cells) if (!c.periodLines) expect(c.name, c.code).not.toBe('');
     for (const r of buildDetachList(input).rows) expect(r.name, r.code).not.toBe('');
@@ -182,7 +182,7 @@ describe('匯出統計＝畫面統計（含單人特例，缺陷 F-5 回歸）',
       checked++;
       const { input } = x;
       const sp = specialOf(input.result);
-      for (const p of buildSeatPages(input).filter((q) => !q.slotMode)) {
+      for (const p of buildSeatPages(input).filter((q) => !q.slotMode && !q.title.includes('參考座位'))) {
         const room = input.settings.classrooms.find((c) => p.title.includes(c.name + '　'))!;
         const screen = roomStats(room.id, input.result.assignments, input.entries, input.exam.subjects, input.result.detaches, sp);
         const without = roomStats(room.id, input.result.assignments, input.entries, input.exam.subjects, input.result.detaches);
