@@ -20,7 +20,7 @@ export function astFlow(doc: Doc, exam: ExamConfig, s2: boolean, classSeats: num
   const rooms = effectiveRooms(exam, doc.settings.classrooms).filter((r) => exam.classroomIds.includes(r.id) && r.kind === 'class');
   const spare = students > 0 ? classSeats - Math.max(cap.science.need, cap.liberal.need) : classSeats;
   let s3 = rooms.length > 0;
-  if (rooms.length === 0) issues.push({ step: 3, text: '③ 還沒有選班級教室', fix: '去 ③ 勾選教室', level: 'block' });
+  if (rooms.length === 0) issues.push({ step: 3, text: '③ 還沒有選教室', fix: '去 ③ 勾選教室', level: 'block' });
   for (const [label, c] of [['理組', cap.science], ['文組', cap.liberal]] as const) {
     if (cap.hasList && c.seats < c.need) {
       s3 = false;

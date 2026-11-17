@@ -219,7 +219,7 @@ export function AstStep3(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
       <div class="card stack">
         <div class="row" style="justify-content:space-between">
           <div>
-            <h3>班級教室與座位圖</h3>
+            <h3>教室與座位圖</h3>
             <p class="small muted">座位圖可以每排深位數不同、可停用個別座位；要留空就停用座位，不另做「隔排、隔位」規則。<b>自習容量預設等於可排座位</b>，可以手動調高，程式不會自己調大。座位上限：每間最多 8 排×8 深位、56 座（與標籤紙脫鉤；比標籤紙大時標籤自動分張）。</p>
             <More title="說明：教室清單與勾選">教室清單是所有模擬考共用的：修改座位圖與自習容量會影響其他使用這間教室的模擬考。「列入本次」沿用原有的勾選，沒列入的教室不會被排考試或自習。</More>
           </div>
@@ -236,7 +236,7 @@ export function AstStep3(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
                 on={selected.has(r.id)} onSwitch={(v) => toggleId(r.id, v)} switchLabel="列入本次" {...(track ? { trackBadge: track === 'science' ? '理組教室' : '文組教室' } : {})} />
             );
           })}
-          {classRooms.length === 0 && <p class="small muted">高中部還沒有班級教室，請到共用設定新增。</p>}
+          {classRooms.length === 0 && <p class="small muted">高中部還沒有教室，請到共用設定新增。</p>}
         </div>
       </div>
       </PhaseGuard>
