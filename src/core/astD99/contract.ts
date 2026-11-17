@@ -51,6 +51,8 @@ export interface PlanInput {
    * min-rows＝最少排數：沿用舊排法（一排排滿再下一排）。只影響綜合教室，班級教室不受影響。
    */
   reserveLayout?: 'min-depth' | 'min-rows';
+  /** G36：固定自習教室（教室 id）：這些教室全程不當考場，每人整天只去同一間自習；沒設＝沿用原本逐節決定 */
+  fixedStudyRooms?: readonly string[];
   /** 管理者已核可的替代方案（某時段改用某班原班教室給抽離者自習）；只有列在這裡的才生效 */
   approvals?: readonly { slotId: string; roomId: string }[];
   /** AST-3：鎖定（引擎之後套用，鎖定值重排時不可改）；算進輸入，所以相同輸入、設定、鎖定得相同結果（T-21） */
@@ -61,6 +63,8 @@ export interface PlanInput {
 
 export interface ExamPlacement { slotId: string; code: string; subjectId: string; roomId: string; row: number; depth: number }
 export interface StudyPlacement { slotId: string; code: string; roomId: string }
+/** G36：自習參考座位（全日固定，非考試座位、不印標籤）：同一人在同一間自習教室只有一個座位，去考試的時段座位保留 */
+export interface StudySeat { roomId: string; code: string; row: number; depth: number }
 export interface Proposal {
   kind: 'use-class-room';
   slotId: string;
@@ -113,6 +117,9 @@ export interface PlanOutput {
   exams: readonly ExamPlacement[];
   /** 自習只有教室、沒有座位 */
   study: readonly StudyPlacement[];
+  /** G36：自習參考座位（全日固定）；座位放不下的人在 studyUnseated（不硬排） */
+  studySeats?: readonly StudySeat[];
+  studyUnseated?: readonly { roomId: string; code: string }[];
   /** 同排混科的排（要在輸出標警示） */
   mixedRows: readonly { slotId: string; roomId: string; row: number }[];
   /** 需管理者核可的替代方案；未核可不得生效 */

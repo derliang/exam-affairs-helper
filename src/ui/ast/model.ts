@@ -130,6 +130,7 @@ export function astInput(doc: Doc, exam: ExamConfig, mode: PlanMode = astModeOf(
     students: astStudents(doc, exam, slots),
     ...(exam.astReserveLayout === 'min-rows' ? { reserveLayout: 'min-rows' as const } : {}),
     ...(exam.astAllowOtherStudy ? { allowOtherClassStudy: true } : {}),
+    ...(exam.astFixedStudyRooms?.length ? { fixedStudyRooms: exam.astFixedStudyRooms.filter((id) => exam.classroomIds.includes(id)) } : {}),
     ...(exam.astApprovals?.length ? { approvals: exam.astApprovals } : {}),
     ...(hasLocks ? { locks: L } : {}),
     ...(carry ? { carry: carry.seats } : {}),

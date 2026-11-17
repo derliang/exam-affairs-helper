@@ -30,6 +30,8 @@ export interface ExportOptions {
   study: boolean;
   /** 座位表、標籤檔是否含預備教室頁（併在最後，頁首標「預備教室」；G34） */
   reserve: boolean;
+  /** G36：含自習參考座位頁（預設勾）：學測原班不考者的虛線參考格＋抽離自習的參考頁；取消則都不出。標籤不受影響 */
+  studyRef?: boolean;
 }
 
 export const defaultOptions = (paper: LabelPaper = 'B4'): ExportOptions => ({
@@ -39,6 +41,7 @@ export const defaultOptions = (paper: LabelPaper = 'B4'): ExportOptions => ({
   paper,
   study: false, // 稿 v2.7：抽離自習名單預設不勾（校-45）
   reserve: true,
+  studyRef: true,
 });
 
 export interface PlannedFile {
@@ -68,7 +71,7 @@ export function placeReserveLast<T extends { tag?: string }>(pages: T[], include
  * G34：座位表一個檔、標籤一個檔，預備教室頁併在各自檔案的最後、頁首標「預備教室」；抽離自習名單獨立、預設不勾。
  */
 export function buildParts(input: ExportInput, o: ExportOptions): Parts {
-  const withPaper: ExportInput = { ...input, exam: { ...input.exam, labelLayout: defaultLabelLayout(o.paper) } };
+  const withPaper: ExportInput = { ...input, includeStudyRef: o.studyRef !== false, exam: { ...input.exam, labelLayout: defaultLabelLayout(o.paper) } };
   const parts: Parts = {};
   if (o.seat) {
     const pg = placeReserveLast([...buildSeatPages(withPaper, 'class'), ...buildSeatPages(withPaper, 'reserve')], o.reserve);

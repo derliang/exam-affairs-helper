@@ -37,6 +37,11 @@ export interface ExportInput {
   /** 座位表／標籤表頭（共用設定的範本代入本次考試；校-54）。沒給或空白＝用考試名稱（舊行為） */
   seatHeading?: string;
   labelHeading?: string;
+  /**
+   * G36：含自習參考座位頁（第 6 步勾選，預設勾）。true＝學測原班教室「整場不考」的人也排參考座位（虛線格、不印標籤）；
+   * false＝連抽離自習的參考頁都不出；沒給＝舊行為（只出抽離自習的參考頁）。會考不使用。
+   */
+  includeStudyRef?: boolean;
 }
 
 /** 一個格子上要印的內容 */
@@ -63,6 +68,8 @@ export interface CellModel {
   persons?: PersonModel[];
   /** 特殊考生單字角標（v2.36，#223）：右下角；取代整格粗框與整句小牌 */
   corners?: CornerTag[];
+  /** G36：自習參考座位格（非考試座位、不印標籤）：虛線框，黑白列印也分得出 */
+  ref?: boolean;
 }
 /** 角標：x＝不考（黑底白字）、add＝加考／抽離考試（白底黑框）、take＝「有考」（該科不考超過一半時反標，白底黑框） */
 export interface CornerTag { kind: 'x' | 'add' | 'take'; text: string }
@@ -628,6 +635,7 @@ export function buildSeatPages(input: ExportInput, scope: Scope = 'all'): SeatPa
     pg.chips = chipsOf(pg.stats.total, cells.values(), input.exam.subjects);
     const notes = applyCorners([...cells.values()], input.exam.subjects.map((s) => s.name));
     if (notes.length) { pg.flipNotes = notes; pg.chips.push(...notes); }
+    if (input.includeStudyRef === true && input.exam.kind === 'gsat') addHomeStudyRef(pg, room, input, ctx);
   }
   if (scope !== 'class') {
     // 預備教室座位表（時段版，稿 v2.28）：一間預備教室一頁，格內每行一個時段；抽離自習不排座位
@@ -668,10 +676,33 @@ export function buildSeatPages(input: ExportInput, scope: Scope = 'all'): SeatPa
         ...(() => { const r = rotationRows(seats, ctx); return r ? { rotation: r } : {}; })(),
       });
     }
-    pages.push(...studyReferencePages(input, ctx, rooms));
+    if (input.includeStudyRef !== false) pages.push(...studyReferencePages(input, ctx, rooms));
   }
   return pages;
 }
+
+/**
+ * 學測原班教室的自習參考座位（G36）：班上「整場不考」的人（名冊有、沒有任何考試座位、也沒被抽離）排在考試座位之後的剩餘座位，
+ * 同班座號遞增；格內一律寫班級、座號、姓名；虛線框＋「自習」小牌；不印標籤（標籤只看 assignments）。座位不夠不硬排，列在頁首小標籤。
+ */
+function addHomeStudyRef(pg: SeatPageModel, room: Classroom, input: ExportInput, ctx: Ctx): void {
+  const cls = input.settings.classes.find((c) => c.name === room.name);
+  if (!cls) return;
+  const placed = new Set<string>([...input.result.assignments.map((a) => a.code), ...input.result.detaches.map((d) => d.code)]);
+  const stay = input.students.filter((st) => st.classNo === cls.no && !placed.has(codeFor(st))).sort((a, b) => a.seatNo - b.seatNo);
+  if (stay.length === 0) return;
+  const free = [...pg.usable].map((k) => k.split('-').map(Number) as [number, number]).filter(([r, d]) => !pg.cells.has(`${r}-${d}`)).sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const seated = stay.slice(0, free.length);
+  seated.forEach((st, i) => {
+    const [row, depth] = free[i]!;
+    pg.cells.set(`${row}-${depth}`, { ...makeCell(codeFor(st), { row, depth }, ctx), tags: [], marks: [], ref: true, colorBg: 'FFFFFF', corners: [{ kind: 'add', text: '自習' }] });
+  });
+  if (!pg.stats.table.classes.includes(cls.name)) { pg.stats.table.classes.push(cls.name); for (const r of pg.stats.table.rows) r.per.push(0); }
+  pg.chips.push(`自習（參考座位）${seated.length} 人`);
+  if (stay.length > seated.length) pg.chips.push(`座位不足：缺 ${stay.length - seated.length} 座，未排入 ${stay.slice(seated.length).map((x) => String(x.seatNo).padStart(2, '0')).join('、')} 號`);
+  pg.stats.table.rows.push({ label: '自習參考座位（不印標籤）', per: pg.stats.table.classes.map((c) => (c === cls.name ? seated.length : 0)), total: seated.length });
+}
+const codeFor = (st: { classNo: number; seatNo: number }): string => `${String(st.classNo).padStart(2, '0')}${String(st.seatNo).padStart(2, '0')}`;
 
 /**
  * 抽離自習「參考座位」座位表（G32，修訂 D7）：每個時段、每間排了自習的預備教室一頁，

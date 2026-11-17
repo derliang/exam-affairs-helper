@@ -65,7 +65,7 @@ function cellHtml(c: CellModel | undefined, w: number, h: number, mode: 'seat' |
   // 標籤上沒有標示的格子不留標示區、整塊垂直置中、字取最大（#218）；其餘字級在格寬內取最大（#222）
   const free = mode === 'label';
   const npt = namePtFit(c.classLabel, c.name, w - (mode === 'label' ? 2.2 : 1.4), mode === 'label' ? 18 : 12);
-  return `<div class="pp-c${free ? ' fr' : ''}" style="${size};background:${bg}"><i class="pp-co">${esc(c.coord)}</i><b class="pp-no">${esc(c.code)}</b><span class="pp-nm" style="font-size:${npt}pt"><em style="color:${em}">${esc(c.classLabel)}</em><span>${esc(c.name)}</span></span>${cornersHtml(c)}</div>`;
+  return `<div class="pp-c${free ? ' fr' : ''}${c.ref ? ' pp-ref' : ''}" style="${size};background:${bg}"><i class="pp-co">${esc(c.coord)}</i><b class="pp-no">${esc(c.code)}</b><span class="pp-nm" style="font-size:${npt}pt"><em style="color:${em}">${esc(c.classLabel)}</em><span>${esc(c.name)}</span></span>${cornersHtml(c)}</div>`;
 }
 
 function seatHtml(p: SeatPageModel, o: HtmlOptions): string {
@@ -198,6 +198,7 @@ footer { font-size: 8pt; color: #555; text-align: right; margin-top: 3mm }
 .pp.pp-lab .pp-wd .pp-wh.pp-wt{justify-content:flex-start;padding-top:0}
 .pp .pp-pr b{font-weight:700}
 .pp .pp-c.pp-bl{border:none;background:none}
+.pp .pp-c.pp-ref{outline:.5mm dashed var(--ink);outline-offset:-.8mm}
 .pp .pp-e{background:repeating-linear-gradient(135deg,#F1EDE0 0 1.2mm,#E2DCC8 1.2mm 2.4mm)}
 .pp.pp-lab .pp-c{display:grid;grid-template-rows:1fr auto 9mm;justify-items:center;align-items:center;gap:0;padding:5mm 1mm .8mm}
 .pp.pp-lab .pp-no{align-self:end;margin-bottom:2.6mm;font-size:31pt}.pp.pp-lab .pp-nm{font-size:15pt}.pp.pp-lab .pp-mk{font-size:12pt}.pp.pp-lab .pp-co{font-size:9pt}

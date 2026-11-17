@@ -71,7 +71,7 @@ function PreviewCard(p: { prepared: Extract<ReturnType<typeof prepareExport>, { 
   const html = useMemo(() => {
     if (!room) return '';
     try {
-    const withPaper = { ...input, exam: { ...input.exam, labelLayout: defaultLabelLayout(p.paper) } };
+    const withPaper = { ...input, includeStudyRef: true, exam: { ...input.exam, labelLayout: defaultLabelLayout(p.paper) } };
     const meta = { generatedAt: input.result.generatedAt, dataVersion: input.result.dataVersion, extraCss: `html{background:#e9ecf1;zoom:${kind === 'label' ? (p.paper === 'A3' ? 0.38 : 0.45) : 0.5}}body{margin:0;padding:8px}.sheet{width:${kind === 'label' ? (p.paper === 'A3' ? 297 : 250) : 210}mm;box-sizing:border-box;margin:0 auto 8px!important;box-shadow:0 1px 4px #0003}` };
     if (kind === 'label') { const pgs = buildLabelPages(withPaper, 'all').filter((x) => x.roomName === room.name || x.roomName.startsWith(`${room.name}（第`) || x.roomName.startsWith(`${room.name}　抽離考試`)); return pgs.length ? renderPrintHtml({ label: pgs }, meta) : ''; }
     if (kind === 'seat') { const pg = buildSeatPages(withPaper, 'all').find((x) => x.roomName === room.name); return pg ? renderPrintHtml({ seat: [pg] }, meta) : ''; }
@@ -203,9 +203,9 @@ export function Step6(p: {
     }
   };
 
-  const ck = (key: 'seat' | 'label' | 'study' | 'reserve', title: string, sub: string) => (
+  const ck = (key: 'seat' | 'label' | 'study' | 'reserve' | 'studyRef', title: string, sub: string) => (
     <label class="check" style="align-items:flex-start">
-      <input type="checkbox" checked={o[key]} onChange={(e) => set({ [key]: e.currentTarget.checked } as Partial<ExportOptions>)} />
+      <input type="checkbox" checked={o[key] !== false} onChange={(e) => set({ [key]: e.currentTarget.checked } as Partial<ExportOptions>)} />
       <span><b>{title}</b><br /><span class="small muted">{sub}</span></span>
     </label>
   );
@@ -265,6 +265,7 @@ export function Step6(p: {
           </div>
           {!junior && ck('study', '抽離自習名單（A4）', '合併成一個檔案，每科一頁；只有名單與人數，不出座位表與標籤')}
           {!junior && ck('reserve', '包含預備教室頁', `抽離考試的預備教室座位表（時段版）與標籤，併在上面座位表、標籤檔案的最後，每頁頁首標「預備教室」；預備教室最多 7 排×8 深位，標籤同一頁 7×8（格高隨列數調整）`)}
+          {!junior && ck('studyRef', '含自習參考座位頁', '不考的人（自習）也排參考座位：原班教室座位表上以虛線格「自習」標出、抽離自習的預備教室也出參考頁；只供檢核座位夠不夠、可照坐，不印標籤。取消則這些都不出')}
         </div>
         <div class="dlbtns row" style="align-items:flex-start;gap:24px;flex-wrap:wrap">
           <div class="stack" style="gap:6px">
