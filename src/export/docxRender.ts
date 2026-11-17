@@ -456,6 +456,8 @@ function seatSection(page: SeatPageModel, opts: DocxOptions): ISectionOptions {
       const c = page.cells.get(`${r}-${d}`);
       const edge = (on: boolean) => (on ? bd(INK, 16) : bd(CUT, 7));
       const borders = { top: edge(d === page.depth), bottom: edge(d === 1), left: edge(r === 1), right: edge(r === page.rows) };
+      const dash = { style: BorderStyle.DASHED, size: 12, color: INK };
+      if (c?.ref) { borders.top = dash; borders.bottom = dash; borders.left = dash; borders.right = dash; }
       const pal = c ? (page.detachStyle ? DETACH : { bg: c.colorBg, line: c.colorLine, fg: c.colorFg }) : null;
       cells.push(
         new TableCell({

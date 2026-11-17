@@ -26,6 +26,7 @@ import {
   type PlanStudent,
   type Proposal,
   type StudyPlacement,
+  type StudySeat,
 } from './contract';
 
 interface Stu {
@@ -126,8 +127,28 @@ class Ctx {
     const byId = new Map(this.rooms.map((r) => [r.id, r.idx]));
     this.approved = input.slots.map((s) => new Set((input.approvals ?? []).filter((a) => a.slotId === s.id).map((a) => byId.get(a.roomId)).filter((x): x is number => x !== undefined)));
     this.cache = input.slots.map(() => new Map());
+    // G36：固定自習教室——這些教室全程不當考場；每個「至少有一節自習」的人整天只去同一間（放不下的人不硬排，列為未排入）
+    const fixedIds = new Set(input.fixedStudyRooms ?? []);
+    for (const r of this.rooms) if (fixedIds.has(r.id) && r.seats.length > 0) this.fixed.add(r.idx);
+    if (this.fixed.size) {
+      const load = new Map<number, number>();
+      const fixedRooms = this.rooms.filter((r) => this.fixed.has(r.idx));
+      const studies = (st: Stu): boolean => input.slots.some((sl) => !this.takes(st, sl));
+      for (const st of this.stus) {
+        if (!studies(st)) continue;
+        const h = this.home.get(st.classNo);
+        const free = (r: Room): number => r.studyCap - (load.get(r.idx) ?? 0);
+        const pick = h && this.fixed.has(h.idx) && free(h) > 0 ? h : [...fixedRooms].sort((a, b) => free(b) - free(a) || a.rank - b.rank).find((r) => free(r) > 0);
+        if (!pick) continue; // 放不下：沒有固定教室，建置時列為未排入
+        this.fixedHome.set(st.idx, pick.idx);
+        load.set(pick.idx, (load.get(pick.idx) ?? 0) + 1);
+      }
+    }
   }
   readonly studentsIn: PlanStudent[];
+  /** 固定自習教室（索引）、每人的固定教室 */
+  private readonly fixed = new Set<number>();
+  private readonly fixedHome = new Map<number, number>();
 
   run(): PlanOutput {
     const slots = this.input.slots;
@@ -244,7 +265,7 @@ class Ctx {
     const examByClass = new Map<number, number>();
     for (const g of groups) examByClass.set(g.classNo, (examByClass.get(g.classNo) ?? 0) + g.students.length);
     for (const st of this.stus) if (!slot || !this.takes(st, slot)) nonExamByClass.set(st.classNo, (nonExamByClass.get(st.classNo) ?? 0) + 1);
-    const R = this.rooms.filter((r) => r.seats.length > 0);
+    const R = this.rooms.filter((r) => r.seats.length > 0 && !this.fixed.has(r.idx));
     const caps = R.map((r) => r.seats.length).sort((a, b) => b - a);
     let kmin = 0;
     for (let acc = 0; acc < examinees && kmin < caps.length; kmin++) acc += caps[kmin]!;
@@ -475,6 +496,12 @@ class Ctx {
     let displaced = 0;
     for (const st of this.stus) {
       if (examRoom[st.idx]! >= 0) continue;
+      if (this.fixed.size) {
+        const fh = this.fixedHome.get(st.idx);
+        if (fh !== undefined) addStudy(fh, st);
+        else pending.push(st);
+        continue;
+      }
       const h = this.home.get(st.classNo);
       if (h && examSet.has(h.idx)) {
         displaced++;
@@ -490,6 +517,10 @@ class Ctx {
     const unplaced: number[] = [];
     const usedApprovals = new Set<number>();
     for (const st of pending) {
+      if (this.fixed.size) {
+        unplaced.push(st.idx); // 固定自習教室放不下：不硬排，列為未排入
+        continue;
+      }
       const r = reserves.find((x) => free(x) > 0) ?? [...others].sort((a, b) => free(b) - free(a) || a.rank - b.rank).find((x) => free(x) > 0);
       if (!r) {
         unplaced.push(st.idx);
@@ -583,7 +614,25 @@ class Ctx {
       for (const i of p.unplaced) unplaced.push({ slotId: slot.id, code: this.stus[i]!.code });
       if (p.unplaced.length && !this.input.allowOtherClassStudy) proposals.push(...this.propose(s, p, plans));
     });
-    const out: PlanOutput = { usage, exams, study, mixedRows, proposals, ...(unplaced.length ? { unplaced } : {}) };
+    // G36：自習參考座位（全日固定：同一人在同一間教室只有一個座位，去考試的那節座位保留）
+    const studySeats: StudySeat[] = [];
+    const studyUnseated: { roomId: string; code: string }[] = [];
+    const byRoom = new Map<number, Stu[]>();
+    plans.forEach((p) => p.studyRoom.forEach((r, i) => {
+      if (r < 0) return;
+      const l = byRoom.get(r) ?? [];
+      if (!l.includes(this.stus[i]!)) l.push(this.stus[i]!);
+      byRoom.set(r, l);
+    }));
+    for (const [r, list] of [...byRoom].sort((a, b) => a[0] - b[0])) {
+      const room = this.rooms[r]!;
+      const fit = list.slice(0, Math.min(room.seats.length, room.studyCap));
+      const m = new Map([['study', fit]]);
+      const lay = layoutRoom(this.shapeRoom(room, m), [{ subject: 'study', students: fit }]);
+      for (const x of lay.placed) studySeats.push({ roomId: room.id, code: x.st.code, row: x.row, depth: x.depth });
+      for (const st of list.slice(fit.length)) studyUnseated.push({ roomId: room.id, code: st.code });
+    }
+    const out: PlanOutput = { usage, exams, study, mixedRows, proposals, ...(unplaced.length ? { unplaced } : {}), ...(studySeats.length ? { studySeats } : {}), ...(studyUnseated.length ? { studyUnseated } : {}) };
     return { ...out, metrics: computeMetrics(this.input, out) };
   }
 
