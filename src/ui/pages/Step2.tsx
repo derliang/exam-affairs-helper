@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { ExamConfig, ExamEntry, Participation, RosterDiff, RosterDiffChoice } from '../../data';
-import { allResolved, applyDiffs, applyGroupChoice, compareRosters, groupDiffs, manyDiffs, type DiffGroup, diffsStale, isResolved, readXlsx, XlsError, refreshDiffs, validateResolved, type Sheet } from '../../import';
+import { hasPua, puaCodes, showPua, allResolved, applyDiffs, applyGroupChoice, compareRosters, groupDiffs, manyDiffs, type DiffGroup, diffsStale, isResolved, readXlsx, XlsError, refreshDiffs, validateResolved, type Sheet } from '../../import';
 import { Alert, Badge, Button, ClassChip, ConfirmButton, More, PageHead, Seg, StatsBar, StepHead } from '../components';
 import { confirmCopy } from '../flow';
 import { addClass, diffOptions, examYear, rosterName, syncDiffs, updateExam, type Doc } from '../store';
@@ -188,10 +188,11 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
                   </>
                 ) : (
                   <>
-                    <div class="fact"><b>考試名單</b>{d.exam ? who(d.exam) + groupOf('exam', d.exam, d.kind === 'group-diff' ? d.groups?.exam : undefined) : '（沒有這個人）'}</div>
+                    <div class="fact"><b>考試名單</b>{d.exam ? (hasPua(d.exam.name) ? who({ ...d.exam, name: showPua(d.exam.name) }) : who(d.exam)) + groupOf('exam', d.exam, d.kind === 'group-diff' ? d.groups?.exam : undefined) : '（沒有這個人）'}</div>
                     <div class="fact"><b>學生名單</b>{d.roster ? who(d.roster) + groupOf('roster', d.roster, d.kind === 'group-diff' ? d.groups?.roster : undefined) : '（沒有這個人）'}</div>
                   </>
                 )}
+                {d.exam && hasPua(d.exam.name) && <div class="fact"><b>提醒</b>考試名單的姓名含造字區碼位（{puaCodes(d.exam.name).join('、')}，不是標準字，印出來可能是空白）。建議選「以學生名單為準」。</div>}
               </div>
               <Seg<RosterDiffChoice> className="cmpseg" label={`第 ${i + 1} 筆處理方式`} value={(d.choice ?? '') as RosterDiffChoice}
                 onChange={(v) => {
@@ -244,6 +245,10 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
     );
   }
 
+  const puaList = entries ? entries.filter((e) => hasPua(e.name)) : [];
+  const puaAlert = puaList.length > 0
+    ? <Alert tone="warn"><b>{puaList.length} 位考生姓名含造字區字元</b>（{puaList.slice(0, 5).map((e) => `${e.classNo}班${e.seatNo}號 ${puaCodes(e.name).join('、')}`).join('；')}{puaList.length > 5 ? '…' : ''}）。造字區字元不是標準字，印出來可能是空白；若學生名單有標準寫法，比對時請以學生名單為準。</Alert>
+    : null;
   const status = !entries && bcctAll
     ? (roster.length > 0
       ? <Alert tone="ok" action={<Button onClick={() => input.current?.click()}>仍要匯入考試名單</Button>}><b>全員參加，不需匯入。</b>會考每位同學都考，學生名單就是考試名單（共 {roster.length} 人）；只有要記錄缺考時才需要匯入。</Alert>
@@ -276,6 +281,7 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
           {reimport}
         </div>
         {done && !diffs.length ? null : status}
+        {puaAlert}
         {lost.length > 0 && !diffs.length && (
           <Alert tone="warn" action={<Button small onClick={() => setLost([])}>知道了</Button>}>
             <b>「以學生名單為準」影響了 {lost.length} 人：</b>{lost.join('、')}。他們在考試名單上原本的考科與 X／＋ 標示已清掉（或沒有考科），請到 ④ 或個別覆寫確認。

@@ -84,7 +84,7 @@ function PreviewCard(p: { prepared: Extract<ReturnType<typeof prepareExport>, { 
   const kinds: { value: PreviewKind; label: string }[] = [{ value: 'label', label: '標籤' }, { value: 'seat', label: '座位表' }, ...(p.pickupOn ? [{ value: 'pickup' as const, label: '領卷清單' }] : []), ...(p.attendanceOn ? [{ value: 'attendance' as const, label: '出缺席記錄表' }] : [])];
   const cap = kind === 'label'
     ? `${p.paper === 'A3' ? 'A3（297×420 mm）・7 排 × 7 深位 ＝ 49 格' : 'B4（250×353 mm）・6 排 × 8 深位 ＝ 48 格'}・格子大小固定，不隨人數變；用不到的格子空白；教室比一張紙大時自動分成多張。`
-    : kind === 'seat' ? 'A4 座位表，每頁附該教室的考生統計；實際檔案每間班級教室一頁。' : kind === 'attendance' ? 'A4 出缺席記錄表，每間教室一頁，照座位順序，留各科打勾欄。' : 'A4 領卷清單，每間教室一頁，列出每科試卷與答案卡份數。';
+    : kind === 'seat' ? 'A4 座位表，每頁附該教室的考生統計；實際檔案每間班級教室一頁。' : kind === 'attendance' ? 'A4 出缺席記錄表，每間教室至少一頁（人多接下一頁），照座位順序，留各科打勾欄。' : 'A4 領卷清單，每間教室一頁，列出每科試卷與答案卡份數。';
   return (
     <div class="card stack" style="margin-top:12px">
       <div class="row" style="justify-content:space-between">
