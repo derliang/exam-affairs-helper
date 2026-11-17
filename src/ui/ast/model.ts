@@ -73,7 +73,8 @@ export function astStudents(doc: Doc, exam: ExamConfig, slots: readonly AstSlot[
   const slotOf = new Map<string, string>();
   for (const s of slots) for (const id of s.subjectIds) slotOf.set(id, s.id);
   const classTrack = new Map(doc.settings.classes.filter((c) => c.division === exam.division).map((c) => [c.no, c.track]));
-  return seatableEntries(doc, exam).map((e) => {
+  // G23：沒報名任何科（每節都自習）的人也要進規劃：不排考試座位（takes 全空），但自習去處與容量要算他們（D64 不變）
+  return examEntries(doc, exam).map((e) => {
     const takes: Record<string, string> = {};
     for (const id of e.subjectIds) {
       const sid = slotOf.get(id);
@@ -239,6 +240,10 @@ export interface AstCapacity {
   /** 綜合教室：已勾幾間、共幾間、自習容量合計、最多一個時段的自習人數 */
   study: { on: number; total: number; capacity: number; need: number; slotsShort: number };
   hasList: boolean;
+  /** G23：不參加任何一科、每節都自習的人數（不排考試座位，但算進容量） */
+  studyOnly: number;
+  /** G23：全體（含每節自習者）與本次勾選教室的座位合計；每個時段所有人都要有地方坐 */
+  everyone: { people: number; seats: number };
 }
 
 export function astCapacity(doc: Doc, exam: ExamConfig, plan: AstPlan | undefined = astPlan(doc, exam)): AstCapacity {
@@ -266,6 +271,8 @@ export function astCapacity(doc: Doc, exam: ExamConfig, plan: AstPlan | undefine
     liberal: { seats: seatsOf('liberal'), need: need('liberal') },
     study: { on: reserveOn.length, total: reservesAll.length, capacity: reserveOn.reduce((n, r) => n + studyCapacityOf(r), 0), need: needStudy, slotsShort },
     hasList: students.length > 0,
+    studyOnly: students.filter((x) => Object.keys(x.takes).length === 0).length,
+    everyone: { people: students.length, seats: rooms.reduce((n, r) => n + classroomSeats(r).length, 0) },
   };
 }
 
