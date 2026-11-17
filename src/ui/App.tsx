@@ -13,7 +13,7 @@ import { enabledNav, enabledStepPanels, FeatureContext } from './features';
 import { flowOf, nextAction, prevStepOf } from './flow';
 import { scrollPageTop, backLabel, goBack, guardNav, goTo, initialNav, pushTo, stepTitle, type NavState, type Route } from './nav';
 import { Exams } from './pages/Exams';
-import { NewExam } from './pages/NewExam';
+import { NewExam, type NewExamDraft } from './pages/NewExam';
 import { Init } from './pages/Init';
 import { EnvWizard } from './pages/EnvWizard';
 import { WIZARD_STEPS } from './env';
@@ -146,6 +146,8 @@ export function App() {
   const r = gnav.route;
   // 記住最近開啟的模擬考，導覽列才能在任何頁面一鍵跳到它的步驟
   const [lastExamId, setLastExamId] = useState<string | undefined>();
+  // #344：新增模擬考頁的草稿；去共用設定再「← 回到」時帶回，從列表重新按「新增」、取消或建立後清掉
+  const newDraft = useRef<NewExamDraft | undefined>(undefined);
   useEffect(() => { if (r.page === 'step') setLastExamId(r.examId); }, [r]);
   const lastExam = hist.present.exams.find((e) => e.id === lastExamId);
   const hasFolder = r.page !== 'init' || repo.hasFolder();
@@ -214,8 +216,8 @@ export function App() {
         {folderMissing && fsRepo && r.page !== 'init' && <div style="margin-bottom:12px"><FolderLostAlert name={fsRepo.folderName?.() ?? ''} pending={fsRepo.pendingCount()} onRelink={() => openFolderDlg('relink')} onChange={() => openFolderDlg('change')} onDiscard={() => openFolderDlg('discard')} onSettings={() => go2({ page: 'init' }, { route: r, label: pageName(r, hist.present) })} /></div>}
         {saveErr && !folderMissing && <div style="margin-bottom:12px"><Alert tone="danger" action={<Button small onClick={retrySave}>重試存檔</Button>}>最新的修改還沒有存進資料夾（{saveErr}）。請確認資料夾仍可寫入後按「重試存檔」；在存妥之前請不要關閉頁面。</Alert></div>}
         {warning && r.page !== 'init' && <div style="margin-bottom:12px"><Alert tone="warn">{warning}</Alert></div>}
-        {r.page === 'exams' && <Exams doc={hist.present} folder={repo.folderName?.()} onEnv={() => go({ page: 'wizard', step: 1 })} onOpen={(examId) => { openExam(examId); go({ page: 'step', examId, step: 1 }); }} onNew={() => go({ page: 'new' })} onSettings={() => go2({ page: 'settings' }, { route: r, label: pageName(r, hist.present) })} onChangeFolder={() => go2({ page: 'init' }, { route: r, label: pageName(r, hist.present) })} {...(folderMissing ? { listError: <FolderListError onRelink={() => openFolderDlg('relink')} /> } : {})} onArchive={(id) => archiveExam(id, true)} onRestore={(id) => archiveExam(id, false)} onDelete={removeExam} />}
-        {r.page === 'new' && <NewExam doc={hist.present} onCancel={() => go({ page: 'exams' })} onCreate={(d, examId) => { edit(d); go({ page: 'step', examId, step: 1 }); }} onEnv={edit} onGoSettings={(tab, division) => go2({ page: 'settings', tab, division }, { route: r, label: pageName(r, hist.present) })} />}
+        {r.page === 'exams' && <Exams doc={hist.present} folder={repo.folderName?.()} onEnv={() => go({ page: 'wizard', step: 1 })} onOpen={(examId) => { openExam(examId); go({ page: 'step', examId, step: 1 }); }} onNew={() => { newDraft.current = undefined; go({ page: 'new' }); }} onSettings={() => go2({ page: 'settings' }, { route: r, label: pageName(r, hist.present) })} onChangeFolder={() => go2({ page: 'init' }, { route: r, label: pageName(r, hist.present) })} {...(folderMissing ? { listError: <FolderListError onRelink={() => openFolderDlg('relink')} /> } : {})} onArchive={(id) => archiveExam(id, true)} onRestore={(id) => archiveExam(id, false)} onDelete={removeExam} />}
+        {r.page === 'new' && <NewExam doc={hist.present} draft={newDraft.current} onDraft={(d) => { newDraft.current = d; }} onCancel={() => { newDraft.current = undefined; go({ page: 'exams' }); }} onCreate={(d, examId) => { newDraft.current = undefined; edit(d); go({ page: 'step', examId, step: 1 }); }} onEnv={edit} onGoSettings={(tab, division) => go2({ page: 'settings', tab, division }, { route: r, label: pageName(r, hist.present) })} />}
         {r.page === 'wizard' && <EnvWizard doc={hist.present} step={r.step ?? 1} onStep={(step) => { setNav((s) => ({ ...s, route: { page: 'wizard', step } })); scrollPageTop(); }} onChange={edit} onGoSettings={(tab, division) => go2({ page: 'settings', tab, division }, { route: r, label: pageName(r, hist.present) })} onFinish={() => go({ page: 'exams' })} />}
         {r.page === 'lookup' && <Lookup doc={hist.present} examId={r.examId} crumbs={pathCrumbs} onGoStep={(examId, step) => go({ page: 'step', examId, step })} onExams={() => go({ page: 'exams' })} />}
         {r.page === 'settings' && <Settings doc={hist.present} onChange={edit} tab={r.tab} onTab={(tab) => setNav((s) => (s.route.page === 'settings' ? { ...s, route: { ...s.route, tab } } : s))} {...(r.division ? { division: r.division } : {})} />}

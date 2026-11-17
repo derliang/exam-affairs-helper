@@ -7,6 +7,7 @@ import { DEFAULT_LABEL_NOTES, LABEL_NOTE_MAX_CHARS, LABEL_NOTE_MAX_LINES, noteLi
 import { Alert, Badge, Button, ClassChip, ConfirmButton, EmptyState, Modal, More, Seg, Switch } from '../components';
 import { confirmCopy } from '../flow';
 import { RoomTable } from '../components/RoomList';
+import { classesWithoutRoom, ensureClassRooms } from '../env';
 import { CLASS_COLOR_COUNT, CLASS_COLOR_NAMES, colorConflicts } from '../colors';
 import { RosterIO } from './RosterIO';
 import { ScheduleTab } from './Schedule';
@@ -55,9 +56,16 @@ type Props = { doc: Doc; onChange: (d: Doc) => void; division: Division };
 
 /** 教室清單（稿 v2.22 校-43）：依部別切換，表格呈現，整列可點展開座位表 */
 function Rooms({ doc, onChange, division, onGoSchool }: Props & { onGoSchool?: () => void }) {
+  // #343：名冊已有學生、但還沒帶出班級教室（例如精靈第 4 步按了「稍後處理」的舊資料）——給一顆鈕直接帶出，不要只叫人去匯入名單
+  const missing = classesWithoutRoom(doc, division);
   return (
     <div class="card stack">
       <div><h3>教室清單（{division === 'junior' ? '國中部' : '高中部'}）</h3><p class="small muted">維護常用的教室與預備教室；每次模擬考從這裡用開關選出並自動帶入上次的選擇，可修改。座位表在這裡也能編輯，和模擬考 ③ 是同一個編輯畫面。</p></div>
+      {missing.length > 0 && (
+        <Alert tone="warn" action={<Button kind="primary" onClick={() => onChange(ensureClassRooms(doc, division))}>依名冊帶出班級教室</Button>}>
+          <b>名冊有 {missing.length} 個班級還沒有班級教室</b>（{missing.join('、')}）。按右邊的鈕依各班人數帶出預設座位（單邊最多 7），之後可在下面編輯座位；已有的教室不變。
+        </Alert>
+      )}
       <RoomTable division={division} classes={doc.settings.classes} exams={doc.exams} inUse={(id) => doc.exams.some((e) => e.classroomIds.includes(id))} rooms={doc.settings.classrooms} paper={doc.settings.defaultLabelPaper} {...(onGoSchool ? { onGoSchool } : {})}
         onChange={(classrooms) => onChange({ ...doc, settings: { ...doc.settings, classrooms } })} />
     </div>
