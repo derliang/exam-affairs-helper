@@ -62,11 +62,32 @@ export function scheduleKeyOf(kind: ExamKind, round?: number): ScheduleKey {
 /** 共用設定裡的節次表；沒改過（含舊存檔）＝內建預設 */
 export function scheduleOf(settings: Pick<Settings, 'schedules'>, key: ScheduleKey): PeriodTable {
   const t = settings.schedules?.[key];
-  return t && Array.isArray(t.days) ? t : DEFAULTS[key];
+  return t && Array.isArray(t.days) ? lockRows(t, key) : DEFAULTS[key];
+}
+
+/**
+ * G38：科目名稱與每科時長＝大考規定，寫死。存檔裡的列一律以內建為準：名稱、時長改回內建值；
+ * 不是內建科目的列（舊版使用者自訂新增的）忽略。排列、順序、同節、開始時間照存檔（可自訂）。
+ * 同一科目 id 出現多列（學測國文＝國綜＋國寫）依出現順序對應內建的第幾列。
+ */
+export function lockRows(t: PeriodTable, key: ScheduleKey): PeriodTable {
+  const canon = new Map<string, PeriodRow[]>();
+  for (const d of DEFAULTS[key].days) for (const x of d) canon.set(x.subjectId!, [...(canon.get(x.subjectId!) ?? []), x]);
+  const seen = new Map<string, number>();
+  return {
+    days: t.days.map((d) => (Array.isArray(d) ? d : []).flatMap((x) => {
+      const list = x && x.subjectId ? canon.get(x.subjectId) : undefined;
+      if (!list) return [];
+      const n = seen.get(x.subjectId!) ?? 0;
+      seen.set(x.subjectId!, n + 1);
+      const c = list[Math.min(n, list.length - 1)]!;
+      return [{ ...x, name: c.name, minutes: c.minutes }];
+    })),
+  };
 }
 
 /** 這份是否與內建預設相同（用來決定要不要存、還原鈕要不要亮） */
-export const isDefaultSchedule = (t: PeriodTable, key: ScheduleKey): boolean => JSON.stringify(normalize(t)) === JSON.stringify(normalize(DEFAULTS[key]));
+export const isDefaultSchedule = (t: PeriodTable, key: ScheduleKey): boolean => JSON.stringify(normalize(lockRows(t, key))) === JSON.stringify(normalize(DEFAULTS[key]));
 
 function normalize(t: PeriodTable): unknown {
   return t.days.map((d) => d.map((x) => [x.name, x.subjectId ?? '', x.minutes ?? null, !!x.samePrev, x.start ?? '']));
@@ -76,7 +97,7 @@ function normalize(t: PeriodTable): unknown {
 export function withSchedule<T extends Pick<Settings, 'schedules'>>(settings: T, key: ScheduleKey, table: PeriodTable | undefined): T {
   const rest = { ...(settings.schedules ?? {}) };
   delete rest[key];
-  if (table && !isDefaultSchedule(table, key)) rest[key] = table;
+  if (table && !isDefaultSchedule(table, key)) rest[key] = lockRows(table, key);
   const out = { ...settings, schedules: rest };
   if (!Object.keys(rest).length) delete (out as { schedules?: unknown }).schedules;
   return out;
