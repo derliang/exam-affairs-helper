@@ -225,6 +225,25 @@ export function updateExam(doc: Doc, id: string, patch: Partial<ExamConfig>): Re
   return { ok: true, doc: { ...doc, exams: doc.exams.map((e) => (e.id === id ? { ...e, ...patch } : e)) } };
 }
 
+/** 封存或還原某次模擬考（G1）：封存後只能查看與下載；還原後回到進行中。資料都不動，只改標記 */
+export function setExamArchived(doc: Doc, id: string, archived: boolean): Result<Doc> {
+  if (!doc.exams.some((e) => e.id === id)) return fail('找不到這次模擬考');
+  return {
+    ok: true,
+    doc: { ...doc, exams: doc.exams.map((e) => { if (e.id !== id) return e; const { archived: _a, ...rest } = e; void _a; return archived ? { ...rest, archived: true } : rest; }) },
+  };
+}
+
+/** 刪除某次模擬考（G1）：只刪 App 內這次考試的設定、名單、標示與排座結果；共用設定、學生名單與已下載的檔案都不動。存檔時會一併清掉該考試的資料夾 */
+export function deleteExam(doc: Doc, id: string): Result<Doc> {
+  if (!doc.exams.some((e) => e.id === id)) return fail('找不到這次模擬考');
+  const files = { ...(doc.examFiles ?? {}) };
+  delete files[id];
+  const next: Doc = { ...doc, exams: doc.exams.filter((e) => e.id !== id) };
+  if (Object.keys(files).length) next.examFiles = files; else delete next.examFiles;
+  return { ok: true, doc: next };
+}
+
 // ── 新增／刪除／改名班級（D83）──────────────────────────────────────────
 
 const classesOf = (doc: Doc, division: Division): ClassInfo[] => doc.settings.classes.filter((c) => c.division === division);

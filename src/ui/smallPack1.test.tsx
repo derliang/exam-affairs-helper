@@ -68,28 +68,28 @@ describe('領卷清單預設關（裁決 9：現況已是預設關，這裡守�
 });
 
 describe('#147：教室橫排／深位各自受標籤版型限制', () => {
-  it('#210：上限與標籤紙脫鉤，一律 8 排×8 深位、56 座', () => {
-    expect(seatLimits('B4')).toEqual({ rows: 8, depth: 8 });
-    expect(seatLimits('A3')).toEqual({ rows: 8, depth: 8 });
+  it('G14：上限與紙張無關，一律 7 排×7 深位、49 座', () => {
+    expect(seatLimits('B4')).toEqual({ rows: 7, depth: 7 });
+    expect(seatLimits('A3')).toEqual({ rows: 7, depth: 7 });
   });
-  it('8 排×6 深位（48 座）在 B4 改不出來：橫排加到 7 以上被擋', () => {
+  it('橫排、深位各自有 7 的上限：改大超過被擋', () => {
     const lim = seatLimits('B4');
     const r6 = room({ rows: 6, depth: 6, seatCount: 36 });
-    expect(resize(r6, { rows: 9 }, 56, lim)).toBe(r6); // 排數超過 8
-    expect(resize(r6, { depth: 8 }, 56, lim).depth).toBe(8);
-    const r68 = room({ rows: 6, depth: 8, seatCount: 48 });
-    expect(resize(r68, { rows: 5 }, 48, lim).rows).toBe(5);
+    expect(resize(r6, { rows: 8 }, 49, lim)).toBe(r6); // 排數超過 7
+    expect(resize(r6, { depth: 7 }, 49, lim).depth).toBe(7);
+    const r67 = room({ rows: 6, depth: 7, seatCount: 42 });
+    expect(resize(r67, { rows: 5 }, 49, lim).rows).toBe(5);
   });
-  it('舊資料 8 排×6 深位：檢查找得出來，說明橫排／深位各自的上限；允許改小', () => {
+  it('舊資料 8 排×6 深位：檢查找得出來（標籤停用、提示縮小）；允許改小', () => {
     const bad = room({ rows: 8, depth: 6, seatCount: 48 });
-    expect(roomsOverLabel([bad, room()], 'B4')).toEqual([bad]); // 只提示會分張，不擋
-    expect(resize(bad, { rows: 6 }, 56, seatLimits('B4')).rows).toBe(6);
+    expect(roomsOverLabel([bad, room()], 'B4')).toEqual([bad]);
+    expect(resize(bad, { rows: 6 }, 49, seatLimits('B4')).rows).toBe(6);
   });
-  it('原本的排座仍能排進標籤：6 排×8 深位的座位可印；超出的標籤版型會丟錯（⑥ 預覽要接住，不白屏）', () => {
+  it('超過 7×7 的教室不輸出標籤、不丟錯（⑥ 預覽不白屏）；沒超過的照常印', () => {
     const f = makeFixture();
-    const wide = { ...f, settings: { ...f.settings, classrooms: f.settings.classrooms.map((c) => (c.id === 'r1' ? { ...c, rows: 8, depth: 6 } : c)) }, result: { ...f.result, assignments: f.result.assignments.map((a) => (a.classroomId === 'r1' && a.code === f.result.assignments.find((x) => x.classroomId === 'r1')!.code ? { ...a, row: 8, depth: 6 } : a)) } };
-    const pages = buildLabelPages(wide);
-    expect(pages.some((p) => p.part && p.part.of > 1 && p.origin?.row === 7)).toBe(true); // 第 8 排被分到第二張
+    const wide = { ...f, settings: { ...f.settings, classrooms: f.settings.classrooms.map((c) => (c.id === 'r1' ? { ...c, rows: 8, depth: 6 } : c)) } };
+    const pages = buildLabelPages(wide, 'class');
+    expect(pages.map((p) => p.roomName)).toEqual(['乙教室']);
   });
   it('用到 clickSeat 不受影響（座位格數仍以總數為上限）', () => {
     expect(clickSeat(room({ rows: 2, depth: 3, seatCount: 6 }), { row: 1, depth: 1 }, 48).seatCount).toBe(5);

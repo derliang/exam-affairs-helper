@@ -6,11 +6,11 @@ import { renderPrintHtml } from '../../export/htmlRender';
 import { buildLabelPages, buildSeatPages } from '../../export/model';
 import { defaultOptions, planFiles, preflight, runExport, type ExportFormat, type ExportOptions, type OutputFile } from '../../export/plan';
 import type { FontData } from '../../export/docxRender';
-import { Alert, Badge, Button, FormatPick, More, Seg, StepHead } from '../components';
+import { Alert, Badge, Button, FormatButton, More, Seg, StepHead } from '../components';
 import { enabledExportItems, useIsEnabled } from '../features';
 import { prepareExport, relevantIssues, unappliedDiffsOf, unresolvedDiffsOf } from '../exportInput';
 import { afterExport } from '../flow';
-import { labelSplitNote } from '../rooms';
+import { labelSplitNote, roomsOverLabel } from '../rooms';
 import type { Doc } from '../store';
 import { isStale, validationChecks } from '../seating';
 import { defaultLabelLayout } from '../../export/model';
@@ -83,7 +83,7 @@ function PreviewCard(p: { prepared: Extract<ReturnType<typeof prepareExport>, { 
   }, [input, kind, idx, p.paper, room]);
   const kinds: { value: PreviewKind; label: string }[] = [{ value: 'label', label: '標籤' }, { value: 'seat', label: '座位表' }, ...(p.pickupOn ? [{ value: 'pickup' as const, label: '領卷清單' }] : []), ...(p.attendanceOn ? [{ value: 'attendance' as const, label: '出缺席記錄表' }] : [])];
   const cap = kind === 'label'
-    ? `${p.paper === 'A3' ? 'A3（297×420 mm）・7 排 × 7 深位 ＝ 49 格' : 'B4（250×353 mm）・6 排 × 8 深位 ＝ 48 格'}・格子大小固定，不隨人數變；用不到的格子空白；教室比一張紙大時自動分成多張。`
+    ? `${p.paper === 'A3' ? 'A3（297×420 mm）・每格約 42.4×60.0 mm' : 'B4（250×353 mm）・每格約 35.7×50.4 mm'}・每格＝紙寬÷7、紙高÷7，格子排列與該教室座位表的排×深位一致，沒有座位或沒有考生的位置不印格子。`
     : kind === 'seat' ? 'A4 座位表，每頁附該教室的考生統計；實際檔案每間教室一頁。' : kind === 'attendance' ? 'A4 出缺席記錄表，每間教室至少一頁（人多接下一頁），照座位順序，留各科打勾欄。' : 'A4 領卷清單，每間教室一頁，列出每科試卷與答案卡份數。';
   return (
     <div class="card stack" style="margin-top:12px">
@@ -94,7 +94,7 @@ function PreviewCard(p: { prepared: Extract<ReturnType<typeof prepareExport>, { 
       {rooms.length > 1 && (
         <div class="row"><Seg<string> label="預覽教室" value={String(idx)} onChange={(v) => setRi(Number(v))} options={rooms.map((r, i) => ({ value: String(i), label: r.kind === 'reserve' ? `${r.name}（預備）` : r.name }))} /></div>
       )}
-      {kind === 'label' && room && labelSplitNote(room, p.paper) && <Alert tone="info">{labelSplitNote(room, p.paper)}預覽依序列出每一張。</Alert>}
+      {kind === 'label' && room && labelSplitNote(room, p.paper) && <Alert tone="info">{labelSplitNote(room, p.paper)}</Alert>}
       {typeof html === 'object'
         ? <Alert tone="danger"><b>這間教室的預覽排不出來</b>：{html.error}。請回 ③ 調整教室的座位。</Alert>
         : html
@@ -103,6 +103,11 @@ function PreviewCard(p: { prepared: Extract<ReturnType<typeof prepareExport>, { 
       <p class="small muted">{cap}</p>
     </div>
   );
+}
+
+/** 兩顆下載鈕（Word、PDF）停用的原因（G15）；可以下載回空字串 */
+export function downloadGate(o: { stale: boolean; blocked: boolean; nothing: boolean }): string {
+  return o.stale ? '排座已過期，請先重新排座。' : o.blocked ? '上方還有必須處理的問題，處理後才能下載。' : o.nothing ? '尚未勾選任何下載內容，請先在上方勾選。' : '';
 }
 
 export const kb = (n: number) => (n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
@@ -133,6 +138,8 @@ export function Step6(p: {
   const [err, setErr] = useState('');
   const [extraOn, setExtraOn] = useState<Record<string, boolean>>({});
   const [results, setResults] = useState<OutputFile[] | null>(null);
+  /** 最近一次下載用的格式（G15：Word、PDF 各一顆按鈕，沒有格式選擇） */
+  const [doneFmt, setDoneFmt] = useState<ExportFormat>('word');
   const [fontState, setFontState] = useState<Loaded | null>(null);
   const junior = exam.division === 'junior';
   const pickupOn = useIsEnabled('pickup-list', exam.kind);
@@ -158,25 +165,30 @@ export function Step6(p: {
   const relevant = (list: ReturnType<typeof preflight>) => relevantIssues(list, mainNone, chosenExtras.length);
   const issues = relevant(prepared.ok ? preflight(prepared.input, o, { stale, unresolvedDiffs: diffs, unappliedDiffs: unapplied }, has) : []);
   const blocked = !prepared.ok || issues.some((i) => i.level === 'block');
+  const overRooms = roomsOverLabel(exam.classroomIds.map((id) => p.doc.settings.classrooms.find((c) => c.id === id)).filter((c): c is NonNullable<typeof c> => !!c));
   const files = prepared.ok && !blocked && !mainNone ? planFiles(prepared.input, o) : [];
 
-  const go = async () => {
+  const noDlWhy = downloadGate({ stale, blocked, nothing: files.length === 0 && chosenExtras.length === 0 });
+  const noDl = noDlWhy !== '';
+  const go = async (fmt: ExportFormat) => {
     if (!prepared.ok) return;
+    const oo: ExportOptions = { ...o, format: fmt };
     setBusy(true);
     setErr('');
     try {
       const env = fontState ?? (await loader());
       setFontState(env);
       // 載入字型後字集檢查可能出現新警告：有新的擋下項目就停
-      const again = relevant(preflight(prepared.input, o, { stale, unresolvedDiffs: diffs, unappliedDiffs: unapplied }, env.has));
+      const again = relevant(preflight(prepared.input, oo, { stale, unresolvedDiffs: diffs, unappliedDiffs: unapplied }, env.has));
       const hit = again.filter((i) => i.level === 'block');
       if (hit.length) { setErr(`無法下載：${hit.map((i) => i.text).join('；')}`); return; }
-      const out = mainNone ? [] : await runExport(prepared.input, o, { fonts: env.fonts });
-      for (const x of chosenExtras) out.push(...(await x.run({ doc: p.doc, exam, format: o.format })));
+      const out = mainNone ? [] : await runExport(prepared.input, oo, { fonts: env.fonts });
+      for (const x of chosenExtras) out.push(...(await x.run({ doc: p.doc, exam, format: fmt })));
       for (const f of out.filter((x) => x.mime === 'text/html')) {
         if (!openPrintPage(f)) throw new Error('瀏覽器擋住了新視窗，請允許本網站開啟彈出視窗後再按一次。');
       }
       await downloadMany(out.filter((x) => x.mime !== 'text/html'));
+      setDoneFmt(fmt);
       setResults(out);
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
@@ -226,10 +238,7 @@ export function Step6(p: {
         <div>
           <h3>下載內容</h3>
           <p class="small muted">每一類合併成一個多頁檔案，不是一個座位表或一個標籤一個檔。</p>
-          <More title="說明：Word、PDF 與版本碼">Word 方便你編輯，每類下載一個檔；PDF 是先開啟列印用頁面，再用瀏覽器的列印另存成 PDF，適合確定不再編輯、想避免格式跑掉時使用。要列印時，請開啟下載的 Word 檔（或另存的 PDF）再列印，本程式不直接列印。頁尾印有產生時間與資料版本碼，可事後核對表是否對應現在的名單與設定。</More>
-        </div>
-        <div class="field"><span class="label">格式</span>
-          <div class="row"><FormatPick<ExportFormat> label="格式" value={o.format} onChange={(v) => set({ format: v })} options={['word', 'pdf']} /></div>
+          <More title="說明：Word、PDF 與版本碼">Word 方便你編輯，每類下載一個檔；「下載 PDF」是先開啟列印用頁面，再用瀏覽器的列印另存成 PDF，適合確定不再編輯、想避免格式跑掉時使用。要列印時，請開啟下載的 Word 檔（或另存的 PDF）再列印，本程式不直接列印。頁尾印有產生時間與資料版本碼，可事後核對表是否對應現在的名單與設定。</More>
         </div>
         <div class="stack">
           {ck('seat', '座位表（A4）', '合併成一個檔案，每間教室一頁；每頁附該教室的考生統計')}
@@ -240,40 +249,45 @@ export function Step6(p: {
               <span><b>{x.title}</b><br /><span class="small muted">{x.sub}</span></span>
             </label>
           ))}
-          {ck('label', '標籤', '合併成一個檔案，每間教室一張紙；標籤格大小固定，白底' + (junior ? '' : '；不考、加考、抽離的標籤用淡黃底'))}
+          {ck('label', '標籤', '合併成一個檔案，每間教室一張紙；每格＝紙寬÷7、紙高÷7，白底' + (junior ? '' : '；不考、加考、抽離的標籤用淡黃底'))}
           <div class="field" style="margin-left:30px">
             <span class="label">標籤紙張（只有標籤可選；座位表與名單固定 A4）</span>
-            <div class="row"><Seg<LabelPaper> label="標籤紙張" value={o.paper} onChange={(v) => set({ paper: v })} options={[{ value: 'B4', label: 'B4（一般，6×8）' }, { value: 'A3', label: 'A3（大尺寸，7×7）' }]} /></div>
-            <span class="hint">兩種紙張的標籤格大小各自固定，不隨班級人數變；用不到的格子空白。</span>
+            <div class="row"><Seg<LabelPaper> label="標籤紙張" value={o.paper} onChange={(v) => set({ paper: v })} options={[{ value: 'B4', label: 'B4（一般，7×7）' }, { value: 'A3', label: 'A3（大尺寸，7×7）' }]} /></div>
+            <span class="hint">每格＝紙寬÷7、紙高÷7（B4 約 35.7×50.4 mm、A3 約 42.4×60.0 mm），格子排列與該教室座位表的排×深位一致；沒有座位或沒有考生的位置不印格子。</span>
+            {o.label && overRooms.length > 0 && <Alert tone="warn">{overRooms.map((r) => r.name).join('、')} 超過 7×7，標籤無法對應，這些教室不會輸出標籤；請回 ③ 縮小座位。</Alert>}
           </div>
           {!junior && ck('study', '抽離自習名單（A4）', '合併成一個檔案，每科一頁；只有名單與人數，不出座位表與標籤')}
           {!junior && ck('reserve', `預備教室的座位表（A4）與標籤（${o.paper}）`, '抽離考試，一間預備教室一頁、格內每行一個時段；座位表、標籤各合併成一個檔案')}
         </div>
-        <div class="row" style="justify-content:space-between">
-          <span class="muted">{o.format === 'pdf' ? '將開啟' : '將下載'} <b class="num">{(o.format === 'pdf' && files.length ? 1 : files.length) + chosenExtras.length}</b> {o.format === 'pdf' ? '個列印頁' : '個檔案'}</span>
-          <button type="button" class="btn btn-primary btn-lg" disabled={blocked || busy || (files.length === 0 && chosenExtras.length === 0)} onClick={go}>
-            {busy ? '產生中…' : stale ? '排座過期，先重新排座' : o.format === 'word' ? '下載 Word 文件' : '開啟列印頁（另存 PDF）'}
-          </button>
+        <div class="dlbtns row" style="align-items:flex-start;gap:24px;flex-wrap:wrap">
+          <div class="stack" style="gap:6px">
+            <FormatButton kind="word" disabled={noDl || busy} onClick={() => go('word')}>{busy ? '產生中…' : '下載 Word'}</FormatButton>
+            <span class="small muted">{noDl ? noDlWhy : `將下載 ${files.length + chosenExtras.length} 個 Word 檔案`}</span>
+          </div>
+          <div class="stack" style="gap:6px">
+            <FormatButton kind="pdf" disabled={noDl || busy} onClick={() => go('pdf')}>下載 PDF（開啟列印頁）</FormatButton>
+            <span class="small muted">{noDl ? noDlWhy : `將開啟 ${(files.length ? 1 : 0) + chosenExtras.length} 個列印頁，在新視窗選「列印」→「另存為 PDF」`}</span>
+          </div>
         </div>
         {err && <Alert tone="danger">{err}</Alert>}
       {results && (
         <div class="psec">
           <Alert tone="ok">
-            <b>{o.format === 'word' ? '下載已送出' : '已開啟列印用頁面'}</b>
-            {o.format === 'word' ? wordNoticeText(results.length) : '，請在新視窗選「列印」→ 目的地選「另存為 PDF」。'}
+            <b>{doneFmt === 'word' ? '下載已送出' : '已開啟列印用頁面'}</b>
+            {doneFmt === 'word' ? wordNoticeText(results.length) : '，請在新視窗選「列印」→ 目的地選「另存為 PDF」。'}
           </Alert>
           <div style="overflow-x:auto"><table class="t compact">
-            <thead><tr><th>檔案</th><th>內容</th><th>大小</th>{o.format === 'word' && <th></th>}</tr></thead>
+            <thead><tr><th>檔案</th><th>內容</th><th>大小</th>{doneFmt === 'word' && <th></th>}</tr></thead>
             <tbody>{results.map((f) => (
-              <tr key={f.name}><td><b>{f.name}</b></td><td class="muted">{f.desc}</td><td>{kb(typeof f.data === 'string' ? f.data.length : f.data.byteLength)}</td>{o.format === 'word' && <td><Button small onClick={() => download(f)}>再下載</Button></td>}</tr>
+              <tr key={f.name}><td><b>{f.name}</b></td><td class="muted">{f.desc}</td><td>{kb(typeof f.data === 'string' ? f.data.length : f.data.byteLength)}</td>{doneFmt === 'word' && <td><Button small onClick={() => download(f)}>再下載</Button></td>}</tr>
             ))}</tbody>
           </table></div>
           <p class="small muted">本次文件版本：<Badge>{prepared.ok ? prepared.input.result.dataVersion : ''}</Badge>（頁尾相同）</p>
-          {o.format === 'word' && <Alert tone="warn">修改 Word 文件後，請自行重新核對；系統不會驗證改後內容。</Alert>}
+          {doneFmt === 'word' && <Alert tone="warn">修改 Word 文件後，請自行重新核對；系統不會驗證改後內容。</Alert>}
           <div>
             <h3>接下來該做什麼</h3>
             <ol class="nextlist">
-              {afterExport(o.format, o.paper).map((i) => (
+              {afterExport(doneFmt, o.paper).map((i) => (
                 <li key={i.text}>{i.text}{' '}
                   {i.step && <Button small onClick={() => p.onGoStep(i.step as 5)}>回 ⑤ 排座</Button>}
                   {i.nav && p.onExams && <Button small kind="primary" onClick={p.onExams}>回模擬考列表</Button>}

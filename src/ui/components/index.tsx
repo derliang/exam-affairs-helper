@@ -340,8 +340,8 @@ export function FormatPick<T extends 'word' | 'pdf'>(p: { value: T; onChange: (v
 }
 
 /** 動作型格式鈕（Excel 下載） */
-export function FormatButton(p: { kind: FormatKind; onClick: () => void; children: ComponentChildren }) {
-  return <button type="button" class={`btn btn-fmt ${FMT_CLASS[p.kind]}`} onClick={p.onClick}><FormatIcon kind={p.kind} />{p.children}</button>;
+export function FormatButton(p: { kind: FormatKind; onClick: () => void; children: ComponentChildren; disabled?: boolean }) {
+  return <button type="button" class={`btn btn-fmt ${FMT_CLASS[p.kind]}`} disabled={p.disabled} onClick={p.onClick}><FormatIcon kind={p.kind} />{p.children}</button>;
 }
 
 /** 收合說明（稿 v2.31，DESIGN 10.12）：每個區塊只留一行說明，長說明收進這裡 */

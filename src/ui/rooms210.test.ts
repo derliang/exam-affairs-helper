@@ -1,33 +1,34 @@
-// Issue #210：真實教室 7 排×8 深位、8 排×7 深位目前無法用任一標籤紙表示（待方案核可後轉綠）
+// G14／D113：教室上限改成 7×7（取代 #210 的 8×8）；超過 7×7 的舊教室不自動縮，提示並停用標籤輸出
 import { describe, expect, it } from 'vitest';
 import type { Classroom } from '../data';
-import { resize, seatLimits } from './rooms';
+import { labelSplitNote, resize, roomsOverLabel, seatLimitNote, seatLimits } from './rooms';
 
-const base: Classroom = { id: 'r', name: '甲', kind: 'class', rows: 6, depth: 7, seatCount: 42 };
+const base: Classroom = { id: 'r', name: '甲', kind: 'class', rows: 5, depth: 6, seatCount: 30 };
 
-describe('#210 真實教室尺寸', () => {
+describe('G14 教室座位上限 7×7', () => {
   for (const paper of ['B4', 'A3'] as const) {
-    it(`${paper}：能編成 7 排×8 深位`, () => {
-      const r = resize(base, { rows: 7, depth: 8 }, 56, seatLimits(paper));
-      expect([r.rows, r.depth]).toEqual([7, 8]);
-    });
-    it(`${paper}：能編成 8 排×7 深位`, () => {
-      const r = resize(base, { rows: 8, depth: 7 }, 56, seatLimits(paper));
-      expect([r.rows, r.depth]).toEqual([8, 7]);
+    it(`${paper}：能編成 7 排×7 深位，編不出 8 排或 8 深位`, () => {
+      const r = resize(base, { rows: 7, depth: 7 }, 49, seatLimits(paper));
+      expect([r.rows, r.depth]).toEqual([7, 7]);
+      expect(resize(base, { rows: 8 }, 49, seatLimits(paper))).toBe(base);
+      expect(resize(base, { depth: 8 }, 49, seatLimits(paper))).toBe(base);
     });
   }
+  it('舊資料 8 排的教室：允許改小，不會被自動縮', () => {
+    const old: Classroom = { ...base, rows: 8, depth: 7, seatCount: 56 };
+    expect(resize(old, { rows: 7 }, 49, seatLimits('B4')).rows).toBe(7);
+    expect(roomsOverLabel([old, base])).toEqual([old]);
+  });
 });
 
-import { labelSplitNote, seatLimitNote } from './rooms';
-describe('#210 提示文字（稿 v2.36）', () => {
-  it('超過標籤紙：說明張數；B4 另提改 A3', () => {
+describe('G14 提示文字', () => {
+  it('超過 7×7：提示「標籤無法對應，請縮小」；沒超過沒有提示', () => {
     const r: Classroom = { ...base, rows: 8, depth: 7, seatCount: 56 };
-    expect(labelSplitNote(r, 'B4')).toBe('這間教室 56 個座位超過標籤紙 B4（48 格）。輸出標籤時會自動分成 2 張貼，或改用 A3。');
-    expect(labelSplitNote({ ...base, rows: 6, depth: 8, seatCount: 48 }, 'B4')).toBeNull();
-    expect(labelSplitNote(r, 'A3')).toContain('自動分成 2 張貼。');
+    expect(labelSplitNote(r)).toContain('超過 7×7，標籤無法對應，請縮小');
+    expect(labelSplitNote({ ...base, rows: 7, depth: 7, seatCount: 49 })).toBeNull();
   });
   it('到上限提示', () => {
-    expect(seatLimitNote({ ...base, rows: 8 })).toBe('排最多 8、深位最多 8，座位總數最多 56。');
+    expect(seatLimitNote({ ...base, rows: 7 })).toBe('排最多 7、深位最多 7（標籤上限 7×7）。');
     expect(seatLimitNote(base)).toBeNull();
   });
 });

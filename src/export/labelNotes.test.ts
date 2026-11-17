@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import JSZip from 'jszip';
 import { createMemoryFS, encode, DEFAULT_LABEL_NOTES, labelNoteLines, loadDoc, LABEL_NOTE_MAX_LINES, parseNoteLine } from '../data';
 import { makeFixture } from './fixtures';
-import { buildLabelPages, labelBoxMm, renderDocx, renderPrintHtml } from './index';
+import { buildLabelPages, labelBoxMm, labelNotePt, renderDocx, renderPrintHtml } from './index';
 
 const fontDir = new URL('./fonts/', import.meta.url);
 const fonts = {
@@ -26,9 +26,8 @@ const htmlOf = (f: ReturnType<typeof makeFixture>) => renderPrintHtml({ label: b
 describe('標籤注意事項（設定頁可改）', () => {
   it('預設文字與改版前一致：列印頁逐字相同、「0101」「右上角」「透明膠帶」粗體', () => {
     const h = htmlOf(makeFixture());
-    expect(h).toContain(
-      '<div class="pp-note"><h4>注意事項：</h4><div>*<b>0101</b>開始為第一排第一個位置以此類推。</div><div>*請貼於桌面<b>右上角</b>。</div><div>*請使用<b>透明膠帶</b>黏貼。</div></div>',
-    );
+    expect(h).toContain('class="pp-note"');
+    expect(h).toContain('注意事項：</h4><div>*<b>0101</b>開始為第一排第一個位置以此類推。</div><div>*請貼於桌面<b>右上角</b>。</div><div>*請使用<b>透明膠帶</b>黏貼。</div></div>');
   });
 
   it('預設文字在 Word 裡也在（三行都出現）', async () => {
@@ -54,12 +53,13 @@ describe('標籤注意事項（設定頁可改）', () => {
     expect(x).not.toContain('透明膠帶');
   });
 
-  it('空白內容＝不印注意事項框（兩種輸出都沒有），格高回到 35mm', async () => {
+  it('空白內容＝不印注意事項框（兩種輸出都沒有），格高仍是紙高÷7', async () => {
     const f = withNotes('  \n\n');
     expect(htmlOf(f)).not.toContain('pp-note"><h4>');
     expect(await docXml(f)).not.toContain('注意事項');
-    const f8 = withNotes('', { paper: 'B4', labelCols: 6, labelRows: 8 });
-    expect(htmlOf(f8)).toContain('height:35mm');
+    const f8 = withNotes('', { paper: 'B4' });
+    expect(htmlOf(f8)).toContain('height:' + +(353 / 7).toFixed(2) + 'mm');
+    expect(htmlOf(f8)).not.toContain('class="pp-note"');
   });
 
   it('超過上限的行數與字數會被截掉', () => {
@@ -69,25 +69,31 @@ describe('標籤注意事項（設定頁可改）', () => {
     expect(long.map((s) => s.text).join('')).toHaveLength(30);
   });
 
-  it('行數越多格高越矮，B4 排 8 列最多行時仍放得下（格子＋保留高度不超過紙高）', () => {
-    const layout = { paper: 'B4' as const, cols: 6, rows: 8 };
-    const hs = [0, 1, 2, 3, 4].map((n) => labelBoxMm(layout, 10, n).h);
-    expect(hs[0]).toBe(35);
-    for (let i = 2; i < hs.length; i++) expect(hs[i]!).toBeLessThan(hs[i - 1]!);
-    expect(hs[3]).toBe(33.6); // 預設三行與改版前相同
-    // 注意事項框＋抬頭＋頁尾的高度（與 labelReserveMm 同算法）加格子不超過可印高度
-    for (let n = 1; n <= 4; n++) expect(labelBoxMm(layout, 10, n).h * 8 + 15 + (5 + 6 + 8.6 + 1 + n * 8) + 14 + 10).toBeLessThanOrEqual(353);
-    const a3 = { paper: 'A3' as const, cols: 7, rows: 7 };
-    for (let n = 1; n <= 4; n++) expect(labelBoxMm(a3, 10, n).h * 7 + 15 + (8 + 10 + 13.6 + 2 + n * 12.35) + 14 + 10).toBeLessThanOrEqual(420);
+  it('注意事項字級（D113）：格子固定＝紙高÷7，剩餘高度放不下就縮字、縮到不足 8pt 就不印', () => {
+    const b4 = { paper: 'B4' as const, cols: 7, rows: 7 };
+    // 深位 5：剩餘空間夠，用原字級
+    expect(labelNotePt(b4, 5, 3, 13)).toBe(13);
+    // 深位 6：剩餘約 31mm，縮字但仍印得出來
+    const six = labelNotePt(b4, 6, 3, 13);
+    expect(six).toBeGreaterThanOrEqual(8);
+    expect(six).toBeLessThan(13);
+    // 深位 7：滿格，沒有空間
+    expect(labelNotePt(b4, 7, 3, 13)).toBe(0);
+    expect(labelNotePt(b4, 5, 0, 13)).toBe(0);
+    // 格子加上標題頁尾與注意事項不超過紙高
+    for (const rows of [3, 4, 5, 6]) {
+      const pt = labelNotePt(b4, rows, 4, 13);
+      if (pt) expect(rows * labelBoxMm(b4, rows).h + 22 + 4 * (pt * 0.3528 * 1.5) + 4).toBeLessThanOrEqual(353);
+    }
   });
 
-  it('Word：4 行（上限）、B4 排 8 列仍是單頁（頁數＝教室數），列高等於 labelBoxMm', async () => {
-    const f = withNotes(Array.from({ length: 4 }, (_, i) => `*第${i + 1}行注意事項。`).join('\n'), { paper: 'B4', labelCols: 6, labelRows: 8 });
+  it('Word：4 行（上限）、B4 仍是單頁（頁數＝教室數），列高等於 labelBoxMm', async () => {
+    const f = withNotes(Array.from({ length: 4 }, (_, i) => '*第' + (i + 1) + '行注意事項。').join('\n'), { paper: 'B4' });
     const pages = buildLabelPages(f, 'class');
     expect(pages[0]!.notes).toHaveLength(4);
     const x = await docXml(f);
     const rowH = Number(x.match(/<w:trHeight w:val="(\d+)"/)![1]);
-    expect(rowH).toBe(Math.round((labelBoxMm(pages[0]!.layout, 10, 4).h * 1440) / 25.4));
+    expect(rowH).toBe(Math.round((labelBoxMm(pages[0]!.layout, 5).h * 1440) / 25.4));
     expect((x.match(/<w:sectPr/g) ?? []).length).toBe(pages.length);
   });
 

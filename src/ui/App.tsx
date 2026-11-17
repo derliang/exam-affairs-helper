@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import './featureRegister/pickup';
 import './featureRegister/lookup';
 import './featureRegister/attendance';
@@ -7,7 +7,7 @@ import './featureRegister/quick';
 import { Footer } from './components/Footer';
 import { AppBar, type AppBarItem, type Theme } from './components/AppBar';
 import { StepSide, hasSide } from './pages/StepSide';
-import { Alert, Button, EmptyState, PageHead, StepNav, StepNextContext, SummaryBar, UndoGroup } from './components';
+import { Alert, Badge, Button, EmptyState, PageHead, StepNav, StepNextContext, SummaryBar, UndoGroup } from './components';
 import { enabledNav, enabledStepPanels, FeatureContext } from './features';
 import { flowOf, nextAction } from './flow';
 import { scrollPageTop, backLabel, goBack, guardNav, goTo, initialNav, pushTo, stepTitle, type NavState, type Route } from './nav';
@@ -32,7 +32,7 @@ import { AstStep6 } from './ast/AstStep6';
 import { ReservePage } from './pages/ReservePage';
 import { createFsRepository, isFsAccessSupported, SwitchBlockedError } from '../data';
 import { createMemoryRepository, emptyDoc, withDefaults, type Repository } from './repository';
-import { examLabel, stampModified, type Doc } from './store';
+import { deleteExam, examLabel, setExamArchived, stampModified, type Doc } from './store';
 import { activateForExam, migrateRosterYear } from './rosterYears';
 import { APP_VERSION, formatVersion } from './version';
 import { describeChange } from './describeChange';
@@ -92,6 +92,9 @@ export function App() {
     }
     try { await load(); } catch { setWarning('新資料夾已選定，但讀取資料失敗，請改選別的資料夾或重新整理頁面。'); }
   };
+  // G1：封存／還原／刪除模擬考；只動 App 內資料，不碰使用者已下載的檔案
+  const archiveExam = (id: string, archived: boolean) => { const r = setExamArchived(hist.present, id, archived); if (r.ok) edit(r.doc); };
+  const removeExam = (id: string) => { const r = deleteExam(hist.present, id); if (r.ok) edit(r.doc); };
   const onUndo = () => setHist((h) => { const n = undo(h); void repo.save(n.present); return n; });
   const [staleNote, setStaleNote] = useState<string | undefined>();
   const onUndoTo = (index: number) => {
@@ -185,11 +188,11 @@ export function App() {
         {r.page === 'init' && <Init repo={repo} fsSupported={fsSupported} onRestore={fsRepo ? () => fsRepo.restore() : undefined} onDone={async () => { await load(); go({ page: 'exams' }); }} />}
         {saveErr && <div style="margin-bottom:12px"><Alert tone="danger" action={<Button small onClick={retrySave}>重試存檔</Button>}>最新的修改還沒有存進資料夾（{saveErr}）。請確認資料夾仍可寫入後按「重試存檔」；在存妥之前請不要關閉頁面。</Alert></div>}
         {warning && r.page !== 'init' && <div style="margin-bottom:12px"><Alert tone="warn">{warning}</Alert></div>}
-        {r.page === 'exams' && <Exams doc={hist.present} folder={repo.folderName?.()} onOpen={(examId) => { openExam(examId); go({ page: 'step', examId, step: 1 }); }} onNew={() => go({ page: 'new' })} onSettings={() => go2({ page: 'settings' }, { route: r, label: pageName(r, hist.present) })} onChangeFolder={() => void changeFolder()} />}
+        {r.page === 'exams' && <Exams doc={hist.present} folder={repo.folderName?.()} onOpen={(examId) => { openExam(examId); go({ page: 'step', examId, step: 1 }); }} onNew={() => go({ page: 'new' })} onSettings={() => go2({ page: 'settings' }, { route: r, label: pageName(r, hist.present) })} onChangeFolder={() => void changeFolder()} onArchive={(id) => archiveExam(id, true)} onRestore={(id) => archiveExam(id, false)} onDelete={removeExam} />}
         {r.page === 'new' && <NewExam doc={hist.present} onCancel={() => go({ page: 'exams' })} onCreate={(d, examId) => { edit(d); go({ page: 'step', examId, step: 1 }); }} />}
         {r.page === 'lookup' && <Lookup doc={hist.present} examId={r.examId} crumbs={pathCrumbs} onGoStep={(examId, step) => go({ page: 'step', examId, step })} onExams={() => go({ page: 'exams' })} />}
         {r.page === 'settings' && <Settings doc={hist.present} onChange={edit} tab={r.tab} onTab={(tab) => setNav((s) => (s.route.page === 'settings' ? { ...s, route: { ...s.route, tab } } : s))} {...(r.division ? { division: r.division } : {})} />}
-        {r.page === 'step' && <Workspace route={r} doc={stepDoc} onToRooms={(division) => go2({ page: 'settings', tab: 'rooms', division }, { route: r, label: pageName(r, hist.present) })} onToSchool={() => go2({ page: 'settings', tab: 'school' }, { route: r, label: pageName(r, hist.present) })} onToRoster={(division) => go2({ page: 'settings', tab: 'roster', division }, { route: r, label: pageName(r, hist.present) })} onChange={edit} onStep={(step) => go({ page: 'step', examId: r.examId, step })} onFix={(step) => go2({ page: 'step', examId: r.examId, step }, { route: r, label: pageName(r, hist.present) })} onReserve={() => go({ page: 'reserve', examId: r.examId })} ret={retStep} onRet={back} onExams={() => go({ page: 'exams' })} />}
+        {r.page === 'step' && <Workspace route={r} doc={stepDoc} onToRooms={(division) => go2({ page: 'settings', tab: 'rooms', division }, { route: r, label: pageName(r, hist.present) })} onToSchool={() => go2({ page: 'settings', tab: 'school' }, { route: r, label: pageName(r, hist.present) })} onToRoster={(division) => go2({ page: 'settings', tab: 'roster', division }, { route: r, label: pageName(r, hist.present) })} onChange={edit} onStep={(step) => go({ page: 'step', examId: r.examId, step })} onFix={(step) => go2({ page: 'step', examId: r.examId, step }, { route: r, label: pageName(r, hist.present) })} onReserve={() => go({ page: 'reserve', examId: r.examId })} ret={retStep} onRet={back} onExams={() => go({ page: 'exams' })} onRestore={(id) => archiveExam(id, false)} />}
         {r.page === 'reserve' && <ReservePage doc={hist.present} examId={r.examId} crumbs={reserveCrumbs(r.examId)} onGoStep={(step) => go({ page: 'step', examId: r.examId, step })} onExams={() => go({ page: 'exams' })} />}
         {(r.page === 'reconcile' || r.page === 'override') && <section><h2>{r.page}</h2><p class="muted">施工中</p></section>}
       </main>
@@ -213,7 +216,17 @@ export function pageName(r: Route, doc: Doc): string {
   }
 }
 
-function Workspace(p: { route: Extract<Route, { page: 'step' }>; doc: Doc; onToRoster: (division: 'senior' | 'junior') => void; onToRooms: (division: 'senior' | 'junior') => void; onToSchool: () => void; onChange: (d: Doc) => void; onStep: (n: 1 | 2 | 3 | 4 | 5 | 6) => void; onFix: (n: 1 | 2 | 3 | 4 | 5 | 6) => void; onReserve: () => void; ret?: number | undefined; onRet: () => void; onExams: () => void }) {
+function Workspace(p0: { route: Extract<Route, { page: 'step' }>; doc: Doc; onToRoster: (division: 'senior' | 'junior') => void; onToRooms: (division: 'senior' | 'junior') => void; onToSchool: () => void; onChange: (d: Doc) => void; onStep: (n: 1 | 2 | 3 | 4 | 5 | 6) => void; onFix: (n: 1 | 2 | 3 | 4 | 5 | 6) => void; onReserve: () => void; ret?: number | undefined; onRet: () => void; onExams: () => void; onRestore?: (examId: string) => void }) {
+  // G1：已封存的考試只能查看與下載；所有編輯（onChange）一律不生效，畫面上的編輯區停用，要編輯先還原
+  const ro = !!p0.doc.exams.find((e) => e.id === p0.route.examId)?.archived;
+  const p = ro ? { ...p0, onChange: (() => undefined) as (d: Doc) => void } : p0;
+  const stackRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    for (const el of Array.from(stackRef.current?.children ?? [])) {
+      const keep = el.classList.contains('archived-banner') || el.classList.contains('sumbar') || el.classList.contains('wsret');
+      (el as HTMLElement & { inert: boolean }).inert = ro && p0.route.step !== 6 && !keep;
+    }
+  });
   // #249：分科 ③ 編輯座位時，排座統計延後到停手才重算；算完在這裡重畫（其他步驟永遠同步取得精確結果）
   const [, setPlanTick] = useState(0);
   useEffect(() => {
@@ -233,7 +246,13 @@ function Workspace(p: { route: Extract<Route, { page: 'step' }>; doc: Doc; onToR
     <StepNextContext.Provider value={{ action: nextAction(flow, step), onGo: p.onStep }}>
       <div class={`ws${hasSide(step, exam.kind) ? '' : ' wide'}`}>
       <aside class="side"><StepNav steps={flow.steps} onGo={(n) => p.onStep(n as 1 | 2 | 3 | 4 | 5 | 6)} /></aside>
-      <div class="stack" style="min-width:0">
+      <div class="stack" style="min-width:0" ref={stackRef}>
+        {ro && (
+          <div class="archived-banner" role="status">
+            <Badge tone="info">已封存</Badge>這次考試已封存：可以查看與下載，不能編輯。要編輯請先還原。
+            {p.onRestore && <Button small kind="primary" onClick={() => p.onRestore!(exam.id)}>還原</Button>}
+          </div>
+        )}
         {p.ret && (
           <div class="row wsret"><Button onClick={p.onRet}>↩ 回到「{exam.name}」{stepTitle(p.ret, exam.kind)}</Button><span class="small muted">你是從那一步過來處理問題的</span></div>
         )}
