@@ -110,13 +110,13 @@ describe('步驟⑥ 合併區塊與 #147 核實', () => {
   it('下載內容與下載結果同一張卡；Word／PDF／版本碼說明收合', () => {
     const html = renderToString(<Step6 doc={d} exam={e} onGoStep={noop} />);
     expect(html).toContain('說明：Word、PDF 與版本碼');
-    expect(html).toContain('一間預備教室一頁、格內每行一個時段');
+    expect(html).toContain('併在上面座位表、標籤檔案的最後');
   });
-  it('#284：有人抽離自習時「抽離自習名單」預設勾選、下載檔案表有它；沒人抽離自習維持不勾（稿 v2.7）', () => {
+  it('G34：抽離自習名單獨立、預設不勾（有沒有人抽離自習都一樣；取代 #284 的自動勾選）', () => {
     const res = examResult(d, e)!;
     expect(res.detaches.some((x) => x.purpose === 'study')).toBe(true);
     const html = renderToString(<Step6 doc={d} exam={e} onGoStep={noop} />);
-    expect(html).toMatch(/checked[^>]*>\s*<span><b>抽離自習名單/);
+    expect(html).not.toMatch(/checked[^>]*>\s*<span><b>抽離自習名單/);
     const none: Doc = { ...d, examFiles: { e1: { ...d.examFiles!.e1!, result: { ...res, detaches: res.detaches.filter((x) => x.purpose !== 'study') } } } };
     const html2 = renderToString(<Step6 doc={none} exam={e} onGoStep={noop} />);
     expect(html2).not.toMatch(/checked[^>]*>\s*<span><b>抽離自習名單/);
