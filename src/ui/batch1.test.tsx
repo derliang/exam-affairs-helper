@@ -81,3 +81,13 @@ describe('G2 新增模擬考頁標題區不重複', () => {
     expect(nav).not.toContain('新增模擬考');
   });
 });
+
+describe('分科也套用同一組規則（通則）', () => {
+  it('分科 ③ 教室卡片標題與空清單提示稱「教室」；教室刪除在共用設定教室清單（RoomTable，已涵蓋）', async () => {
+    const { AstStep3 } = await import('./ast/AstStep3');
+    const { doc, exam } = docWith('ast');
+    const html = renderToString(<AstStep3 doc={doc} exam={exam} onChange={noop} />);
+    expect(html).toContain('教室與座位圖');
+    expect(html).not.toContain('班級教室與座位圖');
+  });
+});

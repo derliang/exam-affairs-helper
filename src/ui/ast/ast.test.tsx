@@ -122,10 +122,10 @@ describe('教室編輯（每排深位數、停用座位、自習容量）', () =
 });
 
 describe('③ 教室與自習空間', () => {
-  it('標題、狀態檢核、班級、綜合教室、自習去哪裡、班級教室與座位圖', () => {
+  it('標題、狀態檢核、班級、綜合教室、自習去哪裡、教室與座位圖', () => {
     const { doc, exam } = fixture();
     const html = renderToString(<AstStep3 doc={doc} exam={exam} onChange={noop} />);
-    for (const s of ['③ 教室與自習空間', '理組考場座位', '文組考場座位', '綜合教室自習容量', '綜合教室（＝預備教室）', '新增綜合教室', '自習可以去哪裡', '允許自習去他班原班教室', '班級教室與座位圖', '自習容量（預設＝可排座位）', '編輯座位圖']) expect(html).toContain(s);
+    for (const s of ['③ 教室與自習空間', '理組考場座位', '文組考場座位', '綜合教室自習容量', '綜合教室（＝預備教室）', '新增綜合教室', '自習可以去哪裡', '允許自習去他班原班教室', '教室與座位圖', '自習容量（預設＝可排座位）', '編輯座位圖']) expect(html).toContain(s);
     expect(html).toContain('夠用');
     expect(html).not.toContain('標少數');
   });

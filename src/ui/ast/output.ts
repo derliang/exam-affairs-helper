@@ -357,7 +357,7 @@ export function astOutputs(doc: Doc, exam: ExamConfig, plan: AstPlan, paper: Lab
 export function astOutputBlockers(plan: AstPlan | undefined, hasList: boolean, mismatch?: string): { text: string; step: 2 | 3 | 5 }[] {
   if (mismatch) return [{ text: mismatch, step: 5 }];
   if (!hasList) return [{ text: '還沒有考試名單，請先到 ② 匯入。', step: 2 }];
-  if (!plan) return [{ text: '還沒有可排的方案：請先到 ③ 勾選班級教室。', step: 3 }];
+  if (!plan) return [{ text: '還沒有可排的方案：請先到 ③ 勾選教室。', step: 3 }];
   if (plan.infeasible) return [{ text: '座位不夠，排不出方案：請先到 ③ 補座位。', step: 3 }];
   const b: { text: string; step: 2 | 3 | 5 }[] = [];
   if (plan.pending.length > 0) b.push({ text: `還有 ${plan.pending.length} 個時段的替代方案待核可，請先到 ⑤ 核可。`, step: 5 });
