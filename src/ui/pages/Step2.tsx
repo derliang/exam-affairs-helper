@@ -7,6 +7,7 @@ import { addClass, diffOptions, examYear, rosterName, syncDiffs, updateExam, typ
 import { rosterYearMismatch, rosterYearOf } from '../rosterYears';
 import { previewChoice } from '../step2';
 import { ImportWizard, scanOptionsFor } from './ImportWizard';
+import { RosterIO } from './RosterIO';
 
 /** 差異卡標題（稿 v2.34 H-6 的 7 種情形；「班級或座號不同」「姓名不同」由兩邊內容判斷） */
 export const titleOf = (d: RosterDiff): string => {
@@ -252,7 +253,7 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
   const status = !entries && bcctAll
     ? (roster.length > 0
       ? <Alert tone="ok" action={<Button onClick={() => input.current?.click()}>仍要匯入考試名單</Button>}><b>全員參加，不需匯入。</b>會考每位同學都考，學生名單就是考試名單（共 {roster.length} 人）；只有要記錄缺考時才需要匯入。</Alert>
-      : <Alert tone="warn" action={<Button kind="primary" onClick={p.onToRoster}>去匯入學生名單</Button>}><b>國三學生名單是空的。</b>會考不需匯入考試名單，請先到「共用設定」匯入國三學生名單。</Alert>)
+      : null)
     : !entries
     ? <Alert tone="warn" action={<Button kind="primary" onClick={() => input.current?.click()}>匯入本次考試名單</Button>}><b>還沒有匯入本次考試名單。</b>匯入後會和共用學生名單比對，排座前要處理完所有差異。</Alert>
     : diffs.length > 0 && resolved === diffs.length
@@ -271,13 +272,70 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
     : diffs.length > 0 ? <Badge tone="warn">差異 {diffs.length - resolved} 筆待處理</Badge>
     : <Badge tone="ok">✓ 已比對，沒有差異</Badge>;
 
-  // 稿 v2.22（校-60）：步驟② 合成一張「考試名單」卡，區塊內上下分區；待處理時才多一則帶動作的提示
+  // G8：學生名單（共用設定那一份）與本次考試名單分成兩區；名單是空的就在這裡直接匯入，已有名單就改成「修改學生名單」
+  const bcct = exam.kind === 'bcct';
+  const rosterEmpty = roster.length === 0;
+  const rosterCard = (
+    <div class="card stack" aria-label={`${sn}（共用設定）`}>
+      <div class="row" style="justify-content:space-between;gap:10px">
+        <div class="row" style="gap:10px"><h3>{sn}（共用設定）</h3>{rosterEmpty ? <Badge tone="warn">尚未匯入</Badge> : <Badge tone="ok">{roster.length} 人</Badge>}</div>
+        {!rosterEmpty && <Button kind="primary" onClick={p.onToRoster}>修改{sn}</Button>}
+      </div>
+      <div class="row" style="gap:8px">
+        <span class="small muted">名單年度：{rosterYearOf(doc)} 學年</span>
+        {rosterYearMismatch(doc, exam) && <Badge tone="warn">年度不符</Badge>}
+      </div>
+      {rosterYearMismatch(doc, exam) && (
+        <Alert tone="warn">這次考試是 {examYear(exam)} 學年度，但目前的{sn}是 {rosterYearOf(doc)} 學年度的名單，比對結果可能不準。請到「共用設定 → 學生名單」切換或新增 {examYear(exam)} 學年度並匯入名單。</Alert>
+      )}
+      {rosterEmpty ? (
+        <>
+          <Alert tone="warn"><b>{sn}是空的。</b>請直接在下面匯入：名單會同時寫進「共用設定 → 學生名單」和這一步，是同一份資料，在哪邊修改都會同步。{bcct ? '會考不需要匯入考試名單，只要有學生名單就能排座。' : '建議先匯入學生名單，再匯入本次考試名單，否則比對時所有考生都會列為差異。'}</Alert>
+          <div class="card stack" style="border:2px dashed var(--accent-line);background:var(--accent-soft)" aria-label="匯入學生名單">
+            <b>匯入{sn}</b>
+            <div class="btnrow"><RosterIO doc={doc} division={exam.division} onChange={p.onChange} variant="zone" /></div>
+            <span class="small muted">匯入前會先讓你預覽；有問題的列會逐列問你怎麼處理，確認後才寫入，之後可用頁首「↶ 復原」回到匯入前。</span>
+          </div>
+        </>
+      ) : (
+        <>
+          <div class="row" style="gap:10px 22px">
+            <span class="label" style="margin:0">各班人數</span>
+            {perClass.map(({ c, n }) => <span class="row" style="gap:6px" key={c.no}><ClassChip colorIndex={c.colorIndex}>{c.name}</ClassChip><b class="num" style="font-size:17px">{n}</b></span>)}
+            {perClass.length === 0 && <span class="small muted">共用設定還沒有這個部別的班級。</span>}
+            <span class="muted">合計 <b class="num">{roster.length}</b></span>
+          </div>
+          <p class="small muted">要新增、修改或匯入新的{sn}，請按「修改{sn}」到共用設定處理；改完按頁首路徑列的「{exam.name}」「② 考試名單」就會回到這一步。</p>
+        </>
+      )}
+    </div>
+  );
+
+  // 會考：只有學生名單（全員參加）；要記錄缺考才需要另外匯入考試名單
+  if (bcctAll) {
+    return (
+      <section class="stack">
+        <StepHead title="② 考試名單" />
+        {rosterCard}
+        {!rosterEmpty && status}
+        {filePick}
+        {err && <Alert tone="danger">{err}</Alert>}
+        {sheets && (
+          <ImportWizard sheets={sheets} exam={exam} classNames={classNames} trackOf={(n) => doc.settings.classes.find((c) => c.division === exam.division && c.no === n)?.track} previous={entries ?? undefined} saved={doc.settings.markMap ?? {}}
+            onCancel={() => setSheets(null)} onDone={adopt} />
+        )}
+      </section>
+    );
+  }
+
+  // 稿 v2.22（校-60）：步驟② 學生名單、本次考試名單各一區；待處理時才多一則帶動作的提示
   return (
     <section class="stack">
       <StepHead title="② 考試名單" />
+      {rosterCard}
       <div class="card stack">
         <div class="row" style="justify-content:space-between;gap:10px">
-          <div class="row" style="gap:10px"><h3>考試名單</h3>{headBadge}</div>
+          <div class="row" style="gap:10px"><h3>本次考試名單{bcct ? '' : '（含考科、組別）'}</h3>{headBadge}</div>
           {reimport}
         </div>
         {done && !diffs.length ? null : status}
@@ -287,19 +345,12 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
             <b>「以學生名單為準」影響了 {lost.length} 人：</b>{lost.join('、')}。他們在考試名單上原本的考科與 X／＋ 標示已清掉（或沒有考科），請到 ④ 或個別覆寫確認。
           </Alert>
         )}
-        <div class="row" style="gap:8px">
-          <span class="small muted">名單年度：{rosterYearOf(doc)} 學年</span>
-          {rosterYearMismatch(doc, exam) && <Badge tone="warn">年度不符</Badge>}
-        </div>
-        {rosterYearMismatch(doc, exam) && (
-          <Alert tone="warn">這次考試是 {examYear(exam)} 學年度，但目前的{sn}是 {rosterYearOf(doc)} 學年度的名單，比對結果可能不準。請到「共用設定 → 學生名單」切換或新增 {examYear(exam)} 學年度並匯入名單。</Alert>
-        )}
         {filePick}
         {err && <Alert tone="danger">{err}</Alert>}
         <div class="row" style="gap:12px;justify-content:space-between">
           <div class="row" style="gap:10px">
             <Badge>考試名單.xlsx</Badge>
-            <span class="muted small">{entries ? `已匯入 ${entries.length} 筆` : bcctAll ? `不需匯入（全員 ${roster.length} 人）` : '尚未匯入'}</span>
+            <span class="muted small">{entries ? `已匯入 ${entries.length} 筆` : '尚未匯入'}</span>
             {entries && diffs.length > 0 && (
               <ConfirmButton kind="default" small undoable copy={confirmCopy.reimportList(entries.length)} onConfirm={() => input.current?.click()}>重新匯入</ConfirmButton>
             )}
@@ -326,17 +377,7 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
           <ImportWizard sheets={sheets} exam={exam} classNames={classNames} trackOf={(n) => doc.settings.classes.find((c) => c.division === exam.division && c.no === n)?.track} previous={entries ?? undefined} saved={doc.settings.markMap ?? {}}
             onCancel={() => setSheets(null)} onDone={adopt} />
         )}
-        <div class="row" style="justify-content:space-between;gap:10px;border-top:1px solid var(--line);padding-top:12px">
-          <div class="row" style="gap:10px 22px">
-            <span class="label" style="margin:0">各班人數</span>
-            {perClass.map(({ c, n }) => <span class="row" style="gap:6px" key={c.no}><ClassChip colorIndex={c.colorIndex}>{c.name}</ClassChip><b class="num" style="font-size:17px">{n}</b></span>)}
-            {perClass.length === 0 && <span class="small muted">共用設定還沒有這個部別的班級。</span>}
-            <span class="muted">合計 <b class="num">{roster.length}</b></span>
-            {entries && <span class="small muted">考生 {entries.length} 人{exam.participation === 'partial' ? `，未參加 ${notJoin} 人` : ''}{fullyAbsent > 0 ? `，全科缺考 ${fullyAbsent} 人` : ''}</span>}
-          </div>
-          <Button small onClick={p.onToRoster}>查看／編輯{sn}</Button>
-        </div>
-        {roster.length === 0 && <Alert tone="warn">{sn}是空的，比對時所有考生都會列為差異。請先到「共用設定」匯入學生名單。</Alert>}
+        {entries && <div class="small muted">考生 {entries.length} 人{exam.participation === 'partial' ? `，未參加 ${notJoin} 人` : ''}{fullyAbsent > 0 ? `，全科缺考 ${fullyAbsent} 人` : ''}</div>}
       </div>
     </section>
   );
