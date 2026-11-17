@@ -60,7 +60,7 @@ export function RowFix(p: {
         <Badge tone={done ? 'ok' : 'warn'}>{done && mode ? `已決定：${MODE_TEXT[mode]}` : '待處理'}</Badge>
         <b>{p.where}</b><span>{p.kindText}</span>
       </div>
-      <div class="small">{p.message}</div>
+      <div class="small">{p.message.replace(/，已略過(這一列)?$/, '')}</div>
       <div class="muted small">原始檔這一列的內容：{p.cells.length ? p.cells.join('｜') : '（空白）'}</div>
       <Seg<RowMode> label={`${p.where} 處理方式`} value={(mode ?? '') as RowMode} onChange={pick}
         options={[{ value: 'add', label: MODE_TEXT.add }, { value: 'edit', label: MODE_TEXT.edit }, { value: 'skip', label: MODE_TEXT.skip }]} />

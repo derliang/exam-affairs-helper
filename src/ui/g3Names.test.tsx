@@ -9,6 +9,7 @@ import { Step2 } from './pages/Step2';
 import { RowFix } from './pages/RowFix';
 import { ClearRoster, CLEAR_KEYWORD } from './pages/RosterIO';
 import { demoDoc } from './repository';
+import { describeChange } from './describeChange';
 import { reseat } from './seating';
 import { newExam, type Doc } from './store';
 import { parseRosterWorkbook } from './step2';
@@ -88,6 +89,10 @@ describe('G9 刪除全部名單', () => {
       expect(doc.rosters[division]).toHaveLength(4); // 不改原物件，頁首「復原」才還原得回
     });
   }
+  it('頁首復原按鈕寫「刪除全部名單」，復原後名單回來', () => {
+    const { doc } = withExam('gsat', fake(5));
+    expect(describeChange(doc, clearRoster(doc, 'senior'))).toBe('刪除高中部全部名單');
+  });
   it('已排座的模擬考標「會變過期」', () => {
     const room = { id: 'g3-room', name: 'g3-room', kind: 'class', rows: 1, depth: 12, seatCount: 12, division: 'junior' } as unknown as Classroom;
     const { doc: d0, exam: e0 } = withExam('bcct', fake(6));

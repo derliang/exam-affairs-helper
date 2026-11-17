@@ -12,6 +12,7 @@ function rosterLabel(prev: Student[], next: Student[], div: Division): string | 
   const n = new Map(next.map((s) => [key(s), s]));
   const added = next.filter((s) => !p.has(key(s))).length;
   const removed = prev.filter((s) => !n.has(key(s))).length;
+  if (next.length === 0 && prev.length > 1) return `刪除${DIV[div]}全部名單`;
   if (added + removed > 3) return `匯入${DIV[div]}學生名單`;
   if (added === 1 && removed === 0) return '新增學生';
   if (removed === 1 && added === 0) return '刪除學生';
