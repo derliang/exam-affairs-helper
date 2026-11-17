@@ -55,6 +55,7 @@ function settingsLabel(prev: Doc['settings'], next: Doc['settings']): string | u
   }
   if (prev.schoolName !== next.schoolName || prev.headerText !== next.headerText || prev.seatHeader !== next.seatHeader || prev.labelHeader !== next.labelHeader || prev.labelNotes !== next.labelNotes || prev.defaultLabelPaper !== next.defaultLabelPaper) return '修改學校與表頭';
   if (!same(prev.features, next.features)) return '切換選用功能';
+  if (!same(prev.env, next.env)) return '確認環境';
   return '修改設定';
 }
 

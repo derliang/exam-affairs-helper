@@ -5,7 +5,7 @@
  */
 import { useState } from 'preact/hooks';
 import type { PeriodTable, ScheduleKey } from '../../data';
-import { addRow, dropRow, isDefaultSchedule, moveRow, numberRows, removeRow, slotName, SCHEDULE_KEYS, scheduleOf, updateRow, withSchedule, type RowRef } from '../../core/periods';
+import { dropRow, isDefaultSchedule, moveRow, numberRows, removeRow, slotName, SCHEDULE_KEYS, scheduleOf, updateRow, withSchedule, type RowRef } from '../../core/periods';
 import type { Doc } from '../store';
 
 const NOTES: Record<ScheduleKey, string> = {
@@ -34,7 +34,7 @@ export function ScheduleTab({ doc, onChange }: { doc: Doc; onChange: (d: Doc) =>
     <div class="card stack">
       <div>
         <h3>節次與時長</h3>
-        <p class="small muted">像學校的模擬考科目表：一天一欄，科目由上往下。<b>最重要的是科目順序</b>：用左邊的 ⠿ 拖拉，或按 ↑↓，也可以拖到另一天；新增模擬考時自動帶入這份順序。時長比照大考，只看考試時間、不管發卷與休息；開始時間每次可能不同，所以選填，也不會印在標籤上。</p>
+        <p class="small muted">像學校的模擬考科目表：一天一欄，科目由上往下。<b>最重要的是科目順序</b>：用左邊的 ⠿ 拖拉，或按 ↑↓，也可以拖到另一天；新增模擬考時自動帶入這份順序。科目名稱與每科時長是大考規定，不能修改；時長只看考試時間、不管發卷與休息；開始時間每次可能不同，所以選填，也不會印在標籤上。</p>
       </div>
       <div class="row" style="justify-content:space-between">
         <div class="seg ttseg" role="group" aria-label="考試類型">
@@ -61,8 +61,8 @@ export function ScheduleTab({ doc, onChange }: { doc: Doc; onChange: (d: Doc) =>
                     onDragStart={(e) => { setDrag(at); e.dataTransfer?.setData('text/plain', id); }}
                     onDragEnd={() => { setDrag(null); setOver(null); }}>⠿</span>
                   <span class="sn">{slotName(slotAt(di, i))}</span>
-                  <input class="input" aria-label="科目名稱" value={r.name} onChange={(e) => { const v = e.currentTarget.value.trim(); if (v) save(updateRow(table, at, { name: v })); }} />
-                  <span class="dur"><input class="input" type="number" min={1} aria-label="時長（分鐘）" value={r.minutes ?? ''} onChange={(e) => { const n = Math.round(Number(e.currentTarget.value)); save(updateRow(table, at, { minutes: n > 0 ? n : undefined })); }} /><span>分</span></span>
+                  <span class="nm" aria-label="科目名稱">{r.name}</span>
+                  <span class="dur" aria-label="時長（分鐘）"><b>{r.minutes ?? '—'}</b><span>分</span></span>
                   <span class="ops">
                     <button type="button" class="btn btn-sm btn-ghost" aria-label="上移" onClick={() => save(moveRow(table, at, -1))}>↑</button>
                     <button type="button" class="btn btn-sm btn-ghost" aria-label="下移" onClick={() => save(moveRow(table, at, 1))}>↓</button>
@@ -77,9 +77,7 @@ export function ScheduleTab({ doc, onChange }: { doc: Doc; onChange: (d: Doc) =>
                 </div>
               );
             })}
-            <div class={`end${over === `${di},end` ? ' over' : ''}`} {...dropProps({ day: di, index: day.length }, `${di},end`)}>
-              <button type="button" class="btn btn-sm" onClick={() => save(addRow(table, di))}>＋ 新增一科</button>
-            </div>
+            <div class={`end${over === `${di},end` ? ' over' : ''}`} {...dropProps({ day: di, index: day.length }, `${di},end`)} />
           </div>
         ))}
       </div>

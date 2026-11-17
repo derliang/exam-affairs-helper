@@ -1,6 +1,6 @@
 import { renderToString } from 'preact-render-to-string';
 import { describe, expect, it } from 'vitest';
-import type { Settings } from '../data';
+import type { PeriodTable, Settings } from '../data';
 import { defaultSubjects } from '../ui/subjects';
 import { demoDoc } from '../ui/repository';
 import { newExam } from '../ui/store';
@@ -101,9 +101,11 @@ describe('編輯節次表', () => {
     expect(added.days[0]![4]).toEqual({ name: '新科目', minutes: 50 });
     expect(removeRow(added, { day: 0, index: 4 })).toEqual(t0);
     expect(updateRow(updateRow(t0, { day: 0, index: 0 }, { start: '08:10' }), { day: 0, index: 0 }, { start: undefined })).toEqual(t0);
-    const s = withSchedule({} as Pick<Settings, 'schedules'>, 'g12', added);
-    expect(s.schedules?.g12).toBeDefined();
-    expect(withSchedule(s, 'g12', t0)).toEqual({});
+    // G38：自訂新增的科目不存（忽略），所以只剩預設＝不存
+    expect(withSchedule({} as Pick<Settings, 'schedules'>, 'g12', added)).toEqual({});
+    const moved = withSchedule({} as Pick<Settings, 'schedules'>, 'g12', moveRow(t0, { day: 0, index: 0 }, 1));
+    expect(moved.schedules?.g12).toBeDefined();
+    expect(withSchedule(moved, 'g12', t0)).toEqual({});
     expect(isDefaultSchedule(t0, 'g12')).toBe(true);
   });
 });
@@ -111,7 +113,7 @@ describe('編輯節次表', () => {
 describe('共用設定「節次與時長」分頁', () => {
   it('照稿：類型分段鈕、兩天兩欄、節次編號、國文整個一起標、英聽固定、還原預設', () => {
     const html = renderToString(<ScheduleTab doc={demoDoc()} onChange={() => undefined} />);
-    for (const s of ['節次與時長', '學測第 1、2 次', '學測第 3、4 次', '分科', '會考', '第 一 天', '第 二 天', '與上一科同節', '開始時間（選填）', '國文：整個一起標', '英聽固定排第一天最後一節', '＋ 新增一科', '還原「學測第 1、2 次」預設']) expect(html).toContain(s);
+    for (const s of ['節次與時長', '學測第 1、2 次', '學測第 3、4 次', '分科', '會考', '第 一 天', '第 二 天', '與上一科同節', '開始時間（選填）', '國文：整個一起標', '英聽固定排第一天最後一節', '還原「學測第 1、2 次」預設']) expect(html).toContain(s);
     expect(html).toContain('時段三');
     expect(html).not.toContain('第 7 節');
   });
@@ -123,5 +125,54 @@ describe('時段編號每天重新開始（使用者 2026-11-10）', () => {
     expect(rows.map((r) => [r.day, r.slot, r.period])).toEqual([[0, 1, 1], [0, 2, 2], [1, 1, 3], [1, 1, 3], [1, 2, 4]]);
     expect(slotName(1)).toBe('時段一');
     expect(dayName(1)).toBe('第二天');
+  });
+});
+
+describe('G38 科目名稱與每科時長寫死', () => {
+  const keys = ['g12', 'g34', 'ast', 'bcct'] as const;
+  for (const key of keys) {
+    it(key + '：舊存檔自訂的名稱、時長、新增科目一律忽略，排列與同節、開始時間照存', () => {
+      const d = defaultSchedule(key);
+      const first = d.days[0]![0]!;
+      const custom = JSON.parse(JSON.stringify(d)) as PeriodTable;
+      custom.days[0]!.reverse(); // 排列自訂
+      custom.days[0]!.forEach((r) => { r.name = '亂改'; r.minutes = 7; });
+      custom.days[0]![1]!.start = '08:10';
+      custom.days[1]!.push({ name: '自訂科目', minutes: 30 });
+      const t = scheduleOf({ schedules: { [key]: custom } }, key);
+      const defMin = new Map(d.days.flat().map((r) => [r.subjectId + r.name, r.minutes]));
+      for (const r of t.days.flat()) {
+        expect(r.name).not.toBe('亂改');
+        expect(r.name).not.toBe('自訂科目');
+        expect(r.minutes).toBe(defMin.get(r.subjectId + r.name));
+      }
+      expect(t.days[1]!.length).toBe(d.days[1]!.length);
+      expect(t.days[0]!.map((r) => r.name)).toEqual([...d.days[0]!].reverse().map((r) => r.name)); // 順序照存檔
+      expect(t.days[0]![1]!.start).toBe('08:10');
+      expect(t.days[0]!.at(-1)!.name).toBe(first.name);
+    });
+    it(key + '：存回時只存排列；名稱與時長不會被寫進存檔', () => {
+      const t = moveRow(defaultSchedule(key), { day: 0, index: 0 }, 1);
+      t.days[0]![0]!.minutes = 1;
+      t.days[0]![0]!.name = 'X';
+      const saved = withSchedule({} as Pick<Settings, 'schedules'>, key, t).schedules?.[key];
+      expect(saved?.days[0]!.every((r) => r.name !== 'X' && r.minutes !== 1)).toBe(true);
+    });
+  }
+  it('學測國文兩列（國綜、國寫）時長各自對回 90', () => {
+    const c = defaultSchedule('g12');
+    c.days[0]![2]!.minutes = 1; c.days[1]![2]!.minutes = 2;
+    const t = scheduleOf({ schedules: { g12: c } }, 'g12');
+    expect(t.days[0]![2]!.minutes).toBe(90);
+    expect(t.days[1]![2]!.minutes).toBe(90);
+  });
+});
+
+describe('G38 畫面', () => {
+  it('名稱與時長是唯讀文字：沒有科目名稱／時長輸入欄、沒有「新增一科」', () => {
+    const html = renderToString(<ScheduleTab doc={demoDoc()} onChange={() => {}} />);
+    expect(html).not.toContain('新增一科');
+    expect(html).not.toMatch(/<input[^>]*aria-label="(科目名稱|時長)/);
+    expect(html).toContain('<b>100</b>');
   });
 });
