@@ -15,7 +15,7 @@ describe('全站品牌列（稿 v2.31）', () => {
   ];
   const html = renderToString(<AppBar version="v1.4.0" items={items} theme="system" onTheme={noop} onHome={noop} />);
   it('標誌＋名稱＋版本、主導覽、外觀切換、手機用的「選單」鈕', () => {
-    for (const t of ['模擬考小幫手', 'v1.4.0', '資料夾設定', '模擬考列表', '選用功能', '共用設定', '跟隨系統', '選單']) expect(html).toContain(t);
+    for (const t of ['考務小幫手', 'v1.4.0', '資料夾設定', '模擬考列表', '選用功能', '共用設定', '跟隨系統', '選單']) expect(html).toContain(t);
   });
   it('目前所在頁用 aria-current，不黏頂（class 不是 pbar）', () => {
     expect(html).toContain('aria-current="true"');

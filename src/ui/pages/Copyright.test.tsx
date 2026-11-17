@@ -11,7 +11,7 @@ describe('版權頁', () => {
   it('有返回按鈕、H1、版權行、頁頂名稱與頁尾版權行', () => {
     expect(html).toContain('← 回到 模擬考列表');
     expect(html).toContain('使用授權與著作權聲明');
-    expect(html).toContain('使用授權｜模擬考小幫手');
+    expect(html).toContain('使用授權｜考務小幫手');
     expect(html).toContain(LICENSE_COPYRIGHT_LINE.replace('©', '©'));
     expect(html).toContain('Copyright © 2026 derliang｜保留所有權利（All Rights Reserved）｜聲明日期：2026-11-08');
     expect(html).toContain('© 2026 derliang｜保留所有權利｜限非營利使用');

@@ -51,7 +51,7 @@ export function Init(p: { repo: Repository; fsSupported: boolean; fs?: FsReposit
             <rect x="2" y="23.5" width="8.5" height="8.5" rx="2" fill="currentColor" /><rect x="12.75" y="23.5" width="8.5" height="8.5" rx="2" fill="currentColor" opacity=".55" /><rect x="23.5" y="23.5" width="8.5" height="8.5" rx="2" fill="currentColor" opacity=".55" />
           </svg>
         </div>
-        <div><h1>模擬考小幫手</h1><p class="muted">安排模擬考座位、製作標籤與抽離名單</p></div>
+        <div><h1>考務小幫手</h1><p class="muted">安排模擬考座位、製作標籤與抽離名單</p></div>
       </div>
       {lost && p.onDialog && <RestoreMissing name={lost.name} busy={busy} onRelink={() => p.onDialog!('relink')} onOther={pick} />}
       <div class="card stack">
