@@ -6,9 +6,9 @@ import { addRoom, checkSeats, clickSeat, fillDefaultTracks, isSeatActive, patchR
 const room = (o: Partial<Classroom> = {}): Classroom => ({ id: 'r', name: 'A', kind: 'class', rows: 5, depth: 6, seatCount: 30, ...o });
 
 describe('教室座位編輯', () => {
-  it('座位上限＝一張標籤紙：B4 48、A3 49', () => {
-    expect(seatCap('B4')).toBe(56);
-    expect(seatCap('A3')).toBe(56);
+  it('座位上限（D113）：7 排×7 深位＝49，與標籤 7×7 一致，不分紙張', () => {
+    expect(seatCap('B4')).toBe(49);
+    expect(seatCap('A3')).toBe(49);
   });
   it('座位序號：第 1 排深位 1→depth，再第 2 排', () => {
     const r = room({ rows: 2, depth: 3, seatCount: 4 });

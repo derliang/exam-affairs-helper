@@ -8,7 +8,7 @@
 import type { ExamConfig, LabelPaper } from '../../data';
 import { subjectShort } from '../../core/subjectShort';
 import { dataVersion } from '../../core/version';
-import { splitLabelTiles, textEm, wideLabelLayout, type LabelPageModel, type TablePageModel, type CellModel, type PersonModel, type SeatPageModel } from '../../export/model';
+import { roomTooBigForLabel, splitLabelTiles, textEm, wideLabelLayout, type LabelPageModel, type TablePageModel, type CellModel, type PersonModel, type SeatPageModel } from '../../export/model';
 import { examEntries } from '../seating';
 import type { Doc } from '../store';
 import { astSlots, awayStudy, usageCell, type AstPlan, type AstSlot } from './model';
@@ -119,6 +119,10 @@ function labelPages(c: Ctx, paper: LabelPaper): LabelPageModel[] {
   }
   const order = c.plan.input.rooms.map((r) => r.id).filter((id) => bySeat.has(id));
   return order.flatMap((id): LabelPageModel[] => {
+    const rm0 = c.plan.input.rooms.find((r) => r.id === id);
+    const maxRow = Math.max(1, ...(rm0?.seats ?? []).map((x) => x.row));
+    const maxDepth = Math.max(1, ...(rm0?.seats ?? []).map((x) => x.depth));
+    if (roomTooBigForLabel({ rows: maxRow, depth: maxDepth })) return []; // 超過 7×7 標籤無法對應（D113），不輸出
     const seats = [...bySeat.get(id)!.values()].sort((a, b) => a[0]!.row - b[0]!.row || a[0]!.depth - b[0]!.depth);
     const cells: CellModel[] = seats.map((list) => {
       const first = list[0]!;
@@ -135,12 +139,13 @@ function labelPages(c: Ctx, paper: LabelPaper): LabelPageModel[] {
         })),
       };
     });
-    // 兩倍寬後每張紙放得下的座位變少（B4 3×8、A3 4×7），教室比一張紙大就依格數分張（同 #210），每張標「第 N／共 M 張」
+    // 兩倍寬（D113）：一頁橫向最多 3 張、縱向 7 張，排數超過 3 就分頁，每張標「第 N／共 M 張」；格子依座位表的排×深位
     const tiles = splitLabelTiles(cells, { cols: layout.cols / 2, rows: layout.rows });
     return tiles.map((t, i): LabelPageModel => {
       const suffix = tiles.length > 1 ? `（第 ${i + 1}／${tiles.length} 張）` : '';
       return {
         kind: 'label', title: `${c.exam.name}　${rn(c, id)}　整合標籤${suffix}`, examName: c.exam.name, heading: `${c.exam.name}　整合標籤`, roomName: `${rn(c, id)}　整合標籤${suffix}`, layout, notes: [], cells: t.cells,
+        grid: { cols: Math.min(layout.cols / 2, maxRow - t.origin.row + 1), rows: Math.min(layout.rows, maxDepth - t.origin.depth + 1) },
         ...(tiles.length > 1 ? { origin: t.origin, part: { n: i + 1, of: tiles.length } } : {}),
       };
     });

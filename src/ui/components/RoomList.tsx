@@ -54,7 +54,7 @@ export function RoomList(p: {
   );
   return (
     <div class="rw">
-      <p class="muted small">座位上限：每間最多 {lim.rows} 排×{lim.depth} 深位、{cap} 座；比標籤紙大時，標籤會自動分張。點「▸ 編輯座位」調整座位排列。</p>
+      <p class="muted small">座位上限：每間最多 {lim.rows} 排×{lim.depth} 深位、{cap} 座；超過 7×7 的舊教室標籤無法對應，請縮小。點「▸ 編輯座位」調整座位排列。</p>
       {addRow}
       {shown.map((shared) => {
         const on = p.selected?.includes(shared.id) ?? false;
@@ -123,7 +123,7 @@ export function RoomTable(p: {
   const upd = (id: string, f: (r: Classroom) => Classroom) => p.onChange(patchRoom(p.rooms, id, (r) => { const x = f(r); return x.division ? x : { ...x, division: p.division }; }));
   return (
     <div class="stack">
-      <p class="muted small">座位上限：每間最多 {lim.rows} 排×{lim.depth} 深位、{cap} 座；比標籤紙大時，標籤會自動分張。點「編輯座位」調整座位排列。</p>
+      <p class="muted small">座位上限：每間最多 {lim.rows} 排×{lim.depth} 深位、{cap} 座；超過 7×7 的舊教室標籤無法對應，請縮小。點「編輯座位」調整座位排列。</p>
       <Alert tone="info"><b>所屬部別</b>決定這間教室在高中部或國中部的清單出現。舊資料讀進來時程式會依內容推斷；推斷錯了，直接在這一欄改，改完馬上換到另一個部別的清單。</Alert>
       <div class="scroll">
         <table class="t compact nw">

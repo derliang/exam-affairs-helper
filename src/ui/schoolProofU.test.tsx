@@ -62,14 +62,15 @@ describe('校-64 排座過期', () => {
     const { d, e } = seated();
     const fresh = renderToString(<Step6 doc={d} exam={e} onGoStep={noop} />);
     expect(fresh).not.toContain('排座結果過期');
-    expect(fresh).not.toContain('排座過期，先重新排座');
+    expect(fresh).not.toContain('排座已過期，請先重新排座');
 
     const changed: Doc = { ...d, examFiles: { e1: { ...d.examFiles!.e1!, entries: entries.slice(0, 6) } } };
     expect(isStale(changed, e)).toBe(true);
     const html = renderToString(<Step6 doc={changed} exam={e} onGoStep={noop} />);
     expect(html).toContain('stale-banner');
     expect(html).toContain('排座結果過期，下載已停用');
-    expect(html).toMatch(/<button[^>]*disabled[^>]*>排座過期，先重新排座<\/button>/);
+    expect(html).toMatch(/btn-fmt[^>]*disabled/);
+    expect(html).toContain('排座已過期，請先重新排座');
     expect(html).not.toContain('排座已過期：名單或設定在排座之後改過'); // 不再重複顯示紅色錯誤
 
     expect(flowOf(changed, e, 1).steps.find((s) => s.no === 5)!.state).toBe('stale');

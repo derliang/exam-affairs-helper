@@ -45,7 +45,7 @@ const pad2 = (n: number): string => String(n).padStart(2, '0');
 
 export function genCase(rng: Rng, o: GenOptions = {}): RunSeatingInput {
   const division: Division = o.division ?? (rng.chance(0.5) ? 'senior' : 'junior');
-  const nClasses = rng.int(1, 8);
+  const nClasses = rng.int(1, 7);
   const classes: ClassInfo[] = [];
   for (let no = 1; no <= nClasses; no++) {
     const c: ClassInfo = { no, name: `班${no}`, division, colorIndex: no % 12 };
@@ -81,8 +81,8 @@ export function genCase(rng: Rng, o: GenOptions = {}): RunSeatingInput {
     let cap = 0;
     const target = o.enough === false ? Math.floor(need * rng.next() * 0.9) : need + rng.int(0, 15);
     while (cap < target && classrooms.length < 80) {
-      const rows = rng.int(1, 8);
-      const depth = rng.int(1, 8);
+      const rows = rng.int(1, 7);
+      const depth = rng.int(1, 7);
       const seatCount = rng.chance(0.5) ? rows * depth : rng.int(1, rows * depth);
       const room: Classroom = { id: `R${++id}`, name: `教室${id}`, kind: 'class', rows, depth, seatCount, division };
       if (g) room.track = g;
@@ -92,8 +92,8 @@ export function genCase(rng: Rng, o: GenOptions = {}): RunSeatingInput {
   }
   const nReserve = rng.int(3, 10);
   for (let i = 0; i < nReserve; i++) {
-    const rows = rng.int(2, 8);
-    const depth = rng.int(2, 8);
+    const rows = rng.int(2, 7);
+    const depth = rng.int(2, 7);
     classrooms.push({ id: `P${i + 1}`, name: `預備${i + 1}`, kind: 'reserve', rows, depth, seatCount: rng.chance(0.5) ? rows * depth : rng.int(1, rows * depth), division: 'senior' });
   }
 

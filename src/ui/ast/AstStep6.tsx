@@ -4,7 +4,8 @@ import { footerText } from '../../export/model';
 import { renderPrintHtml } from '../../export/htmlRender';
 import { safeName, type ExportFormat, type OutputFile } from '../../export/plan';
 import type { FontData } from '../../export/docxRender';
-import { Alert, Badge, Button, FormatPick, Seg, StepHead } from '../components';
+import { roomsOverLabel } from '../rooms';
+import { Alert, Badge, Button, FormatButton, Seg, StepHead } from '../components';
 import { AST_STEP_BLURBS } from '../nav';
 import { examEntries } from '../seating';
 import type { Doc } from '../store';
@@ -72,8 +73,9 @@ export function AstStep6(p: { doc: Doc; exam: ExamConfig; onGoStep: (n: 2 | 3 | 
   const keys = AST_OUTPUT_ITEMS.map((i) => i.key).filter((k) => on[k]);
   const hasExamNo = examEntries(doc, exam).some((e) => e.examNo);
 
-  const go = async () => {
+  const go = async (format: ExportFormat) => {
     if (!outs) return;
+    setFormat(format);
     setBusy(true); setErr(''); setProg('');
     try {
       const res = await runAstExport(outs, keys, format, paper, exam.name, loader, (i, n, l) => setProg(`第 ${i + 1}／${n} 個檔：${l}`));
@@ -97,6 +99,10 @@ export function AstStep6(p: { doc: Doc; exam: ExamConfig; onGoStep: (n: 2 | 3 | 
     return pg.kind === 'label' ? renderPrintHtml({ label: [pg] }, meta) : renderPrintHtml({ table: [pg as Extract<typeof pg, { kind: 'table' }>] }, meta);
   }, [outs, tab, idx, paper]);
   const tabs: { value: Tab; label: string }[] = [{ value: 'label', label: '標籤' }, { value: 'ann', label: '班級公告' }, { value: 'reg', label: '試務清冊' }, { value: 'study', label: '自習名單' }];
+  const nFiles = keys.filter((k) => outs && pagesOf(outs, k) > 0).length;
+  const noDl = !outs || planning || keys.length === 0;
+  const noDlWhy = !outs ? '還不能下載，請先處理上方的問題。' : planning ? '規劃中只能預覽，請先確認定案。' : '尚未勾選任何下載內容，請先在上方勾選。';
+  const overRooms = roomsOverLabel(exam.classroomIds.map((id) => doc.settings.classrooms.find((c) => c.id === id)).filter((c): c is NonNullable<typeof c> => !!c));
   const total = keys.reduce((a, k) => a + (outs ? pagesOf(outs, k) : 0), 0);
 
   return (
@@ -106,13 +112,12 @@ export function AstStep6(p: { doc: Doc; exam: ExamConfig; onGoStep: (n: 2 | 3 | 
         <Alert key={b.text} tone="danger" action={<Button small kind="primary" onClick={() => p.onGoStep(b.step)}>{b.step === 2 ? '去 ② 考試名單' : b.step === 3 ? '去 ③ 教室' : '去 ⑤ 看方案'}</Button>}><b>還不能下載：</b>{b.text}</Alert>
       ))}
       {built && !built.ok && <Alert tone="danger"><b>這份方案的標籤排不出來</b>：{built.error}。請回 ③ 調整教室的橫排或深位。</Alert>}
-      {p.onChange && <PhaseCard doc={doc} exam={exam} onChange={p.onChange} />}
+      {p.onChange && !exam.archived && <PhaseCard doc={doc} exam={exam} onChange={p.onChange} />}
       {outs && planning && <Alert tone="warn"><b>規劃中：只能預覽，不能下載正式檔。</b>標籤與班級公告要用同一版，所以要先在上面「目前階段」按「確認定案」，才能下載。五份輸出共用同一份方案，頁尾印同一個版本碼 <Badge>{outs.version}</Badge>。</Alert>}
       {outs && !planning && <Alert tone="ok"><b>方案通過驗證，可以下載。</b>五份輸出共用同一份方案，頁尾印同一個版本碼 <Badge>{outs.version}</Badge>，標籤與班級公告不會混用不同版本。</Alert>}
 
       <div class="card stack">
         <div><h3>下載內容</h3><p class="small muted">每一類合併成一個多頁檔案。座位一律寫「排－深位」；標籤與清冊不印鐘點，也不排監考人力。{hasExamNo ? '名單有匯入應試編號，標籤、公告與清冊都會印。' : '名單沒有匯入應試編號，所以不印這一欄。'}</p></div>
-        <div class="field"><span class="label">格式</span><div class="row"><FormatPick<ExportFormat> label="格式" value={format} onChange={(v) => { setFormat(v); setResults(null); }} options={['word', 'pdf']} /></div></div>
         <div class="stack">
           {AST_OUTPUT_ITEMS.map((i) => (
             <label key={i.key} class="check" style="align-items:flex-start">
@@ -122,13 +127,20 @@ export function AstStep6(p: { doc: Doc; exam: ExamConfig; onGoStep: (n: 2 | 3 | 
           ))}
           <div class="field" style="margin-left:30px">
             <span class="label">標籤紙張（只有標籤可選；其他固定 A4）</span>
-            <div class="row"><Seg<LabelPaper> label="標籤紙張" value={paper} onChange={(v) => { setPaper(v); setResults(null); }} options={[{ value: 'B4', label: 'B4（一般，6×8）' }, { value: 'A3', label: 'A3（大尺寸，7×7）' }]} /></div>
+            <div class="row"><Seg<LabelPaper> label="標籤紙張" value={paper} onChange={(v) => { setPaper(v); setResults(null); }} options={[{ value: 'B4', label: 'B4（一般，7×7）' }, { value: 'A3', label: 'A3（大尺寸，7×7）' }]} /></div>
           </div>
         </div>
-        <div class="row" style="justify-content:space-between">
-          <span class="muted">{format === 'pdf' ? '將開啟 1 個列印頁' : `將下載 ${keys.filter((k) => outs && pagesOf(outs, k) > 0).length} 個檔案`}，共 <b class="num">{total}</b> 頁</span>
-          <button type="button" class="btn btn-primary btn-lg" disabled={!outs || planning || busy || keys.length === 0} onClick={go}>{busy ? `產生中（${prog || '準備中'}）…` : format === 'word' ? '下載 Word 文件' : '開啟列印頁（另存 PDF）'}</button>
+        <div class="dlbtns row" style="align-items:flex-start;gap:24px;flex-wrap:wrap">
+          <div class="stack" style="gap:6px">
+            <FormatButton kind="word" disabled={noDl || busy} onClick={() => go('word')}>{busy ? `產生中（${prog || '準備中'}）…` : '下載 Word'}</FormatButton>
+            <span class="small muted">{noDl ? noDlWhy : `將下載 ${nFiles} 個 Word 檔案，共 ${total} 頁`}</span>
+          </div>
+          <div class="stack" style="gap:6px">
+            <FormatButton kind="pdf" disabled={noDl || busy} onClick={() => go('pdf')}>下載 PDF（開啟列印頁）</FormatButton>
+            <span class="small muted">{noDl ? noDlWhy : `將開啟 1 個列印頁（共 ${total} 頁），在新視窗選「列印」→「另存為 PDF」`}</span>
+          </div>
         </div>
+        {overRooms.length > 0 && keys.includes('label') && <Alert tone="warn">{overRooms.map((r) => r.name).join('、')} 超過 7×7，標籤無法對應，這些教室不會輸出整合標籤；請回 ③ 縮小座位。</Alert>}
         {busy && format === 'word' && <p class="small muted" role="status">每個 Word 檔都要嵌入字型，資料多時整批可能要一到兩分鐘，請不要關閉或重新整理此頁。</p>}
         {err && <Alert tone="danger">{err}</Alert>}
         {results && (
@@ -146,7 +158,7 @@ export function AstStep6(p: { doc: Doc; exam: ExamConfig; onGoStep: (n: 2 | 3 | 
       {outs && (
         <div class="card stack">
           <div class="row" style="justify-content:space-between">
-            <div><h3>預覽</h3><p class="small muted">與下載用同一份頁面；{tab === 'label' ? `標籤：每張兩格寬，這頁共 ${(pages[idx] as { cells?: unknown[] } | undefined)?.cells?.length ?? 0} 張（${paper === 'A3' ? 'A3 一頁 4×7＝28' : 'B4 一頁 3×8＝24'} 張）；考場比一張紙大會分成多張紙。` : `共 ${pages.length} 頁。`}</p></div>
+            <div><h3>預覽</h3><p class="small muted">與下載用同一份頁面；{tab === 'label' ? `標籤：每張 2 格寬（格＝紙寬÷7、紙高÷7），這頁共 ${(pages[idx] as { cells?: unknown[] } | undefined)?.cells?.length ?? 0} 張；一頁橫向最多 3 張、縱向最多 7 張，排數超過 3 的考場會分成多張紙。` : `共 ${pages.length} 頁。`}</p></div>
             <Seg<Tab> label="預覽哪一份" value={tab} onChange={(v) => { setTab(v); setPi(0); }} options={tabs} />
           </div>
           {pages.length > 1 && <div class="row" style="flex-wrap:wrap"><Seg<string> label="預覽頁" value={String(idx)} onChange={(v) => setPi(Number(v))} options={pages.map((_, i) => ({ value: String(i), label: pageName(i) }))} /></div>}
@@ -155,7 +167,7 @@ export function AstStep6(p: { doc: Doc; exam: ExamConfig; onGoStep: (n: 2 | 3 | 
             : <Alert tone="info">這一份沒有內容：{tab === 'study' ? '所有考生都留在原班自習，不用布置自習教室。' : '沒有可預覽的頁面。'}</Alert>}
         </div>
       )}
-      {p.onChange && <VersionCard doc={doc} exam={exam} onChange={p.onChange} />}
+      {p.onChange && !exam.archived && <VersionCard doc={doc} exam={exam} onChange={p.onChange} />}
     </section>
   );
 }

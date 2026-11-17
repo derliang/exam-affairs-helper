@@ -32,6 +32,8 @@ import {
   footerText,
   labelBoxMm,
   labelGrid,
+  labelGridSize,
+  labelNotePt,
   periodLineFontPt,
   mmToTwip,
   PAPER_MM,
@@ -348,7 +350,7 @@ function wideUnit(m: CellModel | undefined, o: { w: number; h: number; cellTw: n
       children,
     });
   if (!m) {
-    return [0, 1].map((i) => new TableCell({ width: { size: o.cellTw, type: WidthType.DXA }, verticalAlign: VerticalAlign.TOP, margins: { top: 0, bottom: 0, left: tw(1), right: tw(1) }, shading: HATCH_FILL, borders: { top: b, bottom: b, left: i === 0 ? b : none, right: i === 1 ? b : none }, children: hatchParas(o.w - 2.1, o.h - 1.4) }));
+    return [0, 1].map(() => new TableCell({ width: { size: o.cellTw, type: WidthType.DXA }, verticalAlign: VerticalAlign.TOP, margins: { top: 0, bottom: 0, left: tw(1), right: tw(1) }, borders: { top: none, bottom: none, left: none, right: none }, children: [line([], { h: 0.35 })] }));
   }
   const g = { topPad: 5, codePt: o.isB4 ? 33 : 31, nameMax: 18, subjMax: o.isB4 ? 20 : 16 };
   const lay = wideLayout(m, o.w - 2, o.h, g);
@@ -564,13 +566,15 @@ function seatSection(page: SeatPageModel, opts: DocxOptions): ISectionOptions {
 
 function labelSection(page: LabelPageModel, opts: DocxOptions): ISectionOptions {
   const mode = opts.boldMode ?? 'embed-bold';
-  const margin = opts.labelMarginMm ?? 10;
+  const margin = opts.labelMarginMm ?? 3;
   const { layout } = page;
   const paper = PAPER_MM[layout.paper];
-  const box = labelBoxMm(layout, margin, page.notes.length);
+  const gs = labelGridSize(page);
+  const box = labelBoxMm(layout, gs.rows);
   const tw = (mm: number) => mmToTwip(mm);
   const isB4 = layout.paper === 'B4';
-  const gridW = box.w * layout.cols;
+  const physCols = gs.cols * (layout.wide ? 2 : 1);
+  const gridW = box.w * physCols;
   // 欄寬無條件捨去：四捨五入可能讓整排比可印範圍多出幾 twip
   const cellTw = Math.floor((box.w * 1440) / 25.4);
   const noInside = { top: none, bottom: none, left: none, right: none, insideHorizontal: none, insideVertical: none };
@@ -578,8 +582,8 @@ function labelSection(page: LabelPageModel, opts: DocxOptions): ISectionOptions 
   const g = { h: box.h, innerW: box.w - 2.2, topPad: 5, codePt: isB4 ? 33 : 31, namePt: 15, nameMax: 18, coordPt: 9, markPt: 11, markArea: 9, bottomPad: 0.8, codeAtBottom: true, codeGap: 2.6 };
   const grid = labelGrid(page);
   const rows: TableRow[] = [];
-  const ucols = layout.wide ? layout.cols / 2 : layout.cols; // 兩倍寬：以「張」為單位
-  for (let r = 0; r < layout.rows; r++) {
+  const ucols = gs.cols; // 兩倍寬：以「張」為單位
+  for (let r = 0; r < gs.rows; r++) {
     const cells: TableCell[] = [];
     for (let c = 0; c < ucols; c++) {
       const m = grid[r * ucols + c];
@@ -591,23 +595,23 @@ function labelSection(page: LabelPageModel, opts: DocxOptions): ISectionOptions 
           width: { size: cellTw, type: WidthType.DXA },
           verticalAlign: VerticalAlign.TOP,
           margins: { top: 0, bottom: 0, left: tw(1), right: tw(1) },
-          shading: m ? { type: ShadingType.CLEAR, fill: marked ? 'FFE08A' : 'FFFFFF', color: 'auto' } : HATCH_FILL,
-          borders: { top: b, bottom: b, left: b, right: b },
-          children: m ? (m.persons ? personParas(m, box.w - 2, box.h, { topPad: 5, coordPt: g.coordPt, codePt: isB4 ? 33 : 31, nameMax: 18, schedMax: 11 }, mode) : m.periodLines ? periodParas(m, box.w - 2, box.h, g.coordPt, mode) : cellParas(m, g, INK, mode)) : hatchParas(box.w - 2.1, box.h - 1.4),
+          shading: m ? { type: ShadingType.CLEAR, fill: marked ? 'FFE08A' : 'FFFFFF', color: 'auto' } : undefined,
+          borders: m ? { top: b, bottom: b, left: b, right: b } : { top: none, bottom: none, left: none, right: none },
+          children: m ? (m.persons ? personParas(m, box.w - 2, box.h, { topPad: 5, coordPt: g.coordPt, codePt: isB4 ? 33 : 31, nameMax: 18, schedMax: 11 }, mode) : m.periodLines ? periodParas(m, box.w - 2, box.h, g.coordPt, mode) : cellParas(m, g, INK, mode)) : [line([], { h: 0.35 })],
         }),
       );
     }
     rows.push(new TableRow({ height: { value: tw(box.h), rule: HeightRule.EXACT }, cantSplit: true, children: cells }));
   }
-  const gridTable = new Table({ width: { size: cellTw * layout.cols, type: WidthType.DXA }, columnWidths: Array<number>(layout.cols).fill(cellTw), layout: TableLayoutType.FIXED, borders: noInside, rows });
+  const gridTable = new Table({ width: { size: cellTw * physCols, type: WidthType.DXA }, columnWidths: Array<number>(physCols).fill(cellTw), layout: TableLayoutType.FIXED, borders: noInside, rows });
 
   // 注意事項（字數固定，框寬依字級估算）
-  const notePt = isB4 ? 13 : 20;
-  const h4Pt = isB4 ? 14 : 22;
-  const lines = page.notes;
+  const notePt = labelNotePt(layout, gs.rows, page.notes.length, isB4 ? 13 : 20);
+  const h4Pt = notePt + 1;
+  const lines = notePt ? page.notes : [];
   const noteTextW = Math.max(textMm('注意事項：', h4Pt, true), ...lines.map((l) => l.reduce((w, s) => w + textMm(s.text, notePt, s.bold), 0)));
-  const padX = isB4 ? 6 : 9;
-  const padY = isB4 ? 3 : 5;
+  const padX = 4;
+  const padY = 2;
   const leftBar = isB4 ? 1.8 : 2.4;
   const noteW = Math.min(gridW, noteTextW + 2 * padX + leftBar + 2);
   const lh = notePt * 0.3528 * 1.75;
@@ -640,7 +644,7 @@ function labelSection(page: LabelPageModel, opts: DocxOptions): ISectionOptions 
     properties: {
       page: {
         size: { width: tw(paper.w), height: tw(paper.h) },
-        margin: { top: tw(margin), bottom: tw(12), left: tw(box.padX), right: tw(box.padX), footer: tw(6) },
+        margin: { top: tw(margin), bottom: tw(10), left: tw(box.padX), right: tw(box.padX), footer: tw(4) },
       },
     },
     footers: { default: pageFooter(opts) },
@@ -648,7 +652,7 @@ function labelSection(page: LabelPageModel, opts: DocxOptions): ISectionOptions 
       headBlock({ widthMm: gridW, h1: (page.heading ?? `${page.examName}　標籤`) + (page.flipNotes?.length ? `　（${page.flipNotes.join('；')}）` : ''), room: page.roomName, h1Pt: 15, roomPt: 12, padX: 4, padY: 1 }, mode),
       spacer(3),
       gridTable,
-      ...(lines.length ? [spacer(isB4 ? 5 : 8), note] : []),
+      ...(lines.length ? [spacer(3), note] : []),
       line([], { h: 0.35 }),
     ],
   };
