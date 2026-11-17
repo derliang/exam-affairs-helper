@@ -172,6 +172,13 @@ export function AstStep3(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
         <div class="stats chkgrid">
           {check('理組考場座位', capc.science.seats, capc.science.need)}
           {check('文組考場座位', capc.liberal.seats, capc.liberal.need)}
+          {capc.hasList && (
+            <div class={`chk${capc.everyone.seats < capc.everyone.people ? ' bad' : ''}`}>
+              <small>全體座位（含自習者）</small><strong>{capc.everyone.seats}</strong>
+              <span class="sub">全體 {capc.everyone.people} 人{capc.studyOnly > 0 ? `（其中 ${capc.studyOnly} 人不考任何科、每節自習，不排考試座位，但要有地方坐）` : ''}</span>
+              <Badge tone={capc.everyone.seats < capc.everyone.people ? 'danger' : 'ok'}>{capc.everyone.seats < capc.everyone.people ? `不足 ${capc.everyone.people - capc.everyone.seats}` : '夠用'}</Badge>
+            </div>
+          )}
           <div class={`chk${capc.hasList && short > 0 ? ' warnc' : ''}`}>
             <small>綜合教室自習容量</small><strong>{capc.study.capacity}</strong>
             {capc.hasList && <span class="sub">最多一個時段自習 {capc.study.need}（{MODE_LABEL[astModeOf(exam)]}）・已勾 {capc.study.on}／{capc.study.total} 間</span>}
