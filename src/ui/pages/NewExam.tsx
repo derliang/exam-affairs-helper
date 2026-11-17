@@ -1,8 +1,10 @@
 import { useState } from 'preact/hooks';
 import type { ExamKind, Semester } from '../../data';
-import { Alert, Button, PageHead } from '../components';
+import { Alert, Button, PageHead, Seg } from '../components';
 import { checkExamName } from '../flow';
-import { defaultSemester, newExam, previousExam, schoolYear, suggestExamName, type Doc } from '../store';
+import { defaultSemester, newExam, nextRound, previousExam, schoolYear, suggestExamName, type Doc } from '../store';
+
+const CN = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
 
 const TYPES: { kind: ExamKind; level: string; title: string; subj: string; soon?: boolean }[] = [
   { kind: 'gsat', level: '高中部', title: '學測模擬考', subj: '國、英、數（第 3 次起分數 A、數 B）、自然、社會' },
@@ -22,28 +24,43 @@ export function NewExam(p: { doc: Doc; onCancel: () => void; onCreate: (d: Doc, 
   const [semEdited, setSemEdited] = useState(false);
   // 學年度預設依今天算，可改（補登過去學年的考試，#211）；使用者沒改過就不鎖定
   const [yearText, setYearText] = useState(() => String(schoolYear(now())));
+  // 次別（G3）：學測、分科在這裡決定；沒自己改過就跟著類型與學年度推算
+  const [round, setRound] = useState(() => nextRound(p.doc, 'gsat', (p.now ?? (() => new Date()))()));
+  const [roundEdited, setRoundEdited] = useState(false);
   const [err, setErr] = useState('');
   const check = checkExamName(p.doc, name);
   const prev = previousExam(p.doc, kind);
   const isJ = kind === 'bcct';
   const yearNum = Number(yearText);
   const yearOk = Number.isInteger(yearNum) && yearNum >= 90 && yearNum <= 200;
+  const hasRound = kind !== 'bcct';
+  const rounds = Array.from({ length: Math.max(4, round) }, (_, i) => i + 1);
   const onYear = (v: string) => {
     setYearText(v);
     const y = Number(v);
-    if (!edited && Number.isInteger(y) && y >= 90 && y <= 200) setName(suggestExamName(p.doc, kind, now(), y));
+    if (Number.isInteger(y) && y >= 90 && y <= 200) {
+      const r = roundEdited ? round : nextRound(p.doc, kind, now(), y);
+      if (!roundEdited) setRound(r);
+      if (!edited) setName(suggestExamName(p.doc, kind, now(), y, hasRound ? r : undefined));
+    }
+  };
+  const onRound = (r: number) => {
+    setRound(r); setRoundEdited(true);
+    if (!edited) setName(suggestExamName(p.doc, kind, now(), yearNum, r));
   };
 
   const pick = (k: ExamKind) => {
     setKind(k); setErr('');
-    if (!edited) setName(suggestExamName(p.doc, k, now(), yearNum));
+    const r = roundEdited ? round : nextRound(p.doc, k, now(), yearNum);
+    if (!roundEdited) setRound(r);
+    if (!edited) setName(suggestExamName(p.doc, k, now(), yearNum, k === 'bcct' ? undefined : r));
     if (!semEdited) setSemester(defaultSemester(k));
   };
   const submit = () => {
     if (!check.ok || !yearOk) return;
     const t = now();
     const year = Number(yearText);
-    const r = newExam(p.doc, kind, name, t, { semester, year, ...(prev ? { prev } : {}) });
+    const r = newExam(p.doc, kind, name, t, { semester, year, ...(kind === 'gsat' ? { round } : {}), ...(prev ? { prev } : {}) });
     if (!r.ok) { setErr(r.error); return; }
     p.onCreate(r.doc, r.doc.exams[r.doc.exams.length - 1]!.id);
   };
@@ -85,6 +102,12 @@ export function NewExam(p: { doc: Doc; onCancel: () => void; onCreate: (d: Doc, 
             <div class={`field${yearOk ? '' : ' err'}`}><label for="exam-year">學年度</label>
               <input id="exam-year" class="input" inputMode="numeric" value={yearText} aria-invalid={!yearOk} onInput={(e) => onYear(e.currentTarget.value)} />
               <span class={yearOk ? 'hint' : 'field-msg'}>{yearOk ? '預設依今天的日期（8 月起算新學年）；補登過去學年的考試可改，例如 114' : '請填民國年，例如 114'}</span></div>
+            {hasRound && (
+              <div class="field"><span class="label">次別（第幾次）</span>
+                <Seg<string> label="次別" value={String(round)} onChange={(v) => onRound(Number(v))}
+                  options={rounds.map((n) => ({ value: String(n), label: `第${CN[n] ?? n}次` }))} />
+                <span class="hint">{kind === 'gsat' ? '第 1、2 次數學是單一科，第 3 次起分為數學A、數學B；建立後可在第 1 步「修改基本資料」更改' : '分科每次考的科目都一樣，次別只用在名稱'}</span></div>
+            )}
             <div class="field"><span class="label">對象</span>
               <div class="input" style="display:flex;align-items:center">{isJ ? '國三' : '高三'}</div>
               <span class="hint">由類型決定</span></div>

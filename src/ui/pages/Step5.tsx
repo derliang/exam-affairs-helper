@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import type { ExamConfig, SeatingResult } from '../../data';
 import { seatLabel, studentCode } from '../../data';
 import { mixedMarkCodes, overridePurpose } from '../../core/detach';
@@ -6,7 +6,7 @@ import { Alert, Badge, Button, ConfirmButton, Modal, More, Seg, StatsBar, StepHe
 import { confirmCopy } from '../flow';
 import { ChartLegend, SeatChart } from '../components/SeatChart';
 import {
-  afterOverrideChange, chartModel, detachChartModel, seatableEntries, detachSummary, nameMapOf, examClasses, examEntries, examOverrides, examResult, examRooms,
+  afterOverrideChange, autoSeat, chartModel, detachChartModel, seatableEntries, detachSummary, nameMapOf, examClasses, examEntries, examOverrides, examResult, examRooms,
   isStale, overrideNotes, removeOverride, reseat, roomStatTable, unseatedFullyAbsent, seatingBlockers, setOverride, validationChecks, type StepNo,
 } from '../seating';
 import { roomCapacity } from '../rooms';
@@ -45,6 +45,16 @@ export function Step5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
     if (r.ok) { setErr(null); p.onChange(r.doc); } else setErr(r.errors ?? [r.error]);
   };
 
+  // G13：前置條件齊備、這次考試從沒排過座，進入本步驟自動排一次並顯示結果。已有結果（含過期）一律不自動重排，也不覆蓋手動調整；排座本身是固定規則，同一份資料每次結果相同
+  const autoFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (blockers.length > 0 || result || autoFor.current === exam.id) return;
+    autoFor.current = exam.id;
+    const r = autoSeat(doc, exam, new Date().toISOString());
+    if (!r) return;
+    if (r.ok) { setErr(null); p.onChange(r.doc); } else setErr(r.errors ?? [r.error]);
+  }, [exam.id, blockers.length, !!result]);
+
   if (blockers.length) {
     return (
       <section class="stack">
@@ -65,7 +75,7 @@ export function Step5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
       <section class="stack">
         <StepHead title="⑤ 排座與預覽">排座、看座位表與統計；名單或設定改了要重新排座。</StepHead>
         <div class="card stack">
-          <Alert tone="info"><b>還沒有排座。</b>名單、教室與標示都已就緒。按「開始排座」後，程式依班級輪流把每一排排給下一班，空位只留在最後；排完自動驗證。</Alert>
+          <Alert tone="info"><b>還沒有排座。</b>名單、教室與標示都已就緒，進到這一步會自動排座；若自動排座沒成功，按「開始排座」重試。程式依班級輪流把每一排排給下一班，空位只留在最後；排完自動驗證。</Alert>
           {err && <SeatError errors={err} onStep={p.onStep} />}
           <div class="btnrow"><Button kind="primary" onClick={run}>開始排座</Button></div>
         </div>
@@ -119,7 +129,9 @@ export function Step5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
       {stale && (
         <div class="stale-banner" role="status">
           <Badge tone="warn">需重新排座</Badge>名單或設定在排座之後有修改，座位表是舊的；驗證與下載要等重新排座。
-          <Button small kind="primary" onClick={run}>重新排座</Button>
+          {overrides.length > 0
+            ? <ConfirmButton small kind="primary" copy={confirmCopy.reseat(overrides.length)} onConfirm={run}>重新排座</ConfirmButton>
+            : <Button small kind="primary" onClick={run}>重新排座</Button>}
         </div>
       )}
       {err && <SeatError errors={err} onStep={p.onStep} />}

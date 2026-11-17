@@ -6,10 +6,10 @@ import './featureRegister/alignment';
 import './featureRegister/quick';
 import { Footer } from './components/Footer';
 import { AppBar, type AppBarItem, type Theme } from './components/AppBar';
-import { StepSide, hasSide } from './pages/StepSide';
-import { Alert, Button, EmptyState, PageHead, StepNav, StepNextContext, SummaryBar, UndoGroup } from './components';
+import { StepSide } from './pages/StepSide';
+import { Alert, Button, EmptyState, PageHead, StepDock, StepNav, StepNextContext, SummaryBar, UndoGroup } from './components';
 import { enabledNav, enabledStepPanels, FeatureContext } from './features';
-import { flowOf, nextAction } from './flow';
+import { flowOf, nextAction, prevStepOf } from './flow';
 import { scrollPageTop, backLabel, goBack, guardNav, goTo, initialNav, pushTo, stepTitle, type NavState, type Route } from './nav';
 import { Exams } from './pages/Exams';
 import { NewExam } from './pages/NewExam';
@@ -231,7 +231,7 @@ function Workspace(p: { route: Extract<Route, { page: 'step' }>; doc: Doc; onToR
   const step = p.route.step;
   return (
     <StepNextContext.Provider value={{ action: nextAction(flow, step), onGo: p.onStep }}>
-      <div class={`ws${hasSide(step, exam.kind) ? '' : ' wide'}`}>
+      <div class="ws">
       <aside class="side"><StepNav steps={flow.steps} onGo={(n) => p.onStep(n as 1 | 2 | 3 | 4 | 5 | 6)} /></aside>
       <div class="stack" style="min-width:0">
         {p.ret && (
@@ -240,14 +240,17 @@ function Workspace(p: { route: Extract<Route, { page: 'step' }>; doc: Doc; onToR
         <SummaryBar flow={flow} onGo={p.onFix} />
         {step === 1 ? <Step1 doc={p.doc} exam={exam} onChange={p.onChange} />
           : step === 2 ? <Step2 doc={p.doc} exam={exam} onChange={p.onChange} onToRoster={() => p.onToRoster(exam.division)} />
-          : step === 3 ? (exam.kind === 'ast' ? <AstStep3 doc={p.doc} exam={exam} onChange={p.onChange} onToRooms={() => p.onToRooms(exam.division)} onStep={p.onFix} /> : <Step3 doc={p.doc} exam={exam} onChange={p.onChange} onToRooms={() => p.onToRooms(exam.division)} onToSchool={p.onToSchool} />)
+          : step === 3 ? (exam.kind === 'ast' ? <AstStep3 doc={p.doc} exam={exam} onChange={p.onChange} onToRooms={() => p.onToRooms(exam.division)} onStep={p.onFix} /> : <Step3 doc={p.doc} exam={exam} onChange={p.onChange} onToRooms={() => p.onToRooms(exam.division)} onToSchool={p.onToSchool} onToRoster={() => p.onToRoster(exam.division)} />)
           : step === 4 ? (exam.kind === 'ast' ? <AstStep4 doc={p.doc} exam={exam} onChange={p.onChange} onStep={p.onFix} /> : <Step4 doc={p.doc} exam={exam} onChange={p.onChange} onStep={p.onFix} />)
           : step === 5 ? (exam.kind === 'ast' ? <AstStep5 doc={p.doc} exam={exam} onChange={p.onChange} onStep={p.onFix} /> : <Step5 doc={p.doc} exam={exam} onChange={p.onChange} onStep={p.onFix} onReserve={p.onReserve} />)
           : exam.kind === 'ast' ? <AstStep6 doc={p.doc} exam={exam} onGoStep={(n) => p.onFix(n)} onChange={p.onChange} onExams={p.onExams} />
           : <Step6 doc={p.doc} exam={exam} onGoStep={(n) => p.onFix(n)} onExams={p.onExams} />}
         {enabledStepPanels({ settings: p.doc.settings, examKind: exam.kind }, step).map((s) => <div key={s.featureId}>{s.render({ doc: p.doc, exam, onChange: p.onChange, onStep: p.onFix })}</div>)}
       </div>
-      {hasSide(step, exam.kind) && <aside class="side side-r"><StepSide step={step} doc={p.doc} exam={exam} /></aside>}
+      <aside class="side side-r">
+        <StepDock action={nextAction(flow, step)} current={step} prev={prevStepOf(flow, step)} onGo={p.onStep} onExams={p.onExams} />
+        <StepSide step={step} doc={p.doc} exam={exam} />
+      </aside>
       </div>
     </StepNextContext.Provider>
   );

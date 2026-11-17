@@ -157,10 +157,10 @@ export function nextRound(doc: Doc, kind: ExamKind, now: Date, year: number = sc
 }
 
 /** 新增頁預設的名稱：「學測第三次」「會考第一次」，已被用掉就往後找（資料夾名稱會用它） */
-export function suggestExamName(doc: Doc, kind: ExamKind, now: Date = new Date(), year: number = schoolYear(now)): string {
+export function suggestExamName(doc: Doc, kind: ExamKind, now: Date = new Date(), year: number = schoolYear(now), round?: number): string {
   const cn = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
   const base = KIND_LABEL[kind].replace(/（.*）/, '');
-  for (let i = nextRound(doc, kind, now, year); i < 100; i++) {
+  for (let i = round ?? nextRound(doc, kind, now, year); i < 100; i++) {
     const name = `${base}第${cn[i] ?? i}次`;
     if (!doc.exams.some((e) => e.name === name)) return name;
     // 同名的是舊學年的考試：新學年的「第一次」改加學年度前綴，次別仍是正確的 i

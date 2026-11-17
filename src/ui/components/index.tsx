@@ -252,16 +252,33 @@ export const StepNextContext = createContext<{ action: NextAction; onGo: (step: 
  * 按鈕永遠可以按；前面還有沒做完的事由上方摘要列逐項標示，不禁止（D47）。
  */
 export function StepHead(p: { title: string; children?: ComponentChildren; /** 分科 ③④⑤ 的短語（與一般考試不同） */ blurb?: string }) {
-  const ctx = useContext(StepNextContext);
-  const a = ctx?.action;
   const n = '①②③④⑤⑥'.indexOf(p.title.charAt(0));
   // 會考的 ④（不需要）不顯示「組別對照表」短語
   const blurb = p.blurb ?? (n < 0 || (n === 3 && p.children === undefined) ? undefined : STEP_BLURBS[n]);
   return (
     <div class="card stephead">
       <div><h2>{p.title}</h2>{(blurb ?? p.children) && <p class="small muted">{blurb ?? p.children}</p>}</div>
-      {ctx && a && a.kind === 'go' && <Button kind="primary" onClick={() => ctx.onGo(a.to)}>{a.label}</Button>}
-      {ctx && a && a.kind === 'none' && <span class="small muted">最後一步</span>}
+    </div>
+  );
+}
+
+/**
+ * G6：隨時可見的「完成此步」操作區（桌機在右側欄頂端、平板與手機固定在畫面底部，見 app.css .stepdock）。
+ * 永遠可按；這一步或前面還有事沒做完時，旁邊說明原因，事後在摘要列「待處理」提醒，不停用。
+ * 最後一步（⑥）的按鈕是「完成，回模擬考列表」。
+ */
+export function StepDock(p: { action: NextAction; current: StepNo; prev?: { to: StepNo; name: string } | undefined; onGo: (step: StepNo) => void; onExams: () => void }) {
+  const a = p.action;
+  const last = a.kind === 'none';
+  return (
+    <div class="stepdock" role="region" aria-label="步驟操作">
+      {a.kind === 'go' && a.pending && <div class="dock-note" role="status"><b>這一步還有項目沒處理</b><span>{a.pending.reason}。仍可前往下一步，事後會在「待處理」提醒。</span></div>}
+      <div class="dock-row">
+        {last
+          ? <Button kind="primary" onClick={p.onExams}>完成，回模擬考列表</Button>
+          : <Button kind="primary" onClick={() => p.onGo(a.kind === 'go' ? a.to : p.current)}>{a.kind === 'go' ? a.label : ''} →</Button>}
+        {p.prev && <Button onClick={() => p.onGo(p.prev!.to)}>‹ 上一步：{p.prev.name}</Button>}
+      </div>
     </div>
   );
 }
