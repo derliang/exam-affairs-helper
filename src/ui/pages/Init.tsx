@@ -1,9 +1,16 @@
 import { useState } from 'preact/hooks';
-import { Alert, More } from '../components';
+import type { FsRepository } from '../../data';
+import { Alert, More, PageHead } from '../components';
 import type { Repository } from '../repository';
+import type { Doc } from '../store';
+import { FolderCard, RestoreMissing, type FolderMode } from './FolderUi';
 
 /** 初始化：選資料夾 ＋ 拖拉資料夾（UI-03）。標題列不借用進度條樣式（UI-01/02） */
-export function Init(p: { repo: Repository; fsSupported: boolean; onRestore?: () => Promise<boolean>; onDone: () => void }) {
+/**
+ * 資料夾設定頁（G24）：已選資料夾時顯示「目前資料夾」卡片（狀態、最後存檔、更換／重新連結／搬到新位置）；
+ * 還沒選（或啟動時上次的資料夾找不到，G16）時顯示選擇資料夾與白話說明。
+ */
+export function Init(p: { repo: Repository; fsSupported: boolean; fs?: FsRepository; doc?: Doc; missing?: boolean; onDialog?: (m: FolderMode) => void; onBack?: () => void; onRestore?: () => Promise<boolean>; onDone: () => void }) {
   const [busy, setBusy] = useState(false);
   const [over, setOver] = useState(false);
   const [err, setErr] = useState('');
@@ -22,6 +29,18 @@ export function Init(p: { repo: Repository; fsSupported: boolean; onRestore?: ()
   };
 
   const pick = () => !busy && run(() => p.repo.chooseFolder());
+  if (p.fs && p.doc && p.repo.hasFolder() && p.onDialog) {
+    const d = p.doc;
+    return (
+      <section>
+        <PageHead {...(p.onBack ? { crumbs: [{ label: '模擬考列表', onClick: p.onBack }] } : {})} title="資料夾設定" />
+        <div class="stack" style="max-width:860px">
+          <FolderCard name={p.fs.folderName?.() ?? ''} missing={!!p.missing} pending={p.fs.pendingCount()} lastSaved={p.fs.lastSavedAt()} exams={d.exams.length} rosters={[d.rosters.senior, d.rosters.junior].filter((r) => r.length > 0).length} onRelink={() => p.onDialog!('relink')} onChange={() => p.onDialog!('change')} onMove={() => p.onDialog!('move')} />
+        </div>
+      </section>
+    );
+  }
+  const lost = p.fs?.restoreProblem();
   return (
     <div class="center-card">
       <div class="row">
@@ -34,6 +53,7 @@ export function Init(p: { repo: Repository; fsSupported: boolean; onRestore?: ()
         </div>
         <div><h1>模擬考小幫手</h1><p class="muted">安排模擬考座位、製作標籤與抽離名單</p></div>
       </div>
+      {lost && p.onDialog && <RestoreMissing name={lost.name} busy={busy} onRelink={() => p.onDialog!('relink')} onOther={pick} />}
       <div class="card stack">
         <h2 style="font-size:18px">選擇資料儲存資料夾</h2>
         <p class="muted">學生名單與座位結果只存在你的電腦，本網站不會把它們上傳到網路。請選一個你找得到的資料夾。</p>

@@ -49,14 +49,14 @@ export function quickCheck(doc: Doc, exam: ExamConfig, input?: QuickInput): Quic
   checks.push({ key: 'rooms', state: sameRooms ? 'ok' : 'fail', text: sameRooms ? '教室與上次相同。' : '教室與上次不同（或這次還沒選教室）。' });
   // ② 學生名單沒變：現在的學生名單與上次考試名單比對沒有差異
   const roster = doc.rosters[exam.division];
-  const d = compareRosters(roster, examEntries(doc, prev), prev.participation).diffs.length;
+  const d = compareRosters(roster, examEntries(doc, prev), 'partial').diffs.length;
   checks.push({ key: 'roster', state: d === 0 ? 'ok' : 'fail', text: d === 0 ? '學生名單與上次相同。' : `學生名單與上次不同，有 ${d} 筆差異。` });
   // ③ 新名單人數相符、④ 科目都對得上：要貼上之後才知道
   if (!input) {
     checks.push({ key: 'count', state: 'pending', text: '貼上新名單後檢查人數是否等於考生數。' });
     checks.push({ key: 'subjects', state: 'pending', text: '貼上新名單後檢查科目標示是否都對得上。' });
   } else {
-    const diff = compareRosters(roster, input.entries, exam.participation).diffs.length;
+    const diff = compareRosters(roster, input.entries, 'partial').diffs.length;
     const okCount = input.entries.length === roster.length && diff === 0;
     checks.push({ key: 'count', state: okCount ? 'ok' : 'fail', text: okCount ? `新名單 ${input.entries.length} 人，與考生數相符。` : `新名單 ${input.entries.length} 人，學生名單 ${roster.length} 人，另有 ${diff} 筆姓名或座號差異。` });
     checks.push({ key: 'subjects', state: input.problems === 0 ? 'ok' : 'fail', text: input.problems === 0 ? '科目標示都對得上。' : `有 ${input.problems} 處科目標示對不上考科表。` });
