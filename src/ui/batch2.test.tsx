@@ -157,7 +157,7 @@ describe('G13 自動排座', () => {
   });
 });
 
-describe('G6 隨時可見的「完成此步」', () => {
+describe('G6／G33 隨時可見的前後導覽', () => {
   const go = () => undefined;
   it('桌機右側欄頂端固定、平板手機底部固定列：樣式存在', () => {
     expect(css).toContain('.stepdock');
@@ -168,8 +168,10 @@ describe('G6 隨時可見的「完成此步」', () => {
     const flow = flowOf(doc, exam, 3);
     const action = nextAction(flow, 3);
     const html = renderToString(<StepDock action={action} current={3} prev={prevStepOf(flow, 3)} onGo={go} onExams={go} />);
-    expect(html).toContain('完成此步，前往');
-    expect(html).toContain('上一步：');
+    expect(html).toContain('下一步 ›');
+    expect(html).toContain('‹ 上一步');
+    expect(html).not.toContain('完成此步');
+    expect(html.indexOf('dock-prev')).toBeLessThan(html.indexOf('dock-next')); // 後退在左、前進在右
     expect(html).toContain('stepdock');
     expect(html).not.toContain('disabled');
     if (action.kind === 'go' && action.pending) expect(html).toContain('仍可前往下一步');
@@ -181,11 +183,22 @@ describe('G6 隨時可見的「完成此步」', () => {
     expect(prevStepOf(flow, 1)).toBeUndefined();
     expect(nextAction(flowOf(doc, exam, 3), 3)).toMatchObject({ kind: 'go', to: 5 });
   });
-  it('最後一步（⑥）顯示「完成，回模擬考列表」', () => {
+  it.each(KINDS)('%s：第 1 步沒有上一步，下一步仍在右邊、帶步驟名稱小字', (kind) => {
+    const { doc, exam } = docWith(kind, [10, 10, 10]);
+    const flow = flowOf(doc, exam, 1);
+    const html = renderToString(<StepDock action={nextAction(flow, 1)} current={1} prev={prevStepOf(flow, 1)} onGo={go} onExams={go} />);
+    expect(html).not.toContain('上一步');
+    expect(html).toContain('下一步 ›');
+    expect(html).toContain('dock-sub">② ');
+  });
+  it('最後一步（⑥）顯示「完成 ✓」與小字「回模擬考列表」', () => {
     const { doc, exam } = docWith('gsat', [10, 10, 10]);
     const flow = flowOf(doc, exam, 6);
     const html = renderToString(<StepDock action={nextAction(flow, 6)} current={6} prev={prevStepOf(flow, 6)} onGo={go} onExams={go} />);
-    expect(html).toContain('完成，回模擬考列表');
-    expect(html).toContain('上一步：⑤');
+    expect(html).toContain('完成 ✓');
+    expect(html).toContain('回模擬考列表');
+    expect(html).not.toContain('下一步');
+    expect(html).toContain('‹ 上一步');
+    expect(html).toContain('dock-sub">⑤ ');
   });
 });
