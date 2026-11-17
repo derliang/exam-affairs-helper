@@ -14,6 +14,8 @@ import { labelSplitNote, roomsOverLabel } from '../rooms';
 import type { Doc } from '../store';
 import { isStale, validationChecks } from '../seating';
 import { defaultLabelLayout } from '../../export/model';
+import { gateOf, reconcile, stampNow } from '../reconcile';
+import { ReconcilePanel } from './ReconcilePanel';
 
 type Loaded = { fonts: FontData; has: (ch: string) => boolean };
 
@@ -166,7 +168,13 @@ export function Step6(p: {
   const overRooms = roomsOverLabel(exam.classroomIds.map((id) => p.doc.settings.classrooms.find((c) => c.id === id)).filter((c): c is NonNullable<typeof c> => !!c));
   const files = prepared.ok && !blocked && !mainNone ? planFiles(prepared.input, o) : [];
 
-  const noDlWhy = downloadGate({ stale, blocked, nothing: chosenExtras.length === 0 && (mainNone || (!blocked && files.length === 0)) });
+  // G35 考前對帳：進入第 6 步與資料變動後自動重算（useMemo 依 doc、exam），另有「重新對帳」；紅燈擋下載、琥珀須逐項確認
+  const [recheck, setRecheck] = useState(0);
+  const [ack, setAck] = useState('');
+  const rec = useMemo(() => reconcile(p.doc, exam), [p.doc, exam, recheck]);
+  const at = useMemo(() => stampNow(), [rec]);
+  const gate = gateOf(rec, ack);
+  const noDlWhy = downloadGate({ stale, blocked, nothing: chosenExtras.length === 0 && (mainNone || (!blocked && files.length === 0)) }) || gate.why;
   const noDl = noDlWhy !== '';
   const go = async (fmt: ExportFormat) => {
     if (!prepared.ok) return;
@@ -205,6 +213,7 @@ export function Step6(p: {
   return (
     <section>
       <StepHead title="⑥ 下載">下載座位表、標籤與名單；要列印請開下載的檔案。</StepHead>
+      <div style="margin-top:12px"><ReconcilePanel r={rec} gate={gate} acked={gate.warns.length > 0 && ack === gate.fingerprint} at={at} busy={busy} onRecheck={() => setRecheck((n) => n + 1)} onGo={(n) => p.onGoStep(n)} onConfirmDownload={(fp, fmt) => { setAck(fp); void go(fmt); }} /></div>
       {stale && (
         <div class="stale-banner" role="status" style="margin-top:12px">
           <Badge tone="warn">過期</Badge>排座結果過期，下載已停用。
