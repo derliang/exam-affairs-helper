@@ -851,6 +851,7 @@ table.t{border-collapse:collapse;width:100%;min-width:560px}
 .ttr .sgrip:hover{background:var(--sunken);color:var(--text)}
 .ttr .sn{font-weight:800;color:var(--accent);white-space:nowrap}
 .ttr .input{height:36px;min-height:36px;min-width:0}
+.ttr .nm{font-weight:700;color:var(--text);min-width:0}
 .ttr .dur{display:flex;align-items:center;gap:4px}.ttr .dur .input{width:60px;padding:0 6px;text-align:right}.ttr .dur span{font-size:13px;color:var(--text-2)}
 .ttr .ops{display:flex;gap:2px}.ttr .ops .btn{min-height:36px;min-width:36px;padding:0 8px}
 .ttr .sub{grid-column:2/-1;display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;font-size:13px;color:var(--text-2)}
