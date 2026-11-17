@@ -71,7 +71,7 @@ function PreviewCard(p: { prepared: Extract<ReturnType<typeof prepareExport>, { 
     try {
     const withPaper = { ...input, exam: { ...input.exam, labelLayout: defaultLabelLayout(p.paper) } };
     const meta = { generatedAt: input.result.generatedAt, dataVersion: input.result.dataVersion, extraCss: `html{background:#e9ecf1;zoom:${kind === 'label' ? (p.paper === 'A3' ? 0.38 : 0.45) : 0.5}}body{margin:0;padding:8px}.sheet{width:${kind === 'label' ? (p.paper === 'A3' ? 297 : 250) : 210}mm;box-sizing:border-box;margin:0 auto 8px!important;box-shadow:0 1px 4px #0003}` };
-    if (kind === 'label') { const pgs = buildLabelPages(withPaper, 'all').filter((x) => x.roomName === room.name || x.roomName.startsWith(`${room.name}（第`)); return pgs.length ? renderPrintHtml({ label: pgs }, meta) : ''; }
+    if (kind === 'label') { const pgs = buildLabelPages(withPaper, 'all').filter((x) => x.roomName === room.name || x.roomName.startsWith(`${room.name}（第`) || x.roomName.startsWith(`${room.name}　抽離考試`)); return pgs.length ? renderPrintHtml({ label: pgs }, meta) : ''; }
     if (kind === 'seat') { const pg = buildSeatPages(withPaper, 'all').find((x) => x.roomName === room.name); return pg ? renderPrintHtml({ seat: [pg] }, meta) : ''; }
     if (kind === 'attendance') { const pg = buildAttendancePages(withPaper).find((t) => t.subtitle?.startsWith(room.name)); return pg ? renderPrintHtml({ table: [pg] }, meta) : ''; }
     const pg = room.kind === 'reserve' ? undefined : buildPickupPages(withPaper).find((t) => t.subtitle?.startsWith(room.name));
@@ -129,11 +129,9 @@ export function Step6(p: {
 }) {
   const { exam } = p;
   const [oRaw, setO] = useState<ExportOptions>(() => defaultOptions(exam.labelLayout.paper));
-  const [studyTouched, setStudyTouched] = useState(false);
   const prepared = useMemo(() => prepareExport(p.doc, exam), [p.doc, exam]);
-  // #284：有人抽離自習時「抽離自習名單」預設勾選（沒有人抽離自習就維持稿 v2.7 的預設不勾）；使用者自己勾過就照使用者的
-  const studyN = prepared.ok ? prepared.input.result.detaches.filter((d) => d.purpose === 'study').length : 0;
-  const o: ExportOptions = studyTouched || studyN === 0 ? oRaw : { ...oRaw, study: true };
+  // G34（稿 v2.43 第 26 題）：抽離自習名單維持獨立檔案、預設不勾（取代 #284 的自動勾選）
+  const o: ExportOptions = oRaw;
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [extraOn, setExtraOn] = useState<Record<string, boolean>>({});
@@ -144,14 +142,14 @@ export function Step6(p: {
   const junior = exam.division === 'junior';
   const pickupOn = useIsEnabled('pickup-list', exam.kind);
   const attendanceOn = useIsEnabled('attendance-sheet', exam.kind);
-  const set = (patch: Partial<ExportOptions>) => { if ('study' in patch) setStudyTouched(true); setO((x) => ({ ...x, ...patch })); setResults(null); };
+  const set = (patch: Partial<ExportOptions>) => { setO((x) => ({ ...x, ...patch })); setResults(null); };
 
   // 選用功能多出的匯出項（D75）：功能關閉時完全不出現
   const extras = enabledExportItems({ settings: p.doc.settings, examKind: exam.kind });
   const chosenExtras = extras.filter((x) => extraOn[x.key]);
   const extraRank = (id: string) => { const i = ['pickup-list', 'attendance-sheet', 'print-alignment'].indexOf(id); return i < 0 ? 99 : i; };
   const orderedExtras = [...extras].sort((a, b) => extraRank(a.featureId) - extraRank(b.featureId));
-  const mainNone = !o.seat && !o.label && !o.study && !o.reserve;
+  const mainNone = !o.seat && !o.label && !o.study;
   const diffs = p.unresolvedDiffs ?? unresolvedDiffsOf(p.doc, exam);
   const unapplied = p.unappliedDiffs ?? unappliedDiffsOf(p.doc, exam);
   // 校-64：名單或設定在排座後改過＝過期；⑤ 沒傳進來就自己算（排座簽章＝result.dataVersion，舊資料沒有簽章視為未過期）
@@ -237,11 +235,11 @@ export function Step6(p: {
       <div class="card stack" style="margin-top:12px">
         <div>
           <h3>下載內容</h3>
-          <p class="small muted">每一類合併成一個多頁檔案，不是一個座位表或一個標籤一個檔。</p>
+          <p class="small muted">座位表合併成一個檔案、標籤合併成一個檔案，不是一間教室一個檔。{junior ? '' : '預備教室排在最後、每頁頁首標「預備教室」。'}</p>
           <More title="說明：Word、PDF 與版本碼">Word 方便你編輯，每類下載一個檔；「下載 PDF」是先開啟列印用頁面，再用瀏覽器的列印另存成 PDF，適合確定不再編輯、想避免格式跑掉時使用。要列印時，請開啟下載的 Word 檔（或另存的 PDF）再列印，本程式不直接列印。頁尾印有產生時間與資料版本碼，可事後核對表是否對應現在的名單與設定。</More>
         </div>
         <div class="stack">
-          {ck('seat', '座位表（A4）', '合併成一個檔案，每間教室一頁；每頁附該教室的考生統計')}
+          {ck('seat', '座位表（A4）', '合併成一個檔案，每間教室一頁' + (junior ? '' : '（預備教室排在最後）') + '；每頁附該教室的考生統計')}
           {/* 稿 v2.22（校-47）：選用項穿插在核心項之間——座位表、領卷清單、出缺席記錄表、對位測試頁、標籤 */}
           {orderedExtras.map((x) => (
             <label key={x.key} class="check" style="align-items:flex-start">
@@ -249,7 +247,7 @@ export function Step6(p: {
               <span><b>{x.title}</b><br /><span class="small muted">{x.sub}</span></span>
             </label>
           ))}
-          {ck('label', '標籤', '合併成一個檔案，每間教室一張紙；每格＝紙寬÷7、紙高÷7，白底' + (junior ? '' : '；不考、加考、抽離的標籤用淡黃底'))}
+          {ck('label', '標籤', '合併成一個檔案，每間教室一張紙' + (junior ? '' : '（預備教室排在最後）') + '；每格＝紙寬÷7、紙高÷7，白底' + (junior ? '' : '；不考、加考、抽離的標籤用淡黃底'))}
           <div class="field" style="margin-left:30px">
             <span class="label">標籤紙張（只有標籤可選；座位表與名單固定 A4）</span>
             <div class="row"><Seg<LabelPaper> label="標籤紙張" value={o.paper} onChange={(v) => set({ paper: v })} options={[{ value: 'B4', label: 'B4（一般，7×7）' }, { value: 'A3', label: 'A3（大尺寸，7×7）' }]} /></div>
@@ -257,7 +255,7 @@ export function Step6(p: {
             {o.label && overRooms.length > 0 && <Alert tone="warn">{overRooms.map((r) => r.name).join('、')} 超過 7×7，標籤無法對應，這些教室不會輸出標籤；請回 ③ 縮小座位。</Alert>}
           </div>
           {!junior && ck('study', '抽離自習名單（A4）', '合併成一個檔案，每科一頁；只有名單與人數，不出座位表與標籤')}
-          {!junior && ck('reserve', `預備教室的座位表（A4）與標籤（${o.paper}）`, '抽離考試，一間預備教室一頁、格內每行一個時段；座位表、標籤各合併成一個檔案')}
+          {!junior && ck('reserve', '包含預備教室頁', `抽離考試的預備教室座位表（時段版）與標籤，併在上面座位表、標籤檔案的最後，每頁頁首標「預備教室」；預備教室最多 7 排×8 深位，標籤同一頁 7×8（格高隨列數調整）`)}
         </div>
         <div class="dlbtns row" style="align-items:flex-start;gap:24px;flex-wrap:wrap">
           <div class="stack" style="gap:6px">

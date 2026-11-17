@@ -1,7 +1,8 @@
 import { subjectShort } from '../../core/subjectShort';
 import type { ExamConfig } from '../../data';
 import { Alert } from '../components';
-import { examClasses, markRows, seatableEntries } from '../seating';
+import { MarkLabelSample, sampleCellMm } from './LabelSample';
+import { markRows } from '../seating';
 import { examLabel, examYear, type Doc } from '../store';
 import { mathSplit } from '../subjects';
 
@@ -36,6 +37,8 @@ function Side1(p: { exam: ExamConfig }) {
   );
 }
 
+const PAPER_NOTE = `B4 每格約 ${sampleCellMm('B4', 6).w.toFixed(1)}×${sampleCellMm('B4', 6).h.toFixed(1)} mm、A3 約 ${sampleCellMm('A3', 6).w.toFixed(1)}×${sampleCellMm('A3', 6).h.toFixed(1)} mm`;
+
 /** ④ 待處理、範例標示（B4 小標籤與 A3 大標籤，依實際尺寸等比例） */
 function Side4(p: { doc: Doc; exam: ExamConfig }) {
   const { doc, exam } = p;
@@ -45,15 +48,7 @@ function Side4(p: { doc: Doc; exam: ExamConfig }) {
   const rows = markRows(doc, exam);
   const undecided = rows.filter((r) => r.state === 'undecided').length;
   const sample = rows.find((r) => r.mode === 'mark-absent' || r.mode === 'mark-extra');
-  // A-9：範例挑一位真的被這個標示標到的考生（X＝這科不考的人、＋＝加考這科的人）；挑不到才用第一位，標示字樣仍保留
-  const all = seatableEntries(doc, exam);
-  const marked = sample && all.find((e) => (sample.mode === 'mark-absent') !== e.subjectIds.includes(sample.subjectId) && (!sample.track || e.track === sample.track));
-  const stu = marked ?? all[0];
-  const cls = stu && examClasses(doc, exam).find((c) => c.no === stu.classNo);
-  const mark = sample ? `${sample.mode === 'mark-absent' ? 'X' : '＋'}${subjectShort(sample.subjectName)}` : '';
-  const code = stu ? `${String(stu.classNo).padStart(2, '0')}${String(stu.seatNo).padStart(2, '0')}` : '';
-  const papers = [{ p: 'B4', kind: '小標籤', w: 250, h: 353 }, { p: 'A3', kind: '大標籤', w: 297, h: 420 }];
-  const sheetW = (w: number) => (w / 6) * 2.4;
+  const markTag = sample ? { kind: (sample.mode === 'mark-absent' ? 'x' : 'add') as 'x' | 'add', text: subjectShort(sample.subjectName) } : undefined;
   return (
     <>
       <div class="card stack">
@@ -64,28 +59,8 @@ function Side4(p: { doc: Doc; exam: ExamConfig }) {
       </div>
       <div class="card stack">
         <div class="lab">範例標示</div>
-        <div class="lprev">
-          {papers.map((x) => (
-            <figure key={x.p}>
-              <div class="lprev-box" style={`width:${sheetW(x.w).toFixed(1)}px;height:${((x.h / 8) * 2.4).toFixed(1)}px`}>
-                <div class="lsheet-one" style={`width:${(x.w * 2.4).toFixed(1)}px;height:${(x.h * 2.4).toFixed(1)}px`}>
-                  <div class="lprev-cell" style={`width:${sheetW(x.w).toFixed(1)}px;height:${((x.h / 8) * 2.4).toFixed(1)}px`}>
-                    {stu && cls && (
-                      <div class={`lcell${mark ? (mark.startsWith('X') ? ' mk-x sp' : ' mk-add sp') : ''}`}>
-                        <span class="co">1-1</span>
-                        <span class="no">{code}</span>
-                        <span class="nm"><span class="tag-c">{cls.name[0]}</span>{stu.name}</span>
-                        {mark && <span class="mks"><span class="mk">{mark}</span></span>}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <figcaption><b>{x.p}</b>（{x.kind}）<br />{(x.w / 6).toFixed(1)}×{(x.h / 8).toFixed(1)} mm</figcaption>
-            </figure>
-          ))}
-        </div>
-        <p class="small muted">標籤上的樣子（用文字加粗框）。兩張依實際尺寸等比例並排：A3 的格子比 B4 大約寬 19%、高 19%。座位表另外使用班級底色，其餘相同，只是不分紙張。</p>
+        {(['B4', 'A3'] as const).map((pp) => <MarkLabelSample key={pp} paper={pp} mark={markTag} />)}
+        <p class="small muted">範例是用實際輸出的程式畫的（假資料）。標籤最多 7 排×7 深位，格子大小只隨紙張不同（寬＝紙寬÷7、高＝紙高÷7；{PAPER_NOTE}），格子排列與該教室的座位表一致，沒有座位的地方不印格子，所以 5 排×6 深位的教室整頁只有 30 格。有標示的考生，標示印在格子右下角（✕＝這科不考、＋＝加考這科）。</p>
       </div>
     </>
   );
