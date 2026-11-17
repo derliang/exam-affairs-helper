@@ -85,6 +85,8 @@ export interface SeatPageModel {
   /** 表頭（校-54）：有值時列印頁頁首直接印它，不再拆「考試名稱＋座位表」 */
   heading?: string;
   roomName: string;
+  /** 合併檔內的分區標示（G34）：預備教室頁頁首標「預備教室」；班級教室沒有 */
+  tag?: string;
   /** 頁首小標籤：共幾人、不考／加考各科人數 */
   chips: string[];
   rows: number; // 排數（橫向欄）
@@ -105,6 +107,8 @@ export interface LabelPageModel {
   examName: string;
   heading?: string;
   roomName: string;
+  /** 合併檔內的分區標示（G34）：預備教室頁頁首標「預備教室」 */
+  tag?: string;
   layout: LabelLayout;
   /** 注意事項框的行（設定頁可改）；空陣列＝不印框 */
   notes: NoteLine[];
@@ -196,11 +200,15 @@ export function wideLabelLayout(paper: LabelPaper): LabelLayout {
   return { paper, cols: 6, rows: LABEL_GRID_MAX, wide: true };
 }
 
-/** 標籤格尺寸（D113）：寬＝紙寬÷7，高＝紙高÷7。標題與頁尾要佔約 22mm，滿 7 列的頁面格高只好扣掉這段（待列印實測） */
+/** 預備教室標籤最多 7 排×8 深位（G30）：8 列時格高＝（紙高－標題頁尾）÷8，同一頁放下 */
+export const RESERVE_DEPTH_MAX = 8;
+export const PREP_TAG = '預備教室';
+
+/** 標籤格尺寸（D113）：寬＝紙寬÷7，高＝紙高÷7（8 列時÷8）。標題與頁尾要佔約 22mm，滿 7 列的頁面格高只好扣掉這段（待列印實測） */
 export const LABEL_PAGE_FIXED_MM = 22;
 export function labelCellMm(layout: LabelLayout, gridRows = LABEL_GRID_MAX): { w: number; h: number } {
   const p = PAPER_MM[layout.paper];
-  return { w: p.w / LABEL_GRID_MAX, h: gridRows >= LABEL_GRID_MAX ? (p.h - LABEL_PAGE_FIXED_MM) / LABEL_GRID_MAX : p.h / LABEL_GRID_MAX };
+  return { w: p.w / LABEL_GRID_MAX, h: gridRows >= LABEL_GRID_MAX ? (p.h - LABEL_PAGE_FIXED_MM) / gridRows : p.h / LABEL_GRID_MAX };
 }
 
 interface Ctx {
@@ -605,6 +613,7 @@ export function buildSeatPages(input: ExportInput, scope: Scope = 'all'): SeatPa
       examName: input.exam.name,
       ...(input.seatHeading?.trim() ? { heading: input.seatHeading.trim() } : {}),
       roomName: room.name,
+      ...(room.kind === 'reserve' ? { tag: PREP_TAG } : {}),
       chips: [],
       detachStyle: false,
       rows: room.rows,
@@ -645,6 +654,7 @@ export function buildSeatPages(input: ExportInput, scope: Scope = 'all'): SeatPa
         examName: input.exam.name,
         ...(input.seatHeading?.trim() ? { heading: input.seatHeading.trim() } : {}),
         roomName: room.name,
+        tag: PREP_TAG,
         chips: [`共 ${people.size} 人`, `${slots.size} 個時段`, '抽離考試'],
         detachStyle: false,
         slotMode: true,
@@ -699,7 +709,7 @@ export function labelGrid(p: LabelPageModel): (CellModel | undefined)[] {
 }
 
 /** 教室座位超過 7×7，標籤無法對應（D113）：不輸出該教室的標籤，請使用者縮小 */
-export const roomTooBigForLabel = (r: { rows: number; depth: number }): boolean => r.rows > LABEL_GRID_MAX || r.depth > LABEL_GRID_MAX;
+export const roomTooBigForLabel = (r: { rows: number; depth: number; kind?: 'class' | 'reserve' }): boolean => r.rows > LABEL_GRID_MAX || r.depth > (r.kind === 'reserve' ? RESERVE_DEPTH_MAX : LABEL_GRID_MAX);
 
 /** 標籤：每間教室一張紙，位置同座位表（見 labelGrid）。超出格數丟錯 */
 export function buildLabelPages(input: ExportInput, scope: Scope = 'all'): LabelPageModel[] {
@@ -722,6 +732,7 @@ export function buildLabelPages(input: ExportInput, scope: Scope = 'all'): Label
         examName: input.exam.name,
         ...(input.labelHeading?.trim() ? { heading: input.labelHeading.trim() } : {}),
         roomName: room.name + suffix,
+        ...(room.kind === 'reserve' ? { tag: PREP_TAG } : {}),
         layout,
         grid: { cols: room.rows, rows: room.depth },
         notes: labelNoteLines(input.settings.labelNotes),
@@ -750,6 +761,7 @@ export function buildLabelPages(input: ExportInput, scope: Scope = 'all'): Label
         examName: input.exam.name,
         ...(input.labelHeading?.trim() ? { heading: input.labelHeading.trim() } : {}),
         roomName: `${room.name}　抽離考試${suffix}`,
+        tag: PREP_TAG,
         layout,
         grid: { cols: room.rows, rows: room.depth },
         notes: labelNoteLines(input.settings.labelNotes),
@@ -1026,4 +1038,9 @@ export function textEm(s: string, bold = false): number {
   let em = 0;
   for (const ch of s) em += ch === ' ' ? 0.28 : /[!-~]/.test(ch) ? (/[ij|l.,:;!']/.test(ch) ? 0.3 : 0.58) : 1;
   return em * (bold ? 1.05 : 1);
+}
+
+/** 頁首右上顯示的教室名：預備教室頁在前面加「預備教室」（G34：合併檔內分得出哪幾頁是預備教室；名稱已含該字就不重複） */
+export function roomShown(p: { roomName: string; tag?: string }): string {
+  return p.tag && !p.roomName.includes(p.tag) ? `${p.tag}　${p.roomName}` : p.roomName;
 }
