@@ -8,7 +8,11 @@ import type { RosterProblem } from '../import';
 
 export type ProblemDecision =
   | { action: 'add' | 'edit'; classNo: number; seatNo: number; name: string; schoolId?: string }
+  | { action: 'confirm' }
   | { action: 'skip' };
+
+/** G18：能「確認無誤」的問題類型（班級＋座號重複、班級或座號無法辨識不可以） */
+export const CONFIRMABLE: ReadonlySet<RosterProblem['kind']> = new Set(['no-name', 'dup-school-id']);
 
 export const PROBLEM_KIND_TEXT: Record<RosterProblem['kind'], string> = {
   'no-name': '缺少姓名',
@@ -26,6 +30,8 @@ export interface Resolution {
   invalid: Record<number, string>;
   added: number;
   skipped: number;
+  /** 確認無誤的列（缺姓名＝空位不建學生；學號重複＝照原樣匯入） */
+  confirmed: number;
   /** 每一列都決定了、內容也合法，才能按「確認取代」 */
   ready: boolean;
 }
@@ -40,10 +46,27 @@ export function resolveProblems(base: readonly Student[], problems: readonly Ros
   const invalid: Record<number, string> = {};
   let added = 0;
   let skipped = 0;
+  let confirmed = 0;
   problems.forEach((_, i) => {
     const d = decisions[i];
     if (!d) { pending.push(i); return; }
     if (d.action === 'skip') { skipped++; return; }
+    if (d.action === 'confirm') {
+      const pr = problems[i];
+      if (!pr || !CONFIRMABLE.has(pr.kind)) { invalid[i] = '這類問題不能確認無誤，請補上、修改或不匯入'; return; }
+      confirmed++;
+      if (pr.kind === 'no-name') return; // 缺姓名：保留為空位，不建立學生
+      const { classNo, seatNo, name } = pr.draft;
+      const hit = classNo === undefined || seatNo === undefined ? undefined : taken.get(`${classNo}-${seatNo}`);
+      if (classNo === undefined || seatNo === undefined || !name.trim()) { invalid[i] = '這一列資料不完整，不能確認無誤'; return; }
+      if (hit) { invalid[i] = `班級 ${classNo} 座號 ${seatNo} 已經有「${hit.name}」，不能確認無誤`; return; }
+      const sid = (pr.draft.schoolId ?? '').trim();
+      const s: Student = { classNo, seatNo, name: name.trim(), ...(sid ? { schoolId: sid } : {}) };
+      taken.set(`${classNo}-${seatNo}`, s);
+      students.push(s);
+      added++;
+      return;
+    }
     const name = d.name.trim();
     const sid = (d.schoolId ?? '').trim();
     if (!isNo(d.classNo)) { invalid[i] = '班級要是 1～99 的整數'; return; }
@@ -58,7 +81,7 @@ export function resolveProblems(base: readonly Student[], problems: readonly Ros
     students.push(s);
     added++;
   });
-  return { students, pending, invalid, added, skipped, ready: pending.length === 0 && Object.keys(invalid).length === 0 };
+  return { students, pending, invalid, added, skipped, confirmed, ready: pending.length === 0 && Object.keys(invalid).length === 0 };
 }
 
 /** 按鈕上要寫的「還差什麼」：沒決定幾列、幾列內容有誤 */

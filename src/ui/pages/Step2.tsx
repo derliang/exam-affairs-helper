@@ -54,13 +54,13 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
   const fullyAbsent = entries ? entries.filter((e) => e.subjectIds.length === 0).length : 0;
   const classNames = doc.settings.classes.filter((c) => c.division === exam.division).map((c) => c.name);
   const dopts = diffOptions(doc, exam);
-  const compare = (list: ExamEntry[]) => compareRosters(roster, list, exam.participation, dopts);
+  const compare = (list: ExamEntry[]) => compareRosters(roster, list, 'partial', dopts);
 
   // 共用名單、考試名單、參加方式任一改變，已存的差異就過期：重算並只沿用內容完全相同的選擇（#60）
-  const stale = !!entries && diffsStale(diffs, refreshDiffs(roster, entries, exam.participation, diffs, dopts));
+  const stale = !!entries && diffsStale(diffs, refreshDiffs(roster, entries, 'partial', diffs, dopts));
   useEffect(() => {
-    if (entries && stale) save({ diffs: refreshDiffs(roster, entries, exam.participation, diffs, dopts) });
-  }, [stale, roster, entries, exam.participation]);
+    if (entries && stale) save({ diffs: refreshDiffs(roster, entries, 'partial', diffs, dopts) });
+  }, [stale, roster, entries]);
 
   const onFile = async (file: File) => {
     setErr('');
@@ -113,7 +113,7 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
   /** 會考全員參加：沒匯入名單時，學生名單就是考試名單，這一步視為完成 */
   const bcctAll = exam.kind === 'bcct' && entries === null;
   const done = bcctAll ? roster.length > 0 : entries !== null && diffs.length === 0;
-  const notJoin = entries && exam.participation === 'partial' ? compare(entries).notParticipating : 0;
+  const notJoin = entries ? compare(entries).notParticipating : 0;
   const classes = doc.settings.classes.filter((c) => c.division === exam.division);
   /** 「恭班 45 號　張小翔」：班名＋座號＋姓名（原型寫法） */
   const who = (x?: { classNo: number; seatNo: number; name: string }) => (x ? `${classes.find((c) => c.no === x.classNo)?.name ?? x.classNo}班 ${x.seatNo} 號　${x.name}` : "—");
@@ -355,16 +355,12 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
               <ConfirmButton kind="default" small undoable copy={confirmCopy.reimportList(entries.length)} onConfirm={() => input.current?.click()}>重新匯入</ConfirmButton>
             )}
           </div>
-          <div class="row" style="gap:8px"><span class="label" style="margin:0">誰會參加</span>
-            <Seg<Participation> label="參加模式" value={exam.participation}
-              onChange={(v) => { const r = updateExam(doc, exam.id, { participation: v }); if (r.ok) p.onChange(syncDiffs(r.doc)); }}
-              options={[{ value: 'all', label: '全部學生參加' }, { value: 'partial', label: '只有部分學生參加' }]} />
-          </div>
         </div>
         <p class="small muted">匯入接受 .xlsx 檔；舊版 .xls 請先用 Excel 另存新檔成 .xlsx。</p>
-        <p class="small muted">{exam.participation === 'partial'
-          ? '未列入本次考試的人不視為名單差異，不排座、不出現在座位表。'
-          : '學生名單有、考試名單沒有的人，列為差異，逐筆處理。'}</p>
+        <p class="small muted">學生名單＝全體學生；考試名單＝每位學生報名這次考試的情況。學生名單裡有、但考試名單沒有的人，視為未參加：不排座、不出現在座位表，只在下方顯示人數。</p>
+        {entries && exam.kind === 'gsat' && roster.length > 0 && notJoin / roster.length >= 0.2 && (
+          <Alert tone="warn">考試名單有 {notJoin} 人（{Math.round((notJoin / roster.length) * 100)}%）不在名單內、被視為未參加。學測通常人人報名，請確認是否漏列。</Alert>
+        )}
         {fullyAbsent > 0 && (
           <Alert tone="info">
             其中 {fullyAbsent} 位全科缺考：{exam.seatFullyAbsent ? '目前照樣排座。' : '預設不排座、不計領卷份數，⑤ 的考生人數會比這裡少。'}
@@ -377,7 +373,7 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
           <ImportWizard sheets={sheets} exam={exam} classNames={classNames} trackOf={(n) => doc.settings.classes.find((c) => c.division === exam.division && c.no === n)?.track} previous={entries ?? undefined} saved={doc.settings.markMap ?? {}}
             onCancel={() => setSheets(null)} onDone={adopt} />
         )}
-        {entries && <div class="small muted">考生 {entries.length} 人{exam.participation === 'partial' ? `，未參加 ${notJoin} 人` : ''}{fullyAbsent > 0 ? `，全科缺考 ${fullyAbsent} 人` : ''}</div>}
+        {entries && <div class="small muted">考生 {entries.length} 人，未參加 {notJoin} 人{fullyAbsent > 0 ? `，全科缺考 ${fullyAbsent} 人` : ''}</div>}
       </div>
     </section>
   );
