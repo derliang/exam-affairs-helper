@@ -974,7 +974,8 @@ details.more{font-size:14px;color:var(--text-2)}details.more summary{cursor:poin
 @media (max-width:1060px){
   .ws .side-r{grid-column:1/-1}
   .ws .side-r .stepdock{position:fixed;left:0;right:0;bottom:0;z-index:30;border-radius:0;border-inline:0;border-bottom:0;padding:10px max(16px,env(safe-area-inset-left,0px)) calc(10px + env(safe-area-inset-bottom,0px));grid-template-columns:1fr;max-height:40vh;overflow:auto}
-  .ws .side-r .stepdock .dock-row{display:flex;gap:8px;flex-direction:row-reverse}
-  .ws .side-r .stepdock .btn{width:auto;flex:1 1 auto}
+  .ws .side-r .stepdock{box-sizing:border-box;width:100%}
+  .ws .side-r .stepdock .dock-row{display:flex;gap:8px;flex-wrap:wrap;flex-direction:row-reverse}
+  .ws .side-r .stepdock .btn{width:auto;flex:1 1 140px;white-space:normal}
   .ws:has(.stepdock){padding-bottom:110px}
 }
