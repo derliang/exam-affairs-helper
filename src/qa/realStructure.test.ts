@@ -133,8 +133,8 @@ describe.skipIf(!HAS_LOCAL)('本機真實檔案：只斷言結構與計數（不
 
   it('學生名單（區塊版式）：國三／高三每班人數正確，且無警告（缺姓名列除外）', async () => {
     const expected = [STRUCTURES.junior.join(), STRUCTURES.E3.join()];
-    // 排除驗收員的輸出子資料夾「驗收測試-*」（內有比對結果等非原始名單檔）
-    const f = files.filter((x) => /學生名單/.test(x) && !/考生/.test(x) && !/驗收測試-/.test(x));
+    // 排除驗收員的輸出子資料夾（「驗收測試-*」「分科驗收-*」等路徑含「驗收」者；內有比對結果、改過人數的名單副本，不是原始名單檔）
+    const f = files.filter((x) => /學生名單/.test(x) && !/考生/.test(x) && !/驗收/.test(x));
     expect(f.length).toBeGreaterThan(0);
     const got: string[] = [];
     for (const name of f) {
