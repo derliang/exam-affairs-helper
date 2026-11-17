@@ -126,7 +126,7 @@ describe('G35 會考（無抽離、無自習）', () => {
     for (const row of r.ledger) { expect(row.study).toBe(0); expect(row.ok).toBe(true); expect(row.exam).toBe(20); }
     expect(gateOf(r, '').why).toBe('');
   });
-  it('紅燈：標籤對不上（座位被刪）擋下載；琥珀：教室剛好滿座須確認', () => {
+  it('紅燈：標籤對不上（座位被刪）擋下載；班級教室剛好滿座不警示', () => {
     const { doc, exam } = bcctDoc();
     const bad = withResult(doc, exam, (x) => ({ ...x, assignments: x.assignments.slice(0, -1) }));
     expect(light(reconcile(bad, exam), 'M-3')).toBe('fail');
@@ -136,8 +136,7 @@ describe('G35 會考（無抽離、無自習）', () => {
     const seated = autoSeat({ ...tight, examFiles: { [exam.id]: { ...tight.examFiles![exam.id]!, result: undefined } } }, exam, '2026-11-10T03:00:00Z');
     if (!seated || !seated.ok) throw new Error('排座失敗');
     const r = ready(reconcile(seated.doc, exam));
-    expect(light(r, 'M-4')).toBe('warn');
-    expect(gateOf(r, '').warns.map((w) => w.id)).toContain('M-4');
+    expect(light(r, 'M-4')).toBe('pass'); // 班級教室排滿是常態，不警示
   });
   it('空白：沒排座結果', () => {
     const { doc, exam } = bcctDoc();
@@ -189,6 +188,44 @@ describe('G35 分科（D99：不考的人＝自習，算進座位容量）', () 
   it('空白：名冊空 → no-roster', () => {
     const { doc, exam } = astDoc();
     expect(reconcile({ ...doc, rosters: { senior: [], junior: [] } }, exam).state).toBe('no-roster');
+  });
+});
+
+describe('G35 琥珀「教室滿座」只限抽離（預備、綜合）教室（使用者 2026-11-17 裁示）', () => {
+  it('學測：預備教室抽離考試剛好滿座 → M-4 警示；班級教室滿座不警示', () => {
+    const { doc, exam } = gsatDoc();
+    const rooms = doc.settings.classrooms.map((c) => (c.id === 'k1' ? { ...c, rows: 1, depth: 2, seatCount: 2 } : c));
+    const tampered = withResult({ ...doc, settings: { ...doc.settings, classrooms: rooms } }, exam, (x) => {
+      const math = x.detaches.find((d) => d.purpose === 'study')!.subjectId;
+      return { ...x, detaches: [...x.detaches, { code: '0101', subjectId: math, purpose: 'exam', roomId: 'k1', seat: { row: 1, depth: 1 } }, { code: '0201', subjectId: math, purpose: 'exam', roomId: 'k1', seat: { row: 1, depth: 2 } }] };
+    });
+    const m4 = ready(reconcile(tampered, exam)).checks.find((c) => c.id === 'M-4')!;
+    expect(m4.light).toBe('warn');
+    expect(m4.issues.every((i) => i.text.startsWith('預備一'))).toBe(true);
+    // 沒動預備教室、只把班級教室縮到剛好 → 不警示
+    const onlyClass = { ...doc, settings: { ...doc.settings, classrooms: doc.settings.classrooms.map((c) => (c.id === 'c1' ? { ...c, rows: 2, depth: 5, seatCount: 10 } : c)) } };
+    expect(ready(reconcile(onlyClass, exam)).checks.find((c) => c.id === 'M-4')!.light).not.toBe('warn');
+  });
+  it('分科：班級教室滿座不警示；綜合教室考試剛好滿座才警示', () => {
+    const { doc, exam } = astDoc();
+    const small = { ...doc, settings: { ...doc.settings, classrooms: doc.settings.classrooms.map((c) => (c.id === 'c1' ? { ...c, rows: 3, depth: 4, seatCount: 12 } : c)) } };
+    const plan = astPlan(small, exam)!;
+    const r = ready(reconcile(small, exam, astOutputs(small, exam, plan, 'B4')));
+    expect(r.checks.find((c) => c.id === 'M-4')!.light).toBe('pass');
+    // 綜合教室考試：理組班教室只有 6 座，溢出的考生到綜合教室考；再把綜合教室縮到剛好等於最擠那節的考試人數
+    const rooms = doc.settings.classrooms.map((c) => (c.kind === 'class' && c.track === 'science' ? { ...c, rows: 2, depth: 3, seatCount: 6 } : c.id === 'k1' ? { ...c, rows: 7, depth: 7, seatCount: 49 } : c));
+    const big = { ...doc, settings: { ...doc.settings, classrooms: rooms } };
+    const p0 = astPlan(big, exam)!;
+    expect(p0.infeasible).toBeFalsy();
+    const perSlot = new Map<string, number>();
+    for (const e of p0.out.exams) if (e.roomId === 'k1') perSlot.set(e.slotId, (perSlot.get(e.slotId) ?? 0) + 1);
+    const peak = Math.max(0, ...perSlot.values());
+    expect(peak).toBeGreaterThan(0);
+    const exact = { ...big, settings: { ...big.settings, classrooms: rooms.map((c) => (c.id === 'k1' ? { ...c, rows: 1, depth: peak, seatCount: peak } : c)) } };
+    const p1 = astPlan(exact, exam)!;
+    const full = ready(reconcile(exact, exam, p1.infeasible ? undefined : astOutputs(exact, exam, p1, 'B4'))).checks.find((c) => c.id === 'M-4')!;
+    expect(full.light).toBe('warn');
+    expect(full.issues.every((i) => i.text.startsWith('綜合教室一'))).toBe(true);
   });
 });
 

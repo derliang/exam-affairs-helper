@@ -77,13 +77,14 @@ const ledgerOk = (r: Omit<LedgerRow, 'ok'>, expExam: number, expStudy: number): 
   r.scope === r.exam + r.study + r.absent && r.seat === r.exam && r.label === r.exam && r.room === r.exam && r.exam === expExam && r.study === expStudy;
 
 /** 一個教室節次的占用：房間、時段、用途 */
-interface Use { room: string; roomName: string; slot: number; exam: number; study: number; seats: number; dup: number }
+interface Use { /** 抽離（預備、綜合）教室 */ reserve: boolean; room: string; roomName: string; slot: number; exam: number; study: number; seats: number; dup: number }
 
 function m4(uses: Use[], slotName: (i: number) => string, cap: (u: Use) => number): Check {
   const formula = '同時段一座位一人；教室人數 ≤ 可用座位';
   const over = uses.filter((u) => u.exam > cap(u));
   const dup = uses.filter((u) => u.dup > 0);
-  const full = uses.filter((u) => u.exam > 0 && u.exam === cap(u));
+  // 琥珀「滿座」只看抽離（預備、綜合）教室；班級教室排滿是常態，不警示（使用者 2026-11-17 裁示）
+  const full = uses.filter((u) => u.reserve && u.exam > 0 && u.exam === cap(u));
   const tight = uses.filter((u) => u.exam > 0).reduce<Use | undefined>((m, u) => (!m || cap(u) - u.exam < cap(m) - m.exam ? u : m), undefined);
   const issues: Issue[] = [
     ...over.map((u) => ({ text: `${u.roomName} ${slotName(u.slot)}：${u.exam} 人，座位 ${cap(u)}，超過 ${u.exam - cap(u)} 人`, step: 3 as const })),
@@ -219,7 +220,7 @@ export function reconcileStandard(doc: Doc, exam: ExamConfig): Reconcile {
     for (const [rid, x] of perRoom) {
       const r = roomById.get(rid);
       const dup = [...x.seats.values()].filter((n) => n > 1).length;
-      uses.push({ room: rid, roomName: r?.name ?? rid, slot: gi, exam: x.exam, study: x.study, seats: r ? classroomSeats(r).length : 0, dup });
+      uses.push({ reserve: r?.kind === 'reserve', room: rid, roomName: r?.name ?? rid, slot: gi, exam: x.exam, study: x.study, seats: r ? classroomSeats(r).length : 0, dup });
     }
     // M-8：從抽離原始資料重新點每間教室這個時段的用途
     const rawUse = new Map<string, { exam: number; study: number }>();
@@ -320,7 +321,7 @@ export function reconcileAst(doc: Doc, exam: ExamConfig, outs?: AstOutputs): Rec
       const st = study.filter((e) => e.roomId === rid).length;
       const seatKeys = new Map<string, number>();
       for (const e of ex) seatKeys.set(`${e.row}-${e.depth}`, (seatKeys.get(`${e.row}-${e.depth}`) ?? 0) + 1);
-      uses.push({ room: rid, roomName: rname(rid), slot: gi, exam: ex.length, study: st, seats: roomById.get(rid)?.seats.length ?? 0, dup: [...seatKeys.values()].filter((n) => n > 1).length });
+      uses.push({ reserve: roomById.get(rid)?.kind === 'reserve', room: rid, roomName: rname(rid), slot: gi, exam: ex.length, study: st, seats: roomById.get(rid)?.seats.length ?? 0, dup: [...seatKeys.values()].filter((n) => n > 1).length });
       if (ex.length > 0 && st > 0) { overlapN++; overlap.push({ text: `${rname(rid)} ${s.label}：同時有考試 ${ex.length} 人與自習 ${st} 人`, step: 5 }); }
     }
     const room = exams.length;
