@@ -93,10 +93,11 @@ describe('#60 差異依輸入重算', () => {
     const d = doc('partial');
     const id = d.exams[0]!.id;
     expect(syncDiffs(d)).toBe(d); // 沒變動就是同一份
+    // G19：不論 participation 存什麼，名單沒有的人一律視為未參加，不是差異
     const all = syncDiffs({ ...d, exams: [{ ...d.exams[0]!, participation: 'all' }] });
-    expect(all.examFiles![id]!.diffs).toHaveLength(1);
+    expect(all.examFiles![id]!.diffs).toHaveLength(0);
     const added = syncDiffs({ ...all, rosters: { ...all.rosters, senior: [...roster, S(1, 3, '丁')] } });
-    expect(added.examFiles![id]!.diffs).toHaveLength(2);
+    expect(added.examFiles![id]!.diffs).toHaveLength(0);
     const removed = syncDiffs({ ...added, rosters: { ...added.rosters, senior: [roster[0]!] } });
     expect(removed.examFiles![id]!.diffs).toHaveLength(0);
     const renamed = syncDiffs({ ...removed, rosters: { ...removed.rosters, senior: [S(1, 1, '甲改')] } });
