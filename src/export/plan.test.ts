@@ -108,3 +108,13 @@ describe('匯出前檢查', () => {
     expect(preflight(f, { ...defaultOptions(), format: 'pdf' }, ok, has)).toEqual([]);
   });
 });
+
+describe('字型警示：造字區字元改寫碼位（#298）', () => {
+  it('警示寫碼位與班級座號，引號內不放造字區字元', () => {
+    const f = makeFixture();
+    f.students[0]!.name = '甲';
+    const i = preflight(f, defaultOptions(), { stale: false, unresolvedDiffs: 0 }, (ch) => !/[-]/.test(ch));
+    expect(i[0]!.text).toContain('0101 的造字區碼位 U+E391');
+    expect(i[0]!.text).not.toContain('');
+  });
+});
