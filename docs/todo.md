@@ -164,7 +164,7 @@
 - 審併 PR：到該對話 worktree 重跑 tsc／vitest；main 的 `node_modules` 過舊先 `npm ci`。
 - 版號：有使用者看得到的變更併 main 前要升 `package.json` 版本；純文件不用。
 
-> **G37 狀態（設計員 2026-11-17）：稿待審，稿 v2.50**（`docs/design/mockups/G37首次使用精靈稿.html`，成品 https://claude.ai/artifact/XHhqu9mDF2hzbbrQmGPfQm ，DESIGN 10.27）。稿通過前不實作。
+> **G37 狀態（設計員 2026-11-17）：稿待審，稿 v2.50**（`docs/design/mockups/G37首次使用精靈稿.html`，成品 https://claude.ai/artifact/XHhqu9mDF2hzbbrQmGPfQm ，DESIGN 10.28）。稿通過前不實作。
 ### H0. 兩階段規劃：MVP（模擬考完善）→ 補考安排（使用者 2026-11-17 裁示；補考規格見上方 H）
 - **第一階段＝MVP**：以「模擬考功能完善」為指標。完成標準＝G16～G34 全部做完並上線（含 G23 分科；分科規格已定案，不用等）。使用者實測再回報的問題另列，MVP 完成由使用者宣告。
 - **第二階段**：加入「安排補考」功能，實作在 MVP 之後。
