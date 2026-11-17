@@ -153,8 +153,8 @@ export function PageHead(p: { crumbs?: { label: string; onClick: () => void }[];
     <header class={`pghd${crumbs.length ? '' : ' noc'}`}>
       {crumbs.length > 0 && (
         <nav class="crumbs" aria-label="返回路徑">
-          {crumbs.map((c) => <><button type="button" class="crumb" onClick={c.onClick}>{c.label}</button><span class="sep" aria-hidden="true">›</span></>)}
-          <span class="cur" aria-current="page">{p.title}</span>
+          {/* G2：路徑只列「來的地方」；目前頁名稱由下方 h1 呈現，不再於路徑末尾重複一次 */}
+          {crumbs.map((c, i) => <>{i > 0 && <span class="sep" aria-hidden="true">›</span>}<button type="button" class="crumb" onClick={c.onClick}>{c.label}</button></>)}
         </nav>
       )}
       <div class="ph-row">

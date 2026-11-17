@@ -60,3 +60,8 @@ export function guardNav(s: NavState, allowed: (r: Route) => boolean): NavState 
   const route: Route = allowed(s.route) ? s.route : { page: 'exams' };
   return route === s.route && back.length === s.back.length ? s : { route, back: route === s.route ? back : [] };
 }
+
+/** G4：換步驟後把頁面捲回頂端（沒有 window 的環境，例如測試，什麼都不做） */
+export function scrollPageTop(win: { scrollTo?: (x: number, y: number) => void } | undefined = (globalThis as { window?: { scrollTo?: (x: number, y: number) => void } }).window): void {
+  win?.scrollTo?.(0, 0);
+}

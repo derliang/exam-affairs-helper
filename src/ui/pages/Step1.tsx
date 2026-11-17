@@ -66,7 +66,7 @@ export function Step1(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
       {/* 稿 v2.31：三張卡合成一張卡，區塊內上下分區：基本資料（含次別）／考科表／沿用上次 */}
       <div class="psec">
         <div class="row" style="justify-content:space-between">
-          <div><h3>本次考科</h3><p class="small muted">依類型與次別自動帶出，可以新增、編輯、刪除</p></div>
+          <div><h3>本次考科</h3>{!fixed && <p class="small muted">依類型與次別自動帶出，可以新增、編輯、刪除</p>}</div>
           {!fixed && (
             <div class="row">
               {custom && <ConfirmButton kind="default" copy={confirmCopy.resetSubjects()} onConfirm={() => set({ subjects: defaultSubjects(exam.kind, exam.round) })}>還原本次考科</ConfirmButton>}

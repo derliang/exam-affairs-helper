@@ -60,7 +60,7 @@ describe('步驟狀態（第N/6步、完成狀態）', () => {
     const f = flowOf(doc(e, false), e, 1);
     expect(f.steps.map((s) => s.state)).toEqual(['cur', 'todo', 'todo', 'todo', 'todo', 'todo']);
     expect(f.steps).toHaveLength(6);
-    expect(f.issues.map((i) => i.step)).toEqual([2, 3, 4, 5]); // ④ 補「尚未完成」（稿 v2.13）
+    expect(f.allIssues.map((i) => i.step)).toEqual([2, 3, 4, 5]); // ④ 補「尚未完成」（稿 v2.13）
   });
 
   it('接近一半未選：④ 未完成；選了之後 ①②③④ 完成', () => {
@@ -75,25 +75,25 @@ describe('步驟狀態（第N/6步、完成狀態）', () => {
     const { d, e } = seated();
     expect(flowOf(d, e, 5).steps[4]!.state).toBe('cur');
     expect(flowOf(d, e, 1).steps[4]!.state).toBe('done');
-    expect(flowOf(d, e, 1).issues).toEqual([]);
+    expect(flowOf(d, e, 1).allIssues).toEqual([]);
     const changed: Doc = { ...d, examFiles: { e1: { ...d.examFiles!.e1!, entries: entries.slice(0, 6) } } };
     const f = flowOf(changed, e, 1);
     expect(f.steps[4]!.state).toBe('stale');
-    expect(f.issues.map((i) => i.text)).toEqual(['⑤ 名單或設定在排座後改過，需要重新排座']);
+    expect(f.allIssues.map((i) => i.text)).toEqual(['⑤ 名單或設定在排座後改過，需要重新排座']);
   });
 
   it('考科表被刪光：① 未完成並要求還原', () => {
     const e = exam({ subjects: [] });
     const f = flowOf(doc(e), e, 2);
     expect(f.steps[0]!.state).toBe('todo');
-    expect(f.issues[0]).toMatchObject({ step: 1, level: 'block' });
+    expect(f.allIssues[0]).toMatchObject({ step: 1, level: 'block' });
   });
 
   it('會考的 ④ 標註不需要，且不會因標示而擋下', () => {
     const e = exam({ kind: 'bcct', division: 'junior' });
     const f = flowOf(doc(e, false), e, 1);
     expect(f.steps[3]!.note).toBe('會考不需要');
-    expect(f.issues.some((i) => i.step === 4)).toBe(false);
+    expect(f.allIssues.some((i) => i.step === 4)).toBe(false);
   });
 });
 
@@ -101,24 +101,24 @@ describe('稿 v2.13／v2.15 補項：尚未完成的步驟算待處理、會考�
   it('①～④ 沒做完、又沒有更具體問題的步驟，補一項「尚未完成」，排在真問題之後', () => {
     const e = exam({ classroomIds: [] });
     const f = flowOf(doc(e, false), e, 1);
-    const todo = f.issues.filter((i) => i.todo);
+    const todo = f.allIssues.filter((i) => i.todo);
     expect(todo.map((i) => i.step)).toEqual([4, 5]);
     expect(todo.find((i) => i.step === 4)).toMatchObject({ text: '④ 標示與抽離規則尚未完成', level: 'warn' });
-    const firstTodo = f.issues.findIndex((i) => i.todo);
-    expect(f.issues.slice(firstTodo).every((i) => i.todo)).toBe(true);
+    const firstTodo = f.allIssues.findIndex((i) => i.todo);
+    expect(f.allIssues.slice(firstTodo).every((i) => i.todo)).toBe(true);
     expect(firstTodo).toBeGreaterThan(0);
   });
   it('會考的 ④ 不算「尚未完成」，③ 的下一步直接是 ⑤', () => {
     const e = exam({ kind: 'bcct', division: 'junior' });
     const f = flowOf(doc(e, false), e, 3);
-    expect(f.issues.some((i) => i.step === 4)).toBe(false);
+    expect(f.allIssues.some((i) => i.step === 4)).toBe(false);
     expect(nextAction(f, 3)).toMatchObject({ kind: 'go', to: 5, label: '完成此步，前往 ⑤ 排座與預覽' });
   });
   it('摘要列「尚未完成」項目用 si todo（琥珀）', async () => {
     const { renderToString } = await import('preact-render-to-string');
     const { SummaryBar } = await import('./components');
     const e = exam({ classroomIds: [] });
-    const html = renderToString(SummaryBar({ flow: flowOf(doc(e, false), e, 1), onGo: () => undefined }));
+    const html = renderToString(SummaryBar({ flow: flowOf(doc(e, false), e, 6), onGo: () => undefined }));
     expect(html).toContain('class="si todo"');
   });
 });
@@ -172,15 +172,16 @@ describe('前置條件與「下一步」按鈕', () => {
 
 describe('常駐摘要列', () => {
   it('考生／座位／空位／警告', () => {
-    const f = flowOf(doc(), exam(), 1);
-    expect(f.summary).toEqual({ students: 7, seats: 9, spare: 2, warnings: 2 });
+    const f = flowOf(doc(), exam(), 6);
+    expect(f.summary.warnings).toBe(f.issues.length);
+    expect(f.summary).toMatchObject({ students: 7, seats: 9, spare: 2 });
     expect(summaryText(f.summary)).toEqual({ seatNote: '2', bad: false });
   });
   it('座位不夠時空位欄顯示「缺 N」', () => {
     expect(summaryText({ students: 7, seats: 5, spare: -2, warnings: 1 })).toEqual({ seatNote: '缺 2', bad: true });
   });
   it('點警告跳到第一個問題的步驟；沒有警告則無處可跳', () => {
-    expect(firstIssueStep(flowOf(doc(), exam(), 1))).toBe(4);
+    expect(firstIssueStep(flowOf(doc(), exam(), 6))).toBe(4);
     const { d, e } = seated();
     expect(firstIssueStep(flowOf(d, e, 1))).toBeUndefined();
     expect(flowOf(d, e, 1).summary.warnings).toBe(0);
@@ -270,5 +271,44 @@ describe('#254 名單依學年度分存：匯入別的學年度不影響這個�
     const other = { ...base, rosters: { senior: [], junior: [] }, otherYears: { '115': { rosters: { senior: entries.map((x) => ({ classNo: x.classNo, seatNo: x.seatNo, name: x.name })), junior: [] }, classes: base.settings.classes } } };
     expect(rosterChanged(other, e115)).toBe(false);
     expect(isStale(other, e115)).toBe(false);
+  });
+});
+
+describe('G5 待處理只提醒「目前步驟之前」的步驟', () => {
+  it('停在第 1 步：後面的步驟都還沒做，也不提醒；allIssues 仍完整（供「下一步」判斷）', () => {
+    const e = exam({ classroomIds: [] });
+    const f = flowOf(doc(e, false), e, 1);
+    expect(f.issues).toEqual([]);
+    expect(f.summary.warnings).toBe(0);
+    expect(f.allIssues.length).toBeGreaterThan(0);
+  });
+  it('目前步驟本身與其後都不列；只列編號比它小的步驟，且依步驟編號排序', () => {
+    const e = exam({ classroomIds: [] });
+    for (const cur of [1, 2, 3, 4, 5, 6] as const) {
+      const f = flowOf(doc(e, false), e, cur);
+      expect(f.issues.every((i) => i.step < cur)).toBe(true);
+      const steps = f.issues.map((i) => i.step);
+      expect(steps).toEqual([...steps].sort((a, b) => a - b));
+      expect(f.summary.warnings).toBe(f.issues.length);
+    }
+  });
+  it('停在 ⑥ 時才提醒 ②③④⑤ 沒做完', () => {
+    const e = exam({ classroomIds: [] });
+    expect(flowOf(doc(e, false), e, 6).issues.map((i) => i.step)).toContain(5);
+    expect(flowOf(doc(e, false), e, 3).issues.map((i) => i.step)).not.toContain(5);
+  });
+  it('下一步旁的前置提示不受影響（仍含目前這步的 block 問題）', () => {
+    const f = flowOf(doc(), exam(), 4);
+    expect(prerequisites(f, 5).length).toBeGreaterThan(0);
+  });
+  it('三種考試類型（學測、分科、會考）都適用同一規則', () => {
+    for (const kind of ['gsat', 'ast', 'bcct'] as const) {
+      const e = exam({ kind, ...(kind === 'bcct' ? { division: 'junior' as const } : {}) });
+      const f1 = flowOf(doc(e, false), e, 1);
+      expect(f1.issues).toEqual([]);
+      const f6 = flowOf(doc(e, false), e, 6);
+      expect(f6.issues.every((i) => i.step < 6)).toBe(true);
+      expect(f6.issues.map((i) => i.step)).toEqual([...f6.issues.map((i) => i.step)].sort((a, b) => a - b));
+    }
   });
 });

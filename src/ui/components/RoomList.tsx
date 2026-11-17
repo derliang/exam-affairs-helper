@@ -47,7 +47,7 @@ export function RoomList(p: {
   const upd = (id: string, f: (r: Classroom) => Classroom) => p.onChange(patchRoom(p.rooms, id, (r) => stamp(f(r))));
   const addRow = (
     <div class="btnrow">
-      <Button onClick={() => p.onChange(addRoom(p.rooms, 'class', p.division ?? 'senior', ctx))}>新增班級教室</Button>
+      <Button onClick={() => p.onChange(addRoom(p.rooms, 'class', p.division ?? 'senior', ctx))}>新增教室</Button>
       {!junior && <Button onClick={() => p.onChange(addRoom(p.rooms, 'reserve', p.division ?? 'senior', ctx))}>新增預備教室</Button>}
       <BulkAdd onAdd={(n) => p.onChange(addRooms(p.rooms, 'class', n, p.division ?? 'senior', ctx))} />
     </div>
@@ -72,7 +72,7 @@ export function RoomList(p: {
                 <Switch label={r.kind === 'class' ? '列為考場' : '列為預備'} ariaLabel={`${r.kind === 'class' ? '列為考場' : '列為預備'}：${r.name}`} checked={on}
                   onChange={(v) => p.onSelect!(v ? [...p.selected!, r.id] : p.selected!.filter((x) => x !== r.id))} />
               ) : <RoomBadge room={r} index={shown.indexOf(r)} classes={p.classes} />}
-              <div class="field"><label class="small" for={`rn-${r.id}`}>{r.kind === 'class' ? '班級教室' : '預備教室'}</label>
+              <div class="field"><label class="small" for={`rn-${r.id}`}>{r.kind === 'class' ? '教室' : '預備教室'}</label>
                 <input id={`rn-${r.id}`} class="input" value={r.name} onClick={(e) => e.stopPropagation()} onChange={(e) => upd(r.id, (x) => ({ ...x, name: e.currentTarget.value.trim() || x.name }))} /></div>
               <div class="field" onClick={(e) => e.stopPropagation()}><span class="label">橫排（左右）</span><Stepper label="橫排" value={r.rows} max={lim.rows} onChange={(n) => upd(r.id, (x) => resize(x, { rows: n }, cap, lim))} /></div>
               <div class="field" onClick={(e) => e.stopPropagation()}><span class="label">深位（前後）</span><Stepper label="深位" value={r.depth} max={lim.depth} onChange={(n) => upd(r.id, (x) => resize(x, { depth: n }, cap, lim))} /></div>
@@ -82,13 +82,13 @@ export function RoomList(p: {
                     onChange={(t) => upd(r.id, (x) => setRoomTrack(x, t))} />
                   {!r.track && <span class="hint">⚠ 還沒指定，高中部排座會被擋下</span>}</div>
               )}
-              <div class="info">{hasOv && <Badge tone="info">本次專用</Badge>}座位 <b>{roomCapacity(r)}</b>・不排 <b>{roomCapacity(r) - r.seatCount}</b>・可排 <b>{r.seatCount}</b>{r.kind === 'reserve' ? <><br />預備教室，不計入班級教室</> : (!junior && r.track ? <><br />{r.track === 'science' ? '理組' : '文組'}</> : null)}</div>
+              <div class="info">{hasOv && <Badge tone="info">本次專用</Badge>}座位 <b>{roomCapacity(r)}</b>・不排 <b>{roomCapacity(r) - r.seatCount}</b>・可排 <b>{r.seatCount}</b>{r.kind === 'reserve' ? <><br />預備教室，不計入教室座位合計</> : (!junior && r.track ? <><br />{r.track === 'science' ? '理組' : '文組'}</> : null)}</div>
               <div class="btnrow" onClick={(e) => e.stopPropagation()}>
                 <Button small onClick={() => setOpen(isOpen ? null : r.id)}>{isOpen ? '▾ 收合座位' : '▸ 編輯座位'}</Button>
                 <Button small onClick={() => p.onChange(duplicateRoom(p.rooms, r.id))}>複製這間教室</Button>
                 {canOv && <Button small onClick={() => setOpen(isOvOpen ? null : examKey)}>{isOvOpen ? '▾ 收合本次座位' : hasOv ? '編輯本次座位' : '本次調整座位'}</Button>}
                 {canOv && hasOv && <ConfirmButton small kind="default" copy={confirmCopy.restoreRoomOverride(r.name)} onConfirm={() => { p.onOverride!(r.id, null); if (isOvOpen) setOpen(null); }}>還原成共用設定</ConfirmButton>}
-                {r.kind === 'reserve' && <ConfirmButton small copy={confirmCopy.deleteRoom(r.name, !!p.selected?.includes(r.id) || !!p.inUse?.(r.id))} onConfirm={() => p.onChange(removeRoom(p.rooms, r.id))}>刪除</ConfirmButton>}
+                <ConfirmButton small copy={confirmCopy.deleteRoom(r.name, !!p.selected?.includes(r.id) || !!p.inUse?.(r.id))} onConfirm={() => p.onChange(removeRoom(p.rooms, r.id))}>刪除</ConfirmButton>
               </div>
             </div>
             {isOpen && <SeatGrid paper={p.paper} room={shared} cap={cap} lim={lim} onClose={() => setOpen(null)} onChange={(x) => upd(r.id, () => x)} />}
@@ -134,7 +134,7 @@ export function RoomTable(p: {
                 <tr key={r.id} class={`rowtap${isOpen ? ' open' : ''}`} aria-expanded={isOpen} onClick={toggle}>
                   <td><input class="input" style="min-width:150px" value={r.name} aria-label={`教室名稱：${r.name}`} onClick={(e) => e.stopPropagation()}
                     onChange={(e) => upd(r.id, (x) => ({ ...x, name: e.currentTarget.value.trim() || x.name }))} /></td>
-                  <td>{r.kind === 'reserve' ? '預備教室' : '班級教室'}</td>
+                  <td>{r.kind === 'reserve' ? '預備教室' : '教室'}</td>
                   <td onClick={(e) => e.stopPropagation()}>
                     <select class="input" style="min-width:110px" aria-label={`${r.name} 所屬部別`} value={p.division}
                       onChange={(e) => p.onChange(patchRoom(p.rooms, r.id, (x) => setRoomDivision(x, e.currentTarget.value as Division)))}>
@@ -148,19 +148,19 @@ export function RoomTable(p: {
                     <div class="row" style="flex-wrap:nowrap">
                       <Button small {...(isOpen ? { kind: 'primary' as const } : {})} onClick={toggle}>{isOpen ? '收合座位' : '編輯座位'}</Button>
                       <Button small onClick={() => p.onChange(duplicateRoom(p.rooms, r.id))}>複製</Button>
-                      {r.kind === 'reserve' && <ConfirmButton small copy={confirmCopy.deleteRoom(r.name, !!p.inUse?.(r.id))} onConfirm={() => p.onChange(removeRoom(p.rooms, r.id))}>刪除</ConfirmButton>}
+                      <ConfirmButton small copy={confirmCopy.deleteRoom(r.name, !!p.inUse?.(r.id))} onConfirm={() => p.onChange(removeRoom(p.rooms, r.id))}>刪除</ConfirmButton>
                     </div>
                   </td>
                 </tr>,
                 isOpen && <tr key={`${r.id}-edit`} class="editrow"><td colSpan={6}><SeatGrid paper={p.paper} room={r} cap={cap} lim={lim} steppers onClose={() => setOpen(null)} onChange={(x) => upd(r.id, () => x)} /></td></tr>,
               ];
             })}
-            {shown.length === 0 && <tr><td colSpan={6} class="muted">{junior ? '國中部還沒有教室，請按下方「新增班級教室」。' : '高中部還沒有教室。'}</td></tr>}
+            {shown.length === 0 && <tr><td colSpan={6} class="muted">{junior ? '國中部還沒有教室，請按下方「新增教室」。' : '高中部還沒有教室。'}</td></tr>}
           </tbody>
         </table>
       </div>
       <div class="row">
-        <Button onClick={() => p.onChange(addRoom(p.rooms, 'class', p.division, ctx))}>新增班級教室</Button>
+        <Button onClick={() => p.onChange(addRoom(p.rooms, 'class', p.division, ctx))}>新增教室</Button>
         {!junior && <Button onClick={() => p.onChange(addRoom(p.rooms, 'reserve', p.division, ctx))}>新增預備教室</Button>}
         <BulkAdd onAdd={(n) => p.onChange(addRooms(p.rooms, 'class', n, p.division, ctx))} />
       </div>
@@ -168,13 +168,13 @@ export function RoomTable(p: {
   );
 }
 
-/** 一次新增 N 間班級教室（#205）：先選間數再按鈕；新增後可逐間改排數，或用「複製這間教室」 */
+/** 一次新增 N 間教室（#205）：先選間數再按鈕；新增後可逐間改排數，或用「複製這間教室」 */
 function BulkAdd(p: { onAdd: (n: number) => void }) {
   const [n, setN] = useState(6);
   return (
     <span class="row" style="flex-wrap:nowrap;gap:6px">
       <Stepper label="一次新增間數" value={n} max={20} onChange={setN} />
-      <Button onClick={() => p.onAdd(n)}>一次新增 {n} 間班級教室</Button>
+      <Button onClick={() => p.onAdd(n)}>一次新增 {n} 間教室</Button>
     </span>
   );
 }
