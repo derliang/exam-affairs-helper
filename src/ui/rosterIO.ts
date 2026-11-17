@@ -100,3 +100,22 @@ export function rosterChanged(doc: Doc, exam: ExamConfig): boolean {
   if (entries.some((e) => !set.has(key(e)))) return true;
   return exam.participation === 'all' && roster.length !== entries.length;
 }
+
+/** G9：清空目前所選學年度、該部別的整份學生名單（其他學年度、另一部別都不動；班級資料不動） */
+export function clearRoster(doc: Doc, division: Division): Doc {
+  return { ...doc, rosters: { ...doc.rosters, [division]: [] } };
+}
+
+export interface ClearAffected {
+  name: string;
+  /** 已排過座，清空後會變「過期」 */
+  willBeStale: boolean;
+}
+
+/** G9：清空前列出受影響的模擬考＝同部別、同學年度的考試（清空後考生變 0）；已排座的另標「會變過期」 */
+export function examsAffectedByClear(doc: Doc, division: Division): ClearAffected[] {
+  const after = clearRoster(doc, division);
+  return doc.exams
+    .filter((e) => e.division === division && examYear(e) === rosterYearOf(doc))
+    .map((e) => ({ name: e.name, willBeStale: !!examResult(doc, e) && !isStale(doc, e) && isStale(after, e) }));
+}
