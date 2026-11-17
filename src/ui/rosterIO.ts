@@ -98,7 +98,8 @@ export function rosterChanged(doc: Doc, exam: ExamConfig): boolean {
   const key = (x: { classNo: number; seatNo: number; name: string }) => `${x.classNo}-${x.seatNo}-${x.name.trim()}`;
   const set = new Set(roster.map(key));
   if (entries.some((e) => !set.has(key(e)))) return true;
-  return exam.participation === 'all' && roster.length !== entries.length;
+  // G19：名單沒有的人一律視為未參加，人數不同不算變更
+  return false;
 }
 
 /** G9：清空目前所選學年度、該部別的整份學生名單（其他學年度、另一部別都不動；班級資料不動） */
