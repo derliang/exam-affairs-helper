@@ -6,6 +6,7 @@ export type Route =
   | { page: 'init' }
   | { page: 'exams' }
   | { page: 'new' }
+  | { page: 'wizard'; step?: number }
   | { page: 'copyright' }
   | { page: 'privacy' }
   | { page: 'lookup'; examId?: string }

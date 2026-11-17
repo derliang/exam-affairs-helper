@@ -333,6 +333,23 @@ export interface SeatingResult {
   overrides: Override[];
 }
 
+/** G37：環境確認的一列快照（text＝畫面顯示，sig＝比對用） */
+export interface EnvRow { text: string; sig: string }
+/** G37：首次使用精靈進度與「環境已確認」快照（資料夾層級，只存在設定檔，不傳任何地方） */
+export interface EnvState {
+  /** 精靈第 1 步選的學年度與部別（只影響精靈顯示與確認範圍） */
+  year?: number;
+  division?: 'senior' | 'junior' | 'both';
+  /** 精靈已看過（確認或用預設）的步驟 1～5 */
+  seen?: number[];
+  /** 使用者按了「先略過」 */
+  skipped?: boolean;
+  /** 最近一次確認時間（ISO） */
+  confirmedAt?: string;
+  /** 確認當時的設定快照，鍵見 src/ui/env.ts */
+  rows?: Record<string, EnvRow>;
+}
+
 /** 設定頁資料夾層級固定資訊（D61） */
 export interface Settings {
   schoolName: string;
@@ -354,6 +371,8 @@ export interface Settings {
   features?: Record<string, boolean>;
   /** 節次與時長（D94）：只存使用者改過的種類；沒有這個欄位（舊存檔）或沒寫的種類＝內建預設 */
   schedules?: Partial<Record<ScheduleKey, PeriodTable>>;
+  /** G37 環境確認（首次使用精靈與新增考試確認）；舊存檔沒有＝尚未確認 */
+  env?: EnvState;
 }
 
 /** 磁碟檔案外殼：版本與損壞偵測用（D21） */
