@@ -112,7 +112,7 @@ describe('稿 v2.13／v2.15 補項：尚未完成的步驟算待處理、會考�
     const e = exam({ kind: 'bcct', division: 'junior' });
     const f = flowOf(doc(e, false), e, 3);
     expect(f.allIssues.some((i) => i.step === 4)).toBe(false);
-    expect(nextAction(f, 3)).toMatchObject({ kind: 'go', to: 5, label: '完成此步，前往 ⑤ 排座與預覽' });
+    expect(nextAction(f, 3)).toMatchObject({ kind: 'go', to: 5, label: '前往 ⑤ 排座與預覽' });
   });
   it('摘要列「尚未完成」項目用 si todo（琥珀）', async () => {
     const { renderToString } = await import('preact-render-to-string');
@@ -126,7 +126,7 @@ describe('稿 v2.13／v2.15 補項：尚未完成的步驟算待處理、會考�
 describe('前置條件與「下一步」按鈕', () => {
   it('沒問題就前往下一步', () => {
     const f = flowOf(doc(), exam(), 1);
-    expect(nextAction(f, 1)).toEqual({ kind: 'go', to: 2, label: '完成此步，前往 ② 考試名單' });
+    expect(nextAction(f, 1)).toEqual({ kind: 'go', to: 2, label: '前往 ② 考試名單', name: '② 考試名單' });
   });
 
   it('沒匯入名單時，②→③ 停用，說明原因並一鍵回 ②', () => {
@@ -158,7 +158,7 @@ describe('前置條件與「下一步」按鈕', () => {
     const f = flowOf(doc(e), e, 5);
     expect(nextAction(f, 5)).toMatchObject({ kind: 'go', to: 6, pending: { fixStep: 5, fix: '去 ⑤ 開始排座' } });
     const { d, e: e2 } = seated();
-    expect(nextAction(flowOf(d, e2, 5), 5)).toEqual({ kind: 'go', to: 6, label: '完成此步，前往 ⑥ 下載' });
+    expect(nextAction(flowOf(d, e2, 5), 5)).toEqual({ kind: 'go', to: 6, label: '前往 ⑥ 下載', name: '⑥ 下載' });
     expect(nextAction(flowOf(d, e2, 6), 6)).toEqual({ kind: 'none' });
   });
 
@@ -235,7 +235,7 @@ describe('施工N：D82 考生人數、TODO-17 下一步不擋人', () => {
     const e = exam();
     const html = renderToString(StepNextBar({ action: nextAction(flowOf(doc(e, false), e, 2), 2), onGo: () => undefined })!);
     expect(html).toContain('前面還有事沒做完');
-    expect(html).toContain('完成此步，前往 ③ 教室設定');
+    expect(html).toContain('前往 ③ 教室設定');
     expect(html).not.toContain('disabled');
   });
   it('TODO-19：步驟 ⑥ 叫「下載」', async () => {

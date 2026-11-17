@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
 import type { ExamKind, Semester } from '../../data';
-import { Alert, Button, PageHead, Seg } from '../components';
+import { Alert, Button, PageHead } from '../components';
 import { checkExamName } from '../flow';
 import { defaultSemester, newExam, nextRound, previousExam, schoolYear, suggestExamName, type Doc } from '../store';
 
@@ -86,10 +86,11 @@ export function NewExam(p: { doc: Doc; onCancel: () => void; onCreate: (d: Doc, 
           <p class="small muted">高中部：學測、分科；國中部：會考。</p>
 
         <div class="psec"><div class="lab">2　基本資料</div>
-          <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr))">
-            <div class={`field${!check.ok ? ' err' : ''}`}><label for="exam-name">模擬考名稱</label>
-              <input id="exam-name" class="input" value={name} aria-invalid={!check.ok} onInput={(e) => { setName(e.currentTarget.value); setEdited(true); }} />
-              <span class={check.ok ? 'hint' : 'field-msg'}>{check.ok ? '資料夾名稱會用這個名稱' : check.message}</span></div>
+          {/* G17：兩欄對齊——「學年度｜學期」「名稱｜對象」各一列，「次別」整列、說明在格子下方跨整行；手機單欄 */}
+          <div class="newgrid">
+            <div class={`field${yearOk ? '' : ' err'}`}><label for="exam-year">學年度</label>
+              <input id="exam-year" class="input" inputMode="numeric" value={yearText} aria-invalid={!yearOk} onInput={(e) => onYear(e.currentTarget.value)} />
+              <span class={yearOk ? 'hint' : 'field-msg'}>{yearOk ? '預設依今天的日期（8 月起算新學年）；補登過去學年的考試可改，例如 114' : '請填民國年，例如 114'}</span></div>
             <div class="field"><label for="exam-term">學期</label>
               <div class="termcards" role="group" aria-label="學期" id="exam-term">
                 {([['first', '上學期'], ['second', '下學期']] as const).map(([v, l]) => (
@@ -99,15 +100,18 @@ export function NewExam(p: { doc: Doc; onCancel: () => void; onCreate: (d: Doc, 
                 ))}
               </div>
               <span class="hint">學測預設上學期、分科預設下學期（切換類型時自動帶入，仍可自己改）</span></div>
-            <div class={`field${yearOk ? '' : ' err'}`}><label for="exam-year">學年度</label>
-              <input id="exam-year" class="input" inputMode="numeric" value={yearText} aria-invalid={!yearOk} onInput={(e) => onYear(e.currentTarget.value)} />
-              <span class={yearOk ? 'hint' : 'field-msg'}>{yearOk ? '預設依今天的日期（8 月起算新學年）；補登過去學年的考試可改，例如 114' : '請填民國年，例如 114'}</span></div>
             {hasRound && (
-              <div class="field"><span class="label">次別（第幾次）</span>
-                <Seg<string> label="次別" value={String(round)} onChange={(v) => onRound(Number(v))}
-                  options={rounds.map((n) => ({ value: String(n), label: `第${CN[n] ?? n}次` }))} />
+              <div class="field newgrid-wide"><span class="label" id="round-label">次別（第幾次）</span>
+                <div class="roundgrid" role="group" aria-labelledby="round-label">
+                  {rounds.map((n) => (
+                    <button type="button" key={n} class="rbtn" aria-pressed={round === n} onClick={() => onRound(n)}>第{CN[n] ?? n}次</button>
+                  ))}
+                </div>
                 <span class="hint">{kind === 'gsat' ? '第 1、2 次數學是單一科，第 3 次起分為數學A、數學B；建立後可在第 1 步「修改基本資料」更改' : '分科每次考的科目都一樣，次別只用在名稱'}</span></div>
             )}
+            <div class={`field${!check.ok ? ' err' : ''}`}><label for="exam-name">模擬考名稱</label>
+              <input id="exam-name" class="input" value={name} aria-invalid={!check.ok} onInput={(e) => { setName(e.currentTarget.value); setEdited(true); }} />
+              <span class={check.ok ? 'hint' : 'field-msg'}>{check.ok ? '資料夾名稱會用這個名稱' : check.message}</span></div>
             <div class="field"><span class="label">對象</span>
               <div class="input" style="display:flex;align-items:center">{isJ ? '國三' : '高三'}</div>
               <span class="hint">由類型決定</span></div>

@@ -11,6 +11,8 @@ export function countingFS() {
     writeText: async (p, t) => { c.writes++; c.bytes += t.length; return base.writeText(p, t); },
     listDirs: async (d) => { c.lists++; return base.listDirs(d); },
     remove: async (p) => { c.removes++; return base.remove(p); },
+    exists: () => base.exists(),
+    listAll: () => base.listAll(),
   };
   const reset = () => { c.reads = c.writes = c.lists = c.removes = c.bytes = 0; };
   return { fs, base, c, reset };
