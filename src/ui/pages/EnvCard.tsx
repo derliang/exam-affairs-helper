@@ -34,6 +34,7 @@ export function EnvCard(p: {
           <span class="envtext">{l.before !== undefined ? <>{l.before} → <b>{l.text}</b></> : l.text}</span>
           {l.tone !== 'ok' && p.onGoSettings && <Button small onClick={() => p.onGoSettings!(fixOf(l).tab)}>到「{fixOf(l).label}」›</Button>}
           {l.problem && <span class="field-msg" style="flex-basis:100%">{l.problem}</span>}
+          {l.note && <span class="hint" data-k="envnote" style="flex-basis:100%">{l.note}</span>}
         </li>
       ))}
     </ul>

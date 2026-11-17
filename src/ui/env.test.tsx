@@ -74,12 +74,13 @@ describe('紅燈：缺必要設定不能確認', () => {
     expect(r.state).toBe('blocked');
     expect(r.problems.join()).toContain('學校名稱空白');
   });
-  it('班級教室座位比學生少＝紅燈', () => {
+  // #343 起：單一班級座位比人數少只是提醒；同組（理組）班級教室座位總數不夠才是紅燈。這裡理組只有這間 2 座的教室，3 人排不下
+  it('同組班級教室座位總數比學生少＝紅燈', () => {
     const d0 = doc0();
     const d = { ...d0, settings: { ...d0.settings, classrooms: [...d0.settings.classrooms, { id: 'x', name: d0.settings.classes[0]!.name, kind: 'class' as const, rows: 1, depth: 2, seatCount: 2, division: 'senior' as const }] } };
     const r = envReport(d, 'gsat', 4);
     expect(r.state).toBe('blocked');
-    expect(r.problems.join()).toContain('座位不足');
+    expect(r.problems.join()).toContain('高三理組學生 3 人，班級教室座位共 2 個，還差 1 個');
   });
 });
 

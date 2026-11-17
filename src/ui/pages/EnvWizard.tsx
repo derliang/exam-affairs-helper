@@ -10,7 +10,7 @@ import { SCHEDULE_KEYS, isDefaultSchedule, scheduleOf } from '../../core/periods
 import { Alert, Badge, Button, Modal, PageHead, Seg, StepNav, type StepState } from '../components';
 import { defaultSeatGrid } from '../classRooms';
 import {
-  DIV_LABEL, WIZARD_STEPS, ensureClassRooms, finishWizard, markSeen, setWizardChoice, skipWizard, stepMark, stepProblems, wizardComplete, wizardDivision,
+  DIV_LABEL, WIZARD_STEPS, ensureClassRooms, stepLines, finishWizard, markSeen, setWizardChoice, skipWizard, stepMark, stepProblems, wizardComplete, wizardDivision,
   wizardDivisions, wizardSeen, wizardYear, type WizardDivision, type WizardStep,
 } from '../env';
 import { DEFAULT_SEAT_HEADER, headerTemplates } from '../header';
@@ -201,12 +201,14 @@ function Step4(p: SubProps & { divs: Division[] }) {
           </div>
         );
       })}
-      {problems.filter((m) => !m.includes('還沒有學生名單')).map((m) => <Alert key={m} tone="danger">{m}。請到教室清單加座位。</Alert>)}
+      {problems.filter((m) => !m.includes('還沒有學生名單')).map((m) => <Alert key={m} tone="danger">{m}。</Alert>)}
+      {stepLines(p.doc, 4).filter((l) => l.note).map((l) => <Alert key={l.key} tone="info">{l.note}</Alert>)}
       <p class="small muted">座位配置取最接近正方且單邊 ≤ 7（G11）；預備教室可到教室清單新增。</p>
       <div class="btnrow"><Button onClick={() => p.onGoSettings('rooms', p.divs[0]!)}>教室清單 ›</Button></div>
       <Actions prev={p.prev} later={p.later}>
+        {/* #343：「稍後處理」也先依名冊帶出班級教室，教室清單才有列可以加座位；同名教室沿用，座位配置不動 */}
         {problems.length
-          ? <Button kind="primary" onClick={() => p.onNext(p.doc)}>稍後處理，下一步</Button>
+          ? <Button kind="primary" onClick={() => p.onNext(p.divs.reduce((d, div) => ensureClassRooms(d, div), p.doc))}>稍後處理，下一步</Button>
           : <Button kind="primary" onClick={() => p.onNext(p.divs.reduce((d, div) => ensureClassRooms(d, div), p.doc))}>{hasRooms ? '確認並下一步' : '用預設並下一步'}</Button>}
       </Actions>
     </div>
