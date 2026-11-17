@@ -157,6 +157,7 @@ table.tbl tr.total td { font-weight: 700; background: #f4f4f4 }
 .sheet.land table.tbl th.g { background: #e2e2e2 }
 table.tbl td.k-exam { font-weight: 700 }
 table.tbl td.k-study { background: #d9d9d9 }
+table.tbl td.k-multi { background: #fff4c2; font-weight: 700 }
 .sheet.a4 p.lg { font-size: 9.5pt; color: #6b6657; text-align: center; margin: -2mm 0 3mm }
 .sheet.a4 p.sub { font-size: 12pt; text-align: center; margin: 0 0 4mm }
 footer { font-size: 8pt; color: #555; text-align: right; margin-top: 3mm }

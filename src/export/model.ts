@@ -164,8 +164,8 @@ export interface TablePageModel {
   emWidths?: boolean;
   /** 兩層表頭的上層：每項 {text, span}；span 總和＝欄數時，第一層在 heads 之上 */
   headGroups?: { text: string; span: number }[];
-  /** 各格樣式（與 rows 同形）：'exam' 粗體、'study' 灰底；沒給＝一般 */
-  cellKinds?: (('exam' | 'study' | undefined)[])[];
+  /** 各格樣式（與 rows 同形）：'exam' 粗體、'study' 灰底、'multi' 淡黃底加粗（補考多科生）；沒給＝一般 */
+  cellKinds?: (('exam' | 'study' | 'multi' | undefined)[])[];
   /** 表頭上方一行說明（頁首右側教室牌改放在 title 之後） */
   legend?: string;
 }
