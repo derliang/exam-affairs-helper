@@ -573,8 +573,51 @@ class Ctx {
 
   // ───────────── 輸出（第二階段）─────────────
 
+  /**
+   * 自習「盡量同一地點」（WP-2，D141；修訂 D127②）：不在原班自習的人（去綜合教室或核可的他班教室），
+   * 每間收幾人照第一階段，誰去哪間改成：①前面時段已有自習教室的人，這節同一間還有空位就回同一間；
+   * ②其餘依班級座號去同班同學已最多的那間，一樣多就依教室順序。手動「固定自習教室」是硬性指定，不重分。
+   */
+  private stickyStudy(plans: SlotPlan[]): Int32Array[] {
+    if (this.fixed.size) return plans.map((p) => p.studyRoom);
+    const anchor = new Map<number, number>();
+    return plans.map((p) => {
+      const room = Int32Array.from(p.studyRoom);
+      const movable = this.stus.filter((st) => room[st.idx]! >= 0 && room[st.idx] !== this.home.get(st.classNo)?.idx);
+      const cap = new Map<number, number>();
+      for (const st of movable) cap.set(room[st.idx]!, (cap.get(room[st.idx]!) ?? 0) + 1);
+      const order = [...cap.keys()].sort((a, b) => a - b);
+      const classIn = new Map<string, number>();
+      const done = new Set<number>();
+      const put = (st: Stu, r: number): void => {
+        room[st.idx] = r;
+        done.add(st.idx);
+        cap.set(r, cap.get(r)! - 1);
+        classIn.set(`${r}|${st.classNo}`, (classIn.get(`${r}|${st.classNo}`) ?? 0) + 1);
+      };
+      for (const st of movable) {
+        const a = anchor.get(st.idx);
+        if (a !== undefined && (cap.get(a) ?? 0) > 0) put(st, a);
+      }
+      for (const st of movable) {
+        if (done.has(st.idx)) continue;
+        let best = -1;
+        let bestN = -1;
+        for (const r of order) {
+          if (cap.get(r)! <= 0) continue;
+          const n = classIn.get(`${r}|${st.classNo}`) ?? 0;
+          if (n > bestN) { best = r; bestN = n; }
+        }
+        put(st, best);
+      }
+      for (const st of movable) if (!anchor.has(st.idx)) anchor.set(st.idx, room[st.idx]!);
+      return room;
+    });
+  }
+
   private output(plans: SlotPlan[]): PlanOutput {
     const slots = this.input.slots;
+    const studyRoomOf = this.stickyStudy(plans);
     const usage: Record<string, Record<string, 'exam' | 'study'>> = {};
     const exams: ExamPlacement[] = [];
     const study: StudyPlacement[] = [];
@@ -599,7 +642,7 @@ class Ctx {
         for (const row of lay.mixedRows) mixedRows.push({ slotId: slot.id, roomId: room.id, row });
       }
       for (const st of this.stus) {
-        const r = p.studyRoom[st.idx]!;
+        const r = studyRoomOf[s]![st.idx]!;
         if (r < 0) continue;
         const room = this.rooms[r]!;
         u[room.id] = 'study';
@@ -614,24 +657,25 @@ class Ctx {
       for (const i of p.unplaced) unplaced.push({ slotId: slot.id, code: this.stus[i]!.code });
       if (p.unplaced.length && !this.input.allowOtherClassStudy) proposals.push(...this.propose(s, p, plans));
     });
-    // G36：自習參考座位（全日固定：同一人在同一間教室只有一個座位，去考試的那節座位保留）
+    // G36：自習參考座位；WP-2（D141）取消全日固定：每個時段各自排這節在場的人，不再保留去考試的人的座位
     const studySeats: StudySeat[] = [];
-    const studyUnseated: { roomId: string; code: string }[] = [];
-    const byRoom = new Map<number, Stu[]>();
-    plans.forEach((p) => p.studyRoom.forEach((r, i) => {
-      if (r < 0) return;
-      const l = byRoom.get(r) ?? [];
-      if (!l.includes(this.stus[i]!)) l.push(this.stus[i]!);
-      byRoom.set(r, l);
-    }));
-    for (const [r, list] of [...byRoom].sort((a, b) => a[0] - b[0])) {
-      const room = this.rooms[r]!;
-      const fit = list.slice(0, Math.min(room.seats.length, room.studyCap));
-      const m = new Map([['study', fit]]);
-      const lay = layoutRoom(this.shapeRoom(room, m), [{ subject: 'study', students: fit }]);
-      for (const x of lay.placed) studySeats.push({ roomId: room.id, code: x.st.code, row: x.row, depth: x.depth });
-      for (const st of list.slice(fit.length)) studyUnseated.push({ roomId: room.id, code: st.code });
-    }
+    const studyUnseated: { slotId: string; roomId: string; code: string }[] = [];
+    studyRoomOf.forEach((sr, s) => {
+      const byRoom = new Map<number, Stu[]>();
+      for (const st of this.stus) {
+        const r = sr[st.idx]!;
+        if (r >= 0) byRoom.set(r, [...(byRoom.get(r) ?? []), st]);
+      }
+      const slotId = slots[s]!.id;
+      for (const [r, list] of [...byRoom].sort((a, b) => a[0] - b[0])) {
+        const room = this.rooms[r]!;
+        const fit = list.slice(0, Math.min(room.seats.length, room.studyCap));
+        const m = new Map([['study', fit]]);
+        const lay = layoutRoom(this.shapeRoom(room, m), [{ subject: 'study', students: fit }]);
+        for (const x of lay.placed) studySeats.push({ slotId, roomId: room.id, code: x.st.code, row: x.row, depth: x.depth });
+        for (const st of list.slice(fit.length)) studyUnseated.push({ slotId, roomId: room.id, code: st.code });
+      }
+    });
     const out: PlanOutput = { usage, exams, study, mixedRows, proposals, ...(unplaced.length ? { unplaced } : {}), ...(studySeats.length ? { studySeats } : {}), ...(studyUnseated.length ? { studyUnseated } : {}) };
     return { ...out, metrics: computeMetrics(this.input, out) };
   }

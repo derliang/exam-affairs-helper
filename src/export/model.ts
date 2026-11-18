@@ -736,7 +736,7 @@ function studyReferencePages(input: ExportInput, ctx: Ctx, rooms: Map<string, Cl
   const groups = periodGroups(input.exam.subjects, periods);
   const reserve = [...rooms.values()].filter((r) => r.kind === 'reserve');
   const out: SeatPageModel[] = [];
-  for (const ref of studyReference(groups, input.result.detaches, reserve)) {
+  for (const ref of studyReference(groups, input.result.detaches, reserve, input.exam.reserveLayout)) {
     const room = rooms.get(ref.roomId);
     if (!room) continue;
     const g = groups[ref.group]!;

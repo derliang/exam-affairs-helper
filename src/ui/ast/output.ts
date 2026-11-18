@@ -213,42 +213,37 @@ function seatPages(c: Ctx): SeatPageModel[] {
 
 /**
  * 自習參考座位頁（G36、DESIGN 10.26）：每個時段、每間有人自習的教室一頁；只出座位表、不印標籤。
- * 座位全日固定（engine.studySeats）：這節去考試的人，座位保留並標「考試中」；格內一律寫班級、座號、姓名。
- * 座位放不下的人不硬排，列在頁首小標籤「座位不足」。
+ * WP-2（D141）：座位每個時段各自排（engine.studySeats 帶 slotId），不再全日固定、不保留去考試的人的座位。
+ * 格內一律寫班級、座號、姓名；座位放不下的人不硬排，列在頁首小標籤「座位不足」。
  */
 function studyRefPages(c: Ctx): SeatPageModel[] {
   const out = c.plan.out;
+  const key = (slotId: string, roomId: string) => `${slotId}|${roomId}`;
   const seatsOf = new Map<string, { code: string; row: number; depth: number }[]>();
-  for (const x of out.studySeats ?? []) seatsOf.set(x.roomId, [...(seatsOf.get(x.roomId) ?? []), x]);
+  for (const x of out.studySeats ?? []) seatsOf.set(key(x.slotId, x.roomId), [...(seatsOf.get(key(x.slotId, x.roomId)) ?? []), x]);
   const unseated = new Map<string, string[]>();
-  for (const x of out.studyUnseated ?? []) unseated.set(x.roomId, [...(unseated.get(x.roomId) ?? []), x.code]);
+  for (const x of out.studyUnseated ?? []) unseated.set(key(x.slotId, x.roomId), [...(unseated.get(key(x.slotId, x.roomId)) ?? []), x.code]);
   const pages: SeatPageModel[] = [];
   for (const room of c.plan.input.rooms) {
-    const seats = seatsOf.get(room.id);
-    if (!seats) continue;
     for (const s of c.slots) {
       const here = new Set(out.study.filter((x) => x.slotId === s.id && x.roomId === room.id).map((x) => x.code));
       if (here.size === 0) continue;
-      const examNow = new Set(out.exams.filter((x) => x.slotId === s.id).map((x) => x.code));
       const cells = new Map<string, CellModel>();
       const per = new Map<number, number>();
-      let away = 0;
-      for (const x of seats) {
-        const studying = here.has(x.code);
-        if (!studying && !examNow.has(x.code)) continue;
+      for (const x of seatsOf.get(key(s.id, room.id)) ?? []) {
         const no = Number(x.code.slice(0, 2));
-        if (studying) per.set(no, (per.get(no) ?? 0) + 1); else away++;
+        per.set(no, (per.get(no) ?? 0) + 1);
         cells.set(`${x.row}-${x.depth}`, {
           coord: seatText(x.row, x.depth), seat: { row: x.row, depth: x.depth }, code: x.code, classLabel: c.className(no), name: c.nameOf.get(x.code) ?? '',
-          colorBg: studying ? 'FFFFFF' : 'E9E7DF', colorLine: '222222', colorFg: '22201B', tags: [], marks: [], ref: true,
-          corners: [studying ? { kind: 'add', text: '自習' } : { kind: 'x', text: '考試中' }],
+          colorBg: 'FFFFFF', colorLine: '222222', colorFg: '22201B', tags: [], marks: [], ref: true,
+          corners: [{ kind: 'add', text: '自習' }],
         });
       }
       const nos = [...per.keys()].sort((p, q) => p - q);
-      const miss = unseated.get(room.id) ?? [];
+      const miss = unseated.get(key(s.id, room.id)) ?? [];
       pages.push({
         kind: 'seat', title: `${c.exam.name}　${rn(c, room.id)}　自習參考座位（非考試座位）`, examName: c.exam.name, roomName: `${rn(c, room.id)}　參考座位`,
-        chips: ['參考座位（自習），非考試座位', `自習 ${here.size} 人`, slotHead(c, s), ...(away ? [`考試中 ${away} 人（座位保留）`] : []),
+        chips: ['參考座位（自習），非考試座位', `自習 ${here.size} 人`, slotHead(c, s),
           ...(miss.length ? [`座位不足：缺 ${miss.length} 座，未排入 ${miss.map((m) => `${c.className(Number(m.slice(0, 2)))}${m.slice(2)}`).join('、')}`] : [])],
         detachStyle: false,
         rows: Math.max(...room.seats.map((p) => p.row)), depth: Math.max(...room.seats.map((p) => p.depth)),

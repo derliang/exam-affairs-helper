@@ -8,7 +8,7 @@
  *   - peer 同學優先（模式 1）：同一個人每一節坐同一個座位；座位夠就每人一格（同班遞增、每排輪替），
  *     不夠才讓不同節的人共用座位。共用時同班遞增是「盡量」，只回警告、不擋（對 D3 的例外）。
  *     兩種都排不下時改用監考優先的排法並警告。
- * - 抽離自習只出名單：依預備教室順序，每間再依班級、座號排（不給座位）。
+ * - 抽離自習：各間收幾人依預備教室順序坐滿；誰去哪間「盡量同一地點」（WP-2，見 stickyStudyRooms）。
  * - 單人特例（D26）：保留原座位、標註自填地點，不佔預備教室（與節次無關）。
  *   使用者 2026-11-13 裁示裁決 1 定案為維持現狀：單人特例＝手動個別覆寫，不做「同時段只有一人抽離」的自動判斷。
  * - 同一人同一節被標到兩科：報錯（只有使用者把兩科改成同節才會發生）。
@@ -92,7 +92,7 @@ function takeRooms(rooms: readonly Classroom[], start: number, need: number): { 
  * 做法：把那間教室換成「只留平均後座位」的副本（停用其餘座位、seatCount 縮小），其餘排座與驗證邏輯不用改。
  */
 export type ReserveLayout = 'min-depth' | 'min-rows';
-function shapeLastRoom(rooms: Classroom[], need: number, layout: ReserveLayout | undefined): Classroom[] {
+export function shapeLastRoom(rooms: Classroom[], need: number, layout: ReserveLayout | undefined): Classroom[] {
   if (layout === 'min-rows' || rooms.length === 0) return rooms;
   const last = rooms[rooms.length - 1]!;
   const before = rooms.slice(0, -1).reduce((a, r) => a + r.seatCount, 0);
@@ -113,6 +113,48 @@ function shapeLastRoom(rooms: Classroom[], need: number, layout: ReserveLayout |
 function takeExamRooms(rooms: readonly Classroom[], start: number, need: number, layout: ReserveLayout | undefined): { rooms: Classroom[]; end: number } | null {
   const t = takeRooms(rooms, start, need);
   return t ? { rooms: shapeLastRoom(t.rooms, need, layout), end: t.end } : null;
+}
+
+/**
+ * 抽離自習的教室（WP-2，D141）：每組節次各間收幾人照舊（依教室順序坐滿，最後一間收剩下的），
+ * 誰去哪一間改成「盡量同一地點」：①前幾組節次已有自習教室的人，這組有同一間且還有空位就回同一間；
+ * ②其餘依班級、座號，去同班同學已經最多的那間（同班盡量同處），一樣多就依教室順序。
+ * 沒有人有前幾組的教室時，結果與「依教室順序、班級座號切片」完全相同。
+ */
+function stickyStudyRooms(studyCodes: readonly string[][], roomsOf: readonly Classroom[][]): Map<string, string>[] {
+  const anchor = new Map<string, string>();
+  const classOf = (c: string) => parseStudentCode(c)?.classNo ?? c;
+  return studyCodes.map((codes, gi) => {
+    const rooms = roomsOf[gi]!;
+    const cap = new Map<string, number>();
+    let left = codes.length;
+    for (const r of rooms) { const n = Math.min(r.seatCount, left); cap.set(r.id, n); left -= n; }
+    const out = new Map<string, string>();
+    const classIn = new Map<string, number>(); // `${roomId}|${class}` → 人數
+    const put = (c: string, id: string) => {
+      out.set(c, id);
+      cap.set(id, cap.get(id)! - 1);
+      const k = `${id}|${classOf(c)}`;
+      classIn.set(k, (classIn.get(k) ?? 0) + 1);
+    };
+    for (const c of codes) {
+      const a = anchor.get(c);
+      if (a !== undefined && (cap.get(a) ?? 0) > 0) put(c, a);
+    }
+    for (const c of codes) {
+      if (out.has(c)) continue;
+      let best: string | undefined;
+      let bestN = -1;
+      for (const r of rooms) {
+        if ((cap.get(r.id) ?? 0) <= 0) continue;
+        const n = classIn.get(`${r.id}|${classOf(c)}`) ?? 0;
+        if (n > bestN) { best = r.id; bestN = n; }
+      }
+      if (best !== undefined) put(c, best);
+    }
+    for (const [c, id] of out) if (!anchor.has(c)) anchor.set(c, id);
+    return out;
+  });
 }
 
 /** 一組同時進行（或因一科跨兩節而綁在一起）的節次 */
@@ -278,16 +320,7 @@ export function allocateDetaches(input: DetachInput): DetachResult {
   }
   if (errors.length) return { ok: false, errors };
 
-  // 自習：依教室順序，每間再依班級、座號
-  const studyRoomOf = groups.map(() => new Map<string, string>());
-  groups.forEach((_, gi) => {
-    let i = 0;
-    const study = studyCodes[gi]!;
-    for (const room of studyRoomsOf[gi]!) {
-      for (const code of study.slice(i, i + room.seatCount)) studyRoomOf[gi]!.set(code, room.id);
-      i += room.seatCount;
-    }
-  });
+  const studyRoomOf = stickyStudyRooms(studyCodes, studyRoomsOf);
 
   // 依科目順序輸出：先抽離考試（依座位順序），再抽離自習
   const roomIdx = new Map(input.reserveRooms.map((r, i) => [r.id, i]));
