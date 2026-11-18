@@ -114,7 +114,7 @@ function PreviewCard(p: { prepared: Extract<ReturnType<typeof prepareExport>, { 
         ? <Alert tone="danger"><b>這間教室的預覽排不出來</b>：{html.error}。請回 ③ 調整教室的座位。</Alert>
         : html
         ? <iframe class="pvframe" title="下載預覽" sandbox="" srcdoc={html} style={`width:100%;height:${kind === 'label' ? 660 : 620}px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--sunken)`} />
-        : <Alert tone="info">{room?.kind === 'reserve' ? '這間預備教室沒有加考的人：抽離自習不排座位、不印標籤，只出名單。' : '這間教室沒有可預覽的內容。'}</Alert>}
+        : <Alert tone="info">{room?.kind === 'reserve' ? '這間預備教室沒有加考的人：抽離自習的人只排參考座位頁、不印標籤，名單另出。' : '這間教室沒有可預覽的內容。'}</Alert>}
       <p class="small muted">{cap}</p>
     </div>
   );

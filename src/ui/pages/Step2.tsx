@@ -357,13 +357,15 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
           </div>
         </div>
         <p class="small muted">匯入接受 .xlsx 檔；舊版 .xls 請先用 Excel 另存新檔成 .xlsx。</p>
-        <p class="small muted">學生名單＝全體學生；考試名單＝每位學生報名這次考試的情況。學生名單裡有、但考試名單沒有的人，視為未參加：不排座、不出現在座位表，只在下方顯示人數。</p>
+        <p class="small muted">學生名單＝全體學生；考試名單＝每位學生報名這次考試的情況。學生名單裡有、但考試名單沒有的人，{exam.kind !== 'bcct'
+          ? '視為未參加、每節都自習（D125）：不算考生、不印標籤，一樣排自習座位，座位表上列出班級、座號、姓名（第 6 步可取消「含自習參考座位頁」），人數顯示在下方。'
+          : '視為未參加：不排座、不出現在座位表，只在下方顯示人數。'}</p>
         {entries && exam.kind === 'gsat' && roster.length > 0 && notJoin / roster.length >= 0.2 && (
-          <Alert tone="warn">考試名單有 {notJoin} 人（{Math.round((notJoin / roster.length) * 100)}%）不在名單內、被視為未參加。學測通常人人報名，請確認是否漏列。</Alert>
+          <Alert tone="warn">考試名單有 {notJoin} 人（{Math.round((notJoin / roster.length) * 100)}%）不在名單內、被視為未參加（自習）。學測通常人人報名，請確認是否漏列。</Alert>
         )}
         {fullyAbsent > 0 && (
           <Alert tone="info">
-            其中 {fullyAbsent} 位全科缺考：{exam.seatFullyAbsent ? '目前照樣排座。' : '預設不排座、不計領卷份數，⑤ 的考生人數會比這裡少。'}
+            其中 {fullyAbsent} 位全科缺考：{exam.seatFullyAbsent ? '目前照樣排座。' : `預設不排考試座位、不計領卷份數，⑤ 的考生人數會比這裡少。${exam.kind !== 'bcct' ? '他們每節都自習，座位表上會排自習座位。' : ''}`}
             <details><summary class="small">列出是誰</summary><ul>{(entries ?? []).filter((e) => e.subjectIds.length === 0).map((e) => <li key={`${e.classNo}-${e.seatNo}`}>{who(e).replace(/　.*$/, '')}</li>)}</ul></details>
             <label style="margin-left:12px"><input type="checkbox" checked={!!exam.seatFullyAbsent}
               onChange={(e) => { const r = updateExam(doc, exam.id, { seatFullyAbsent: (e.target as HTMLInputElement).checked }); if (r.ok) p.onChange(r.doc); }} /> 全科缺考者仍排座</label>
@@ -373,7 +375,7 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
           <ImportWizard sheets={sheets} exam={exam} classNames={classNames} trackOf={(n) => doc.settings.classes.find((c) => c.division === exam.division && c.no === n)?.track} previous={entries ?? undefined} saved={doc.settings.markMap ?? {}}
             onCancel={() => setSheets(null)} onDone={adopt} />
         )}
-        {entries && <div class="small muted">考生 {entries.length} 人，未參加 {notJoin} 人{fullyAbsent > 0 ? `，全科缺考 ${fullyAbsent} 人` : ''}</div>}
+        {entries && <div class="small muted">考生 {entries.length} 人，{exam.kind === 'gsat' ? '未參加' : '未參加'} {notJoin} 人{fullyAbsent > 0 ? `，全科缺考 ${fullyAbsent} 人` : ''}</div>}
       </div>
     </section>
   );
