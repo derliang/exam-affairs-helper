@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import JSZip from 'jszip';
-import { buildLabelPages, buildSeatPages, LABEL_BOTTOM_MM, LABEL_EDGE_MM, LABEL_FOOTER_MM, LABEL_NOTE_PT, LABEL_PAGE_FIXED_MM, labelFit, labelNoteBlockMm, mmToTwip, PAPER_MM, renderDocx, renderPrintHtml, statLayout } from './index';
+import { buildLabelPages, buildSeatPages, LABEL_BOTTOM_MM, LABEL_EDGE_MM, LABEL_EDGE_X_MM, LABEL_FOOTER_MM, LABEL_NOTE_PT, LABEL_PAGE_FIXED_MM, labelFit, labelNoteBlockMm, mmToTwip, PAPER_MM, renderDocx, renderPrintHtml, statLayout } from './index';
 import { makeFixture } from './fixtures';
 
 const fontDir = new URL('./fonts/', import.meta.url);
@@ -24,7 +24,7 @@ describe('標籤整頁高度（#372 #385 #387、D136）：四周留列印邊距�
           const f = labelFit(l, rows, lines);
           const need = LABEL_EDGE_MM + WORD_HEAD_MM + rows * f.h + labelNoteBlockMm(paper, f.notePt, lines) + 0.35 + LABEL_BOTTOM_MM;
           expect(need, `${paper} ${rows} 列 ${lines} 行`).toBeLessThanOrEqual(PAPER_MM[paper].h);
-          expect(7 * f.w + 2 * LABEL_EDGE_MM).toBeLessThanOrEqual(PAPER_MM[paper].w + 1e-9);
+          expect(7 * f.w + 2 * LABEL_EDGE_X_MM).toBeLessThanOrEqual(PAPER_MM[paper].w + 1e-9);
           if (lines) expect(f.notePt, `${paper} ${rows} 列 ${lines} 行要印注意事項`).toBeGreaterThanOrEqual(LABEL_NOTE_PT[paper].min);
           else expect(f.notePt).toBe(0);
           expect(f.h).toBeLessThanOrEqual(PAPER_MM[paper].h / 7 + 1e-9);
@@ -45,11 +45,11 @@ describe('標籤整頁高度（#372 #385 #387、D136）：四周留列印邊距�
       const f = labelFit(b4, rows, 3);
       expect(f.notePt).toBe(LABEL_NOTE_PT.B4.min);
       expect(f.h).toBeLessThan(353 / 7);
-      expect(f.h).toBeGreaterThan(38); // 「稍微縮小」：B4 深位 7 約 39.5mm
+      expect(f.h).toBeGreaterThan(37); // 「稍微縮小」：B4 深位 7 約 38.4mm（D136，邊距 10mm）
     }
   });
 
-  it('Word：深位 6、7（B4、A3）每間教室一個區段、四周邊距 ≥ 6mm、注意事項有印，且格高＋標題＋注意事項＋下邊界不超過頁高', async () => {
+  it('Word：深位 6、7（B4、A3）每間教室一個區段、四周邊距 ≥ 10mm、注意事項有印，且格高＋標題＋注意事項＋下邊界不超過頁高', async () => {
     for (const paper of ['B4', 'A3'] as const) {
       for (const depth of [6, 7]) {
         const f = makeFixture({ paper });
@@ -71,13 +71,13 @@ describe('標籤整頁高度（#372 #385 #387、D136）：四周留列印邊距�
     }
   });
 
-  it('列印頁（PDF 路徑）：四周 6mm 內距、格高與 Word 同、深位 7 也印注意事項', () => {
+  it('列印頁（PDF 路徑）：四周 10mm 內距、格高與 Word 同、深位 7 也印注意事項', () => {
     const f = makeFixture({ paper: 'B4' });
     f.settings.classrooms[0] = { ...f.settings.classrooms[0]!, rows: 7, depth: 7, seatCount: 49 };
     const html = renderPrintHtml({ label: buildLabelPages(f, 'class') }, meta);
     const fit = labelFit({ paper: 'B4', cols: 7, rows: 7 }, 7, 3);
     expect(html).toContain(`height:${+fit.h.toFixed(2)}mm`);
-    expect(html).toContain('padding:6mm 6mm');
+    expect(html).toContain('padding:10mm 10.5mm');
     expect(html).toContain('class="pp-note"');
   });
 });
