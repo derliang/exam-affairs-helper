@@ -215,7 +215,11 @@ describe('畫面（renderToString）', () => {
     const h3 = fn(d, 3);
     expect(h3).toContain('科目名稱與時長依大考規定（唯讀）');
     expect(h3).toContain('英文 100');
-    expect(fn(d, 4)).toContain('將自動帶出');
+    // 使用者 2026-11-18：進入步驟 4 就依名冊帶出班級教室（useEffect）；帶出後與考試 ③ 同一個教室清單列，有學生人數、編輯座位、新增預備教室
+    const h4 = fn(ensureClassRooms(d, 'senior'), 4);
+    for (const s of ['class="roomrow', '編輯座位 ▾', '學生 ', '新增預備教室', '到共用設定的教室清單']) expect(h4).toContain(s);
+    expect(h4).not.toContain('role="switch"');
+    expect(h4).not.toContain('<table');
     expect(fn({ ...d, settings: { ...d.settings, schoolName: '' } }, 5)).toContain('不能留空白');
     const done = [1, 2, 3, 4, 5].reduce((x, n) => markSeen(x, n as 1), ensureClassRooms(d, 'senior'));
     expect(fn(done, 6)).toContain('完成設定');

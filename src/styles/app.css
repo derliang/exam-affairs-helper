@@ -164,7 +164,9 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
 .sheet .cell .mk{margin-top:2px}
 .sheet-grid{display:grid;border-top:1px solid var(--cut);border-left:1px solid var(--cut);width:max-content}
 .sheet-grid .cell{border-width:0 1px 1px 0}
-.cls-pal{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.cls-pal{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+/* #407：班級卡片固定每行 3 個（01～03、04～06 各一行）；窄於 560px 每行 2 個（稿 v2.61） */
+@media (max-width:560px){.cls-pal{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .cls-pal .cp{border-radius:var(--r-md);padding:10px 12px;border:1px solid;display:grid;gap:2px}
 .cp .seg{display:grid;grid-template-columns:1fr 1fr;width:100%}
 .cp .seg button{padding:0 4px;min-height:32px;font-size:13px}
@@ -379,7 +381,6 @@ section>header p{color:var(--text-2);max-width:72ch}
 .fmtseg{width:max-content;max-width:100%}
 .fmtseg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-on);border-color:var(--accent)}
 .roomrow{display:grid;grid-template-columns:auto minmax(150px,1.3fr) auto auto minmax(190px,1fr) auto;gap:10px 14px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface)}
-.roomrow.hastrack{grid-template-columns:auto minmax(120px,1fr) auto auto auto minmax(140px,auto) auto}
 .roomrow.on{border-color:var(--accent-line);background:var(--accent-soft)}
 .roomrow.off>:not(.swf){opacity:.55}
 .roomrow .no{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:13px;border:1.5px solid var(--line-2);background:var(--surface)}
@@ -466,7 +467,6 @@ table.t{border-collapse:collapse;width:100%;min-width:560px}
 /* 手機（≤560px）頁首導覽有四列、約占螢幕四分之一：不黏頂，內容才有地方讀；摘要列改黏在視窗最上緣（PR #78 逐頁對稿發現） */
 @media (max-width:560px){.pbar{position:static}.sumbar{top:0}}
 /* V3-1：教室列（含組別鈕）在任何寬度都可換行，不再依視窗寬度（卡片寬度才是實際限制） */
-.roomrow.hastrack{display:flex;flex-wrap:wrap}.roomrow.hastrack>.field:nth-of-type(1){flex:1 1 180px}.roomrow.hastrack>.field{flex:0 1 auto}.roomrow.hastrack .info{flex:1 1 auto}
 /* V2-5：窄螢幕分段鈕撐滿容器、文字可換行，不再被截 */
 @media (max-width:480px){.seg{width:100%}.seg button{flex:1 1 0;white-space:normal;line-height:1.3;padding-block:6px}}
 /* 分科 ⑤ 座位圖、⑥ 預覽的教室切換鈕：教室多（≥5 個）時 375 寬不再被擠成一字一行，改不換行、分段鈕內橫向捲動（稿的示範只有 3 間，教室多時未定義，補驗 2026-11-15 AST-Z1） */
@@ -474,7 +474,6 @@ table.t{border-collapse:collapse;width:100%;min-width:560px}
 /* V3-1 根因：.rw 是 grid，子項預設 min-width:auto 會被內容撐寬而突出卡片 */
 .rw>*{min-width:0}
 /* 教室列：預備教室、國中部班級教室（沒有組別欄）與有組別欄的列用同一套可換行排法，不再突出卡片 */
-.roomrow.notrack{display:flex;flex-wrap:wrap}.roomrow.notrack>.field:nth-of-type(1){flex:1 1 180px}.roomrow.notrack>.field{flex:0 1 auto}.roomrow.notrack .info{flex:1 1 auto}
 .roomrow>.btnrow{flex:0 0 auto;margin-left:auto}
 /* 步驟標題卡：說明文字可收縮，「下一步」鈕留在右側（原型稿的位置）；放不下才換行，不再因說明較長就掉到標題下面 */
 .stephead>div:first-child{flex:1 1 260px;min-width:0}
@@ -597,7 +596,6 @@ table.t{border-collapse:collapse;width:100%;min-width:560px}
 .fmtseg{width:max-content;max-width:100%}
 .fmtseg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-on);border-color:var(--accent)}
 .roomrow{display:grid;grid-template-columns:auto minmax(150px,1.3fr) auto auto minmax(190px,1fr) auto;gap:10px 14px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface)}
-.roomrow.hastrack{grid-template-columns:auto minmax(120px,1fr) auto auto auto minmax(140px,auto) auto}
 .roomrow.on{border-color:var(--accent-line);background:var(--accent-soft)}
 .roomrow.off>:not(.swf){opacity:.55}
 .roomrow .no{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:13px;border:1.5px solid var(--line-2);background:var(--surface)}
@@ -684,13 +682,11 @@ table.t{border-collapse:collapse;width:100%;min-width:560px}
 /* 手機（≤560px）頁首導覽有四列、約占螢幕四分之一：不黏頂，內容才有地方讀；摘要列改黏在視窗最上緣（PR #78 逐頁對稿發現） */
 @media (max-width:560px){.pbar{position:static}.sumbar{top:0}}
 /* V3-1：教室列（含組別鈕）在任何寬度都可換行，不再依視窗寬度（卡片寬度才是實際限制） */
-.roomrow.hastrack{display:flex;flex-wrap:wrap}.roomrow.hastrack>.field:nth-of-type(1){flex:1 1 180px}.roomrow.hastrack>.field{flex:0 1 auto}.roomrow.hastrack .info{flex:1 1 auto}
 /* V2-5：窄螢幕分段鈕撐滿容器、文字可換行，不再被截 */
 @media (max-width:480px){.seg{width:100%}.seg button{flex:1 1 0;white-space:normal;line-height:1.3;padding-block:6px}}
 /* V3-1 根因：.rw 是 grid，子項預設 min-width:auto 會被內容撐寬而突出卡片 */
 .rw>*{min-width:0}
 /* 教室列：預備教室、國中部班級教室（沒有組別欄）與有組別欄的列用同一套可換行排法，不再突出卡片 */
-.roomrow.notrack{display:flex;flex-wrap:wrap}.roomrow.notrack>.field:nth-of-type(1){flex:1 1 180px}.roomrow.notrack>.field{flex:0 1 auto}.roomrow.notrack .info{flex:1 1 auto}
 .roomrow>.btnrow{flex:0 0 auto;margin-left:auto}
 /* 步驟標題卡：說明文字可收縮，「下一步」鈕留在右側（原型稿的位置）；放不下才換行，不再因說明較長就掉到標題下面 */
 .stephead>div:first-child{flex:1 1 260px;min-width:0}
@@ -896,17 +892,6 @@ table.t{border-collapse:collapse;width:100%;min-width:560px}
 details.more{font-size:14px;color:var(--text-2)}details.more summary{cursor:pointer;font-weight:700;color:var(--accent-ink);min-height:32px;display:flex;align-items:center}details.more>div{padding:6px 0 2px}
 .wsret{margin-bottom:12px;gap:10px;align-items:center}
 /* 分科新模型（D99 核心批次，稿 v2.27） */
-.astrow{grid-template-columns:minmax(150px,1.2fr) auto minmax(130px,1fr) minmax(140px,1fr) auto;cursor:auto}
-.astrow .stepper .icon-btn{width:36px;height:36px}
-.aed{display:grid;gap:10px;padding:12px;border:1px solid var(--line);border-top:0;border-radius:0 0 var(--r-md) var(--r-md);background:var(--sunken);overflow-x:auto}
-.aedgrid,.aedseat{display:grid;gap:6px;min-width:560px}
-.aedcol{display:grid;gap:2px;justify-items:center}
-.aedcol .stepper{gap:2px}.aedcol .icon-btn{width:30px;height:30px;font-size:15px}.aedcol output{min-width:20px;font-size:15px}
-.sq{min-height:36px;border-radius:6px;border:1.5px solid var(--line-2);background:var(--surface);color:var(--text-2);font:inherit;font-size:12px;font-weight:700;cursor:pointer}
-.sq:hover{border-color:var(--text-3)}
-.sq.off{background:repeating-linear-gradient(135deg,var(--sunken) 0 5px,var(--line-2) 5px 10px);border-style:dashed;color:var(--text-3)}
-.sq.none{border:0;background:repeating-linear-gradient(135deg,transparent 0 5px,var(--line) 5px 10px);min-height:36px;border-radius:6px;opacity:.6}
-.sq:focus-visible{outline:3px solid var(--accent);outline-offset:1px}
 .mgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
 .mcard{display:grid;gap:8px;align-content:start;padding:14px;border:1.5px solid var(--line);border-radius:var(--r-md);background:var(--surface)}
 .mcard.on{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
@@ -941,7 +926,7 @@ details.more{font-size:14px;color:var(--text-2)}details.more summary{cursor:poin
 .ulg i.u-pend{background:var(--warn-soft);border-color:var(--warn-line)}.ulg i.u-home{background:transparent}
 .propcard .acts{display:grid;gap:6px;align-content:start;min-width:140px}
 .chartbox{overflow-x:auto;max-width:100%}
-@media(max-width:700px){.astrow{grid-template-columns:1fr 1fr}.propcard{grid-template-columns:auto 1fr}.propcard .acts{grid-column:1/-1;grid-auto-flow:column}}
+@media(max-width:700px){.propcard{grid-template-columns:auto 1fr}.propcard .acts{grid-column:1/-1;grid-auto-flow:column}}
 
 /* ───── 分科時程、鎖定、階段、版本（AST-3；稿 v2.34 的階段條、時程候選、鎖定） ───── */
 .stg{display:flex;flex-wrap:wrap;gap:8px;list-style:none;margin:0;padding:0}
@@ -1014,10 +999,6 @@ details.more{font-size:14px;color:var(--text-2)}details.more summary{cursor:poin
 .folder-lost-card{border-color:var(--danger-line,var(--line))}
 .empty.folder-lost-empty{display:grid;gap:10px}
 
-/* G21 第 3 步教室表格（批次 B）：縮圖、更多選單 */
-.roomtable td{vertical-align:middle}
-.roomtable .info{font-size:13px;color:var(--text-2);font-variant-numeric:tabular-nums}
-.roomtable tr.off>td:not(:first-child){opacity:.55}
 .seatthumb{display:inline-grid;gap:1px;padding:3px;border:1px solid var(--line-2);border-radius:var(--r-sm,4px);background:var(--surface);flex:none;align-self:center}
 .seatthumb i{width:5px;height:5px;border-radius:1px;background:var(--accent)}
 .seatthumb i.off{background:var(--line-2);opacity:.5}
@@ -1025,15 +1006,6 @@ details.more{font-size:14px;color:var(--text-2)}details.more summary{cursor:poin
 .moremenu>summary{list-style:none;cursor:pointer;min-width:36px;height:32px;display:grid;place-items:center;border:1px solid var(--line-2);border-radius:var(--r-md);background:var(--surface);font-weight:700}
 .moremenu>summary::-webkit-details-marker{display:none}
 .moremenu .menu{position:absolute;right:0;top:36px;z-index:5;min-width:150px;padding:8px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);box-shadow:0 4px 14px rgba(0,0,0,.15)}
-.roomtable{min-width:780px}
-.roomtable td{white-space:nowrap}
-.roomtable td .field{min-width:130px}
-.roomtable td .info,.roomtable td.info{white-space:normal;min-width:130px}
-.roomtable tr.editrow td{white-space:normal}
-/* #357：表格比捲動容器寬時，列下展開的編輯面板仍完整顯示在容器可視寬度內（貼左、寬＝容器寬），不跟著表格被截；座位格再寬才在面板內自己捲動。
-   white-space：展開列的儲存格也是第一格，會吃到 .t.compact td:first-child 的不換行，說明文字整行撐寬面板，所以在面板上改回可換行 */
-.roomscroll{container-type:inline-size}
-.roomscroll .editpane{position:sticky;left:0;width:100cqw;box-sizing:border-box;white-space:normal}
 
 /* G37 環境確認（稿 v2.50）：只用既有 tokens；狀態不靠顏色，圖形＋文字＋左邊條 */
 .envone{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:10px 12px;border:1px solid var(--line);border-left:6px solid var(--ok-bar);border-radius:var(--r-md);background:var(--surface)}
@@ -1079,3 +1051,19 @@ ul.plain{margin:4px 0 0;padding-left:1.2em}
   .rc-row{grid-template-columns:1fr}
   .rc-table{display:none}.rc-cards{display:grid}
 }
+
+
+/* D138 教室清單全站同一元件（稿 v2.61、DESIGN 10.31）：考試 ③（學測、會考、分科）、共用設定、首次設定精靈都用 RoomList。
+   每列一律可換行的 flex，不橫向捲動、不切欄；展開時整列與編輯區淡藍底；座位格寬跟著容器縮（最寬 52px），不出捲軸 */
+.roomrow{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;cursor:pointer}
+.roomrow>.field{flex:1 1 180px;min-width:0}
+.roomrow .roomcfg{flex-wrap:nowrap;gap:8px}
+.roomrow .info{white-space:normal;flex:1 1 160px}
+.roomrow>.btnrow{flex:0 1 auto;margin-left:auto;gap:6px}
+.roomrow input,.roomrow select,.roomrow .seg,.roomrow .stepper{cursor:auto}
+.roomrow.on{border-radius:var(--r-md) var(--r-md) 0 0}
+.roomlist .editpane{padding:10px 12px;border:1px solid var(--accent-line);border-top:0;border-radius:0 0 var(--r-md) var(--r-md);background:var(--accent-soft);margin-top:-8px}
+.seatthumb i.none{background:transparent}
+.prev .pgrid .pc{width:100%;min-width:0}
+.pc.none{border:0;height:44px;border-radius:6px;background:repeating-linear-gradient(135deg,transparent 0 4px,var(--line) 4px 8px);opacity:.6}
+.rowdepths{gap:8px 14px}

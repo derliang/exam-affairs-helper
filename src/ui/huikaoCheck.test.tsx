@@ -108,7 +108,7 @@ describe('步驟③ 教室列：國中部', () => {
     expect(j).not.toContain('理組');
     expect(j).not.toContain('新增預備教室');
     const s = renderToString(<RoomList rooms={rooms} paper="B4" onChange={noop} selected={['c1']} onSelect={noop} />);
-    expect(s).toContain('<th>組別</th>');
+    expect(s).toContain('理組');
     expect(s).toContain('新增預備教室');
   });
   it('國中部會考整頁③不出現文理組字樣', () => {

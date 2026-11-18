@@ -63,6 +63,30 @@ export function toggleSeat(r: Classroom, row: number, depth: number, cap: number
 
 export const isSeatOff = (r: Classroom, row: number, depth: number): boolean => offSet(r).has(k(row, depth));
 
+/**
+ * 每排深位不同的教室改「橫排數」（D138，三種考試共用的座位編輯）：新增的排深位＝目前最大深位、全部可排；減排＝去掉最後一排。
+ * 橫排 1..上限（舊資料本來就超過時允許改小）、座位格總數不得超過 cap，不合法就原樣回傳。
+ */
+export function setRowCount(r: Classroom, rows: number, limits: { rows: number; cap: number }): Classroom {
+  if (rows < 1 || rows === r.rows || (rows > limits.rows && rows > r.rows)) return r;
+  const depths = rowDepthsOf(r);
+  const mx = Math.max(...depths);
+  while (depths.length < rows) depths.push(mx);
+  depths.length = rows;
+  if (depths.reduce((n, d) => n + d, 0) > Math.max(limits.cap, seatSlotCount(r)) && rows > r.rows) return r;
+  const out = rebuild({ ...r, rows }, depths, offSet(r));
+  return out.seatCount < 1 ? r : out;
+}
+
+/** 每排深位不同的教室改整間「深位」：每一排都改成同一個深位數（D138）；限制同 setRowCount */
+export function setAllDepth(r: Classroom, depth: number, limits: { depth: number; cap: number }): Classroom {
+  if (depth < 1 || (depth > limits.depth && depth > r.depth)) return r;
+  const depths = rowDepthsOf(r).map(() => depth);
+  if (depths.length * depth > Math.max(limits.cap, seatSlotCount(r)) && depth > r.depth) return r;
+  const out = rebuild(r, depths, offSet(r));
+  return out.seatCount < 1 ? r : out;
+}
+
 /** 自習容量 ±1（可調高也可調低，不得小於 0；與可排座位相同就不存，＝回到預設） */
 export function stepStudyCapacity(r: Classroom, delta: 1 | -1): Classroom {
   const n = Math.max(0, studyCapacityOf(r) + delta);

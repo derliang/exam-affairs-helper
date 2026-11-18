@@ -63,12 +63,13 @@ describe('步驟③依部別列教室（校-33）', () => {
 });
 
 describe('共用設定「教室清單」（校-43、校-50）', () => {
-  it('表格：名稱／類型／橫排×深位／可排座位；只有預備教室有刪除；整列可點展開', () => {
+  it('與考試 ③ 同一個教室清單列（D138）：沒有列入開關、多「所屬部別」；只有預備教室有刪除；整列可點展開', () => {
     const html = renderToString(<RoomTable division="senior" rooms={rooms} paper="B4" onChange={noop} />);
-    for (const h of ['>名稱<', '>類型<', '>橫排×深位<', '>可排座位<']) expect(html).toContain(h);
-    expect(html).toContain('5×6');
-    expect(html).toContain('rowtap');
-    expect(html.match(/>編輯座位</g)).toHaveLength(2); // 高中部 2 間
+    expect(html).not.toContain('<table');
+    expect(html).not.toContain('role="switch"');
+    for (const h of ['class="roomrow', 'seatthumb', '所屬部別', '>預備教室<']) expect(html).toContain(h);
+    expect(html).toContain('5</b> 排×<b>6</b> 深位');
+    expect(html.match(/>編輯座位 ▾</g)).toHaveLength(2); // 高中部 2 間
     expect(html.match(/>刪除</g)).toHaveLength(1); // G22：班級教室不能刪，只有預備教室（高中部 1 間）
     expect(html).not.toContain('國一教室');
   });
