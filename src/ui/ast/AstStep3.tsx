@@ -1,100 +1,29 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect } from 'preact/hooks';
 import { missingClassRooms, syncClassRooms } from '../classRooms';
-import type { Classroom, ExamConfig, LabelPaper, RoomSeatLayout, Track } from '../../data';
-import { effectiveRoom, rowDepthOf, roomDivision, studyCapacityOf } from '../../data';
-import { Alert, Badge, Button, ConfirmButton, More, Seg, StepHead } from '../components';
-import { confirmCopy } from '../flow';
-import { layoutOf } from '../components/RoomList';
+import type { Classroom, ExamConfig, RoomSeatLayout, Track } from '../../data';
+import { roomDivision, studyCapacityOf } from '../../data';
+import { Alert, Badge, Button, More, Seg, StepHead, Stepper } from '../components';
+import { RoomList } from '../components/RoomList';
 import { AST_STEP_BLURBS } from '../nav';
-import { addRoom, labelSplitNote, newClassRoomIds, patchRoom, roomLimitsOf, seatCap, seatLimitNote, seatLimits } from '../rooms';
+import { newClassRoomIds, patchRoom } from '../rooms';
 import { setClassTrack, updateExam, type Doc } from '../store';
 import { classColorVars } from '../colors';
 import { PhaseGuard } from './AstRelease';
 import { LeaveCard } from './AstLeave';
 import { astCapacity, astModeOf, astPlan, astPlanPending, MODE_LABEL } from './model';
-import { isSeatOff, resetStudyCapacity, rowDepthsOf, stepRowDepth, stepStudyCapacity, studyAdjust, toggleSeat } from './roomEdit';
+import { resetStudyCapacity, stepStudyCapacity, studyAdjust } from './roomEdit';
 
-/** 座位圖編輯器：每排一個 −／＋（深位數可不同）、點座位停用／恢復（稿 v2.34 ③） */
-function SeatEditor(p: { room: Classroom; cap: number; maxDepth: number; onChange: (r: Classroom) => void; paper: LabelPaper; examOnly?: boolean }) {
-  const { room } = p;
-  const depths = rowDepthsOf(room);
-  const mx = Math.max(...depths);
-  const cols = `repeat(${depths.length},minmax(54px,1fr))`;
-  const cells: preact.JSX.Element[] = [];
-  for (let d = mx; d >= 1; d--) {
-    for (let c = 1; c <= depths.length; c++) {
-      if (d > rowDepthOf(room, c)) { cells.push(<span key={`${c}-${d}`} class="sq none" aria-hidden="true" />); continue; }
-      const off = isSeatOff(room, c, d);
-      cells.push(
-        <button key={`${c}-${d}`} type="button" class={`sq${off ? ' off' : ''}`} aria-pressed={!off}
-          aria-label={`第${c}排第${d}個，${off ? '已停用，點一下恢復' : '可排，點一下停用'}`} onClick={() => p.onChange(toggleSeat(room, c, d, p.cap))}>{off ? '停' : `${c}-${d}`}</button>,
-      );
-    }
-  }
+/** 分科教室列的額外欄：自習容量（預設＝可排座位，可手動調高；稿 v2.34 ③）。教室列本身用全站同一個 RoomList（D138） */
+function StudyCap(p: { shared: Classroom; onChange: (r: Classroom) => void }) {
+  const sc = studyCapacityOf(p.shared);
+  const adj = studyAdjust(p.shared);
   return (
-    <div class="aed">
-      {p.examOnly && <div><Badge tone="info">本次專用</Badge> <span class="small muted">編輯本次座位圖：這裡的調整只用在這次考試，不會改動共用教室清單。</span></div>}
-      <div class="small muted">每一排的深位數可以不同（用 − ＋ 調整）；點座位可停用或恢復，停用的座位不排人。沒有座位的地方（該排深位比較少）也畫成斜線。座位上限：最多 {p.cap} 個座位、每排最多 {p.maxDepth} 個深位；超過 7×7 的舊教室標籤無法對應，請縮小。{seatLimitNote(room) ? seatLimitNote(room) : ''}</div>
-      {labelSplitNote(room, p.paper) && <div class="small hint">{labelSplitNote(room, p.paper)}</div>}
-      <div class="aedgrid" style={{ gridTemplateColumns: cols }}>
-        {depths.map((d, i) => (
-          <div class="aedcol" key={i}>
-            <span class="small muted">第{i + 1}排</span>
-            <div class="stepper">
-              <button type="button" class="icon-btn" aria-label={`第${i + 1}排深位減一`} disabled={d <= 1} onClick={() => p.onChange(stepRowDepth(room, i + 1, -1, { depth: p.maxDepth, cap: p.cap }))}>−</button>
-              <output>{d}</output>
-              <button type="button" class="icon-btn" aria-label={`第${i + 1}排深位加一`} disabled={d >= p.maxDepth} onClick={() => p.onChange(stepRowDepth(room, i + 1, 1, { depth: p.maxDepth, cap: p.cap }))}>＋</button>
-            </div>
-          </div>
-        ))}
+    <div class="field" style="gap:2px"><span class="small muted">自習容量（預設＝可排座位）</span>
+      <div class="row" style="gap:6px">
+        <Stepper label="自習容量" value={sc} min={0} max={999} onChange={(n) => p.onChange(stepStudyCapacity(p.shared, n > sc ? 1 : -1))} />
+        {adj.kind === 'raised' ? <Badge tone="warn">已手動調高 +{adj.diff}</Badge> : adj.kind === 'lowered' ? <Badge>已調低 {adj.diff}</Badge> : <span class="small muted">＝可排座位</span>}
+        {adj.kind !== 'default' && <Button small kind="ghost" onClick={() => p.onChange(resetStudyCapacity(p.shared))}>自習容量還原</Button>}
       </div>
-      <div class="aedseat" style={{ gridTemplateColumns: cols }}>{cells}</div>
-      <p class="small muted" style="text-align:center"><b>▔▔ 講臺（深位 1 靠講臺）▔▔</b></p>
-    </div>
-  );
-}
-
-function RoomRow(p: {
-  room: Classroom; badge: preact.JSX.Element; open: boolean; onToggleOpen: () => void; onChange: (r: Classroom) => void; cap: number; maxDepth: number;
-  on: boolean; onSwitch: (v: boolean) => void; switchLabel: string; trackBadge?: string;
-  paper: LabelPaper;
-  /** 本次考試專用座位配置（#210）：room＝本次實際生效的教室；shared＝共用教室清單裡的原樣；ov 沒傳＝不提供本次調整 */
-  shared: Classroom;
-  ov?: { has: boolean; open: boolean; onToggle: () => void; onChange: (l: RoomSeatLayout) => void; onRestore: () => void };
-}) {
-  const { room: r } = p;
-  const depths = rowDepthsOf(r);
-  const slots = depths.reduce((n, d) => n + d, 0);
-  const sc = studyCapacityOf(r);
-  const adj = studyAdjust(r);
-  const same = Math.min(...depths) === Math.max(...depths);
-  return (
-    <div class="rw">
-      <div class={`roomrow astrow${p.on ? '' : ' off'}`}>
-        <div class="row" style="flex-wrap:nowrap;gap:8px">{p.badge}<b>{r.name}</b>{p.ov?.has && <Badge tone="info">本次專用</Badge>}</div>
-        <div>
-          <button type="button" class="btn btn-sm" aria-pressed={p.on} aria-label={`${p.switchLabel}：${r.name}`} onClick={() => p.onSwitch(!p.on)}>{p.on ? `${p.switchLabel} ✓` : `${p.switchLabel.replace('可用', '不用').replace('列入', '不列入')}`}</button>
-          {p.trackBadge && <span class="badge" style="margin-left:6px">{p.trackBadge}</span>}
-        </div>
-        <div class="info">座位 <b>{slots}</b>・停用 <b>{slots - r.seatCount}</b>・可排 <b>{r.seatCount}</b><br />
-          <span class="small muted">{depths.length} 排，深位 {same ? `每排 ${depths[0]}` : `每排不同（${depths.join('、')}）`}</span></div>
-        <div class="field" style="gap:2px"><span class="small muted">自習容量（預設＝可排座位）</span>
-          <div class="stepper">
-            <button type="button" class="icon-btn" aria-label="自習容量減一" disabled={sc <= 0} onClick={() => p.onChange(stepStudyCapacity(p.shared, -1))}>−</button>
-            <output>{sc}</output>
-            <button type="button" class="icon-btn" aria-label="自習容量加一" onClick={() => p.onChange(stepStudyCapacity(p.shared, 1))}>＋</button>
-          </div>
-          {adj.kind === 'raised' ? <span class="badge b-warn">已手動調高 +{adj.diff}</span> : adj.kind === 'lowered' ? <span class="badge">已調低 {adj.diff}</span> : <span class="small muted">＝可排座位</span>}
-        </div>
-        <div class="row" style="flex-wrap:nowrap">
-          <Button small {...(p.open ? { kind: 'primary' as const } : {})} onClick={p.onToggleOpen}>{p.open ? '收合座位圖' : '編輯座位圖'}</Button>
-          {p.ov && p.on && <Button small onClick={p.ov.onToggle}>{p.ov.open ? '收合本次座位' : p.ov.has ? '調整本次座位' : '調整本次座位'}</Button>}
-          {p.ov?.has && p.on && <ConfirmButton small kind="default" copy={confirmCopy.restoreRoomOverride(r.name)} onConfirm={p.ov.onRestore}>還原成共用設定</ConfirmButton>}
-          {adj.kind !== 'default' && <Button small kind="ghost" onClick={() => p.onChange(resetStudyCapacity(p.shared))}>自習容量還原</Button>}
-        </div>
-      </div>
-      {p.open && <SeatEditor room={p.shared} paper={p.paper} cap={p.cap} maxDepth={p.maxDepth} onChange={p.onChange} />}
-      {p.ov?.open && p.on && <SeatEditor room={r} paper={p.paper} examOnly cap={p.cap} maxDepth={p.maxDepth} onChange={(x) => p.ov!.onChange(layoutOf(x))} />}
     </div>
   );
 }
@@ -102,15 +31,12 @@ function RoomRow(p: {
 /** ③ 教室與自習空間（分科，DESIGN 10.14、稿 v2.34）：狀態檢核、班級、綜合教室、自習可以去哪裡、班級教室與座位圖 */
 export function AstStep3(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => void; onToRooms?: () => void; onStep?: (n: 5) => void }) {
   const { doc, exam } = p;
-  const [open, setOpen] = useState<string | null>(null);
   // G11：本次還沒選任何教室、名單有班級，就依班級自動帶出班級教室（同一般考試的 ③）
   const lackRooms = missingClassRooms(doc, exam);
   useEffect(() => {
     if (exam.classroomIds.length === 0 && lackRooms > 0) p.onChange(syncClassRooms(doc, exam));
   }, [exam.id, exam.classroomIds.length, lackRooms]);
   const paper = doc.settings.defaultLabelPaper;
-  const cap = seatCap(paper);
-  const lim = seatLimits(paper);
   const ctx = { classes: doc.settings.classes, exams: doc.exams };
   const all = doc.settings.classrooms;
   const inDiv = (r: Classroom) => roomDivision(r, ctx) === 'senior';
@@ -135,17 +61,16 @@ export function AstStep3(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
     if (l) cur[id] = l; else delete cur[id];
     patchExam({ roomOverrides: cur });
   };
-  const ovOf = (r: Classroom) => ({
-    has: !!exam.roomOverrides?.[r.id], open: open === `${r.id}#exam`,
-    onToggle: () => setOpen(open === `${r.id}#exam` ? null : `${r.id}#exam`),
-    onChange: (l: RoomSeatLayout) => setOv(r.id, l),
-    onRestore: () => { setOv(r.id, null); if (open === `${r.id}#exam`) setOpen(null); },
-  });
   const upd = (id: string, r: Classroom) => setRooms(patchRoom(all, id, () => r));
-  const toggleId = (id: string, v: boolean) => setIds(v ? [...exam.classroomIds, id] : exam.classroomIds.filter((x) => x !== id));
+  /** 兩張卡（綜合教室、班級教室）共用的教室清單設定：同一個 RoomList（D138） */
+  const listProps = {
+    rooms: all, paper, onChange: setRooms, division: 'senior' as const, exams: doc.exams, classes: doc.settings.classes,
+    selected: exam.classroomIds, onSelect: setIds, overrides: exam.roomOverrides, onOverride: setOv,
+    inUse: (id: string) => doc.exams.some((e) => e.id !== exam.id && e.classroomIds.includes(id)),
+    extra: (_r: Classroom, shared: Classroom) => <StudyCap shared={shared} onChange={(x) => upd(shared.id, x)} />,
+  };
   const patchExam = (patch: Partial<ExamConfig>) => { const r = updateExam(doc, exam.id, patch); if (r.ok) p.onChange(r.doc); };
   const short = capc.study.slotsShort;
-  const byName = new Map(classes.map((c) => [c.name, c]));
   const check = (label: string, have: number, need: number) => {
     const bad = capc.hasList && have < need;
     return (
@@ -211,15 +136,8 @@ export function AstStep3(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
       <div class="card stack">
         <div class="row" style="justify-content:space-between">
           <div><h3>綜合教室（＝預備教室）</h3><p class="small muted">被徵用成考場的原班，不考的同學<b>預設只送綜合教室</b>自習。綜合教室可以有<b>多間，每次可能不同</b>：勾選本次可用的，並確認各自的座位與自習容量。</p></div>
-          <Button onClick={() => setRooms(addRoom(all, 'reserve', 'senior', ctx))}>新增綜合教室</Button>
         </div>
-        <div class="roomlist stack" style="gap:8px">
-          {reserves.map((r) => (
-            <RoomRow key={r.id} room={effectiveRoom(exam, r)} shared={r} paper={paper} ov={ovOf(r)} badge={<span class="no rbadge" aria-hidden="true">綜</span>} open={open === r.id} onToggleOpen={() => setOpen(open === r.id ? null : r.id)}
-              onChange={(x) => upd(r.id, x)} cap={roomLimitsOf('reserve').cap} maxDepth={roomLimitsOf('reserve').depth} on={selected.has(r.id)} onSwitch={(v) => toggleId(r.id, v)} switchLabel="本次可用" />
-          ))}
-          {reserves.length === 0 && <p class="small muted">還沒有綜合教室。分科有人被徵用原班、不考的人要有地方自習時，請新增並勾選。</p>}
-        </div>
+        <RoomList {...listProps} only="reserve" track="none" reserveName="綜合教室" addLabel="＋ 新增綜合教室" switchLabel={() => '本次可用'} />
       </div>
 
       <div class="card stack">
@@ -252,19 +170,7 @@ export function AstStep3(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
           </div>
           {p.onToRooms && <Button onClick={p.onToRooms}>到共用設定看教室清單</Button>}
         </div>
-        <div class="roomlist stack" style="gap:8px">
-          {classRooms.map((r) => {
-            const c = byName.get(r.name);
-            const track = r.track ?? c?.track;
-            return (
-              <RoomRow key={r.id} room={effectiveRoom(exam, r)} shared={r} paper={paper} ov={ovOf(r)}
-                badge={c ? <span class="no rbadge" aria-hidden="true" style={classColorVars(c.colorIndex)}>{[...c.name][0]}</span> : <span class="no rbadge" aria-hidden="true">班</span>}
-                open={open === r.id} onToggleOpen={() => setOpen(open === r.id ? null : r.id)} onChange={(x) => upd(r.id, x)} cap={cap} maxDepth={lim.depth}
-                on={selected.has(r.id)} onSwitch={(v) => toggleId(r.id, v)} switchLabel="列入本次" {...(track ? { trackBadge: track === 'science' ? '理組教室' : '文組教室' } : {})} />
-            );
-          })}
-          {classRooms.length === 0 && <p class="small muted">高中部還沒有教室，請到共用設定新增。</p>}
-        </div>
+        <RoomList {...listProps} only="class" track="badge" addLabel={null} switchLabel={() => '列入本次'} />
       </div>
       </PhaseGuard>
       <LeaveCard doc={doc} exam={exam} onChange={p.onChange} />

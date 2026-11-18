@@ -24,16 +24,20 @@ describe('類別撞名', () => {
     const room = readFileSync('src/ui/components/RoomList.tsx', 'utf8');
     expect(css).not.toMatch(/\.roomrow\.trk/);
     expect(room).not.toMatch(/'\s*trk\s*'/);
-    expect(css).toMatch(/\.roomrow\.hastrack\{/);
     expect(css).toMatch(/^\.trk\{width:46px;height:26px/m);
   });
 });
 
 describe('版面溢出（fix-v3）', () => {
   const css = readFileSync('src/styles/app.css', 'utf8');
-  it('教室列 hastrack 最終為可換行 flex（不得回到固定寬 7 欄 grid 而撐出卡片）', () => {
-    const idx = css.lastIndexOf('.roomrow.hastrack{');
-    expect(css.slice(idx, idx + 80)).toMatch(/display:flex;flex-wrap:wrap/);
+  it('教室列最終為可換行 flex（D138：不得回到固定寬多欄 grid 或表格而撐出卡片、橫向捲動）', () => {
+    const idx = css.lastIndexOf('.roomrow{');
+    expect(css.slice(idx, idx + 60)).toMatch(/display:flex;flex-wrap:wrap/);
+    expect(css).not.toMatch(/\.roomtable|\.roomscroll|\.aedgrid|\.astrow/);
+  });
+  it('班級卡片固定每行 3 個、窄於 560px 每行 2 個（#407）', () => {
+    expect(css).toMatch(/\.cls-pal\{display:grid;grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+    expect(css).toMatch(/@media \(max-width:560px\)\{\.cls-pal\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)\}\}/);
   });
   it('.rw 子項 min-width:0（grid 子項不被內容撐出卡片，V3-1 根因）', () => {
     expect(css).toMatch(/\.rw>\*\{min-width:0\}/);

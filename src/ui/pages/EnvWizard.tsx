@@ -4,11 +4,11 @@
  * 步驟 ② 沒有預設（名單只有使用者有），空名單可「稍後匯入」並就地匯入（承 G8、G10／G18）。
  */
 import type { ComponentChildren } from 'preact';
-import { useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import type { Division, LabelPaper, ScheduleKey } from '../../data';
 import { SCHEDULE_KEYS, isDefaultSchedule, scheduleOf } from '../../core/periods';
 import { Alert, Badge, Button, Modal, PageHead, Seg, StepNav, type StepState } from '../components';
-import { defaultSeatGrid } from '../classRooms';
+import { RoomList } from '../components/RoomList';
 import {
   DIV_LABEL, WIZARD_STEPS, ensureClassRooms, stepLines, finishWizard, markSeen, setWizardChoice, skipWizard, stepMark, stepProblems, wizardComplete, wizardDivision,
   wizardDivisions, wizardSeen, wizardYear, type WizardDivision, type WizardStep,
@@ -44,7 +44,7 @@ export function EnvWizard(p: {
     if (step === 1) return <Step1 doc={p.doc} now={now} onApply={(d) => next(d, 1)} later={later} />;
     if (step === 2) return <Step2 doc={p.doc} divs={divs} onChange={p.onChange} onGoSettings={p.onGoSettings} prev={prev} later={later} onNext={(d) => next(d, 2)} />;
     if (step === 3) return <Step3 doc={p.doc} onGoSettings={p.onGoSettings} prev={prev} later={later} onNext={(d) => next(d, 3)} />;
-    if (step === 4) return <Step4 doc={p.doc} divs={divs} onGoSettings={p.onGoSettings} prev={prev} later={later} onNext={(d) => next(d, 4)} />;
+    if (step === 4) return <Step4 doc={p.doc} divs={divs} onChange={p.onChange} onGoSettings={p.onGoSettings} prev={prev} later={later} onNext={(d) => next(d, 4)} />;
     if (step === 5) return <Step5 doc={p.doc} onChange={p.onChange} onGoSettings={p.onGoSettings} prev={prev} later={later} onNext={(d) => next(d, 5)} />;
     return <Overview doc={p.doc} divs={divs} onStep={p.onStep} prev={prev} onFinish={() => { p.onChange(finishWizard(p.doc, now())); p.onFinish(); }} />;
   })();
@@ -173,7 +173,12 @@ function Step3(p: SubProps) {
 }
 
 // ④ 教室：依班級自動帶出班級教室，沒有名單就沒有班級教室
-function Step4(p: SubProps & { divs: Division[] }) {
+function Step4(p: SubProps & { divs: Division[]; onChange: (d: Doc) => void }) {
+  // 使用者 2026-11-18 裁示：進入步驟 4 就依名冊帶出班級教室（同考試 ③ 的 G11），列上的「編輯座位」才有教室可編；已有的教室不動
+  useEffect(() => {
+    const next = p.divs.reduce((d, div) => ensureClassRooms(d, div), p.doc);
+    if (next !== p.doc) p.onChange(next);
+  }, [p.divs.join(','), p.doc.rosters]);
   const problems = stepProblems(p.doc, 4);
   const hasRooms = p.doc.settings.classrooms.some((r) => r.kind === 'class');
   return (
@@ -188,23 +193,24 @@ function Step4(p: SubProps & { divs: Division[] }) {
             </Alert>
           );
         }
+        // 與共用設定、考試 ③ 同一個教室清單（D138）：沒有列入開關；每列多一欄學生人數（座位不夠標紅）
+        const count = new Map(rows.map((x) => [x.c.name, x.n]));
         return (
           <div key={div} class="stack" data-division={div}>
-            <b>{DIV_LABEL[div]}班級教室</b>
-            <div class="scroll" style="overflow-x:auto"><table class="t compact"><thead><tr><th>班級</th><th>教室</th><th>座位</th><th>學生</th></tr></thead>
-              <tbody>{rows.map((x) => {
-                const room = p.doc.settings.classrooms.find((r) => r.kind === 'class' && r.name === x.c.name && (r.division ?? div) === div);
-                const g = defaultSeatGrid(x.n);
-                const seats = room ? room.seatCount : g.rows * g.depth;
-                return <tr key={x.c.no} class={seats < x.n ? 'bad' : ''}><td>{x.c.name}</td><td>{x.c.name}教室{room ? '' : '（將自動帶出）'}</td><td>{seats}</td><td>{x.n}</td></tr>;
-              })}</tbody></table></div>
+            <b>{DIV_LABEL[div]}教室</b>
+            <RoomList rooms={p.doc.settings.classrooms} paper={p.doc.settings.defaultLabelPaper} division={div} track="none"
+              classes={p.doc.settings.classes} exams={p.doc.exams} inUse={(id) => p.doc.exams.some((e) => e.classroomIds.includes(id))}
+              onChange={(classrooms) => p.onChange({ ...p.doc, settings: { ...p.doc.settings, classrooms } })}
+              extra={(r) => {
+                const n = r.kind === 'class' ? count.get(r.name) : undefined;
+                return n === undefined ? null : <Badge tone={r.seatCount < n ? 'danger' : 'ok'}>學生 {n} 人{r.seatCount < n ? `・座位不足 ${n - r.seatCount}` : ''}</Badge>;
+              }} />
           </div>
         );
       })}
       {problems.filter((m) => !m.includes('還沒有學生名單')).map((m) => <Alert key={m} tone="danger">{m}。</Alert>)}
       {stepLines(p.doc, 4).filter((l) => l.note).map((l) => <Alert key={l.key} tone="info">{l.note}</Alert>)}
-      <p class="small muted">座位配置取最接近正方且單邊 ≤ 7（G11）；預備教室可到教室清單新增。</p>
-      <div class="btnrow"><Button onClick={() => p.onGoSettings('rooms', p.divs[0]!)}>教室清單 ›</Button></div>
+      <p class="small muted">班級教室依名冊的班級自動帶出，座位配置取最接近正方且單邊 ≤ 7（G11），可在上面「編輯座位」調整。也可以 <button type="button" class="linkbtn" onClick={() => p.onGoSettings('rooms', p.divs[0]!)}>到共用設定的教室清單 ›</button></p>
       <Actions prev={p.prev} later={p.later}>
         {/* #343：「稍後處理」也先依名冊帶出班級教室，教室清單才有列可以加座位；同名教室沿用，座位配置不動 */}
         {problems.length
