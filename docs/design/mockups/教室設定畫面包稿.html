@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>教室設定畫面包 稿 v2.57</title>
+<title>教室設定畫面包 稿 v2.60</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700&display=swap">
@@ -276,6 +276,7 @@ section.sec{padding-top:44px;scroll-margin-top:60px;display:grid;gap:16px}
 .q .qi .rec{color:var(--ok-ink)}
 .map td,.map th{vertical-align:top;white-space:normal}
 .dk{font-weight:700}
+@media (max-width:900px){.rl-row{grid-template-columns:150px minmax(0,1fr) minmax(0,1fr)}.rl-stat{grid-column:2/4}.rl-act{grid-column:1/4}}
 @media (max-width:560px){.cols{grid-template-columns:minmax(0,1fr)}}
 
 
@@ -468,14 +469,14 @@ section.sec{padding-top:44px;scroll-margin-top:60px;display:grid;gap:16px}
 .k-tabs button[aria-pressed="true"]{background:var(--accent);color:var(--accent-on);border-color:var(--accent)}
 /* 教室清單列（全站共用元件） */
 .rl{border:1px solid var(--line-2);border-radius:var(--r-md);background:var(--surface);overflow:hidden}
-.rl-row{display:grid;grid-template-columns:96px minmax(0,1fr) auto;gap:6px 14px;align-items:center;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--line)}
+.rl-row{display:grid;grid-template-columns:150px minmax(120px,1.1fr) minmax(150px,1fr) minmax(150px,1fr) auto;gap:8px 16px;align-items:center;padding:12px 14px;cursor:pointer;border-bottom:1px solid var(--line)}
 .rl-row:last-of-type{border-bottom:0}
 .rl-row:hover{background:var(--sunken)}
 .rl-row:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .rl-thumb{display:grid;gap:1px;width:96px}
 .rl-thumb i{display:block;aspect-ratio:1;background:var(--accent);border-radius:1px;opacity:.9}
 .rl-thumb i.off{background:var(--line-2);opacity:.6}
-.rl-main b{font-size:16px}
+.rl-tg{display:grid;gap:4px;font-size:13px;font-weight:700;color:var(--text-2)}.rl-sw{display:inline-flex;align-items:center;gap:8px;color:var(--accent-ink)}.rl-sw i{width:44px;height:26px;border-radius:99px;background:var(--accent);position:relative;display:inline-block}.rl-sw i:after{content:"";position:absolute;right:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#fff}.rl-sw.off i{background:var(--line-2)}.rl-sw.off i:after{right:auto;left:3px}.rl-sw.off{color:var(--text-3)}.rl-nm{display:grid;gap:4px;font-size:13px;font-weight:700;color:var(--text-2)}.rl-nm span.in{font-weight:400;font-size:15px;color:var(--text);min-height:40px;display:flex;align-items:center;padding:0 10px;border:1px solid var(--line-2);border-radius:var(--r-sm);background:var(--sunken)}.rl-cfg{display:flex;gap:10px;align-items:center}.rl-cfg b{font-size:15px}.rl-stat{font-size:13px;color:var(--text-2)}.rl-main b{font-size:16px}
 .rl-main .m{font-size:13px;color:var(--text-2)}
 .rl-act{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .rl-act .chev{color:var(--text-3);font-weight:700}
@@ -502,11 +503,11 @@ section.sec{padding-top:44px;scroll-margin-top:60px;display:grid;gap:16px}
 </style>
 </head>
 <body>
-<div class="hd"><b>教室設定畫面包　稿 v2.57</b><button class="btn btn-sm" data-theme-btn type="button">深色／淺色</button></div>
-<div class="main"><div class="hero"><h1>教室設定畫面包　稿 v2.57</h1><p>解 #367～#370、#375、#376、#378、#407（DF-38）。<b>稿 v2.57、2026-11-18、待使用者審；審過前不實作。</b>畫面全為假資料，只用既有 tokens。每一處「使用者沒說」的地方都在最下面〈待使用者審的問題〉，我沒有自己決定。</p></div>
+<div class="hd"><b>教室設定畫面包　稿 v2.60</b><button class="btn btn-sm" data-theme-btn type="button">深色／淺色</button></div>
+<div class="main"><div class="hero"><h1>教室設定畫面包　稿 v2.60</h1><p>解 #367～#370、#375、#376、#378、#407（DF-38）。<b>稿 v2.60、2026-11-18、待使用者審；審過前不實作。</b>畫面全為假資料，只用既有 tokens。每一處「使用者沒說」的地方都在最下面〈待使用者審的問題〉，我沒有自己決定。</p></div>
 
 <section class="sec" id="rl"><header><h2>1　教室清單：全站同一個元件（#375、#368、#369、#367、#376）</h2></header>
-<div class="say"><b>規則</b>：全站只要有教室清單（共用設定、考試 ③ 教室設定、精靈步驟 4、分科的教室清單），<b>都用同一個「教室清單列」</b>：左邊座位縮圖（深色＝可排、淺灰虛線＝不排）、中間教室名稱＋「N 排×M 深位・座位 N・不排 N・可排 N」、右邊動詞按鈕<b>「編輯座位」</b>與<b>「刪除」</b>。<b>點整列或「編輯座位」都會就地展開座位編輯區，再點一次收起</b>（使用者原話）；一次只展開一間（我的建議，避免頁面過長）。「教室清單」這種名詞不再當按鈕，按鈕一律動詞。下面可實際點。</div>
+<div class="say"><b>規則</b>：全站只要有教室清單（共用設定、考試 ③ 教室設定、精靈步驟 4、分科的教室清單），<b>都用同一個「教室清單列」，版型照使用者 2026-11-18 的截圖（DF-41／#411）</b>：由左而右＝「列為考場（預備教室列為預備）」開關＋「已列入」、「教室」名稱輸入框、「座位配置」（座位縮圖＋N 排×M 深位）、「座位統計」（座位 N・不排 N・可排 N；預備教室多一行「預備教室，不計入教室座位合計」）、動詞按鈕<b>「編輯座位」</b>與<b>「刪除」</b>。<b>表格寬度不夠時整列換行，不橫向捲動、不切掉最後一欄</b>（截圖右欄被切，是這張稿要避免的）。開關只在<b>考試用的清單</b>出現；共用設定與精靈的清單沒有「這次考試用不用」，省略開關（我的建議，請審）。<b>點整列或「編輯座位」都會就地展開座位編輯區，再點一次收起</b>（使用者原話）；一次只展開一間（我的建議，避免頁面過長）。「教室清單」這種名詞不再當按鈕，按鈕一律動詞。下面可實際點。</div>
 <div class="rl" id="rlDemo"></div>
 <div class="say"><b>座位編輯區不裁切（#376）</b>：座位格寬度跟著容器縮放（格子 = 容器寬 ÷ 排數，最小 22px；排數多到小於 22px 才改成兩段排列），<b>不出現橫向捲軸、不被右側停靠面板或摘要列遮住</b>；點格子切換可排／不排。</div>
 </section>
@@ -537,6 +538,7 @@ section.sec{padding-top:44px;scroll-margin-top:60px;display:grid;gap:16px}
 <section class="sec" id="q2"><header><h2>待使用者審的問題</h2><p>建議項標「建議」；沒標的是我沒有意見。</p></header>
 <div class="q-opt rec"><b>1. 精靈步驟 4 每列「刪除」刪的是什麼？</b>（#369）建議：「刪除」只對<b>預備教室</b>與手動新增的教室出現；班級教室那列的「刪除」改成「不排座」（教室保留、班級不再使用，因為班級教室跟名冊班級走）。 備案 A：班級教室也能刪，刪了就當作該班沒有教室，⑤ 排座會被擋下。 備案 B：每列都有，點下去先問「只刪教室」或「連班級一起」。</div>
 <div class="q-opt rec"><b>2. 「新增教室」新增的是哪種教室？</b>（#370）建議：新增<b>預備教室</b>（與現行「＋ 新增預備教室」一致，按鈕文字用使用者說的「新增教室」，點下去選類型時只有預備教室）。 備案：同時可新增班級教室（需放寬現行規定）。</div>
+<div class="q-opt rec"><b>0. 版型統一範圍（DF-41／#411）</b>：開關只在考試清單出現、其他清單省略；截圖右側被切掉的最後一欄，使用者已說明<b>就是現有的「編輯座位」「刪除」按鈕，可以保留</b>（2026-11-18，附該欄截圖：有框的「編輯座位」＋紅字「刪除」），稿照此畫；「統一」是否含操作（展開編輯、刪除、新增）？建議含。</div>
 <div class="q-opt"><b>3. 「教室清單 ›」按鈕怎麼辦？</b>（#367）建議：改成連結（見上），不再當主按鈕。 備案：保留並列。</div>
 <div class="q-opt"><b>4. 縮圖統一範圍</b>（#375）建議：共用設定、考試 ③、精靈步驟 4、分科教室清單都改；座位表輸出頁不算教室清單，不動。</div>
 <div class="q-opt"><b>5. 一次只展開一間還是可多間</b>（#368）建議：一次一間（頁面不會被撐很長）；展開的視覺提示＝列右側「▾／▴」＋整列手指游標。</div>
@@ -548,9 +550,10 @@ section.sec{padding-top:44px;scroll-margin-top:60px;display:grid;gap:16px}
 <script>(function(){
 var rows=[['高三溫教室','班級教室',7,7,[]],['高三良教室','班級教室',7,7,[3,10,17]],['備一','預備教室',7,8,[7,14]]];
 var cur=-1,wrap=document.getElementById('rlDemo');
-function thumb(r,c,off){var h='<div class="rl-thumb" style="grid-template-columns:repeat('+r+',1fr)">';for(var i=0;i<r*c;i++)h+='<i'+(off.indexOf(i)>=0?' class="off"':'')+'></i>';return h+'</div>';}
+function thumb(r,c,off){var h='<div class="rl-thumb" style="width:58px;grid-template-columns:repeat('+r+',1fr)">';for(var i=0;i<r*c;i++)h+='<i'+(off.indexOf(i)>=0?' class="off"':'')+'></i>';return h+'</div>';}
 function draw(){var h='';rows.forEach(function(x,i){var total=x[2]*x[3],off=x[4].length;var open=i===cur;
- h+='<div class="rl-row" role="button" tabindex="0" data-i="'+i+'" aria-expanded="'+open+'">'+thumb(x[2],x[3],x[4])+'<div class="rl-main"><b>'+x[0]+'</b>　<span class="badge">'+x[1]+'</span><div class="m">'+x[2]+' 排×'+x[3]+' 深位・座位 '+total+'・不排 '+off+'・可排 '+(total-off)+'</div></div><div class="rl-act"><button class="btn btn-sm" type="button" data-i="'+i+'">編輯座位</button><button class="btn btn-sm btn-gdanger" type="button" data-del="'+i+'">刪除</button><span class="chev">'+(open?'▴':'▾')+'</span></div></div>';
+ var res=x[1]==='預備教室';
+ h+='<div class="rl-row" role="button" tabindex="0" data-i="'+i+'" aria-expanded="'+open+'"><div class="rl-tg">'+(res?'列為預備':'列為考場')+'<span class="rl-sw"><i></i>已列入</span></div><div class="rl-nm">'+(res?'預備教室':'教室')+'<span class="in">'+x[0]+'</span></div><div class="rl-cfg">'+thumb(x[2],x[3],x[4])+'<b>'+x[2]+' 排×'+x[3]+' 深位</b></div><div class="rl-stat">座位 '+total+'・不排 '+off+'・可排 '+(total-off)+(res?'<br>預備教室，不計入教室座位合計':'')+'</div><div class="rl-act"><button class="btn btn-sm" type="button" data-i="'+i+'">編輯座位</button><button class="btn btn-sm btn-gdanger" type="button" data-del="'+i+'">刪除</button><span class="chev">'+(open?'▴':'▾')+'</span></div></div>';
  if(open){h+='<div class="rl-edit"><div class="k-note">點格子切換「可排／不排」；完整顯示，不需要捲動。</div><div class="seatgrid" style="grid-template-columns:repeat('+x[2]+',minmax(0,1fr));max-width:'+(x[2]*58)+'px">';for(var k=0;k<total;k++)h+='<button type="button" class="'+(x[4].indexOf(k)>=0?'off':'')+'" data-k="'+k+'">'+(k+1)+'</button>';h+='</div></div>';}
 });h+='<div class="rl-foot"><button class="btn btn-sm" type="button">＋ 新增教室</button></div>';wrap.innerHTML=h;}
 wrap.addEventListener('click',function(e){var d=e.target.closest('[data-del]');if(d)return;var k=e.target.closest('[data-k]');if(k){var x=rows[cur],n=+k.dataset.k,j=x[4].indexOf(n);if(j>=0)x[4].splice(j,1);else x[4].push(n);draw();return;}var r=e.target.closest('[data-i]');if(!r)return;var i=+r.dataset.i;cur=cur===i?-1:i;draw();});
