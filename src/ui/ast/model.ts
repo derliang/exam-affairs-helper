@@ -17,6 +17,7 @@ import { buildCandidates, scheduleConflicts, scheduleNeedsApproval, type Candida
 import type { PrevSeat } from '../../data/types';
 import { examEntries, examRooms, seatableEntries } from '../seating';
 import { examYear, type Doc } from '../store';
+import { rosterFor } from '../rosterYears';
 import { dataVersion } from '../../core/version';
 import { snapOf } from '../../core/astD99/release';
 
@@ -73,8 +74,9 @@ export function astStudents(doc: Doc, exam: ExamConfig, slots: readonly AstSlot[
   const slotOf = new Map<string, string>();
   for (const s of slots) for (const id of s.subjectIds) slotOf.set(id, s.id);
   const classTrack = new Map(doc.settings.classes.filter((c) => c.division === exam.division).map((c) => [c.no, c.track]));
-  // G23：沒報名任何科（每節都自習）的人也要進規劃：不排考試座位（takes 全空），但自習去處與容量要算他們（D64 不變）
-  return examEntries(doc, exam).map((e) => {
+  // G23：沒報名任何科（每節都自習）的人也要進規劃：不排考試座位（takes 全空），但自習去處與容量要算他們
+  const entries = examEntries(doc, exam);
+  const listed: PlanStudent[] = entries.map((e) => {
     const takes: Record<string, string> = {};
     for (const id of e.subjectIds) {
       const sid = slotOf.get(id);
@@ -83,6 +85,18 @@ export function astStudents(doc: Doc, exam: ExamConfig, slots: readonly AstSlot[
     const track: Track | undefined = e.track ?? classTrack.get(e.classNo);
     return { classNo: e.classNo, seatNo: e.seatNo, name: e.name, takes, ...(track ? { track } : {}) };
   });
+  // D125（使用者 2026-11-18：「未參加就是自習，分科也是這樣」）：學生名單有、考試名單沒有的人＝未參加＝每節自習，
+  // 一樣排自習座位（不印標籤、座位表列班級座號姓名）。接在名單之後，名單裡沒有這種人時輸出與舊版逐位相同
+  // 還沒匯入考試名單＝還沒有方案可排（不把整份名冊當自習去跑引擎）
+  if (entries.length === 0) return listed;
+  const inList = new Set(entries.map((e) => codeOf(e)));
+  const notJoined: PlanStudent[] = (rosterFor(doc, exam)[exam.division] ?? [])
+    .filter((s) => !inList.has(codeOf(s)))
+    .map((s) => {
+      const track: Track | undefined = classTrack.get(s.classNo);
+      return { classNo: s.classNo, seatNo: s.seatNo, name: s.name, takes: {}, ...(track ? { track } : {}) };
+    });
+  return notJoined.length ? [...listed, ...notJoined] : listed;
 }
 
 export function astRooms(doc: Doc, exam: ExamConfig): PlanRoom[] {
