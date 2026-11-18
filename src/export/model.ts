@@ -213,8 +213,14 @@ export function wideLabelLayout(paper: LabelPaper): LabelLayout {
 export const RESERVE_DEPTH_MAX = 8;
 export const PREP_TAG = '預備教室';
 
-/** 標籤格尺寸（D113）：寬＝紙寬÷7，高＝紙高÷7（8 列時÷8）。標題與頁尾要佔約 22mm，滿 7 列的頁面格高只好扣掉這段（待列印實測） */
-export const LABEL_PAGE_FIXED_MM = 22;
+/**
+ * 標籤格尺寸（D113）：寬＝紙寬÷7，高＝紙高÷7（滿 7 列、8 列時扣掉標題與頁尾後平分）。
+ * 標題與頁尾佔的高度（#372、#385、#387 修正）：原本猜 22mm，B4 用 Word 實際開啟量到
+ * 上邊界 3＋標題列與間距 21.4（格子上緣在 24.4mm）＋下邊界 10＋表格後必有的段落 0.35＝約 35mm，
+ * 22mm 讓滿 7 列的每頁多出約 13mm，第 7 排被擠到下一頁。取 36.5mm（留約 1.5mm 餘裕）。
+ * 這是「整頁高度預算」：格子高度總和不得超過紙高減這個值，標籤頁的任何輸出（Word、列印頁）都以它為準。
+ */
+export const LABEL_PAGE_FIXED_MM = 36.5;
 export function labelCellMm(layout: LabelLayout, gridRows = LABEL_GRID_MAX): { w: number; h: number } {
   const p = PAPER_MM[layout.paper];
   return { w: p.w / LABEL_GRID_MAX, h: gridRows >= LABEL_GRID_MAX ? (p.h - LABEL_PAGE_FIXED_MM) / gridRows : p.h / LABEL_GRID_MAX };
@@ -232,7 +238,8 @@ const parseCode = (code: string) => ({ classNo: Number(code.slice(0, 2)), seatNo
 function ctxOf(input: ExportInput): Ctx {
   return {
     students: new Map(input.students.map((s) => [studentCode(s.classNo, s.seatNo), s])),
-    classes: new Map(input.settings.classes.map((c) => [c.no, c])),
+    // #371：只取本部別的班級（與排座引擎、對帳同一口徑 examClasses）；國中、高中班號重疊時，不能讓後面的班蓋掉本部別的班名
+    classes: new Map(input.settings.classes.filter((c) => c.division === input.exam.division).map((c) => [c.no, c])),
     subjectName: new Map(input.exam.subjects.map((s) => [s.id, s.name])),
     entries: new Map(input.entries.map((e) => [studentCode(e.classNo, e.seatNo), e])),
     input,
@@ -686,7 +693,7 @@ export function buildSeatPages(input: ExportInput, scope: Scope = 'all'): SeatPa
  * 同班座號遞增；格內一律寫班級、座號、姓名；虛線框＋「自習」小牌；不印標籤（標籤只看 assignments）。座位不夠不硬排，列在頁首小標籤。
  */
 function addHomeStudyRef(pg: SeatPageModel, room: Classroom, input: ExportInput, ctx: Ctx): void {
-  const cls = input.settings.classes.find((c) => c.name === room.name);
+  const cls = input.settings.classes.find((c) => c.division === input.exam.division && c.name === room.name);
   if (!cls) return;
   const placed = new Set<string>([...input.result.assignments.map((a) => a.code), ...input.result.detaches.map((d) => d.code)]);
   const stay = input.students.filter((st) => st.classNo === cls.no && !placed.has(codeFor(st))).sort((a, b) => a.seatNo - b.seatNo);
@@ -745,7 +752,7 @@ function studyReferencePages(input: ExportInput, ctx: Ctx, rooms: Map<string, Cl
         perClass: nos.map((n) => ({ className: ctx.classes.get(n)?.name ?? String(n), count: per.get(n)! })),
         total: ref.seats.size,
         perSubject: [],
-        table: { classes: nos.map((n) => ctx.classes.get(n)?.name ?? String(n)), rows: [{ label: '自習人數', per: nos.map((n) => per.get(n)!), total: ref.seats.size }] },
+        table: { classes: nos.map((n) => ctx.classes.get(n)?.name ?? String(n)), rows: [{ label: `自習人數${when || subj ? `（${[when, subj].filter(Boolean).join('　')}）` : ''}`, per: nos.map((n) => per.get(n)!), total: ref.seats.size }] },
       },
     });
   }

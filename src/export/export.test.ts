@@ -10,6 +10,7 @@ import {
   findMissingChars,
   footerText,
   labelCellMm,
+  LABEL_PAGE_FIXED_MM,
   defaultLabelLayout,
   wideLabelLayout,
   roomTooBigForLabel,
@@ -87,7 +88,7 @@ describe('版面模型', () => {
     const a3 = labelCellMm({ paper: 'A3', cols: 7, rows: 7 }, 5);
     expect(a3.w).toBeCloseTo(297 / 7, 5);
     expect(a3.h).toBeCloseTo(420 / 7, 5);
-    expect(labelCellMm({ paper: 'A3', cols: 7, rows: 7 }, 7).h).toBeCloseTo((420 - 22) / 7, 5);
+    expect(labelCellMm({ paper: 'A3', cols: 7, rows: 7 }, 7).h).toBeCloseTo((420 - LABEL_PAGE_FIXED_MM) / 7, 5);
     const pages = buildLabelPages(makeFixture(), 'class');
     expect(pages).toHaveLength(2);
     expect(pages[0]!.grid).toEqual({ cols: 4, rows: 5 }); // 甲教室 4 排×5 深位，格子排列同座位表
@@ -201,7 +202,7 @@ describe('Word 輸出（D44/D45）', () => {
     const widths = [...doc.matchAll(/<w:tblGrid>(.*?)<\/w:tblGrid>/g)].map((m) => [...m[1]!.matchAll(/w:w="(\d+)"/g)].map((x) => Number(x[1]))).find((w) => w.length === 7)!;
     expect(widths).toEqual(Array(7).fill(Math.floor((297 / 7 * 1440) / 25.4)));
     const heights = [...doc.matchAll(/<w:trHeight w:val="(\d+)" w:hRule="exact"/g)].map((m) => Number(m[1]));
-    expect(heights.slice(0, 7)).toEqual(Array(7).fill(mmToTwip((420 - 22) / 7)));
+    expect(heights.slice(0, 7)).toEqual(Array(7).fill(mmToTwip((420 - LABEL_PAGE_FIXED_MM) / 7)));
   });
 
   it('備案 separate-family：Bold 是獨立家族，粗體字用該家族', async () => {
