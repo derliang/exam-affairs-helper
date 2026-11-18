@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>G35 考前對帳 稿 v2.56</title>
+<title>G35 考前對帳 稿 v2.62</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700&display=swap">
@@ -425,45 +425,44 @@ section.sec{padding-top:44px;scroll-margin-top:60px;display:grid;gap:16px}
 .cx[hidden]{display:none}
 .comp{display:inline-flex;font-size:12px;font-weight:700;border:1px solid var(--accent-line);background:var(--accent-soft);color:var(--accent-ink);border-radius:99px;padding:0 8px}
 
-/* v2.56 對帳 12 項新面板（只用既有 tokens） */
-.rc{border:1px solid var(--line-2);border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--shadow-1);overflow:hidden}
-.rc-hd{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--sunken)}
-.rc-hd h3{margin:0;font-family:var(--f-head);font-size:17px}
-.rc-hd .sm{color:var(--text-2);font-size:13px}
-.rc-row{border-bottom:1px solid var(--line)}
-.rc-row:last-child{border-bottom:0}
-.rc-line{display:grid;grid-template-columns:auto 1fr auto;gap:4px 12px;align-items:center;padding:10px 16px;min-height:48px}
-.rc-lamp{display:inline-flex;align-items:center;gap:4px;font-weight:700;font-size:13px;padding:2px 9px;border-radius:99px;border:1px solid;white-space:nowrap}
-.rc-lamp.ok{background:var(--ok-soft);color:var(--ok-ink);border-color:var(--ok-line)}
-.rc-lamp.wa{background:var(--warn-soft);color:var(--warn-ink);border-color:var(--warn-line)}
-.rc-lamp.fl{background:var(--danger-soft);color:var(--danger-ink);border-color:var(--danger-line)}
-.rc-lamp.na{background:var(--sunken);color:var(--text-3);border-color:var(--line-2)}
-.rc-name{font-weight:700}
-.rc-name .no{color:var(--text-3);font-weight:400;margin-right:6px;font-size:13px}
-.rc-one{grid-column:2/3;color:var(--text-2);font-size:14px;margin-top:-2px}
-.rc-more{font:inherit;font-size:13px;font-weight:700;color:var(--accent-ink);background:transparent;border:0;min-height:44px;padding:0 6px;cursor:pointer}
-.rc-detail{padding:4px 16px 14px 16px;display:grid;gap:8px}
+/* v2.56：面板沿用現行 ReconcilePanel／app.css 的規則（逐字複製），只改「通過列只顯示名稱與燈號」 */
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.sb{justify-content:space-between}
+.stack{display:grid;gap:14px}.small{font-size:13px}.muted{color:var(--text-3)}
+.rc-lamp{display:inline-flex;gap:4px;align-items:center;font-weight:700;font-size:13px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);white-space:nowrap}
+.rc-lamp.rc-big{font-size:14px;padding:4px 12px}
+.rc-pass{background:var(--ok-soft);color:var(--ok-ink);border-color:var(--ok-line)}
+.rc-warn{background:var(--warn-soft);color:var(--warn-ink);border-color:var(--warn-line)}
+.rc-fail{background:var(--danger-soft);color:var(--danger-ink);border-color:var(--danger-line)}
+.rc-na{background:var(--sunken);color:var(--text-2)}
+.rc-legend{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.rc-list{display:grid;gap:8px}
+.rc-row{display:grid;grid-template-columns:minmax(150px,1.1fr) 2fr auto;gap:8px 14px;align-items:start;padding:10px 12px;border:1px solid var(--line);border-left-width:5px;border-radius:var(--r-md);background:var(--surface)}
+.rc-row-pass{border-left-color:var(--ok-bar)}.rc-row-warn{border-left-color:var(--warn-bar)}.rc-row-fail{border-left-color:var(--danger)}.rc-row-na{border-left-style:dashed}
+.rc-name{display:flex;flex-direction:column;gap:4px;align-items:flex-start}
+.rc-tri{display:flex;gap:18px;flex-wrap:wrap}
+.rc-tri>div{display:flex;flex-direction:column}.rc-tri b{font-size:18px}
+.rc-more{background:none;border:0;color:var(--accent);cursor:pointer;padding:4px 6px;font:inherit;font-weight:700}
+.rc-detail{grid-column:1/-1;display:grid;gap:6px;padding-top:6px;border-top:1px dashed var(--line)}
 .rc-detail[hidden]{display:none}
-.rc-fig{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:14px}
-.rc-fig b{font-size:18px}
-.rc-list{margin:0;padding-left:20px;color:var(--text-2);font-size:14px}
-.rc-formula{font-size:13px;color:var(--text-3);border-top:1px dashed var(--line-2);padding-top:6px}
-.rc-gate{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid var(--line-2)}
-.rc-gate.ok{background:var(--ok-soft);color:var(--ok-ink)}
-.rc-gate.fl{background:var(--danger-soft);color:var(--danger-ink)}
-.rc-gate.wa{background:var(--warn-soft);color:var(--warn-ink)}
-.rc-gate b{font-size:15px}
+.rc-issue{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.a-info{background:var(--accent-soft);color:var(--accent-ink);border-color:var(--accent-line)}
+.a-warn{background:var(--warn-soft);color:var(--warn-ink);border-color:var(--warn-line)}
+.a-err{background:var(--danger-soft);color:var(--danger-ink);border-color:var(--danger-line)}
+.a-ok{background:var(--ok-soft);color:var(--ok-ink);border-color:var(--ok-line)}
+.ico{font-weight:700;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:13px;background:currentColor;flex:none}
+.ico::before{content:attr(data-i);color:var(--surface)}
 .rc-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
 .rc-tabs button{font:inherit;font-weight:700;min-height:40px;padding:0 14px;border-radius:99px;border:1px solid var(--line-2);background:var(--surface);color:var(--text-2);cursor:pointer}
 .rc-tabs button[aria-pressed="true"]{background:var(--accent);color:var(--accent-on);border-color:var(--accent)}
+@media (max-width:640px){.rc-row{grid-template-columns:1fr}}
 .opt-card{border:1px solid var(--line-2);border-radius:var(--r-md);padding:10px 14px;background:var(--surface);display:grid;gap:4px}
 .opt-card.rec{border-color:var(--accent-line);background:var(--accent-soft)}
 @media (max-width:520px){.rc-line{grid-template-columns:auto 1fr}.rc-more{grid-column:1/3;justify-self:start}.rc-one{grid-column:1/3}}
 </style>
 </head>
 <body>
-<div class="hd"><b>G35 考前對帳　稿 v2.56</b><nav class="toc"><a href="#sum">總覽</a><a href="#items">檢核項目</a><a href="#panel">面板</a><a href="#gate">閘門裁示</a><a href="#modal">警示確認</a><a href="#types">三種類型</a><a href="#same">口徑一致</a><a href="#comp">共用元件</a><a href="#q">待確認</a></nav><button class="btn btn-sm" data-theme-btn type="button">深色／淺色</button></div>
-<div class="main"><div class="hero"><h1>G35　考前對帳　稿 v2.56</h1><p>在「⑥ 下載」前，程式把帳獨立重算一遍：名單範圍內每個人、每個時段都在一個地方，座位不重複、不超量，檔案與畫面一致。每項一個燈號，<b>不通過擋下載</b>。對帳元件與補考的對帳儀表板統一，之後補考稿直接沿用。<b>稿 v2.56、2026-11-18、待使用者審；審過前不寫實作。</b>（v2.56：對帳重做成 12 項、通過只顯示一行、閘門只有一條訊息；與 D129 衝突的「警示要不要擋」留待裁示。）</p></div>
+<div class="hd"><b>G35 考前對帳　稿 v2.62</b><nav class="toc"><a href="#sum">總覽</a><a href="#items">檢核項目</a><a href="#panel">面板</a><a href="#gate">閘門裁示</a><a href="#modal">警示確認</a><a href="#types">三種類型</a><a href="#same">口徑一致</a><a href="#comp">共用元件</a><a href="#q">待確認</a></nav><button class="btn btn-sm" data-theme-btn type="button">深色／淺色</button></div>
+<div class="main"><div class="hero"><h1>G35　考前對帳　稿 v2.62</h1><p>在「⑥ 下載」前，程式把帳獨立重算一遍：名單範圍內每個人、每個時段都在一個地方，座位不重複、不超量，檔案與畫面一致。每項一個燈號，<b>不通過擋下載</b>。對帳元件與補考的對帳儀表板統一，之後補考稿直接沿用。<b>稿 v2.62、2026-11-18、待使用者審；審過前不寫實作。</b>（v2.56：對帳重做成 12 項、通過只顯示一行、閘門只有一條訊息；與 D129 衝突的「警示要不要擋」留待裁示。）</p></div>
 
 <section class="sec" id="sum"><header><h2>先看重點</h2><div class="gtag"><span class="badge b-acc">G35</span><span class="badge b-warn">待使用者審</span></div></header>
 <div class="say"><b>目標與界線</b>：做到「帳對得起來」，不是「百分之百沒錯」。能證明的是內部帳平；<b>不能證明名冊本身正確</b>。依你的裁示：<b>教務處的考生名冊就是總帳，不加「控制總數」輸入</b>。</div>
@@ -500,12 +499,12 @@ section.sec{padding-top:44px;scroll-margin-top:60px;display:grid;gap:16px}
 </section>
 
 <section class="sec" id="panel"><header><h2>第 6 步「考前對帳」面板（v2.56：12 項、通過只顯示一行）</h2><div class="gtag"><span class="badge b-acc">#380</span><span class="badge b-acc">#384</span><span class="badge b-warn">#383 待裁示</span></div></header>
-<div class="say"><b>顯示規則（解 #380）</b>：<b>通過</b>的項目只顯示「燈號＋名稱＋通過」，應有／實有／差異、說明、算法都收在「明細 ▾」裡；<b>不通過</b>的項目<b>直接展開明細</b>（結論一句話＋應有／實有／差異＋問題清單＋「到 ○○ ›」處理路徑；算法仍在最底、淡字）；<b>不適用</b>（會考）顯示灰色「– 不適用」一行、不可展開。<b>警示（琥珀）</b>項目比照不通過<b>直接展開</b>（使用者沒說琥珀比照哪一種，這是我的建議，請審）。每項一行，點整列或「明細」都能展開／收合。</div>
+<div class="say"><b>沿用現有元件（DF-42／DF-43）</b>：面板的版型、燈號、列、「明細」、警示條<b>全部沿用現行 ReconcilePanel／app.css</b>（有左側色條的列卡、名稱下方燈號、應有／實有／差異三格、明細、警示條），本稿<b>只改</b>下面幾點，沒有另外畫新樣式。<br><b>顯示規則（解 #380）</b>：<b>通過</b>的項目只顯示「燈號＋名稱＋通過」，應有／實有／差異、說明、算法都收在「明細 ▾」裡；<b>不通過</b>的項目<b>直接展開明細</b>（結論一句話＋應有／實有／差異＋問題清單＋「到 ○○ ›」處理路徑；算法仍在最底、淡字）；<b>不適用</b>（會考）顯示灰色「– 不適用」一行、不可展開。<b>警示（琥珀）</b>項目比照不通過<b>直接展開</b>（使用者沒說琥珀比照哪一種，這是我的建議，請審）。每項一行，點整列或「明細」都能展開／收合。</div>
 <div class="say"><b>下載閘門只有一條訊息（解 #384）</b>：面板底部<b>只留一條閘門訊息</b>，由「對帳結果」唯一決定，不再另外出現第二條「驗證通過，可以下載」的綠色橫幅（依登記者從截圖推測，那是另一個元件各自判斷的；若 ⑥ 頁仍需要檔案檢查結果，改成併進這一條，由施工時確認）。切下方分頁看四種狀態。</div>
 <div class="rc-tabs" id="rcT" role="group" aria-label="面板狀態">
 <button type="button" data-s="g" aria-pressed="true">全部通過</button><button type="button" data-s="r" aria-pressed="false">有不通過（紅）</button><button type="button" data-s="y" aria-pressed="false">只有警示（琥珀）</button><button type="button" data-s="b" aria-pressed="false">會考（不適用項）</button>
 </div>
-<div class="rc" id="rcPanel"></div>
+<div id="rcPanel"></div>
 </section>
 
 <section class="sec" id="gate"><header><h2>下載閘門：警示要不要擋（#383，與 D129 衝突，待使用者裁示）</h2><div class="gtag"><span class="badge b-warn">待使用者裁示</span></div></header>
@@ -597,37 +596,34 @@ var bcct={1:1,3:1,5:1,7:1,10:1,11:1,12:1};
 var ST='g';
 function esc(x){return String(x)}
 function build(){
- var h='',hasF=0,hasW=0,nf=0,nw=0;
- var set=B[ST]||{};
+ var rows='',hasF=0,hasW=0,nf=0,nw=0,set=B[ST]||{};
+ var LB={p:['pass','✓','通過'],f:['fail','✕','不通過'],w:['warn','▲','警示'],n:['na','–','不適用']};
+ var tri=function(t){return '<div class="rc-tri">'+t.split('　').map(function(x){var m=x.match(/^(\S+?)\s*(\S+)$/);return m?'<div><span class="small muted">'+m[1]+'</span><b>'+m[2]+'</b></div>':'';}).join('')+'</div>';};
  for(var i=1;i<=12;i++){
   var st='p',d=null;
-  if(ST==='b'&&!bcct[i]) st='n';
-  else if(set[i]){d=set[i];st=d[0];}
+  if(ST==='b'&&!bcct[i]) st='n'; else if(set[i]){d=set[i];st=d[0];}
   if(st==='f'){hasF=1;nf++} if(st==='w'){hasW=1;nw++}
-  var lamp={p:'<span class="rc-lamp ok">✓ 通過</span>',f:'<span class="rc-lamp fl">✕ 不通過</span>',w:'<span class="rc-lamp wa">▲ 警示</span>',n:'<span class="rc-lamp na">– 不適用</span>'}[st];
-  var open=(st==='f'||st==='w');
-  var one=(st==='f'||st==='w')?'<div class="rc-one">'+esc(d[1])+'</div>':'';
-  var more=st==='n'?'':'<button class="rc-more" type="button" aria-expanded="'+open+'">'+(open?'收合 ▴':'明細 ▾')+'</button>';
-  var det='';
-  if(st==='f'||st==='w'){det='<div class="rc-detail"><div class="rc-fig"><span>'+esc(d[2])+'</span></div><ul class="rc-list">'+d[3].map(function(x){return '<li>'+esc(x)+'</li>'}).join('')+'</ul><div><button type="button" class="btn btn-sm">'+d[4]+'</button></div><div class="rc-formula">'+esc(d[5])+'</div></div>';}
-  else if(st==='p'){det='<div class="rc-detail" hidden><div class="rc-fig"><span>'+esc(F[i-1])+'</span></div><div class="rc-formula">驗什麼：'+esc(D[i-1])+'</div></div>';}
-  if(st==='n')one='';
-  h+='<div class="rc-row"><div class="rc-line"><span>'+lamp+'</span><div class="rc-name"><span class="no">'+i+'</span>'+N[i-1]+'</div>'+more+one+'</div>'+det+'</div>';
-  if(st==='f'||st==='w'){h=h.replace(/<div class="rc-detail">/,'<div class="rc-detail">');}
+  var L=LB[st],open=(st==='f'||st==='w');
+  var lamp='<span class="rc-lamp rc-'+L[0]+'"><span aria-hidden="true">'+L[1]+'</span> '+L[2]+'</span>';
+  var val='',more='',det='';
+  if(st==='n'){val='<div class="rc-val small muted">會考不適用</div>';}
+  else if(open){val='<div class="rc-val">'+tri(d[2])+'<div class="small">'+d[1]+'</div></div>';more='<button type="button" class="rc-more" aria-expanded="true">明細 ▴</button>';
+    det='<div class="rc-detail">'+d[3].map(function(x,ix){return '<div class="rc-issue"><span>'+x+'</span>'+(ix===0?'<button type="button" class="btn btn-sm">'+d[4]+'</button>':'')+'</div>';}).join('')+'<div class="small muted">檢核公式：'+d[5]+'</div></div>';}
+  else {val='<div class="rc-val"></div>';more='<button type="button" class="rc-more" aria-expanded="false">明細 ▾</button>';
+    det='<div class="rc-detail" hidden><div class="small">'+F[i-1]+'</div><div class="small muted">驗什麼：'+D[i-1]+'</div></div>';}
+  rows+='<div class="rc-row rc-row-'+L[0]+'"><div class="rc-name"><b>'+i+'</b>　'+N[i-1]+lamp+'</div>'+val+more+det+'</div>';
  }
- var g;
- if(hasF) g='<div class="rc-gate fl"><b>✕ 有 '+nf+' 項不通過，修正後才能下載</b><button type="button" class="btn btn-sm" disabled>下載（已停用）</button></div>';
- else if(hasW) g='<div class="rc-gate wa"><b>▲ 有 '+nw+' 項提醒，可以下載</b><button type="button" class="btn btn-primary btn-sm">下載</button></div>';
- else g='<div class="rc-gate ok"><b>✓ 全部通過，可以下載</b><button type="button" class="btn btn-primary btn-sm">下載</button></div>';
- var sum=hasF?(nf+' 項不通過'+(nw?'、'+nw+' 項警示':'')):(hasW?nw+' 項警示':(ST==='b'?'適用 7 項，全部通過':'12 項全部通過'));
- var title='<div class="rc-hd"><h3>考前對帳</h3><span class="sm">'+(ST==='b'?'會考　':'學測　')+sum+'　<button class="btn btn-ghost btn-sm" type="button">重新對帳</button></span></div>';
- document.getElementById('rcPanel').innerHTML=title+h+g;
+ var worst=hasF?'fail':(hasW?'warn':'pass'),head=hasF?nf+' 項不通過，須先修正':(hasW?nw+' 項警示':'全部通過');
+ var g=hasF?'<div class="alert a-err" role="alert"><span class="ico" aria-hidden="true" data-i="!"></span><div><b>還不能下載：</b>有 '+nf+' 項不通過。紅燈沒有「確認放行」，修正後會自動重新對帳。</div></div>'
+  :hasW?'<div class="alert a-warn" role="status"><span class="ico" aria-hidden="true" data-i="!"></span><div><b>有 '+nw+' 項警示：</b>只是提醒，可以下載（方案乙；選甲時這裡改成「逐項確認警示…」按鈕）。</div></div>'
+  :'<div class="alert a-ok" role="status"><span class="ico" aria-hidden="true" data-i="✓"></span><div><b>全部通過</b>：可以下載。</div></div>';
+ document.getElementById('rcPanel').innerHTML='<div class="card stack"><div class="row sb"><h3 style="margin:0">考前對帳</h3><div class="row"><span class="rc-lamp rc-'+worst+' rc-big" role="status"><span aria-hidden="true">'+LB[worst==='fail'?'f':worst==='warn'?'w':'p'][1]+'</span> '+head+'</span><button class="btn btn-sm" type="button">↻ 重新對帳</button></div></div><div class="small muted">依目前資料自動重算。'+(ST==='b'?'（會考）':'')+'</div><div class="rc-legend small"><span class="rc-lamp rc-pass">✓ 通過</span> <span class="rc-lamp rc-warn">▲ 警示</span> <span class="rc-lamp rc-fail">✕ 不通過</span> 擋下載，須先修正　<span class="rc-lamp rc-na">– 不適用</span></div><div class="rc-list">'+rows+'</div>'+g+'</div>';
 }
 document.addEventListener('click',function(e){
  var t=e.target.closest&&e.target.closest('#rcT button');
  if(t){ST=t.dataset.s;[].forEach.call(t.parentNode.children,function(x){x.setAttribute('aria-pressed',x===t)});build();return;}
  var m=e.target.closest&&e.target.closest('.rc-more');
- if(m){var r=m.closest('.rc-row').querySelector('.rc-detail');r.hidden=!r.hidden;m.textContent=r.hidden?'明細 ▾':'收合 ▴';m.setAttribute('aria-expanded',!r.hidden);}
+ if(m){var r=m.closest('.rc-row').querySelector('.rc-detail');r.hidden=!r.hidden;m.textContent=r.hidden?'明細 ▾':'明細 ▴';m.setAttribute('aria-expanded',!r.hidden);}
 });
 build();
 })();</script>

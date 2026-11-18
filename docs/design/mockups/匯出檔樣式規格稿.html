@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>匯出檔樣式規格 稿 v2.59</title>
+<title>匯出檔樣式規格 稿 v2.63</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700&display=swap">
@@ -471,8 +471,8 @@ section.sec{padding-top:44px;scroll-margin-top:60px;display:grid;gap:16px}
 
 .mk{display:inline-block;font-weight:700;font-size:12px;line-height:1.25;padding:1px 5px;border-radius:3px;white-space:nowrap}
 .mk.x{background:var(--att-fill);color:var(--att-on)}
-.mk.add{background:#fff;color:#000;border:1.5px double #000}
-.mk.out{background:#fff;color:#000;border:1.5px solid #000;white-space:normal;max-width:130px}
+.mk.add{background:#fff;color:#000;border:2px solid #000}
+.mk.out{background:#fff;color:#000;border:2px solid #000;white-space:normal;max-width:130px}
 .cellx{display:inline-grid;gap:2px;justify-items:center;min-width:104px;padding:6px 8px;border:1px solid #555;background:#FFE08A;color:#000;border-radius:2px;font-size:13px}
 .cellx b{font-size:20px}
 .sp{background:#fff;border:1px solid var(--line-2);border-radius:var(--r-sm);color:#111;padding:10px 12px;display:grid;gap:6px;font-size:13px}
@@ -485,11 +485,11 @@ section.sec{padding-top:44px;scroll-margin-top:60px;display:grid;gap:16px}
 </style>
 </head>
 <body>
-<div class="hd"><b>匯出檔樣式規格　稿 v2.59</b><button class="btn btn-sm" data-theme-btn type="button">深色／淺色</button></div>
-<div class="main"><div class="hero"><h1>匯出檔樣式規格　稿 v2.59</h1><p>解 #390～#393、#395、#396、#408、#409（已裁示分兩種）。<b>稿 v2.59、2026-11-18、待使用者審；審過前不施工。</b>這份只寫規格與紙面樣子（假資料）；施工等使用者審稿。已定：#386 不套用到原班自習虛線格、對位測試頁不動。使用者沒說的地方都在最下面〈待使用者審〉。</p></div>
+<div class="hd"><b>匯出檔樣式規格　稿 v2.63</b><button class="btn btn-sm" data-theme-btn type="button">深色／淺色</button></div>
+<div class="main"><div class="hero"><h1>匯出檔樣式規格　稿 v2.63</h1><p>解 #390～#393、#395、#396、#408、#409（已裁示分兩種）。<b>稿 v2.63、2026-11-18、待使用者審；審過前不施工。</b>這份只寫規格與紙面樣子（假資料）；施工等使用者審稿。已定：#386 不套用到原班自習虛線格、對位測試頁不動。使用者沒說的地方都在最下面〈待使用者審〉。</p></div>
 
 <section class="sec"><header><h2>1　三種標示（#390、#393、#409）</h2></header>
-<div class="say"><b>規則</b>：標示分<b>三種、三個寫法</b>，座位表、標籤、圖例一致：<br>① <b>不考</b>：黑底白字小牌，<b>每一科都帶 X</b>——「X 社」「X 數B　X 社」（#390：「社」會被誤讀成要考；X＝不考）。<br>② <b>加考（原教室考）</b>：白底雙線框小牌「＋ 數A」（使用者 #409 已裁示：在原教室考場考試的用「＋ 科目」）。<br>③ <b>抽離考試（到別處考）</b>：白底<b>單線框</b>小牌寫完整字樣「抽離 自然 考試」（#393、#409；使用者原話「抽離科目考試」）；字多時小牌允許兩行，多科寫「抽離 自然、數A 考試」。<br>三種仍同一個淡黃格底（D39 的「三種不另分色」不變，只靠小牌字樣與框型區分，黑白列印也分得出）。<b>D39 的「加考／抽離考試共用＋科目」作廢，改為本條。</b></div>
+<div class="say"><b>規則</b>：標示分<b>三種、三個寫法</b>，座位表、標籤、圖例一致：<br>① <b>不考</b>：黑底白字小牌，<b>每一科都帶 X</b>——「X 社」「X 數B　X 社」（#390：「社」會被誤讀成要考；X＝不考）。<br>② <b>加考（原教室考）</b>：<b>沿用現有的加考小牌</b>（白底黑框，SeatChart 的 mk-add）「＋ 數A」（使用者 #409 已裁示：在原教室考場考試的用「＋ 科目」）。<br>③ <b>抽離考試（到別處考）</b>：<b>同一種現有小牌框</b>（mk-add 的白底黑框，不另發明新框型），只換成完整字樣「抽離 自然 考試」（#393、#409；使用者原話「抽離科目考試」）；字多時小牌允許兩行，多科寫「抽離 自然、數A 考試」。<br>三種仍同一個淡黃格底（D39 的「三種不另分色」不變），不考用現有黑底小牌，加考與抽離用現有白底黑框小牌，<b>只靠字樣區分</b>（黑白列印也分得出）。沒有新增任何新框型或新色。<b>D39 的「加考／抽離考試共用＋科目」作廢，改為本條。</b></div>
 <div class="k-card"><div class="lg"><span class="cellx"><span>0412</span><b>0412</b><span>勤｜丁生12</span><span class="mk x">X 社</span></span><span class="cellx"><span>1-3</span><b>0107</b><span>勤｜甲生07</span><span class="mk x">X 數B　X 社</span></span><span class="cellx"><span>2-5</span><b>0212</b><span>勇｜乙生12</span><span class="mk add">＋ 數A</span></span><span class="cellx"><span>備一</span><b>0303</b><span>誠｜丙生03</span><span class="mk out">抽離 自然 考試</span></span></div></div>
 <div class="say"><b>圖例（#409）</b>：改成三行，每行一個小牌樣子＋一句話；說明用「這位考生」當主詞，並明說去哪裡。座位表下方與預覽畫面、匯出檔用同一份文字。</div>
 <div class="k-card"><div class="lg"><b>圖例</b></div>
