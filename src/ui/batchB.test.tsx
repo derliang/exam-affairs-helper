@@ -50,20 +50,21 @@ describe('G30 座位上限依教室類型', () => {
   });
 });
 
-describe('G21 教室表格', () => {
-  it('一間一列：表頭、縮圖、排×深位、座位統計、編輯座位；沒有舊的「複製／本次調整座位」按鈕列', () => {
+describe('G21／D138 教室清單列', () => {
+  it('一間一列：開關、名稱、縮圖、排×深位、座位統計、組別、編輯座位；沒有表格、沒有舊的「複製／本次調整座位」按鈕列', () => {
     const html = renderToString(<RoomList rooms={[room()]} paper="B4" onChange={noop} selected={['r1']} onSelect={noop} classes={[{ name: '甲班', colorIndex: 1, division: 'senior' }]} division="senior" onOverride={noop} />);
-    for (const h of ['<th>教室</th>', '<th>座位配置</th>', '<th>座位統計</th>', '<th>組別</th>', '<th>操作</th>']) expect(html).toContain(h);
+    expect(html).not.toContain('<table');
+    for (const h of ['class="roomrow', 'role="switch"', '>列為考場<', '理組', '座位 <b>42</b>']) expect(html).toContain(h);
     expect(html).toContain('seatthumb');
     expect(html).toContain('6</b> 排×<b>7</b> 深位');
-    expect(html).toContain('▸ 編輯座位');
+    expect(html).toContain('編輯座位 ▾');
     expect(html).not.toContain('本次調整座位');
     expect(html).not.toContain('>複製這間教室<'); // 班級教室不複製
     expect(html).not.toContain('>刪除<'); // 班級教室不能刪
   });
   it('會考（國中部）沒有組別欄', () => {
     const html = renderToString(<RoomList junior rooms={[room({ division: 'junior', track: undefined })]} paper="B4" onChange={noop} selected={['r1']} onSelect={noop} />);
-    expect(html).not.toContain('<th>組別</th>');
+    expect(html).not.toContain('理組');
   });
 });
 
@@ -86,15 +87,16 @@ describe('G22 三種類型：班級教室跟名冊走', () => {
   });
 });
 
-describe('#357 展開的編輯座位面板不被橫向捲動容器截斷', () => {
-  it('表格容器是 roomscroll（容器查詢），面板貼左、寬度＝容器可視寬度', () => {
+describe('#357／#376／#378 教室清單沒有捲動容器（D138）', () => {
+  it('不再包橫向捲動容器；展開區在列的正下方；座位格寬跟著容器縮', () => {
     const html = renderToString(<RoomList rooms={[room()]} paper="B4" onChange={noop} selected={['r1']} onSelect={noop} />);
-    expect(html).toContain('class="scroll roomscroll"');
+    expect(html).not.toContain('class="scroll');
     const css = readFileSync(new URL('../styles/app.css', import.meta.url), 'utf-8');
-    expect(css).toMatch(/\.roomscroll\{container-type:inline-size\}/);
-    expect(css).toMatch(/\.roomscroll \.editpane\{position:sticky;left:0;width:100cqw;box-sizing:border-box;white-space:normal\}/);
+    expect(css).toMatch(/\.prev \.pgrid \.pc\{width:100%;min-width:0\}/);
     const src = readFileSync(new URL('./components/RoomList.tsx', import.meta.url), 'utf-8');
-    expect(src).toMatch(/class="editrow"><td colSpan=\{junior \? 4 : 5\}><div class="editpane">/);
+    expect(src).toContain('<div class="editpane">');
+    expect(src).toContain('minmax(0, 52px)');
+    expect(src).not.toContain('overflow-x');
   });
 });
 

@@ -23,8 +23,8 @@ describe('教室開關（施工R，DESIGN 10.9）', () => {
   it('未列入的教室整列變淡（off）；藍底 on 只給展開中的那列（A-2），列入的列不是藍底', () => {
     const rooms = addRoom(addRoom([], 'class'), 'reserve');
     const html = renderToString(<RoomList rooms={rooms} paper="B4" onChange={noop} selected={[rooms[0]!.id]} onSelect={noop} />);
-    expect(html).not.toMatch(/rowtap open/);
-    expect(html).toMatch(/rowtap off/);
+    expect(html).not.toMatch(/roomrow on/);
+    expect(html).toMatch(/roomrow off/);
   });
   it('新增班級教室預設列入、預備教室預設不列入', () => {
     const base = addRoom([], 'class');
