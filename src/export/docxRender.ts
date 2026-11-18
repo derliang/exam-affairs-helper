@@ -35,6 +35,9 @@ import {
   labelGrid,
   labelGridSize,
   labelNotePt,
+  LABEL_BOTTOM_MM,
+  LABEL_EDGE_MM,
+  LABEL_FOOTER_MM,
   periodLineFontPt,
   mmToTwip,
   PAPER_MM,
@@ -569,11 +572,11 @@ function seatSection(page: SeatPageModel, opts: DocxOptions): ISectionOptions {
 
 function labelSection(page: LabelPageModel, opts: DocxOptions): ISectionOptions {
   const mode = opts.boldMode ?? 'embed-bold';
-  const margin = opts.labelMarginMm ?? 3;
+  const margin = opts.labelMarginMm ?? LABEL_EDGE_MM;
   const { layout } = page;
   const paper = PAPER_MM[layout.paper];
   const gs = labelGridSize(page);
-  const box = labelBoxMm(layout, gs.rows);
+  const box = labelBoxMm(layout, gs.rows, page.notes.length);
   const tw = (mm: number) => mmToTwip(mm);
   const isB4 = layout.paper === 'B4';
   const physCols = gs.cols * (layout.wide ? 2 : 1);
@@ -609,7 +612,7 @@ function labelSection(page: LabelPageModel, opts: DocxOptions): ISectionOptions 
   const gridTable = new Table({ width: { size: cellTw * physCols, type: WidthType.DXA }, columnWidths: Array<number>(physCols).fill(cellTw), layout: TableLayoutType.FIXED, borders: noInside, rows });
 
   // 注意事項（字數固定，框寬依字級估算）
-  const notePt = labelNotePt(layout, gs.rows, page.notes.length, isB4 ? 13 : 20);
+  const notePt = labelNotePt(layout, gs.rows, page.notes.length);
   const h4Pt = notePt + 1;
   const lines = notePt ? page.notes : [];
   const noteTextW = Math.max(textMm('注意事項：', h4Pt, true), ...lines.map((l) => l.reduce((w, s) => w + textMm(s.text, notePt, s.bold), 0)));
@@ -647,7 +650,7 @@ function labelSection(page: LabelPageModel, opts: DocxOptions): ISectionOptions 
     properties: {
       page: {
         size: { width: tw(paper.w), height: tw(paper.h) },
-        margin: { top: tw(margin), bottom: tw(10), left: tw(box.padX), right: tw(box.padX), footer: tw(4) },
+        margin: { top: tw(margin), bottom: tw(LABEL_BOTTOM_MM), left: tw(box.padX), right: tw(box.padX), footer: tw(LABEL_FOOTER_MM) },
       },
     },
     footers: { default: pageFooter(opts) },

@@ -60,7 +60,7 @@ function Side4(p: { doc: Doc; exam: ExamConfig }) {
       <div class="card stack">
         <div class="lab">範例標示</div>
         {(['B4', 'A3'] as const).map((pp) => <MarkLabelSample key={pp} paper={pp} mark={markTag} />)}
-        <p class="small muted">範例是用實際輸出的程式畫的（假資料）。標籤最多 7 排×7 深位，格子大小只隨紙張不同（寬＝紙寬÷7、高＝紙高÷7；{PAPER_NOTE}），格子排列與該教室的座位表一致，沒有座位的地方不印格子，所以 5 排×6 深位的教室整頁只有 30 格。有標示的考生，標示印在格子右下角（✕＝這科不考、＋＝加考這科）。</p>
+        <p class="small muted">範例是用實際輸出的程式畫的（假資料）。標籤最多 7 排×7 深位，格子大小隨紙張不同，四周留列印邊距（{PAPER_NOTE}；深位多時格子稍矮，注意事項一定印在同一頁），格子排列與該教室的座位表一致，沒有座位的地方不印格子，所以 5 排×6 深位的教室整頁只有 30 格。有標示的考生，標示印在格子右下角（✕＝這科不考、＋＝加考這科）。</p>
       </div>
     </>
   );

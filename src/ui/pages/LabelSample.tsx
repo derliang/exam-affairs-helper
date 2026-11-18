@@ -5,8 +5,8 @@ import { sampleHtml, sampleMarkLabelPage, sampleReserveLabelPage, SAMPLE_ROOM } 
 
 const PX = 96 / 25.4; // 1 mm ≈ 3.78 px
 
-/** 範例用的格尺寸（mm）：與實際輸出同一來源（labelCellMm）；rows＝該教室深位數 */
-export const sampleCellMm = (paper: LabelPaper, rows: number): { w: number; h: number } => labelCellMm(defaultLabelLayout(paper), rows);
+/** 範例用的格尺寸（mm）：與實際輸出同一來源（labelCellMm）；rows＝該教室深位數，noteLines＝注意事項行數（範例頁不印注意事項＝0） */
+export const sampleCellMm = (paper: LabelPaper, rows: number, noteLines = 0): { w: number; h: number } => labelCellMm(defaultLabelLayout(paper), rows, noteLines);
 
 const frame = (html: string, w: number, h: number, title: string) => (
   <iframe class="lsample" title={title} sandbox="" srcdoc={html} style={`width:${Math.ceil(w)}px;height:${Math.ceil(h)}px;border:1px solid var(--line);border-radius:var(--r-sm);background:#fff;display:block;max-width:100%`} />

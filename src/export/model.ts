@@ -198,7 +198,7 @@ export const PAPER_MM: Record<LabelPaper | 'A4', { w: number; h: number }> = {
 };
 export const mmToTwip = (mm: number): number => Math.round((mm * 1440) / 25.4);
 
-/** 標籤格數（D113 取代 D74／D107）：B4、A3 都是 7×7；每格＝紙寬÷7、紙高÷7。一般標籤 7 欄，整合標籤（分科）每張佔 2 欄、一頁橫向最多 3 張 */
+/** 標籤格數（D113 取代 D74／D107）：B4、A3 都是 7×7；格子大小見 labelFit（D136：四周留列印邊距）。一般標籤 7 欄，整合標籤（分科）每張佔 2 欄、一頁橫向最多 3 張 */
 export const LABEL_GRID_MAX = 7;
 export function defaultLabelLayout(paper: LabelPaper): LabelLayout {
   return { paper, cols: LABEL_GRID_MAX, rows: LABEL_GRID_MAX };
@@ -214,16 +214,55 @@ export const RESERVE_DEPTH_MAX = 8;
 export const PREP_TAG = '預備教室';
 
 /**
- * 標籤格尺寸（D113）：寬＝紙寬÷7，高＝紙高÷7（滿 7 列、8 列時扣掉標題與頁尾後平分）。
- * 標題與頁尾佔的高度（#372、#385、#387 修正）：原本猜 22mm，B4 用 Word 實際開啟量到
- * 上邊界 3＋標題列與間距 21.4（格子上緣在 24.4mm）＋下邊界 10＋表格後必有的段落 0.35＝約 35mm，
- * 22mm 讓滿 7 列的每頁多出約 13mm，第 7 排被擠到下一頁。取 36.5mm（留約 1.5mm 餘裕）。
- * 這是「整頁高度預算」：格子高度總和不得超過紙高減這個值，標籤頁的任何輸出（Word、列印頁）都以它為準。
+ * 標籤頁的列印邊距（D136，使用者 2026-11-18 裁示 #387「標籤與紙張邊緣沒有間距，列印會有問題」）：
+ * 一般雷射／噴墨印表機四周不可列印區約 4～5mm（Word 邊界太小時也會提示）。A2 先取 6mm，使用者看了問「6mm 會不會太小」，
+ * 2026-11-18 改裁示 10mm：左右上各 10mm，頁尾文字放在離紙邊 10mm 處、本文下邊界 17mm（頁尾一行 4.6mm 加 2.4mm 間隔），Word 與列印頁相同。
  */
-export const LABEL_PAGE_FIXED_MM = 36.5;
-export function labelCellMm(layout: LabelLayout, gridRows = LABEL_GRID_MAX): { w: number; h: number } {
+export const LABEL_EDGE_MM = 10;
+/** 左右頁面邊界：Word 表格框線向外多出約 0.2～0.3mm，左右各加 0.5mm，讓實際量到的最小邊距仍 ≥10mm（上、下邊不需要） */
+export const LABEL_EDGE_X_MM = LABEL_EDGE_MM + 0.5;
+export const LABEL_FOOTER_MM = 10;
+export const LABEL_BOTTOM_MM = 17;
+/**
+ * 標籤頁「整頁高度預算」（#372 起）：上邊界 10＋標題列與間距 21.4（Word 實測）＋下邊界 17＋表格後必有的段落 0.35＋餘裕 1.75＝50.5。
+ * 格子高度總和（加上注意事項框）不得超過紙高減這個值，Word、列印頁都以它為準。
+ */
+export const LABEL_PAGE_FIXED_MM = 50.5;
+/** 注意事項字級（pt）：放得下就用上限；放不下時用下限並把格子縮矮，一定印（D136：深位 6、7 也要印） */
+export const LABEL_NOTE_PT = { B4: { max: 13, min: 10 }, A3: { max: 20, min: 13 } } as const;
+
+/** 注意事項框的高度（mm），與 Word 的畫法一致：上方間距 3＋標題行（字級＋1，行高 1.75）＋標題後間距＋每行（行高 1.75）＋上下內距 4＋框線 */
+export function labelNoteBlockMm(paper: LabelPaper, pt: number, lines: number): number {
+  if (!pt || !lines) return 0;
+  return 3 + (pt + 1) * 0.3528 * 1.75 + (paper === 'B4' ? 1 : 2) + lines * pt * 0.3528 * 1.75 + 4 + 0.6;
+}
+
+/**
+ * 標籤格尺寸與注意事項字級（D113，D136 修訂）：寬＝（紙寬－左右邊距）÷7；高＝紙高÷7，但整頁（標題、格子、注意事項、頁尾）
+ * 放不下時把格子平均縮矮，一定在同一頁、注意事項一定印。noteLines＝注意事項行數（0＝不印框）。
+ */
+export function labelFit(layout: LabelLayout, gridRows = LABEL_GRID_MAX, noteLines = 0): { w: number; h: number; notePt: number } {
   const p = PAPER_MM[layout.paper];
-  return { w: p.w / LABEL_GRID_MAX, h: gridRows >= LABEL_GRID_MAX ? (p.h - LABEL_PAGE_FIXED_MM) / gridRows : p.h / LABEL_GRID_MAX };
+  const w = (p.w - 2 * LABEL_EDGE_X_MM) / LABEL_GRID_MAX;
+  const avail = p.h - LABEL_PAGE_FIXED_MM;
+  const rows = Math.max(1, gridRows);
+  const h0 = Math.min(p.h / LABEL_GRID_MAX, avail / rows);
+  if (!noteLines) return { w, h: h0, notePt: 0 };
+  const { max, min } = LABEL_NOTE_PT[layout.paper];
+  const left = avail - rows * h0;
+  for (let pt = max; pt >= min; pt--) if (labelNoteBlockMm(layout.paper, pt, noteLines) <= left) return { w, h: h0, notePt: pt };
+  return { w, h: (avail - labelNoteBlockMm(layout.paper, min, noteLines)) / rows, notePt: min };
+}
+
+/** 畫面說明用：「四周留 10mm 列印邊距，每格寬約 32.7 mm、高最多約 50.4 mm」（D136；數字與實際輸出同一來源） */
+export function labelSizeNote(paper: LabelPaper): string {
+  const p = PAPER_MM[paper];
+  return `四周留 ${LABEL_EDGE_MM}mm 列印邊距，每格寬約 ${((p.w - 2 * LABEL_EDGE_X_MM) / LABEL_GRID_MAX).toFixed(1)} mm、高最多約 ${(p.h / LABEL_GRID_MAX).toFixed(1)} mm（深位多時格子稍矮，整間教室與注意事項一定印在同一頁）`;
+}
+
+export function labelCellMm(layout: LabelLayout, gridRows = LABEL_GRID_MAX, noteLines = 0): { w: number; h: number } {
+  const f = labelFit(layout, gridRows, noteLines);
+  return { w: f.w, h: f.h };
 }
 
 interface Ctx {
@@ -1059,18 +1098,15 @@ export function seatGeometry(p: SeatPageModel): { cw: number; ch: number; st: Re
   return { cw, ch: withStats, st, statsNext: false };
 }
 
-/** 標籤格尺寸（D113）：寬＝紙寬÷7、高＝紙高÷7（滿 7 列時扣標題頁尾）；左右不留邊 */
-export function labelBoxMm(layout: LabelLayout, gridRows = LABEL_GRID_MAX): { w: number; h: number; padX: number } {
-  const c = labelCellMm(layout, gridRows);
-  return { w: c.w, h: c.h, padX: 0 };
+/** 標籤格尺寸（D113、D136）：見 labelFit；padX＝左右列印邊距 */
+export function labelBoxMm(layout: LabelLayout, gridRows = LABEL_GRID_MAX, noteLines = 0): { w: number; h: number; padX: number } {
+  const c = labelCellMm(layout, gridRows, noteLines);
+  return { w: c.w, h: c.h, padX: LABEL_EDGE_X_MM };
 }
 
-/** 格子下方剩的高度放得下注意事項時回傳字級（pt），放不下回 0（不印）。字級最多 maxPt，縮到不足 8pt 就不印 */
-export function labelNotePt(layout: LabelLayout, gridRows: number, noteLines: number, maxPt: number): number {
-  if (noteLines === 0) return 0;
-  const left = PAPER_MM[layout.paper].h - LABEL_PAGE_FIXED_MM - gridRows * labelBoxMm(layout, gridRows).h - 6;
-  const pt = Math.min(maxPt, Math.floor((left - 4) / ((noteLines + 1) * 0.3528 * 1.5)));
-  return pt >= 8 ? pt : 0;
+/** 注意事項字級（pt）：有內容就一定 > 0（D136）；沒有內容回 0（不印框） */
+export function labelNotePt(layout: LabelLayout, gridRows: number, noteLines: number): number {
+  return labelFit(layout, gridRows, noteLines).notePt;
 }
 
 /** 估字寬（em）：中日韓全形 1、其他 0.55 */

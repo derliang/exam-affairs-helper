@@ -6,7 +6,7 @@
  */
 import { esc } from './htmlRender';
 import type { LabelPaper } from '../data';
-import { defaultLabelLayout, footerText, labelCellMm, PAPER_MM } from './model';
+import { defaultLabelLayout, footerText, PAPER_MM } from './model';
 
 export type AlignPaper = LabelPaper | 'A4';
 export const ALIGN_PAPERS: AlignPaper[] = ['A4', 'B4', 'A3'];
@@ -34,7 +34,8 @@ export function alignmentSpec(paper: AlignPaper): AlignSpec {
   const spec: AlignSpec = { paper, widthMm: w, heightMm: h, marginMm: ALIGN_MARGIN_MM, scaleBarMm: SCALE_BAR_MM };
   if (paper !== 'A4') {
     const layout = defaultLabelLayout(paper);
-    const c = labelCellMm(layout, 0); // 對位用整張紙的 7×7（紙高÷7）
+    // 對位用整張紙的 7×7（紙寬÷7、紙高÷7）：與標籤實際格線無關（D136 標籤加了列印邊距後也不變，避免對位頁跟著變）
+    const c = { w: w / layout.cols, h: h / layout.rows };
     spec.labels = { cols: layout.cols, rows: layout.rows, cellW: c.w, cellH: c.h };
   }
   return spec;

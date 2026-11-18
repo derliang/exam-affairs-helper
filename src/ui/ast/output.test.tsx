@@ -265,7 +265,7 @@ describe('分科輸出：整合標籤兩倍寬（#216／D107）', () => {
     const o = astOutputs(doc, exam, astPlan(doc, exam)!, 'A3');
     const res = await runAstExport(o, ['label'], 'word', 'A3', '分科', async () => ({ fonts: { regular: new Uint8Array(readFileSync(new URL('../../export/fonts/NotoSansTC-Regular-big5.ttf', import.meta.url))), bold: new Uint8Array(readFileSync(new URL('../../export/fonts/NotoSansTC-Bold-core.ttf', import.meta.url))) }, has: () => true }));
     const xml = await (await JSZip.loadAsync(res[0]!.data as Uint8Array)).file('word/document.xml')!.async('string');
-    const col = Math.floor((297 / 7 * 1440) / 25.4);
+    const col = Math.floor(((297 - 21) / 7 * 1440) / 25.4); // D136：左右頁面邊界各 10.5mm（含框線補償 0.5）
     expect((xml.match(new RegExp('w:gridCol w:w="' + col + '"', 'g')) ?? []).length).toBeGreaterThanOrEqual(2);
     const grids = [...xml.matchAll(/<w:tblGrid>(.*?)<\/w:tblGrid>/g)].map((m) => [...m[1]!.matchAll(/w:w="(\d+)"/g)].map((x) => Number(x[1])));
     const g = grids.filter((w) => w.length >= 2 && w.length % 2 === 0 && w.every((x) => x === col));
