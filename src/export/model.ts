@@ -215,17 +215,19 @@ export const PREP_TAG = '預備教室';
 
 /**
  * 標籤頁的列印邊距（D136，使用者 2026-11-18 裁示 #387「標籤與紙張邊緣沒有間距，列印會有問題」）：
- * 一般雷射／噴墨印表機四周不可列印區約 4～5mm（Word 邊界太小時也會提示），取 6mm：左右上各 6mm，
- * 頁尾文字放在離紙邊 6mm 處、本文下邊界 13mm（頁尾一行 4.6mm 加 2.4mm 間隔），Word 與列印頁相同。
+ * 一般雷射／噴墨印表機四周不可列印區約 4～5mm（Word 邊界太小時也會提示）。A2 先取 6mm，使用者看了問「6mm 會不會太小」，
+ * 2026-11-18 改裁示 10mm：左右上各 10mm，頁尾文字放在離紙邊 10mm 處、本文下邊界 17mm（頁尾一行 4.6mm 加 2.4mm 間隔），Word 與列印頁相同。
  */
-export const LABEL_EDGE_MM = 6;
-export const LABEL_FOOTER_MM = 6;
-export const LABEL_BOTTOM_MM = 13;
+export const LABEL_EDGE_MM = 10;
+/** 左右頁面邊界：Word 表格框線向外多出約 0.2～0.3mm，左右各加 0.5mm，讓實際量到的最小邊距仍 ≥10mm（上、下邊不需要） */
+export const LABEL_EDGE_X_MM = LABEL_EDGE_MM + 0.5;
+export const LABEL_FOOTER_MM = 10;
+export const LABEL_BOTTOM_MM = 17;
 /**
- * 標籤頁「整頁高度預算」（#372 起）：上邊界 6＋標題列與間距 21.4（Word 實測）＋下邊界 13＋表格後必有的段落 0.35＋餘裕 1.75。
+ * 標籤頁「整頁高度預算」（#372 起）：上邊界 10＋標題列與間距 21.4（Word 實測）＋下邊界 17＋表格後必有的段落 0.35＋餘裕 1.75＝50.5。
  * 格子高度總和（加上注意事項框）不得超過紙高減這個值，Word、列印頁都以它為準。
  */
-export const LABEL_PAGE_FIXED_MM = 42.5;
+export const LABEL_PAGE_FIXED_MM = 50.5;
 /** 注意事項字級（pt）：放得下就用上限；放不下時用下限並把格子縮矮，一定印（D136：深位 6、7 也要印） */
 export const LABEL_NOTE_PT = { B4: { max: 13, min: 10 }, A3: { max: 20, min: 13 } } as const;
 
@@ -241,7 +243,7 @@ export function labelNoteBlockMm(paper: LabelPaper, pt: number, lines: number): 
  */
 export function labelFit(layout: LabelLayout, gridRows = LABEL_GRID_MAX, noteLines = 0): { w: number; h: number; notePt: number } {
   const p = PAPER_MM[layout.paper];
-  const w = (p.w - 2 * LABEL_EDGE_MM) / LABEL_GRID_MAX;
+  const w = (p.w - 2 * LABEL_EDGE_X_MM) / LABEL_GRID_MAX;
   const avail = p.h - LABEL_PAGE_FIXED_MM;
   const rows = Math.max(1, gridRows);
   const h0 = Math.min(p.h / LABEL_GRID_MAX, avail / rows);
@@ -252,10 +254,10 @@ export function labelFit(layout: LabelLayout, gridRows = LABEL_GRID_MAX, noteLin
   return { w, h: (avail - labelNoteBlockMm(layout.paper, min, noteLines)) / rows, notePt: min };
 }
 
-/** 畫面說明用：「四周留 6mm 列印邊距，每格寬約 34.0 mm、高最多約 50.4 mm」（D136；數字與實際輸出同一來源） */
+/** 畫面說明用：「四周留 10mm 列印邊距，每格寬約 32.7 mm、高最多約 50.4 mm」（D136；數字與實際輸出同一來源） */
 export function labelSizeNote(paper: LabelPaper): string {
   const p = PAPER_MM[paper];
-  return `四周留 ${LABEL_EDGE_MM}mm 列印邊距，每格寬約 ${((p.w - 2 * LABEL_EDGE_MM) / LABEL_GRID_MAX).toFixed(1)} mm、高最多約 ${(p.h / LABEL_GRID_MAX).toFixed(1)} mm（深位多時格子稍矮，整間教室與注意事項一定印在同一頁）`;
+  return `四周留 ${LABEL_EDGE_MM}mm 列印邊距，每格寬約 ${((p.w - 2 * LABEL_EDGE_X_MM) / LABEL_GRID_MAX).toFixed(1)} mm、高最多約 ${(p.h / LABEL_GRID_MAX).toFixed(1)} mm（深位多時格子稍矮，整間教室與注意事項一定印在同一頁）`;
 }
 
 export function labelCellMm(layout: LabelLayout, gridRows = LABEL_GRID_MAX, noteLines = 0): { w: number; h: number } {
@@ -1099,7 +1101,7 @@ export function seatGeometry(p: SeatPageModel): { cw: number; ch: number; st: Re
 /** 標籤格尺寸（D113、D136）：見 labelFit；padX＝左右列印邊距 */
 export function labelBoxMm(layout: LabelLayout, gridRows = LABEL_GRID_MAX, noteLines = 0): { w: number; h: number; padX: number } {
   const c = labelCellMm(layout, gridRows, noteLines);
-  return { w: c.w, h: c.h, padX: LABEL_EDGE_MM };
+  return { w: c.w, h: c.h, padX: LABEL_EDGE_X_MM };
 }
 
 /** 注意事項字級（pt）：有內容就一定 > 0（D136）；沒有內容回 0（不印框） */

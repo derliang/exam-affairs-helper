@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LABEL_EDGE_MM, LABEL_PAGE_FIXED_MM, labelFit, labelCellMm, defaultLabelLayout, PAPER_MM, roomShown, roomTooBigForLabel, labelBoxMm, labelNotePt } from './model';
+import { LABEL_EDGE_X_MM, LABEL_PAGE_FIXED_MM, labelFit, labelCellMm, defaultLabelLayout, PAPER_MM, roomShown, roomTooBigForLabel, labelBoxMm, labelNotePt } from './model';
 import { renderPrintHtml } from './htmlRender';
 import { sampleHtml, sampleMarkLabelPage, sampleReserveLabelPage, SAMPLE_ROOM } from './sample';
 import { sampleCellMm } from '../ui/pages/LabelSample';
@@ -19,7 +19,7 @@ describe('G30 預備教室 7 排×8 深位', () => {
     for (const paper of ['B4', 'A3'] as const) {
       const l = defaultLabelLayout(paper);
       const c8 = labelCellMm(l, 8);
-      expect(c8.w).toBeCloseTo((PAPER_MM[paper].w - 2 * LABEL_EDGE_MM) / 7, 5);
+      expect(c8.w).toBeCloseTo((PAPER_MM[paper].w - 2 * LABEL_EDGE_X_MM) / 7, 5);
       expect(c8.h).toBeCloseTo((PAPER_MM[paper].h - LABEL_PAGE_FIXED_MM) / 8, 5);
       expect(8 * c8.h).toBeLessThanOrEqual(PAPER_MM[paper].h - LABEL_PAGE_FIXED_MM + 1e-9);
       expect(labelBoxMm(l, 8).h).toBe(c8.h);
@@ -39,7 +39,7 @@ describe('G30 預備教室 7 排×8 深位', () => {
       expect(seat.every((p) => p.rows <= 7 && p.depth <= 8)).toBe(true);
       expect(lab.every((p) => p.grid!.cols === 7 && p.grid!.rows === 8 && p.tag === '預備教室')).toBe(true);
       const html = renderPrintHtml({ label: lab, seat }, { generatedAt: '2026-01-01T00:00:00+08:00', dataVersion: 'X' });
-      if (lab.length) expect(html).toContain('grid-template-columns:repeat(7,34mm)');
+      if (lab.length) expect(html).toContain('grid-template-columns:repeat(7,' + +((PAPER_MM.B4.w - 2 * LABEL_EDGE_X_MM) / 7).toFixed(2) + 'mm)');
     }
   });
 });
@@ -74,8 +74,8 @@ describe('G26／G28 範例用真正的渲染器畫', () => {
       expect(html).toContain('丁生21');
     }
   });
-  it('標示範例的格子尺寸＝實際輸出的格尺寸（D136：B4 寬 34.0、A3 寬 40.7；範例頁不印注意事項，高＝紙高÷7）；教室 5 排×6 深位只有 30 格', () => {
-    for (const [paper, w] of [['B4', '34.0'], ['A3', '40.7']] as const) {
+  it('標示範例的格子尺寸＝實際輸出的格尺寸（D136：B4 寬 32.7、A3 寬 39.4；範例頁不印注意事項，高＝紙高÷7）；教室 5 排×6 深位只有 30 格', () => {
+    for (const [paper, w] of [['B4', '32.7'], ['A3', '39.4']] as const) {
       const c = sampleCellMm(paper, SAMPLE_ROOM.depth);
       expect(c.w.toFixed(1)).toBe(w);
       expect(c.h).toBeCloseTo(labelFit(defaultLabelLayout(paper), SAMPLE_ROOM.depth, 0).h, 5);

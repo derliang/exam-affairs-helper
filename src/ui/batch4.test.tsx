@@ -165,13 +165,13 @@ describe('G14 標籤：每格＝紙寬÷7、紙高÷7，排列同座位表（學
         const x = await docXml(input);
         const g = grids(x).filter((w) => w.length === 5);
         expect(g).toHaveLength(1);
-        expect(new Set(g[0]!)).toEqual(new Set([Math.floor(((W - 12) / 7 * 1440) / 25.4)]));
+        expect(new Set(g[0]!)).toEqual(new Set([Math.floor(((W - 21) / 7 * 1440) / 25.4)]));
         const heights = [...x.matchAll(/<w:trHeight w:val="(\d+)" w:hRule="exact"/g)].map((m) => Number(m[1]));
         expect(heights).toHaveLength(6);
         expect(new Set(heights)).toEqual(new Set([mmToTwip(labelFit(defaultLabelLayout(paper), 6, 3).h)])); // D136：深位 6 含注意事項時格子稍矮
         // 列印頁（PDF 用）也是同一組格大小
         const html = renderPrintHtml({ label: pages }, meta);
-        expect(html).toContain(`repeat(5,${+((W - 12) / 7).toFixed(2)}mm)`);
+        expect(html).toContain(`repeat(5,${+((W - 21) / 7).toFixed(2)}mm)`);
         expect(html).toContain(`height:${+labelFit(defaultLabelLayout(paper), 6, 3).h.toFixed(2)}mm`);
       });
     }

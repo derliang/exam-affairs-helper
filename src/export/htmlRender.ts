@@ -4,7 +4,7 @@
  * 座位表與標籤的樣式照設計系統成品頁「座位表與標籤」稿件（docs/design/mockups/設計系統.html #paper）：
  * 改這裡的版面要同步改稿件，反之亦然。
  */
-import { roomShown, footerText, isSpecial, LABEL_EDGE_MM, labelBoxMm, labelGrid, labelGridSize, labelNotePt, landscapeFit, namePtFit, PAPER_MM, periodLineFontPt, personLayout, rotationPage, wideLayout, type PersonLine, SEAT_PAGE, seatGeometry, statLayout, SLOT_TIP, type CellModel, type LabelPageModel, type ListPageModel, type SeatPageModel, type TablePageModel } from './model';
+import { roomShown, footerText, isSpecial, LABEL_EDGE_MM, LABEL_FOOTER_MM, labelBoxMm, labelGrid, labelGridSize, labelNotePt, landscapeFit, namePtFit, PAPER_MM, periodLineFontPt, personLayout, rotationPage, wideLayout, type PersonLine, SEAT_PAGE, seatGeometry, statLayout, SLOT_TIP, type CellModel, type LabelPageModel, type ListPageModel, type SeatPageModel, type TablePageModel } from './model';
 
 export interface HtmlOptions {
   generatedAt: string;
@@ -110,7 +110,7 @@ function labelHtml(p: LabelPageModel, o: HtmlOptions): string {
 <div class="pp-hd" style="margin-bottom:3mm"><div><div class="pp-h1">${esc((p.heading ?? `${p.examName}　標籤`) + (p.flipNotes?.length ? `　（${p.flipNotes.join('；')}）` : ''))}</div></div><span class="pp-room" style="font-size:12pt;padding:1mm 4mm">${esc(roomShown(p))}</span></div>
 <div class="pp-grid" style="grid-template-columns:repeat(${gs.cols * (layout.wide ? 2 : 1)},${mm(cell.w)})">${cells}</div>
 ${noteHtml}
-<div class="pp-foot">${esc(footerText(o.generatedAt, o.dataVersion))}</div></section>`;
+<div class="pp-foot" style="bottom:${LABEL_FOOTER_MM}mm">${esc(footerText(o.generatedAt, o.dataVersion))}</div></section>`;
 }
 
 function listHtml(p: ListPageModel, o: HtmlOptions): string {
