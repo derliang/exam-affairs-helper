@@ -69,23 +69,22 @@ describe('G35 學測（有預備教室、抽離、自習）', () => {
   });
 
   it('琥珀：未參加超過名單範圍 20% → M-1 警示；須逐項確認，確認後放行；資料一變確認作廢', () => {
-    const { doc, exam } = gsatDoc();
-    // 名冊多 10 人（第 4 班）沒有報名 → 未參加 10／40 ＝ 25%
-    const more: Student[] = Array.from({ length: 10 }, (_, k) => ({ classNo: 4, seatNo: k + 1, name: `假生4${k + 1}` }));
-    const d2: Doc = { ...doc, rosters: { ...doc.rosters, senior: [...doc.rosters.senior, ...more] }, settings: { ...doc.settings, classes: [...doc.settings.classes, { no: 4, name: '儉', division: 'senior', colorIndex: 4, track: 'science' }] } };
-    const re = reseat(d2, exam, '2026-11-10T04:00:00Z');
-    if (!re.ok) throw new Error(re.error);
-    const r = ready(reconcile(re.doc, exam));
-    expect(r.scope.absent).toBe(10);
+    // 每班 10 人、各班 3 人沒報名 → 未參加 9／30 ＝ 30%；他們是自習，原班教室有空位，座位表上有參考座位（D125）
+    const { doc, exam } = gsatDoc({ absentRoster: 3 });
+    const r = ready(reconcile(doc, exam));
+    expect(r.scope.absent).toBe(9);
     expect(light(r, 'M-1')).toBe('warn');
     expect(r.checks.filter((c) => c.light === 'fail')).toEqual([]);
     const g = gateOf(r, '');
     expect(g.warns.map((w) => w.id)).toEqual(['M-1']);
     expect(g.why).toMatch(/警示.*逐項確認/);
     expect(gateOf(r, g.fingerprint).why).toBe('');
-    // 資料變動（再多一個未參加）→ 指紋不同 → 確認作廢
-    const d3: Doc = { ...re.doc, rosters: { ...re.doc.rosters, senior: [...re.doc.rosters.senior, { classNo: 4, seatNo: 11, name: '假生411' }] } };
-    const g3 = gateOf(reconcile(d3, exam), g.fingerprint);
+    // 資料變動（再多一個未參加）→ 警示內容變 → 指紋不同 → 確認作廢
+    const more: Student = { classNo: 1, seatNo: 11, name: '假生111' };
+    const d3: Doc = { ...doc, rosters: { ...doc.rosters, senior: [...doc.rosters.senior, more] } };
+    const re3 = reseat(d3, exam, '2026-11-10T04:00:00Z');
+    if (!re3.ok) throw new Error(re3.error);
+    const g3 = gateOf(reconcile(re3.doc, exam), g.fingerprint);
     expect(g3.why).not.toBe('');
   });
 
