@@ -4,6 +4,8 @@
  * 「應有」一側只取名單（名冊、考試名單、考科），「實有」一側取輸出。
  * 檢核編號 M-1～M-8（補考用 C-，不撞號）；燈號：pass 通過、warn 警示（須逐項確認）、fail 不通過（擋下載）、na 不適用。
  * 三種考試共用同一套檢核與總帳：學測（有預備教室與抽離）、會考（無抽離、無自習）、分科（D99，不考的人＝自習，算進座位容量）。
+ * 鐵則（使用者 2026-11-18）：每個時段，學生人數＝考試人數＋自習人數，每個人都要有去處。學測沒有「未參加」這一類：
+ * 名冊有、考試名單沒有的人（含全科缺考）＝自習，座位表上要有他的參考座位（D125、G36）。
  * 自習容量不另算：學測沿用 capacity.ts 的 studyCapacity，分科沿用 ast/model.ts 的 astCapacity。
  */
 import type { ExamConfig } from '../data';
@@ -54,7 +56,7 @@ export interface LedgerRow {
 export type Reconcile =
   | { state: 'no-roster' }
   | { state: 'no-result' }
-  | { state: 'ready'; kind: ExamConfig['kind']; scope: { total: number; enrolled: number; absent: number }; checks: Check[]; ledger: LedgerRow[]; /** 排座結果版本；資料變動後確認作廢用 */ version: string; hasStudy: boolean };
+  | { state: 'ready'; kind: ExamConfig['kind']; scope: { total: number; enrolled: number; absent: number }; checks: Check[]; ledger: LedgerRow[]; /** 排座結果版本；資料變動後確認作廢用 */ version: string; hasStudy: boolean; /** 總帳有沒有「未參加」這一類：學測沒有（未參加的人算自習），會考、分科有 */ hasAbsent: boolean };
 
 export const LIGHT_TEXT: Record<Light, string> = { pass: '通過', warn: '警示', fail: '不通過', na: '不適用' };
 export const LIGHT_ICON: Record<Light, string> = { pass: '✓', warn: '▲', fail: '✕', na: '–' };
@@ -123,18 +125,24 @@ export function reconcileStandard(doc: Doc, exam: ExamConfig): Reconcile {
   const enrolled = new Map(enrolledList.map((e) => [studentCode(e.classNo, e.seatNo), e]));
   const absentCodes = [...R].filter((c) => !enrolled.has(c));
   const scope = { total: R.size, enrolled: enrolledList.length, absent: absentCodes.length };
+  // D125／G36：學測名冊裡未參加（或全科缺考沒排座）的人＝自習，要在原班座位表上有自習參考座位（虛線格）。
+  // 每時段「名冊＝考試＋自習」，沒有第三類；會考沒有自習，維持原樣（未參加另計）
+  const absentStudy = exam.kind === 'gsat';
+  const ab = '未參加';
 
-  // 輸出：座位表頁面與標籤頁面（與下載同一份頁面模型）
-  const input: ExportInput = { settings, exam, students: roster, entries, result };
+  // 輸出：座位表頁面與標籤頁面（與下載同一份頁面模型）。學測帶 includeStudyRef：與第 6 步「含自習參考座位頁」預設勾的輸出同一份
+  const input: ExportInput = { settings, exam, students: roster, entries, result, ...(absentStudy ? { includeStudyRef: true } : {}) };
   let buildErr = '';
   let sp: ReturnType<typeof buildSeatPages> = [];
   let lp: ReturnType<typeof buildLabelPages> = [];
   try { sp = buildSeatPages(input, 'all'); lp = buildLabelPages(input, 'all'); } catch (e) { buildErr = e instanceof Error ? e.message : String(e); }
   const seatHome = new Map<string, number>();
   const seatRes = new Set<string>();
+  /** 原班座位表上的自習參考座位（虛線格）：未參加的人的去處 */
+  const seatRef = new Set<string>();
   for (const p of sp) {
     if (p.slotMode) { for (const c of p.cells.values()) for (const x of c.persons ?? []) seatRes.add(x.code); }
-    else if (p.tag === undefined) for (const c of p.cells.values()) seatHome.set(c.code, (seatHome.get(c.code) ?? 0) + 1);
+    else if (p.tag === undefined) for (const c of p.cells.values()) { seatHome.set(c.code, (seatHome.get(c.code) ?? 0) + 1); if (c.ref) seatRef.add(c.code); }
   }
   const labelHome = new Set<string>();
   const labelRes = new Set<string>();
@@ -191,6 +199,7 @@ export function reconcileStandard(doc: Doc, exam: ExamConfig): Reconcile {
   let sumExpExam = 0; let sumDiffExam = 0; let sumLabel = 0; let sumRoom = 0; let sumSeat = 0;
   const m2issues: Issue[] = [];
   const reserveOverlap: Issue[] = [];
+  const absentMiss = new Set<string>();
   let overlapN = 0;
   const roomSlotN = rooms.length * groups.length;
   const m5bad: string[] = [];
@@ -201,7 +210,8 @@ export function reconcileStandard(doc: Doc, exam: ExamConfig): Reconcile {
     const when = whenOf(g);
     slotLabel.push(when);
     const expExam = enrolledList.filter((e) => e.subjectIds.some((id) => ids.has(id))).length;
-    const expStudy = enrolledList.length - expExam;
+    // 學測：名冊 − 應考（未參加的人也是自習）；會考：只算報名者
+    const expStudy = (absentStudy ? R.size : enrolledList.length) - expExam;
     let exam1 = 0; let study1 = 0; let seat = 0; let label = 0; let room = 0; let dEx = 0; let dSt = 0;
     const perRoom = new Map<string, { exam: number; study: number; seats: Map<string, number> }>();
     const bump = (rid: string, k: 'exam' | 'study', seatKey?: string) => {
@@ -223,6 +233,16 @@ export function reconcileStandard(doc: Doc, exam: ExamConfig): Reconcile {
         if (s.where === 'reserve') { dSt++; if (s.room) bump(s.room, 'study'); }
       }
     }
+    // 名冊上未參加的人（學測）：每時段都是自習，座位表上要有他的參考座位；找不到＝沒有去處
+    if (absentStudy) for (const code of absentCodes) {
+      const has = seatRef.has(code);
+      sumExpPlaces++; sumPlaces += has ? 1 : 0;
+      if (has) study1++;
+      else {
+        missN++;
+        if (!absentMiss.has(code)) { absentMiss.add(code); issues3.push({ text: `${code.slice(0, 2)} 班 ${code.slice(2)} 號：未參加（自習），原班座位表上沒有他的自習座位（座位不夠，或這個班的教室沒選進來）`, step: 3 }); }
+      }
+    }
     for (const [rid, x] of perRoom) {
       const r = roomById.get(rid);
       const dup = [...x.seats.values()].filter((n) => n > 1).length;
@@ -236,7 +256,7 @@ export function reconcileStandard(doc: Doc, exam: ExamConfig): Reconcile {
       u[d.purpose]++; rawUse.set(d.roomId, u);
     }
     for (const [rid, u] of rawUse) if (u.exam > 0 && u.study > 0) { overlapN++; reserveOverlap.push({ text: `${roomById.get(rid)?.name ?? rid} ${when}：同時有抽離考試 ${u.exam} 人與抽離自習 ${u.study} 人`, step: 3 }); }
-    const row0 = { key: g.subjectIds.join('+'), when, subject: g.subjectIds.map((id) => subjName.get(id) ?? id).join('、'), scope: R.size, exam: exam1, study: study1, absent: absentCodes.length, seat, label, room };
+    const row0 = { key: g.subjectIds.join('+'), when, subject: g.subjectIds.map((id) => subjName.get(id) ?? id).join('、'), scope: R.size, exam: exam1, study: study1, absent: absentStudy ? 0 : absentCodes.length, seat, label, room };
     const ok = ledgerOk(row0, expExam, expStudy);
     ledger.push({ ...row0, ok });
     sumExpExam += expExam; sumLabel += label; sumRoom += room; sumSeat += seat;
@@ -250,16 +270,16 @@ export function reconcileStandard(doc: Doc, exam: ExamConfig): Reconcile {
 
   // M-1
   const m1d = R.size - (scope.enrolled + scope.absent);
-  const m1 = tri('M-1', '學生數', R.size, scope.enrolled + scope.absent, m1d, '名冊人數＝報名人數＋未參加人數', `名冊 ${R.size} ＝ 報名 ${scope.enrolled} ＋ 未參加 ${scope.absent}`,
+  const m1 = tri('M-1', '學生數', R.size, scope.enrolled + scope.absent, m1d, `名冊人數＝報名人數＋${ab}人數${absentStudy || exam.kind === 'ast' ? '（未參加的人是自習，座位在 M-3 檢核）' : ''}`, `名冊 ${R.size} ＝ 報名 ${scope.enrolled} ＋ ${ab} ${scope.absent}`,
     m1d !== 0 ? [{ text: `考試名單有 ${scope.enrolled + scope.absent - R.size > 0 ? '名冊沒有的人' : '重複或遺漏'}，名冊 ${R.size} 人、報名 ${scope.enrolled} 人`, step: 2 }] : []);
   if (m1.light === 'pass' && R.size > 0 && scope.absent / R.size > WARN_ABSENT_RATIO) {
     m1.light = 'warn';
-    m1.issues = [{ text: `未參加 ${scope.absent} 人，超過名單範圍 ${R.size} 人的 ${Math.round(WARN_ABSENT_RATIO * 100)}%（常見於名單匯錯）`, step: 2 }];
+    m1.issues = [{ text: `${ab} ${scope.absent} 人，超過名單範圍 ${R.size} 人的 ${Math.round(WARN_ABSENT_RATIO * 100)}%（常見於名單匯錯）`, step: 2 }];
   }
   // M-2
   const m2 = tri('M-2', '每時段人數', sumExpExam, sumLabel, sumDiffExam, (bcct ? '應考＝座位表＝標籤＝各教室加總' : '應考＝座位表＝標籤＝各教室加總（含抽離）'), `${groups.length} 個時段${sumDiffExam ? `，差異共 ${sumDiffExam} 人次` : '全部相符'}`, buildErr ? [{ text: `座位表或標籤排不出來：${buildErr}`, step: 3 }, ...m2issues] : m2issues);
   // M-3
-  const m3 = tri('M-3', '每人每時段一個去處', sumExpPlaces, sumPlaces, sumPlaces - sumExpPlaces, (bcct ? '同一人同一節次只有一個座位' : '同一人同一節次只有一個去處（考試座位或自習位置；跨組、跨抽離都算）'), `${enrolled.size} 人 × ${groups.length} 時段；重複 ${dupN}、遺漏 ${missN}`, issues3.slice(0, 20));
+  const m3 = tri('M-3', '每人每時段一個去處', sumExpPlaces, sumPlaces, sumPlaces - sumExpPlaces, (bcct ? '同一人同一節次只有一個座位' : '同一人同一節次只有一個去處（考試座位或自習位置；跨組、跨抽離都算；名冊上未參加的人也要有自習座位）'), `${absentStudy ? R.size : enrolled.size} 人 × ${groups.length} 時段；重複 ${dupN}、遺漏 ${missN}`, issues3.slice(0, 20));
   // M-4
   const m4c = m4(uses, (i) => slotLabel[i] ?? `時段 ${i + 1}`, (u) => u.seats);
   // M-5
@@ -278,7 +298,7 @@ export function reconcileStandard(doc: Doc, exam: ExamConfig): Reconcile {
   const m8c = bcct ? na('M-8', '教室用途不重疊', '會考每位考生都在原班教室考，教室沒有分用', '同一節次，同一間教室不可同時有兩種以上用途')
     : tri('M-8', '教室用途不重疊', 0, overlapN, overlapN, '同一節次，同一間教室不可同時有兩種以上用途（抽離考試、抽離自習、原班考試）', `${roomSlotN} 個教室節次${overlapN ? `，${overlapN} 個有兩種用途` : '，每個只有一種用途'}`, reserveOverlap);
   const checks = [m1, m2, m3, m4c, m5c, m6, m7c, m8c];
-  return { state: 'ready', kind: exam.kind, scope, checks, ledger, version: result.dataVersion, hasStudy: !bcct };
+  return { state: 'ready', kind: exam.kind, scope, checks, ledger, version: result.dataVersion, hasStudy: !bcct, hasAbsent: !absentStudy };
 }
 
 /* ---------------- 分科（D99） ---------------- */
@@ -292,7 +312,9 @@ export function reconcileAst(doc: Doc, exam: ExamConfig, outs?: AstOutputs): Rec
   const slots = astSlots(doc, exam);
   const R = new Set(roster.map((s) => studentCode(s.classNo, s.seatNo)));
   const enrolled = new Map(entries.map((e) => [studentCode(e.classNo, e.seatNo), e]));
-  const absentN = [...R].filter((c) => !enrolled.has(c)).length;
+  // 未參加（名冊有、考試名單沒有）＝每節自習，astStudents 已把他們排進規劃（使用者 2026-11-18：「分科也是這樣」）
+  const absentCodes = [...R].filter((c) => !enrolled.has(c));
+  const absentN = absentCodes.length;
   const scope = { total: R.size, enrolled: entries.length, absent: absentN };
   const roomById = new Map(plan.input.rooms.map((r) => [r.id, r]));
   const rname = (id: string) => roomById.get(id)?.name ?? doc.settings.classrooms.find((r) => r.id === id)?.name ?? id;
@@ -311,11 +333,11 @@ export function reconcileAst(doc: Doc, exam: ExamConfig, outs?: AstOutputs): Rec
     const exams = plan.out.exams.filter((e) => e.slotId === s.id);
     const study = plan.out.study.filter((e) => e.slotId === s.id);
     const expExam = entries.filter((e) => e.subjectIds.some((id) => ids.has(id))).length;
-    const expStudy = entries.length - expExam;
+    const expStudy = entries.length + absentN - expExam;
     const places = new Map<string, number>();
     for (const e of exams) places.set(e.code, (places.get(e.code) ?? 0) + 1);
     for (const e of study) places.set(e.code, (places.get(e.code) ?? 0) + 1);
-    for (const code of enrolled.keys()) {
+    for (const code of [...enrolled.keys(), ...absentCodes]) {
       const n = places.get(code) ?? 0;
       sumExpPlaces++; sumPlaces += n;
       if (n > 1) { dupN += n - 1; issues3.push({ text: `${code.slice(0, 2)} 班 ${code.slice(2)} 號 ${s.label}：有 ${n} 個去處`, step: 5 }); }
@@ -333,7 +355,7 @@ export function reconcileAst(doc: Doc, exam: ExamConfig, outs?: AstOutputs): Rec
     const room = exams.length;
     const seat = exams.filter((e) => roomById.get(e.roomId)?.kind === 'class').length + (outs ? countLines(outs.seat, shortOf(gi)) : exams.filter((e) => roomById.get(e.roomId)?.kind === 'reserve').length);
     const label = outs ? countLines(outs.label, shortOf(gi)) : room;
-    const row0 = { key: s.id, when: s.label, subject: s.subjectIds.map((id) => subjName.get(id) ?? id).join('、'), scope: R.size, exam: exams.length, study: study.length, absent: absentN, seat, label, room };
+    const row0 = { key: s.id, when: s.label, subject: s.subjectIds.map((id) => subjName.get(id) ?? id).join('、'), scope: R.size, exam: exams.length, study: study.length, absent: 0, seat, label, room };
     ledger.push({ ...row0, ok: ledgerOk(row0, expExam, expStudy) });
     sumExp += expExam; sumLabel += label; sumSeat += seat; sumRoom += room;
     const dd = Math.abs(seat - expExam) + Math.abs(label - expExam) + Math.abs(room - expExam);
@@ -345,7 +367,7 @@ export function reconcileAst(doc: Doc, exam: ExamConfig, outs?: AstOutputs): Rec
   const m1 = tri('M-1', '學生數', R.size, scope.enrolled + scope.absent, m1d, '名冊人數＝報名人數＋未參加人數', `名冊 ${R.size} ＝ 報名 ${scope.enrolled} ＋ 未參加 ${scope.absent}`, m1d !== 0 ? [{ text: `名冊 ${R.size} 人、報名 ${scope.enrolled} 人，考試名單有名冊沒有的人或重複`, step: 2 }] : []);
   if (m1.light === 'pass' && R.size > 0 && scope.absent / R.size > WARN_ABSENT_RATIO) { m1.light = 'warn'; m1.issues = [{ text: `未參加 ${scope.absent} 人，超過名單範圍 ${R.size} 人的 ${Math.round(WARN_ABSENT_RATIO * 100)}%（常見於名單匯錯）`, step: 2 }]; }
   const m2 = tri('M-2', '每時段人數', sumExp, sumLabel, sumDiff, '應考＝座位表＝標籤＝各教室加總', `${slots.length} 個時段${sumDiff ? `，差異共 ${sumDiff} 人次` : '全部相符'}`, m2issues);
-  const m3 = tri('M-3', '每人每時段一個去處', sumExpPlaces, sumPlaces, sumPlaces - sumExpPlaces, '同一人同一節次只有一個去處（考試座位或自習位置；跨組、跨抽離都算）', `${enrolled.size} 人 × ${slots.length} 時段；重複 ${dupN}、遺漏 ${missN}`, issues3.slice(0, 20));
+  const m3 = tri('M-3', '每人每時段一個去處', sumExpPlaces, sumPlaces, sumPlaces - sumExpPlaces, '同一人同一節次只有一個去處（考試座位或自習位置；跨組、跨抽離都算）', `${enrolled.size + absentN} 人 × ${slots.length} 時段；重複 ${dupN}、遺漏 ${missN}`, issues3.slice(0, 20));
   const m4c = m4(uses, (i) => slots[i]?.label ?? `時段 ${i + 1}`, (u) => u.seats);
   const short = cp.study.slotsShort > 0 || plan.unplaced > 0 || cp.study.need > cp.study.capacity;
   const m5c = m5('M-5', cp.study.capacity, cp.study.need, short, `自習位置不足：自習 ${cp.study.need} 人，自習位置 ${cp.study.capacity}`, '自習最多的時段',
@@ -356,7 +378,7 @@ export function reconcileAst(doc: Doc, exam: ExamConfig, outs?: AstOutputs): Rec
   const fp = astFingerprint(exam, plan);
   const m7c = m7(fp, mismatch ? (exam.astFinalFp ?? '') : fp, mismatch ?? '');
   const m8c = tri('M-8', '教室用途不重疊', 0, overlapN, overlapN, '同一節次，同一間教室不可同時有兩種以上用途（考試、自習）', `${uses.length} 個使用中的教室節次${overlapN ? `，${overlapN} 個有兩種用途` : '，每個只有一種用途'}`, overlap);
-  return { state: 'ready', kind: 'ast', scope, checks: [m1, m2, m3, m4c, m5c, m6, m7c, m8c], ledger, version: fp, hasStudy: true };
+  return { state: 'ready', kind: 'ast', scope, checks: [m1, m2, m3, m4c, m5c, m6, m7c, m8c], ledger, version: fp, hasStudy: true, hasAbsent: false };
 }
 
 export const reconcile = (doc: Doc, exam: ExamConfig, outs?: AstOutputs): Reconcile => (exam.kind === 'ast' ? reconcileAst(doc, exam, outs) : reconcileStandard(doc, exam));
