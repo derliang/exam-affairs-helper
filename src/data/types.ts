@@ -186,7 +186,7 @@ export interface ExamConfig {
   astMode?: 'fewest-rooms' | 'least-movement';
   /** 分科綜合教室座位排法（#258）：min-depth＝最少深位（沒設＝預設，人數平均分到各排）、min-rows＝最少排數 */
   astReserveLayout?: 'min-depth' | 'min-rows';
-  /** 分科（G36）：固定自習教室（教室 id）：全程不當考場，每人整天只去同一間自習、坐同一個座位；沒設＝沿用逐節決定 */
+  /** 分科（G36）：固定自習教室（教室 id，手動硬性指定）：全程不當考場，每人整天只去同一間自習；沒設＝自動盡量同一間（WP-2，D141） */
   astFixedStudyRooms?: string[];
   /** 分科：允許自習去他班未徵用的原班教室（沒設＝關，D99 一-2） */
   astAllowOtherStudy?: boolean;

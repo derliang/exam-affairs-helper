@@ -6,7 +6,7 @@
  */
 import type { Classroom, Detach, StudentCode } from '../data/types';
 import { classroomSeats, parseStudentCode, seatLabel } from '../data/helpers';
-import type { PeriodGroup } from './detach';
+import { shapeLastRoom, type PeriodGroup, type ReserveLayout } from './detach';
 import { seatGroup } from './seating';
 
 export interface StudyRefRoom {
@@ -25,7 +25,11 @@ const cmp = (a: string, b: string) => {
   return !x || !y ? (a < b ? -1 : a > b ? 1 : 0) : x.classNo - y.classNo || x.seatNo - y.seatNo;
 };
 
-export function studyReference(groups: readonly PeriodGroup[], detaches: readonly Detach[], reserveRooms: readonly Classroom[]): StudyRefRoom[] {
+/**
+ * layout：預備教室座位排法（#258、#398）；沒給＝最少深位（人數平均分到各排，每排只坐前幾個深位），與抽離考試同一個設定。
+ * 不需要每節同一個座位（WP-2）：每組節次各自排。
+ */
+export function studyReference(groups: readonly PeriodGroup[], detaches: readonly Detach[], reserveRooms: readonly Classroom[], layout?: ReserveLayout): StudyRefRoom[] {
   const roomById = new Map(reserveRooms.map((r) => [r.id, r]));
   const groupOf = new Map<string, number>();
   groups.forEach((g, gi) => g.subjectIds.forEach((id) => groupOf.set(id, gi)));
@@ -62,7 +66,7 @@ export function studyReference(groups: readonly PeriodGroup[], detaches: readonl
         const taken = new Set(classroomSeats(room).map((s) => seatLabel(s)).filter((k) => !usable.has(k)));
         const disabled = [...(room.disabled ?? [])];
         for (const s of classroomSeats(room)) if (taken.has(seatLabel(s))) disabled.push(`${s.row}-${s.depth}`);
-        const shaped: Classroom = { ...room, disabled, seatCount: usable.size };
+        const shaped = shapeLastRoom([{ ...room, disabled, seatCount: usable.size }], Math.min(rest.length, usable.size), layout)[0]!;
         const r = seatGroup([shaped], rest.slice(0, usable.size));
         if (r.ok) for (const a of r.assignments) seats.set(a.code, { row: a.row, depth: a.depth });
         unseated.push(...rest.slice(usable.size));
