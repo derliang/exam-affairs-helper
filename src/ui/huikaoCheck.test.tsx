@@ -68,12 +68,12 @@ describe('會考不匯入名單：考生＝共用學生名單', () => {
     expect(flow.steps[2]!.state).toBe('todo');
     expect(flow.summary.spare).toBe(-4);
   });
-  it('D79：全科缺考（匯入的名單）仍不排座；匯入名單時以匯入為準', () => {
+  it('WP-5：會考不可不參加——匯入的名單裡全科缺考、名單外的人都照樣排座（D137）', () => {
     const { doc, exam } = junior([12]);
-    const entries = examEntries(doc, exam).map((e, i) => (i < 2 ? { ...e, subjectIds: [] } : e));
+    const entries = examEntries(doc, exam).map((e, i) => (i < 2 ? { ...e, subjectIds: [] } : e)).slice(0, 9);
     const d: Doc = { ...doc, examFiles: { [exam.id]: { entries, diffs: [] } } };
-    expect(examEntries(d, exam)).toHaveLength(10);
-    expect(seatableEntries(d, exam)).toHaveLength(8);
+    expect(examEntries(d, exam)).toHaveLength(9);
+    expect(seatableEntries(d, exam)).toHaveLength(10);
   });
   it('學生名單是空的：不顯示考生 0，給座位合計與說明', () => {
     const { doc, exam } = junior([12], 0);

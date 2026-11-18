@@ -144,7 +144,7 @@ export function Step5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
       )}
       {err && <SeatError errors={err} onStep={p.onStep} />}
       {noSeat.length > 0 && (
-        <Alert tone="info"><b>其中 {noSeat.length} 位全科缺考不排座</b>（②的考生人數含他們，這裡的「考生」不含）。
+        <Alert tone="info"><b>其中 {noSeat.length} 位全科缺考不排座</b>（② 選了不排座；②的考生人數含他們，這裡的「考生」不含；考前對帳會因為他們沒有座位而不通過）。
           <details><summary class="small">列出是誰</summary><ul>{noSeat.map((e) => <li key={`${e.classNo}-${e.seatNo}`}>{classLabel(e.classNo)} {e.seatNo} 號</li>)}</ul></details>
         </Alert>
       )}

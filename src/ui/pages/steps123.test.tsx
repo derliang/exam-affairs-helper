@@ -124,7 +124,7 @@ describe('步驟② 考試名單', () => {
 });
 
 describe('步驟③ 教室設定', () => {
-  it('D82：沒匯入考試名單時不顯示考生 0，說「尚未匯入考試名單」；匯入後以本次名單人數算（部分參加時與共用名單不同）', () => {
+  it('D82：沒匯入考試名單時不顯示考生 0，說「尚未匯入考試名單」；匯入後算要排座的人（D137：名冊有、名單沒有的人是自習生，一樣算座位）', () => {
     const { doc, second } = twoGsat();
     const none = classCapacity(doc, second);
     expect(none).toMatchObject({ lines: [], noList: true });
@@ -136,7 +136,7 @@ describe('步驟③ 教室設定', () => {
     const d: Doc = { ...doc, examFiles: { [second.id]: { entries: some, diffs: [] } } };
     const r = classCapacity(d, second);
     expect(r.noList).toBe(false);
-    expect(r.lines.reduce((n, l) => n + l.students, 0)).toBe(3);
+    expect(r.lines.reduce((n, l) => n + l.students, 0)).toBe(doc.rosters.senior.length);
   });
   it('卡片：狀態檢核（理組／文組分列＋預備教室）、班級文理組、教室與座位', () => {
     const { doc, second } = twoGsat();

@@ -23,7 +23,10 @@ const line = (label: string, seats: number, students: number): CapacityLine => {
   return { label, seats, students, ok, detail, message };
 };
 
-/** 班級教室的容量檢核：國中部合計一條；高中部理組、文組各一條，沒指定組別的教室另計 */
+/**
+ * 班級教室的容量檢核：國中部合計一條；高中部理組、文組各一條，沒指定組別的教室另計。
+ * 人數＝實際要排座的人（seatableEntries：考試名單＋未參加者＋全科缺考者，D137），與第 3、4、5 步、對帳、排座引擎同一份名單（WP-4）
+ */
 export function classCapacity(doc: Doc, exam: ExamConfig): { lines: CapacityLine[]; untracked: number; /** 還沒匯入本次考試名單：沒有考生人數可比，不顯示 0（D82） */ noList: boolean; /** 班級教室座位合計（沒名單也算得出來） */ seats: number } {
   const rooms = examRooms(doc, exam).filter((r) => r.kind === 'class');
   const roster = seatableEntries(doc, exam);
@@ -32,7 +35,7 @@ export function classCapacity(doc: Doc, exam: ExamConfig): { lines: CapacityLine
   if (exam.division === 'junior') {
     return { lines: [line('全體', seats, roster.length)], untracked: 0, noList: false, seats };
   }
-  const trackOfClass = new Map(doc.settings.classes.filter((c) => c.division === exam.division).map((c) => [c.no, c.track]));
+  const trackOfClass = new Map(examClasses(doc, exam).map((c) => [c.no, c.track]));
   const lines: CapacityLine[] = [];
   for (const t of ['science', 'liberal'] as Track[]) {
     lines.push(line(TRACK_NAME[t], rooms.filter((r) => r.track === t).reduce((n, r) => n + r.seatCount, 0), roster.filter((s) => (s.track ?? trackOfClass.get(s.classNo)) === t).length));

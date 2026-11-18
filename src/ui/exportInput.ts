@@ -5,7 +5,7 @@
  * 沒有結果或已過期（名單或設定在排座後改過）就擋下，請回 ⑤ 重新排座。
  */
 import { isResolved } from '../import';
-import { examEntries, examResult, isStale, validationChecks } from './seating';
+import { examResult, isStale, seatingEntries, validationChecks } from './seating';
 import type { ExamConfig, ExamEntry, Override } from '../data';
 import { settingsForExam } from '../data';
 import type { ExportInput } from '../export';
@@ -37,8 +37,9 @@ export function prepareExport(doc: Doc, exam: ExamConfig): Prepared {
     .map((id) => settings.classrooms.find((c) => c.id === id))
     .filter((c): c is NonNullable<typeof c> => !!c);
   if (rooms.length === 0) return { ok: false, errors: ['缺教室：這次考試還沒勾選教室，請先到 ③ 教室設定勾選要用的教室，再回來下載。'] };
-  // 會考全員參加不需匯入（② 已這麼說）：examEntries 會用學生名單當考生，與 ③④⑤ 同一口徑（#209）
-  const entries = examEntries(doc, exam);
+  // 會考全員參加不需匯入（② 已這麼說）：examEntries 會用學生名單當考生，與 ③④⑤ 同一口徑（#209）。
+  // 輸出用排座名單（D137）：名冊有、名單沒有的人也排了座，座位表要列出他的班級、座號、姓名
+  const entries = seatingEntries(doc, exam);
   if (!entries || entries.length === 0) return { ok: false, errors: ['缺考試名單：請先到 ② 考試名單匯入大考中心的考生資料 Excel，再回來下載。'] };
   const result = examResult(doc, exam);
   if (!result) return { ok: false, errors: ['缺排座結果：請先到 ⑤ 排座並完成驗證，再回來下載。'] };

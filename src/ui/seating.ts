@@ -12,7 +12,6 @@ import {
   roomStats,
   specialOf,
   runSeating,
-  fullyAbsentCodes,
   entryTracks,
   seatingVersion,
   suggestMarks,
@@ -65,17 +64,40 @@ export const examEntries = (doc: Doc, exam: ExamConfig): ExamEntry[] => {
   }));
 };
 
-/** 實際要排座的考生：預設排除全科缺考者（D79，與 core runSeating 同一份判斷）；設「仍排座」則全部 */
-export const seatableEntries = (doc: Doc, exam: ExamConfig): ExamEntry[] => {
-  const entries = examEntries(doc, exam);
-  const skip = new Set(fullyAbsentCodes({ entries, seatFullyAbsent: !!exam.seatFullyAbsent }));
-  return skip.size ? entries.filter((e) => !skip.has(studentCode(e.classNo, e.seatNo))) : entries;
+/**
+ * 名冊有、考試名單沒有的人（D135②、D137）：學測、分科＝未參加＝每節自習；會考＝不可不參加，一樣排座（WP-5）。
+ * 以「沒有考科」的身分接在考試名單之後，直接進排座引擎（多數留班／少數抽離、預備教室、容量、對帳都同一份名單）。
+ * 還沒匯入考試名單＝還沒有方案可排，回空（不把整份名冊當自習去排）；會考沒匯入時 examEntries 本來就是整份名冊。
+ */
+export const rosterOnlyEntries = (doc: Doc, exam: ExamConfig): ExamEntry[] => {
+  const listed = examEntries(doc, exam);
+  if (listed.length === 0) return [];
+  const inList = new Set(listed.map((e) => studentCode(e.classNo, e.seatNo)));
+  return (rosterFor(doc, exam)[exam.division] ?? [])
+    .filter((s) => !inList.has(studentCode(s.classNo, s.seatNo)))
+    .map((s) => ({ classNo: s.classNo, seatNo: s.seatNo, name: s.name, subjectIds: [], ...(s.special ? { note: s.special } : {}) }));
 };
-/** 全科缺考、因 D79 沒有排座的考生（設「仍排座」時為空）；給 ②⑤ 說明人數差（#233） */
-export const unseatedFullyAbsent = (doc: Doc, exam: ExamConfig): ExamEntry[] => {
-  const entries = examEntries(doc, exam);
-  const skip = new Set(fullyAbsentCodes({ entries, seatFullyAbsent: !!exam.seatFullyAbsent }));
-  return entries.filter((e) => skip.has(studentCode(e.classNo, e.seatNo)));
+/** 排座名單＝考試名單＋名冊有、名單沒有的人（接在後面；沒有這種人時與考試名單完全相同） */
+export const seatingEntries = (doc: Doc, exam: ExamConfig): ExamEntry[] => {
+  const extra = rosterOnlyEntries(doc, exam);
+  return extra.length ? [...examEntries(doc, exam), ...extra] : examEntries(doc, exam);
+};
+/**
+ * 考試名單上全科缺考的人是否不排座：D137 取代 D79 的預設——預設排座；只有學測使用者在 ② 明確選「不排座」（seatFullyAbsent === false）才不排。
+ * 會考不可不參加、分科引擎一律排，都不看這個設定；名冊有、名單沒有的人（未參加）一律排（D125）。
+ */
+export const skipsFullyAbsent = (exam: ExamConfig): boolean => exam.kind === 'gsat' && exam.seatFullyAbsent === false;
+/** 選了「不排座」而沒有排座的全科缺考者（其他情況為空）；給 ②⑤ 說明人數差（#233） */
+export const unseatedFullyAbsent = (doc: Doc, exam: ExamConfig): ExamEntry[] =>
+  skipsFullyAbsent(exam) ? examEntries(doc, exam).filter((e) => e.subjectIds.length === 0) : [];
+/**
+ * 實際要排座的人＝排座引擎的輸入（第 3、4、5 步、對帳、容量、輸出同一份，WP-4）：
+ * 考試名單（學測選「不排座」才去掉全科缺考者）＋名冊有、名單沒有的人。沒有這兩種情況時與考試名單完全相同
+ */
+export const seatableEntries = (doc: Doc, exam: ExamConfig): ExamEntry[] => {
+  const listed = skipsFullyAbsent(exam) ? examEntries(doc, exam).filter((e) => e.subjectIds.length > 0) : examEntries(doc, exam);
+  const extra = rosterOnlyEntries(doc, exam);
+  return extra.length ? [...listed, ...extra] : listed;
 };
 export const examOverrides = (doc: Doc, exam: ExamConfig): Override[] => filesOf(doc, exam.id).overrides ?? [];
 export const examResult = (doc: Doc, exam: ExamConfig): SeatingResult | undefined => filesOf(doc, exam.id).result;
@@ -143,7 +165,7 @@ export function markRows(doc: Doc, exam: ExamConfig): MarkRow[] {
 
 /** 輸出用的姓名：共用學生名單優先，查無才用考試名單（與 export/model 同一規則，⑤預覽、⑥預覽、下載一致） */
 export function nameMapOf(doc: Doc, exam: ExamConfig): Map<string, string> {
-  const m = new Map(examEntries(doc, exam).map((e) => [studentCode(e.classNo, e.seatNo), e.name]));
+  const m = new Map(seatingEntries(doc, exam).map((e) => [studentCode(e.classNo, e.seatNo), e.name]));
   for (const s of rosterFor(doc, exam)[exam.division] ?? []) { const c = studentCode(s.classNo, s.seatNo); if (m.has(c)) m.set(c, s.name); }
   return m;
 }
@@ -165,11 +187,10 @@ export function seatingInputOf(doc: Doc, exam: ExamConfig, now: string): RunSeat
     division: exam.division,
     classes: examClasses(doc, exam),
     classrooms: examRooms(doc, exam),
-    entries: examEntries(doc, exam),
+    entries: seatableEntries(doc, exam),
     subjects: exam.subjects,
     markRules: effectiveMarkRules(doc, exam).rules,
     overrides: examOverrides(doc, exam),
-    ...(exam.seatFullyAbsent ? { seatFullyAbsent: true } : {}),
     ...(rosterNameDiffs(doc, exam).length ? { rosterNames: rosterNameDiffs(doc, exam) } : {}),
     periods: examSubjectPeriods(exam, doc.settings),
     reserveMode: reserveModeOf(exam),
@@ -337,7 +358,7 @@ export interface ChartModel {
 }
 
 function studentCtx(doc: Doc, exam: ExamConfig, result: SeatingResult) {
-  const entries = new Map(examEntries(doc, exam).map((e) => [studentCode(e.classNo, e.seatNo), e]));
+  const entries = new Map(seatingEntries(doc, exam).map((e) => [studentCode(e.classNo, e.seatNo), e]));
   const nameOf = nameMapOf(doc, exam);
   const classes = new Map(examClasses(doc, exam).map((c) => [c.no, c]));
   const subjName = new Map(exam.subjects.map((s) => [s.id, s.name]));
@@ -411,7 +432,7 @@ export function detachSummary(exam: ExamConfig, result: SeatingResult): { subjec
 
 /** ⑤ 座位表統計表（D40）：依這間教室，每班考生人數與每班在本教室考各科的人數 */
 export function roomStatTable(doc: Doc, exam: ExamConfig, result: SeatingResult, roomId: string): { classes: { no: number; name: string }[]; rows: { label: string; per: number[]; total: number }[] } {
-  const st = roomStats(roomId, result.assignments, examEntries(doc, exam), exam.subjects, result.detaches, specialOf(result));
+  const st = roomStats(roomId, result.assignments, seatingEntries(doc, exam), exam.subjects, result.detaches, specialOf(result));
   const names = new Map(examClasses(doc, exam).map((c) => [c.no, c.name]));
   const classes = st.perClass.map((c) => ({ no: c.classNo, name: names.get(c.classNo) ?? String(c.classNo) }));
   const pick = (l: { classNo: number; count: number }[]) => classes.map((c) => l.find((x) => x.classNo === c.no)?.count ?? 0);
@@ -427,7 +448,7 @@ export function roomStatTable(doc: Doc, exam: ExamConfig, result: SeatingResult,
 
 /** 個別覆寫的提醒：覆寫的人已不在名單、或這個人沒有任何標示（覆寫不會生效） */
 export function overrideNotes(doc: Doc, exam: ExamConfig, result: SeatingResult | undefined): Map<string, string> {
-  const codes = new Set(examEntries(doc, exam).map((e) => studentCode(e.classNo, e.seatNo)));
+  const codes = new Set(seatingEntries(doc, exam).map((e) => studentCode(e.classNo, e.seatNo)));
   const marked = new Set((result?.marks ?? []).map((m) => m.code));
   const out = new Map<string, string>();
   for (const o of examOverrides(doc, exam)) {

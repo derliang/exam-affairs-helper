@@ -1,6 +1,6 @@
 /**
  * 對帳鐵則（使用者 2026-11-18）：每個時段，學生人數＝考試人數＋自習人數，每個人都要有去處。
- * 「未參加」（名冊有、考試名單沒有）就是自習：學測、分科都要排座位、不印標籤、座位表上列班級座號姓名。
+ * 「未參加」（名冊有、考試名單沒有）就是自習：學測、分科都要排座位、不印標籤、座位表上列班級座號姓名（D137 起直接進排座引擎）。
  * 取代對帳原本「名單範圍＝考試＋自習＋未參加」的第三類（D125 的後續）。全部虛構假資料。
  */
 import { describe, expect, it } from 'vitest';
@@ -35,25 +35,31 @@ describe('學測：未參加＝自習，座位表上要有他的座位', () => {
     expect(r.checks.filter((c) => c.light === 'fail')).toEqual([]);
   });
 
-  it('紅燈：未參加的人在原班座位表上排不下（座位不夠）→ M-3 不通過、總帳不平、擋下載、指出是誰', () => {
+  it('教室座位不夠連未參加者一起坐：排座引擎直接擋下（D137：他們在引擎裡，不是另貼的參考座位）', () => {
     const { doc, exam } = gsatDoc({ absentRoster: 3 });
-    // 第 1 班教室縮成 3×3＝9 座：7 個考生坐得下，3 個未參加的只剩 2 個參考座位
-    const rooms = doc.settings.classrooms.map((c) => (c.id === 'c1' ? { ...c, rows: 3, depth: 3, seatCount: 9 } : c));
+    // 理組（第 1、3 班）教室縮成 9＋10＝19 座：考生 14 人＋未參加的自習生 6 人＝20 人，坐不下（舊版只算考生 14 人會放行）
+    const rooms = doc.settings.classrooms.map((c) => (c.id === 'c1' ? { ...c, rows: 3, depth: 3, seatCount: 9 } : c.id === 'c3' ? { ...c, rows: 2, depth: 5, seatCount: 10 } : c));
     const small: Doc = { ...doc, settings: { ...doc.settings, classrooms: rooms } };
-    const re = reseat(small, exam, '2026-11-10T04:00:00Z');
-    if (!re.ok) throw new Error(re.error);
-    const r = ready(reconcile(re.doc, exam));
+    expect(reseat(small, exam, '2026-11-10T04:00:00Z').ok).toBe(false);
+  });
+
+  it('紅燈：未參加的人在排座結果裡沒有座位 → M-3 不通過、總帳不平、擋下載、指出是誰', () => {
+    const { doc, exam } = gsatDoc({ absentRoster: 3 });
+    const cur = doc.examFiles![exam.id]!;
+    const res = cur.result!;
+    const broken: Doc = { ...doc, examFiles: { ...doc.examFiles, [exam.id]: { ...cur, result: { ...res, assignments: res.assignments.filter((a) => a.code !== '0110'), detaches: res.detaches.filter((d) => d.code !== '0110') } } } };
+    const r = ready(reconcile(broken, exam));
     expect(light(r, 'M-3')).toBe('fail');
     const m3 = r.checks.find((c) => c.id === 'M-3')!;
     expect(m3.d).toBeLessThan(0);
-    expect(m3.issues[0]!.text).toMatch(/未參加.*沒有他的自習座位/);
+    expect(m3.issues[0]!.text).toMatch(/01 班 10 號.*沒有去處/);
     expect(r.ledger.every((x) => !x.ok)).toBe(true);
     const g = gateOf(r, 'anything');
     expect(g.fails).toBeGreaterThan(0);
     expect(g.why).toMatch(/不通過.*須先修正/);
   });
 
-  it('全科缺考（預設不排考試座位）也是自習，座位表上有他的座位', () => {
+  it('全科缺考（D137 預設排座）也是自習，有座位；算報名者、不算未參加', () => {
     const { doc, exam } = gsatDoc();
     const cur = doc.examFiles![exam.id]!;
     const entries: ExamEntry[] = cur.entries!.map((e) => (e.classNo === 1 && e.seatNo === 5 ? { ...e, subjectIds: [] } : e));
@@ -61,12 +67,13 @@ describe('學測：未參加＝自習，座位表上要有他的座位', () => {
     const re = reseat(d2, exam, '2026-11-10T04:00:00Z');
     if (!re.ok) throw new Error(re.error);
     const r = ready(reconcile(re.doc, exam));
-    expect(r.scope.absent).toBe(1);
+    expect(r.scope).toEqual({ total: 30, enrolled: 30, absent: 0 });
+    expect(re.doc.examFiles![exam.id]!.result!.assignments.some((a) => a.code === '0105')).toBe(true);
     expect(r.checks.filter((c) => c.light === 'fail')).toEqual([]);
     for (const row of r.ledger) { expect(row.ok).toBe(true); expect(row.exam + row.study).toBe(30); }
   });
 
-  it('會考沒有自習：維持原樣，未參加另計', () => {
+  it('會考沒有自習：未參加另計（WP-5：會考名冊每人都有座位，見 engineWp1.test）', () => {
     const { doc, exam } = bcctDoc();
     const r = ready(reconcile(doc, exam));
     expect(r.hasAbsent).toBe(true);

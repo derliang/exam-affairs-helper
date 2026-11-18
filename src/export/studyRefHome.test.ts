@@ -1,4 +1,7 @@
-/** G36：學測原班教室「整場不考」的人也排參考座位（虛線格、不印標籤）；有／沒有自習都不能動到考試座位與標籤 */
+/**
+ * D137（#400 WP-1）：拿掉 G36「學測原班整場不考者虛線參考座位」（addHomeStudyRef）。
+ * 未參加、全科缺考者改成直接進排座引擎（有正式座位、走多數留班／少數抽離），輸出不再另貼虛線格。
+ */
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { makeFixture } from './fixtures';
@@ -7,7 +10,7 @@ import { buildParts } from './plan';
 
 const sha = (x: unknown): string => createHash('sha256').update(JSON.stringify(x, (_k, v) => (v instanceof Map ? [...v] : v instanceof Set ? [...v] : v))).digest('hex');
 
-/** 假資料：教室名稱＝班級名稱；溫班 10 人，7 號、8 號整場不考（沒有名單、沒有考試座位） */
+/** 假資料：教室名稱＝班級名稱；溫班 7 號、8 號沒有考試名單、也沒有座位（舊版會在原班貼虛線格） */
 function withStay(): ExportInput {
   const f = makeFixture();
   const gone = new Set(['0107', '0108']);
@@ -17,45 +20,28 @@ function withStay(): ExportInput {
   return { ...f, settings: { ...f.settings, classrooms: rooms }, entries, result: { ...f.result, assignments }, includeStudyRef: true };
 }
 
-describe('G36 學測原班自習參考座位', () => {
-  it('整場不考的人排在考試座位之後的剩餘座位，格內寫班級座號姓名、虛線參考格、不佔考試座位', () => {
-    const input = withStay();
-    const page = buildSeatPages(input, 'class').find((p) => p.roomName === '溫')!;
-    const refs = [...page.cells.values()].filter((c) => c.ref);
-    expect(refs.map((c) => c.code)).toEqual(['0107', '0108']);
-    for (const c of refs) { expect(c.classLabel).toBe('溫'); expect(c.name).not.toBe(''); expect(c.corners).toEqual([{ kind: 'add', text: '自習' }]); }
-    const exam = input.result.assignments.filter((a) => a.classroomId === 'r1');
-    for (const a of exam) expect(page.cells.get(`${a.row}-${a.depth}`)?.ref).toBeUndefined(); // 考試座位不受影響
-    expect(refs.every((c) => !exam.some((a) => a.row === c.seat.row && a.depth === c.seat.depth))).toBe(true);
-    expect(page.chips).toContain('自習（參考座位）2 人');
-    expect(page.stats.table.rows.at(-1)).toMatchObject({ label: '自習參考座位（不印標籤）', total: 2 });
+describe('D137 原班不再另貼虛線參考座位（座位一律由排座引擎給）', () => {
+  it('班級教室座位表只印排座結果裡的人：沒有虛線格、沒有「自習（參考座位）」小標', () => {
+    const page = buildSeatPages(withStay(), 'class').find((p) => p.roomName === '溫')!;
+    expect([...page.cells.values()].filter((c) => c.ref)).toEqual([]);
+    expect(page.chips.some((t) => t.includes('參考座位') || t.includes('座位不足'))).toBe(false);
   });
-  it('不印標籤：標籤頁與沒有參考座位時完全相同', () => {
+  it('includeStudyRef＝true 與沒給相同；false 只少了預備教室的抽離自習參考頁', () => {
     const input = withStay();
+    expect(sha(buildSeatPages(input, 'all'))).toBe(sha(buildSeatPages({ ...input, includeStudyRef: undefined } as ExportInput, 'all')));
     expect(sha(buildLabelPages(input, 'all'))).toBe(sha(buildLabelPages({ ...input, includeStudyRef: false }, 'all')));
+    const on = buildParts(input, { format: 'word', seat: true, label: false, paper: 'B4', study: false, reserve: true, studyRef: true }).seat!;
+    const off = buildParts(input, { format: 'word', seat: true, label: false, paper: 'B4', study: false, reserve: true, studyRef: false }).seat!;
+    expect(on.length).toBeGreaterThan(off.length);
+    expect(on.filter((p) => p.tag === undefined).map((p) => sha(p))).toEqual(off.filter((p) => p.tag === undefined).map((p) => sha(p)));
   });
-  it('取消勾選（includeStudyRef=false）：原班虛線格與抽離自習參考頁都不出', () => {
-    const on = buildParts(withStay(), { format: 'word', seat: true, label: false, paper: 'B4', study: false, reserve: true, studyRef: true }).seat!;
-    const off = buildParts(withStay(), { format: 'word', seat: true, label: false, paper: 'B4', study: false, reserve: true, studyRef: false }).seat!;
-    expect(on.some((p) => [...p.cells.values()].some((c) => c.ref))).toBe(true);
-    expect(off.some((p) => [...p.cells.values()].some((c) => c.ref))).toBe(false);
-    expect(on.length).toBeGreaterThan(off.length); // 少了預備教室的抽離自習參考頁
-  });
-  it('沒有人需要自習：輸出與舊版逐位相同（sha256）；會考不套用', () => {
+  it('沒有考科的人有座位時：座位表照印（班級座號姓名），但不印標籤（D135⑤）', () => {
     const f = makeFixture();
-    expect(sha(buildSeatPages({ ...f, includeStudyRef: true }, 'class'))).toBe(sha(buildSeatPages(f, 'class')));
-    const input = withStay();
-    const bcct = { ...input, exam: { ...input.exam, kind: 'bcct' as const } };
-    expect(sha(buildSeatPages(bcct, 'class'))).toBe(sha(buildSeatPages({ ...bcct, includeStudyRef: undefined } as ExportInput, 'class')));
-  });
-  it('座位不足不硬排：只排得下的人，其餘列為未排入', () => {
-    const input = withStay();
-    // 溫班教室只開 9 席：考試座位 18 人佔用的前 9 席以外已沒有剩餘（考試座位先排、不受影響）
-    const f = withStay();
-    const exam = f.result.assignments.filter((a) => a.classroomId === 'r1').length;
-    const rooms = f.settings.classrooms.map((r) => (r.id === 'r1' ? { ...r, seatCount: exam + 1, disabled: ['2-3'] } : r));
-    const page = buildSeatPages({ ...input, settings: { ...f.settings, classrooms: rooms } }, 'class').find((p) => p.roomName === '溫')!;
-    expect([...page.cells.values()].filter((c) => c.ref).map((c) => c.code)).toEqual(['0107']);
-    expect(page.chips).toContain('座位不足：缺 1 座，未排入 08 號');
+    const a = f.result.assignments.find((x) => x.classroomId === 'r1')!;
+    const entries = f.entries.map((e) => (`${String(e.classNo).padStart(2, '0')}${String(e.seatNo).padStart(2, '0')}` === a.code ? { ...e, subjectIds: [] } : e));
+    const input = { ...f, entries };
+    expect([...buildSeatPages(input, 'class').flatMap((p) => [...p.cells.values()])].some((c) => c.code === a.code && c.name !== '')).toBe(true);
+    expect(buildLabelPages(input, 'class').flatMap((p) => p.cells).some((c) => c.code === a.code)).toBe(false);
+    expect(buildLabelPages(f, 'class').flatMap((p) => p.cells).some((c) => c.code === a.code)).toBe(true);
   });
 });

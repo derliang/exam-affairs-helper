@@ -74,7 +74,7 @@ describe('設定頁部別預設（項目 8）', () => {
 });
 
 describe('#250 列表人數口徑', () => {
-  it('名單含全科缺考者：列表人數註明「含全科缺考 N 人，不排座」；選仍排座就不註明', () => {
+  it('名單含全科缺考者：預設排座（D137），列表不註明；學測在 ② 選「不排座」才註明「含全科缺考 N 人，不排座」', () => {
     const d = docWith();
     const e = d.exams.find((x) => x.kind === 'gsat')!;
     const entries = [
@@ -83,8 +83,8 @@ describe('#250 列表人數口徑', () => {
     ];
     const doc = { ...d, examFiles: { [e.id]: { entries, diffs: [] } } };
     const html = renderToString(<Exams doc={doc} onOpen={noop} onNew={noop} onSettings={noop} onChangeFolder={noop} />);
-    expect(html).toContain('2 人（含全科缺考 1 人，不排座）');
-    const on = { ...doc, exams: doc.exams.map((x) => (x.id === e.id ? { ...x, seatFullyAbsent: true } : x)) };
-    expect(renderToString(<Exams doc={on} onOpen={noop} onNew={noop} onSettings={noop} onChangeFolder={noop} />)).not.toContain('含全科缺考');
+    expect(html).not.toContain('含全科缺考');
+    const off = { ...doc, exams: doc.exams.map((x) => (x.id === e.id ? { ...x, seatFullyAbsent: false } : x)) };
+    expect(renderToString(<Exams doc={off} onOpen={noop} onNew={noop} onSettings={noop} onChangeFolder={noop} />)).toContain('2 人（含全科缺考 1 人，不排座）');
   });
 });

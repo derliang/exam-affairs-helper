@@ -8,9 +8,8 @@ import { isListeningSubject, type RunSeatingInput } from '../core';
 import { mixedMarkCodes, overridePurpose, type SpecialPlacement } from '../core/detach';
 
 const codeOfEntry = (e: { classNo: number; seatNo: number }) => studentCode(e.classNo, e.seatNo);
-/** D79：實際應排座的名單（預設排除全科缺考者） */
-export const seatableEntries = <E extends { classNo: number; seatNo: number; subjectIds: string[] }>(input: { entries: readonly E[]; seatFullyAbsent?: boolean }): E[] =>
-  input.entries.filter((e) => input.seatFullyAbsent || e.subjectIds.length > 0);
+/** 實際應排座的名單：引擎輸入的每個人都要排（D137，取代 D79「全科缺考預設不排座」；要不要排誰由畫面層決定） */
+export const seatableEntries = <E extends { classNo: number; seatNo: number; subjectIds: string[] }>(input: { entries: readonly E[] }): E[] => [...input.entries];
 
 /** 主座位表不變式（INV-1～INV-6） */
 export function checkMainSeating(input: RunSeatingInput, r: SeatingResult): string[] {

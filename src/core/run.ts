@@ -16,12 +16,14 @@ export interface RunSeatingInput {
   classes: readonly ClassInfo[];
   /** 本次勾選的教室，依清單順序；班級教室用於主排座，預備教室用於抽離（D6/D27） */
   classrooms: readonly Classroom[];
+  /**
+   * 要排座的人，一律都排（D137，取代 D79「全科缺考預設不排座」）：沒有考科的人（全科缺考、名冊有名單沒有）每節都是自習生，
+   * 一樣進主排座與標示抽離。要不要排誰由呼叫端決定（畫面層 seatableEntries），引擎不再自己跳過人
+   */
   entries: readonly ExamEntry[];
   subjects: readonly Subject[];
   markRules: readonly MarkRule[];
   overrides: readonly Override[];
-  /** D79：全科缺考者（無任何考科）預設不排座、不計份數；設 true 才照排 */
-  seatFullyAbsent?: boolean;
   /** 共用學生名單的姓名與考試名單不同者（輸出優先用共用名單，會改變文件內容）；空或不給＝無差異 */
   rosterNames?: readonly { code: string; name: string }[];
   /** 科目→節次（D94）；沒給＝每科各自一節 */
@@ -35,7 +37,7 @@ export interface RunSeatingInput {
 }
 
 export type RunSeatingResult =
-  | { ok: true; result: SeatingResult; special: SpecialPlacement[]; warnings: string[]; /** D79：未排座的全科缺考者編號 */ fullyAbsent: string[] }
+  | { ok: true; result: SeatingResult; special: SpecialPlacement[]; warnings: string[] }
   | { ok: false; errors: string[] };
 
 /** 資料版本碼的輸入：只含影響排座結果的資料（不含產生時間） */
@@ -45,7 +47,9 @@ export function seatingVersion(input: RunSeatingInput): string {
   // 自習容量（D99）只給分科新模型用，不影響現行排座，也不放進版本碼；每排深位數（rowDepths）會改變座位，留在版本碼
   const classrooms = input.classrooms.map(({ division: _d, studyCapacity: _s, ...rest }) => rest);
   // 只在開啟時才放進版本碼，避免舊存檔的版本碼全部變成「過期」
-  return dataVersion({ examId, division, classes, classrooms, entries, subjects, markRules, overrides, ...(input.seatFullyAbsent ? { seatFullyAbsent: true } : {}), ...(input.rosterNames?.length ? { rosterNames: input.rosterNames } : {}), ...versionExtras(input) });
+  // 版本碼沿用舊鍵名 seatFullyAbsent：只在「真的有沒考科的人、且排了座」時才放，沒有這種人的考試版本碼與舊版逐位相同
+  const seatsNoSubject = entries.some((e) => e.subjectIds.length === 0);
+  return dataVersion({ examId, division, classes, classrooms, entries, subjects, markRules, overrides, ...(seatsNoSubject ? { seatFullyAbsent: true } : {}), ...(input.rosterNames?.length ? { rosterNames: input.rosterNames } : {}), ...versionExtras(input) });
 }
 
 /**
@@ -57,10 +61,6 @@ function versionExtras(input: RunSeatingInput): Record<string, unknown> {
   return { ...(groups ? { periodGroups: groups } : {}), ...(input.reserveMode === 'proctor' ? { reserveMode: 'proctor' } : {}), ...(input.reserveLayout === 'min-rows' ? { reserveLayout: 'min-rows' } : {}) };
 }
 
-/** D79：全科缺考者（無任何考科）的編號；設「仍排座」時為空（＝都要排） */
-export const fullyAbsentCodes = (input: { entries: readonly { classNo: number; seatNo: number; subjectIds: string[] }[]; seatFullyAbsent?: boolean }): string[] =>
-  input.seatFullyAbsent ? [] : input.entries.filter((e) => e.subjectIds.length === 0).map((e) => studentCode(e.classNo, e.seatNo));
-
 /** 逐人指定的文理組（分科）；沒有任何人指定就回 undefined，行為與以前完全相同 */
 export function entryTracks(entries: readonly ExamEntry[]): Map<string, Track> | undefined {
   const m = new Map<string, Track>();
@@ -69,9 +69,7 @@ export function entryTracks(entries: readonly ExamEntry[]): Map<string, Track> |
 }
 
 export function runSeating(input: RunSeatingInput): RunSeatingResult {
-  const fullyAbsent = fullyAbsentCodes(input);
-  const absentSet = new Set(fullyAbsent);
-  const seatable = input.entries.filter((e) => !absentSet.has(studentCode(e.classNo, e.seatNo)));
+  const seatable = input.entries;
   const codes = seatable.map((e) => studentCode(e.classNo, e.seatNo));
   const seated = seatExam({ division: input.division, classes: input.classes, classrooms: input.classrooms, codes, ...(entryTracks(seatable) ? { trackOf: entryTracks(seatable)! } : {}) });
   if (!seated.ok) return { ok: false, errors: seated.errors };
@@ -102,6 +100,5 @@ export function runSeating(input: RunSeatingInput): RunSeatingResult {
     },
     special: detached.special,
     warnings: [...overrideWarnings(input.overrides, codes), ...(detached.warnings ?? [])],
-    fullyAbsent,
   };
 }
