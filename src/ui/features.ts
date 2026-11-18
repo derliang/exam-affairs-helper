@@ -31,6 +31,8 @@ export interface ExportExtra {
   sub: string;
   /** 產生檔案；回傳 text/html 的走列印頁，其餘當檔案下載 */
   run: (c: { doc: Doc; exam: ExamConfig; format: 'word' | 'pdf' }) => Promise<OutputFile[]>;
+  /** 不論 Word 或 PDF 都只產生列印頁（新分頁開啟、不存進下載資料夾），例如列印對位測試頁；下載提示要分開計數（#358） */
+  printPageOnly?: boolean;
 }
 
 export interface StepPanel {
