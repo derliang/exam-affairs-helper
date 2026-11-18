@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>教室設定畫面包 稿 v2.60</title>
+<title>教室設定畫面包 稿 v2.61</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700&display=swap">
@@ -482,8 +482,8 @@ section.sec{padding-top:44px;scroll-margin-top:60px;display:grid;gap:16px}
 .rl-act .chev{color:var(--text-3);font-weight:700}
 .rl-edit{padding:12px 14px 16px;border-bottom:1px solid var(--line);background:var(--sunken);display:grid;gap:10px}
 .rl-edit[hidden]{display:none}
-.seatgrid{display:grid;gap:3px;max-width:100%}
-.seatgrid button{aspect-ratio:1;min-width:0;border:1px solid var(--accent-line);background:var(--accent);color:var(--accent-on);border-radius:4px;font:inherit;font-size:11px;padding:0;cursor:pointer}
+.rl-row.open{background:var(--accent-soft)}.scope{display:inline-grid;grid-template-columns:1fr 1fr;border:1px solid var(--line-2);border-radius:var(--r-sm);overflow:hidden;width:max-content;max-width:100%}.scope span{padding:8px 16px;font-weight:700;background:var(--sunken);color:var(--text-2)}.scope span.on{background:var(--accent);color:var(--accent-on)}.edcard{border:1px solid var(--accent-line);border-radius:var(--r-lg);background:var(--surface);padding:14px 16px;display:grid;gap:10px}.edcard h4{margin:0;font-size:16px}.stp{display:inline-flex;align-items:center;gap:10px}.stp button{width:40px;height:40px;border-radius:var(--r-sm);border:1px solid var(--line-2);background:var(--surface);font:inherit;font-size:18px;cursor:pointer}.stp b{font-size:20px;min-width:20px;text-align:center}.stpw{display:flex;flex-wrap:wrap;gap:12px 40px;justify-content:center}.stpw .l{font-size:13px;color:var(--text-2);display:block;text-align:center}.seatgrid{display:grid;gap:8px;max-width:100%;margin:0 auto}
+.seatgrid button{aspect-ratio:1.15;min-width:0;border:1px solid var(--accent-line);background:var(--accent);color:var(--accent-on);border-radius:4px;font:inherit;font-size:11px;padding:0;cursor:pointer}
 .seatgrid button.off{background:var(--surface);color:var(--text-3);border-style:dashed;border-color:var(--line-2)}
 .rl-foot{padding:10px 14px;background:var(--sunken)}
 /* 班級卡片 */
@@ -503,13 +503,13 @@ section.sec{padding-top:44px;scroll-margin-top:60px;display:grid;gap:16px}
 </style>
 </head>
 <body>
-<div class="hd"><b>教室設定畫面包　稿 v2.60</b><button class="btn btn-sm" data-theme-btn type="button">深色／淺色</button></div>
-<div class="main"><div class="hero"><h1>教室設定畫面包　稿 v2.60</h1><p>解 #367～#370、#375、#376、#378、#407（DF-38）。<b>稿 v2.60、2026-11-18、待使用者審；審過前不實作。</b>畫面全為假資料，只用既有 tokens。每一處「使用者沒說」的地方都在最下面〈待使用者審的問題〉，我沒有自己決定。</p></div>
+<div class="hd"><b>教室設定畫面包　稿 v2.61</b><button class="btn btn-sm" data-theme-btn type="button">深色／淺色</button></div>
+<div class="main"><div class="hero"><h1>教室設定畫面包　稿 v2.61</h1><p>解 #367～#370、#375、#376、#378、#407（DF-38）。<b>稿 v2.61、2026-11-18、待使用者審；審過前不實作。</b>畫面全為假資料，只用既有 tokens。每一處「使用者沒說」的地方都在最下面〈待使用者審的問題〉，我沒有自己決定。</p></div>
 
 <section class="sec" id="rl"><header><h2>1　教室清單：全站同一個元件（#375、#368、#369、#367、#376）</h2></header>
 <div class="say"><b>規則</b>：全站只要有教室清單（共用設定、考試 ③ 教室設定、精靈步驟 4、分科的教室清單），<b>都用同一個「教室清單列」，版型照使用者 2026-11-18 的截圖（DF-41／#411）</b>：由左而右＝「列為考場（預備教室列為預備）」開關＋「已列入」、「教室」名稱輸入框、「座位配置」（座位縮圖＋N 排×M 深位）、「座位統計」（座位 N・不排 N・可排 N；預備教室多一行「預備教室，不計入教室座位合計」）、動詞按鈕<b>「編輯座位」</b>與<b>「刪除」</b>。<b>表格寬度不夠時整列換行，不橫向捲動、不切掉最後一欄</b>（截圖右欄被切，是這張稿要避免的）。開關只在<b>考試用的清單</b>出現；共用設定與精靈的清單沒有「這次考試用不用」，省略開關（我的建議，請審）。<b>點整列或「編輯座位」都會就地展開座位編輯區，再點一次收起</b>（使用者原話）；一次只展開一間（我的建議，避免頁面過長）。「教室清單」這種名詞不再當按鈕，按鈕一律動詞。下面可實際點。</div>
 <div class="rl" id="rlDemo"></div>
-<div class="say"><b>座位編輯區不裁切（#376）</b>：座位格寬度跟著容器縮放（格子 = 容器寬 ÷ 排數，最小 22px；排數多到小於 22px 才改成兩段排列），<b>不出現橫向捲軸、不被右側停靠面板或摘要列遮住</b>；點格子切換可排／不排。</div>
+<div class="say"><b>座位編輯區：沿用現行考試第 ③ 步的樣式，不重新設計（DF-42／#412）</b>——展開後依序是「套用範圍：只這次考試／共用設定（所有考試）」、「編輯座位表：○」卡片（說明、「收合」鈕、橫排與深位 − ＋ 步進器、座標說明、每格標「排－深位」的座位格、「圖的下方是講臺」與講臺標示）；展開時整列淡藍底。<b>不裁切（#376）</b>：座位格寬度跟著容器縮放（格子 = 容器寬 ÷ 排數，最小 22px；排數多到小於 22px 才改成兩段排列），<b>不出現橫向捲軸、不被右側停靠面板或摘要列遮住</b>；點格子切換可排／不排。</div>
 </section>
 
 <section class="sec" id="wiz"><header><h2>2　精靈步驟 4「教室」：每列「編輯座位」「刪除」、表尾「新增教室」（#367、#369、#370）</h2></header>
@@ -553,10 +553,11 @@ var cur=-1,wrap=document.getElementById('rlDemo');
 function thumb(r,c,off){var h='<div class="rl-thumb" style="width:58px;grid-template-columns:repeat('+r+',1fr)">';for(var i=0;i<r*c;i++)h+='<i'+(off.indexOf(i)>=0?' class="off"':'')+'></i>';return h+'</div>';}
 function draw(){var h='';rows.forEach(function(x,i){var total=x[2]*x[3],off=x[4].length;var open=i===cur;
  var res=x[1]==='預備教室';
- h+='<div class="rl-row" role="button" tabindex="0" data-i="'+i+'" aria-expanded="'+open+'"><div class="rl-tg">'+(res?'列為預備':'列為考場')+'<span class="rl-sw"><i></i>已列入</span></div><div class="rl-nm">'+(res?'預備教室':'教室')+'<span class="in">'+x[0]+'</span></div><div class="rl-cfg">'+thumb(x[2],x[3],x[4])+'<b>'+x[2]+' 排×'+x[3]+' 深位</b></div><div class="rl-stat">座位 '+total+'・不排 '+off+'・可排 '+(total-off)+(res?'<br>預備教室，不計入教室座位合計':'')+'</div><div class="rl-act"><button class="btn btn-sm" type="button" data-i="'+i+'">編輯座位</button><button class="btn btn-sm btn-gdanger" type="button" data-del="'+i+'">刪除</button><span class="chev">'+(open?'▴':'▾')+'</span></div></div>';
- if(open){h+='<div class="rl-edit"><div class="k-note">點格子切換「可排／不排」；完整顯示，不需要捲動。</div><div class="seatgrid" style="grid-template-columns:repeat('+x[2]+',minmax(0,1fr));max-width:'+(x[2]*58)+'px">';for(var k=0;k<total;k++)h+='<button type="button" class="'+(x[4].indexOf(k)>=0?'off':'')+'" data-k="'+k+'">'+(k+1)+'</button>';h+='</div></div>';}
+ h+='<div class="rl-row'+(open?' open':'')+'" role="button" tabindex="0" data-i="'+i+'" aria-expanded="'+open+'"><div class="rl-tg">'+(res?'列為預備':'列為考場')+'<span class="rl-sw"><i></i>已列入</span></div><div class="rl-nm">'+(res?'預備教室':'教室')+'<span class="in">'+x[0]+'</span></div><div class="rl-cfg">'+thumb(x[2],x[3],x[4])+'<b>'+x[2]+' 排×'+x[3]+' 深位</b></div><div class="rl-stat">座位 '+total+'・不排 '+off+'・可排 '+(total-off)+(res?'<br>預備教室，不計入教室座位合計':'')+'</div><div class="rl-act"><button class="btn btn-sm" type="button" data-i="'+i+'">編輯座位</button><button class="btn btn-sm btn-gdanger" type="button" data-del="'+i+'">刪除</button><span class="chev">'+(open?'▴':'▾')+'</span></div></div>';
+ if(open){var sg='';for(var d=x[3];d>=1;d--)for(var c=1;c<=x[2];c++){var kk=(d-1)*x[2]+(c-1);sg+='<button type="button" class="'+(x[4].indexOf(kk)>=0?'off':'')+'" data-k="'+kk+'">'+c+'-'+d+'</button>';}
+  h+='<div class="rl-edit"><div><div class="k-note" style="margin-bottom:6px">套用範圍</div><span class="scope"><span>只這次考試</span><span class="on">共用設定（所有考試）</span></span><div class="k-note" style="margin-top:6px">改共用設定：用到這間教室的所有考試都會跟著變。</div></div><div class="edcard"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><h4>編輯座位表：'+x[0]+'</h4><button class="btn btn-sm" type="button" data-i="'+cur+'">收合</button></div><div class="k-note">橫排 '+x[2]+' × 深位 '+x[3]+' ＝ '+total+' 個座位，可排 '+(total-off)+'、不排 '+off+'。這類教室最多 7 排×7 深位（49 個座位）。排最多 7、深位最多 7（班級教室上限 7×7）。</div><div class="stpw"><div><span class="l">橫排（左右）</span><span class="stp"><button type="button" data-st="c-">-</button><b>'+x[2]+'</b><button type="button" data-st="c+">+</button></span></div><div><span class="l">深位（前後）</span><span class="stp"><button type="button" data-st="r-">-</button><b>'+x[3]+'</b><button type="button" data-st="r+">+</button></span></div></div><div class="k-note">座標是「排－深位」。點座位切換「可排／不排」（不排會打斜線，例如壞掉的桌椅或走道）；不排的座位不會安排考生，人由前往後連續坐。</div><div class="seatgrid" style="grid-template-columns:repeat('+x[2]+',minmax(0,1fr));max-width:'+(x[2]*72)+'px">'+sg+'</div><div class="k-note" style="text-align:center">圖的下方是講臺：深位 1 最靠前、'+x[3]+' 最後面；橫排第 1～'+x[2]+' 排，由左到右。<br><b>━━ 講臺 ━━</b></div></div></div>';}
 });h+='<div class="rl-foot"><button class="btn btn-sm" type="button">＋ 新增教室</button></div>';wrap.innerHTML=h;}
-wrap.addEventListener('click',function(e){var d=e.target.closest('[data-del]');if(d)return;var k=e.target.closest('[data-k]');if(k){var x=rows[cur],n=+k.dataset.k,j=x[4].indexOf(n);if(j>=0)x[4].splice(j,1);else x[4].push(n);draw();return;}var r=e.target.closest('[data-i]');if(!r)return;var i=+r.dataset.i;cur=cur===i?-1:i;draw();});
+wrap.addEventListener('click',function(e){var d=e.target.closest('[data-del]');if(d)return;var st=e.target.closest('[data-st]');if(st){var xx=rows[cur],t=st.dataset.st;if(t==='c+'&&xx[2]<7)xx[2]++;if(t==='c-'&&xx[2]>1)xx[2]--;if(t==='r+'&&xx[3]<8)xx[3]++;if(t==='r-'&&xx[3]>1)xx[3]--;xx[4]=[];draw();return;}var k=e.target.closest('[data-k]');if(k){var x=rows[cur],n=+k.dataset.k,j=x[4].indexOf(n);if(j>=0)x[4].splice(j,1);else x[4].push(n);draw();return;}var r=e.target.closest('[data-i]');if(!r)return;var i=+r.dataset.i;cur=cur===i?-1:i;draw();});
 draw();
 var cl=[['溫','01',47,1],['良','02',46,2],['恭','03',46,3],['儉','04',42,4],['勤','05',45,5],['誠','06',44,6]];
 document.getElementById('cpal').innerHTML=cl.map(function(c){var t=c[3]<=3;return '<div class="cp" style="background:var(--c'+c[3]+'-bg);border-color:var(--c'+c[3]+'-line);color:var(--c'+c[3]+'-ink)"><b>'+c[0]+'</b><span>'+c[1]+' 班・'+c[2]+' 人</span><span class="seg"><span class="'+(t?'on':'')+'">理組</span><span class="'+(t?'':'on')+'">文組</span></span></div>';}).join('');
