@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import JSZip from 'jszip';
 import { createMemoryFS, encode, DEFAULT_LABEL_NOTES, labelNoteLines, loadDoc, LABEL_NOTE_MAX_LINES, parseNoteLine } from '../data';
 import { makeFixture } from './fixtures';
-import { buildLabelPages, labelBoxMm, labelNotePt, renderDocx, renderPrintHtml } from './index';
+import { buildLabelPages, LABEL_PAGE_FIXED_MM, labelBoxMm, labelNotePt, renderDocx, renderPrintHtml } from './index';
 
 const fontDir = new URL('./fonts/', import.meta.url);
 const fonts = {
@@ -73,17 +73,14 @@ describe('標籤注意事項（設定頁可改）', () => {
     const b4 = { paper: 'B4' as const, cols: 7, rows: 7 };
     // 深位 5：剩餘空間夠，用原字級
     expect(labelNotePt(b4, 5, 3, 13)).toBe(13);
-    // 深位 6：剩餘約 31mm，縮字但仍印得出來
-    const six = labelNotePt(b4, 6, 3, 13);
-    expect(six).toBeGreaterThanOrEqual(8);
-    expect(six).toBeLessThan(13);
-    // 深位 7：滿格，沒有空間
+    // 深位 6、7：扣掉 Word 實測的標題頁尾（#372：約 36.5mm）後剩不到 8pt 三行的高度，不印（以前猜 22mm，Word 裡注意事項會被擠到下一頁）
+    expect(labelNotePt(b4, 6, 3, 13)).toBe(0);
     expect(labelNotePt(b4, 7, 3, 13)).toBe(0);
     expect(labelNotePt(b4, 5, 0, 13)).toBe(0);
     // 格子加上標題頁尾與注意事項不超過紙高
     for (const rows of [3, 4, 5, 6]) {
       const pt = labelNotePt(b4, rows, 4, 13);
-      if (pt) expect(rows * labelBoxMm(b4, rows).h + 22 + 4 * (pt * 0.3528 * 1.5) + 4).toBeLessThanOrEqual(353);
+      if (pt) expect(rows * labelBoxMm(b4, rows).h + LABEL_PAGE_FIXED_MM + 4 * (pt * 0.3528 * 1.5) + 4).toBeLessThanOrEqual(353);
     }
   });
 

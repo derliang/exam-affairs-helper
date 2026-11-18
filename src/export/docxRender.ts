@@ -191,10 +191,10 @@ function hatchParas(wMm: number, hMm: number): Paragraph[] {
 
 /** 抬頭：左邊標題、右邊深色教室牌，底下一條深色線 */
 function headBlock(
-  o: { widthMm: number; h1: string; h2?: string; room: string; h1Pt: number; roomPt: number; padX: number; padY: number },
+  o: { widthMm: number; h1: string; h2?: string; room: string; h1Pt: number; roomPt: number; padX: number; padY: number; /** 教室牌文字寬度的餘裕（mm），預設 1.5；標籤頁加大（Word 會把「高1教室」這類短名折成兩行） */ slackMm?: number },
   mode: BoldMode,
 ): Table {
-  const roomW = textMm(o.room, o.roomPt, true) + 2 * o.padX + 1.5;
+  const roomW = textMm(o.room, o.roomPt, true) + 2 * o.padX + (o.slackMm ?? 1.5);
   const leftW = o.widthMm - roomW;
   const lineBd = bd(NAVY, 18);
   const left: Paragraph[] = [
@@ -652,7 +652,7 @@ function labelSection(page: LabelPageModel, opts: DocxOptions): ISectionOptions 
     },
     footers: { default: pageFooter(opts) },
     children: [
-      headBlock({ widthMm: gridW, h1: (page.heading ?? `${page.examName}　標籤`) + (page.flipNotes?.length ? `　（${page.flipNotes.join('；')}）` : ''), room: roomShown(page), h1Pt: 15, roomPt: 12, padX: 4, padY: 1 }, mode),
+      headBlock({ widthMm: gridW, h1: (page.heading ?? `${page.examName}　標籤`) + (page.flipNotes?.length ? `　（${page.flipNotes.join('；')}）` : ''), room: roomShown(page), h1Pt: 15, roomPt: 12, padX: 4, padY: 1, slackMm: 4 }, mode),
       spacer(3),
       gridTable,
       ...(lines.length ? [spacer(3), note] : []),

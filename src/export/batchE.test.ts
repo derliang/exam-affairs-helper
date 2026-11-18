@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { labelCellMm, defaultLabelLayout, PAPER_MM, roomShown, roomTooBigForLabel, labelBoxMm, labelNotePt } from './model';
+import { LABEL_PAGE_FIXED_MM, labelCellMm, defaultLabelLayout, PAPER_MM, roomShown, roomTooBigForLabel, labelBoxMm, labelNotePt } from './model';
 import { renderPrintHtml } from './htmlRender';
 import { sampleHtml, sampleMarkLabelPage, sampleReserveLabelPage, SAMPLE_ROOM } from './sample';
 import { sampleCellMm } from '../ui/pages/LabelSample';
@@ -20,8 +20,8 @@ describe('G30 預備教室 7 排×8 深位', () => {
       const l = defaultLabelLayout(paper);
       const c8 = labelCellMm(l, 8);
       expect(c8.w).toBeCloseTo(PAPER_MM[paper].w / 7, 5);
-      expect(c8.h).toBeCloseTo((PAPER_MM[paper].h - 22) / 8, 5);
-      expect(8 * c8.h).toBeLessThanOrEqual(PAPER_MM[paper].h - 22 + 1e-9);
+      expect(c8.h).toBeCloseTo((PAPER_MM[paper].h - LABEL_PAGE_FIXED_MM) / 8, 5);
+      expect(8 * c8.h).toBeLessThanOrEqual(PAPER_MM[paper].h - LABEL_PAGE_FIXED_MM + 1e-9);
       expect(labelBoxMm(l, 8).h).toBe(c8.h);
       expect(labelCellMm(l, 7).h).toBeGreaterThan(c8.h);
       expect(labelNotePt(l, 8, 0, 13)).toBe(0);
