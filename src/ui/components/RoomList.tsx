@@ -6,7 +6,7 @@ import { Alert, Badge, Button, ConfirmButton, EmptyState, Modal, Seg, Stepper, S
 import { confirmCopy, UNDO_HINT } from '../flow';
 import { classColorVars } from '../colors';
 import { addRoom, clickSeat, duplicateRoom, fillDefaultTracks, isSeatActive, patchRoom, removeRoom, labelSplitNote, resize, roomLimitsOf, seatLimitNote, setRoomDivision, setRoomTrack } from '../rooms';
-import { rowDepthsOf, setAllDepth, setRowCount, stepRowDepth, toggleSeat } from '../ast/roomEdit';
+import { rowDepthsOf, setAllDepth, setRowCount, toggleSeat } from '../ast/roomEdit';
 
 /** G22：班級教室＝名冊班級（跟名冊走、不能手動新增或刪除）；沒有對應班級的班級教室是「名冊已沒有這個班」的舊教室 */
 export const isOrphanClassRoom = (r: Classroom, classes?: { name: string }[]): boolean =>
@@ -101,7 +101,7 @@ export function RoomList(p: {
   const addLabel = p.addLabel === undefined ? (junior ? null : '＋ 新增預備教室') : p.addLabel;
   return (
     <div class="rw">
-      <p class="muted small">座位上限：班級教室最多 7 排×7 深位（49 座）；{reserveName}最多 7 排×8 深位（56 座）。點整列或「編輯座位」調整座位排列，每一排的深位可以不同。</p>
+      <p class="muted small">座位上限：班級教室最多 7 排×7 深位（49 座）；{reserveName}最多 7 排×8 深位（56 座）。點整列或「編輯座位」調整座位排列。</p>
       <div class="roomlist">
         {shown.map((shared, idx) => {
           const on = p.selected?.includes(shared.id) ?? false;
@@ -267,10 +267,10 @@ export const layoutOf = (r: Classroom): RoomSeatLayout => ({
 
 /**
  * 座位表編輯（三種考試、共用設定、精靈共用；D49/D50、D138）：講臺在下，深位 1 最靠講臺；橫排標「第N排」，每格印「排-深位」。
- * 整間的橫排、深位步進器＋每一排各自的深位步進器（每排深位可不同，使用者 2026-11-18「三種考試都加」）；點座位切換可排／不排。
- * 每排深位都一樣時沿用原本的 resize／clickSeat（資料與以前完全相同）；不一樣時改用 roomEdit 的每排函式。
+ * 只有整間的橫排、深位步進器＋點座位切換可排／不排（D139：使用者 2026-11-18 夜下令拿掉 D138 的「每一排的深位」步進器）。
+ * 舊資料若有 rowDepths（每排深位不同）仍照樣顯示、可編輯：該排沒有的位置畫淡斜線；步進器與點座位改走 roomEdit 的函式以保留每排深位。
  */
-function SeatGrid(p: { room: Classroom; paper: LabelPaper; cap: number; lim: { rows: number; depth: number }; onClose: () => void; onChange: (r: Classroom) => void; /** 本次考試專用（#210）：頂端標「本次專用」 */ examOnly?: boolean }) {
+export function SeatGrid(p: { room: Classroom; paper: LabelPaper; cap: number; lim: { rows: number; depth: number }; onClose: () => void; onChange: (r: Classroom) => void; /** 本次考試專用（#210）：頂端標「本次專用」 */ examOnly?: boolean }) {
   const { room } = p;
   const varied = !!room.rowDepths;
   const per = rowDepthsOf(room);
@@ -292,16 +292,7 @@ function SeatGrid(p: { room: Classroom; paper: LabelPaper; cap: number; lim: { r
         <div class="field" style="gap:2px"><span class="small muted">橫排（左右）</span><Stepper label="橫排" value={room.rows} max={p.lim.rows} onChange={setRows} /></div>
         <div class="field" style="gap:2px"><span class="small muted">深位（前後，整間）</span><Stepper label="深位" value={room.depth} max={p.lim.depth} onChange={setDepth} /></div>
       </div>
-      <div class="stack" style="gap:4px">
-        <span class="small muted">每一排的深位（可以不同；例如最後一排少一個位子）</span>
-        <div class="row rowdepths" role="group" aria-label={`${room.name}每排深位`}>
-          {per.map((d, i) => (
-            <div class="field" style="gap:2px" key={i}><span class="small muted">第{i + 1}排</span>
-              <Stepper label={`第${i + 1}排深位`} value={d} max={p.lim.depth} onChange={(n) => p.onChange(stepRowDepth(room, i + 1, n > d ? 1 : -1, limits))} /></div>
-          ))}
-        </div>
-      </div>
-      <p class="muted small">座標是「排－深位」。點座位切換「可排／不排」（不排會打斜線，例如壞掉的桌椅或走道）；不排的座位不會安排考生，人由前往後連續坐。該排沒有的深位畫成淡斜線、不能點。</p>
+      <p class="muted small">座標是「排－深位」。點座位切換「可排／不排」（不排會打斜線，例如壞掉的桌椅或走道）；不排的座位不會安排考生，人由前往後連續坐。</p>
       <div class="pgrid" style={{ gridTemplateColumns: `repeat(${room.rows}, minmax(0, 52px))` }} role="grid" aria-label={`${room.name}座位表`}>
         {depths.flatMap((d) => rows.map((rw) => {
           if (d > rowDepthOf(room, rw)) return <span key={`${rw}-${d}`} class="pc none" aria-hidden="true" />;
