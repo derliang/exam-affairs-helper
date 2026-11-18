@@ -13,7 +13,7 @@ import { afterExport } from '../flow';
 import { labelSplitNote, roomsOverLabel } from '../rooms';
 import type { Doc } from '../store';
 import { isStale, validationChecks } from '../seating';
-import { defaultLabelLayout } from '../../export/model';
+import { defaultLabelLayout, labelSizeNote } from '../../export/model';
 import { gateOf, reconcile, stampNow } from '../reconcile';
 import { ReconcilePanel } from './ReconcilePanel';
 
@@ -98,7 +98,7 @@ function PreviewCard(p: { prepared: Extract<ReturnType<typeof prepareExport>, { 
   }, [input, kind, idx, p.paper, room]);
   const kinds: { value: PreviewKind; label: string }[] = [{ value: 'label', label: '標籤' }, { value: 'seat', label: '座位表' }, ...(p.pickupOn ? [{ value: 'pickup' as const, label: '領卷清單' }] : []), ...(p.attendanceOn ? [{ value: 'attendance' as const, label: '出缺席記錄表' }] : [])];
   const cap = kind === 'label'
-    ? `${p.paper === 'A3' ? 'A3（297×420 mm）・每格約 42.4×60.0 mm' : 'B4（250×353 mm）・每格約 35.7×50.4 mm'}・每格＝紙寬÷7、紙高÷7，格子排列與該教室座位表的排×深位一致，沒有座位或沒有考生的位置不印格子。`
+    ? `${p.paper === 'A3' ? 'A3（297×420 mm）' : 'B4（250×353 mm）'}・${labelSizeNote(p.paper)}；格子排列與該教室座位表的排×深位一致，沒有座位或沒有考生的位置不印格子。`
     : kind === 'seat' ? 'A4 座位表，每頁附該教室的考生統計；實際檔案每間教室一頁。' : kind === 'attendance' ? 'A4 出缺席記錄表，每間教室至少一頁（人多接下一頁），照座位順序，留各科打勾欄。' : 'A4 領卷清單，每間教室一頁，列出每科試卷與答案卡份數。';
   return (
     <div class="card stack" style="margin-top:12px">
@@ -269,11 +269,11 @@ export function Step6(p: {
               <span><b>{x.title}</b><br /><span class="small muted">{x.sub}</span></span>
             </label>
           ))}
-          {ck('label', '標籤', '合併成一個檔案，每間教室一張紙' + (junior ? '' : '（預備教室排在最後）') + '；每格＝紙寬÷7、紙高÷7，白底' + (junior ? '' : '；不考、加考、抽離的標籤用淡黃底'))}
+          {ck('label', '標籤', '合併成一個檔案，每間教室一張紙' + (junior ? '' : '（預備教室排在最後）') + '；四周留列印邊距，白底' + (junior ? '' : '；不考、加考、抽離的標籤用淡黃底'))}
           <div class="field" style="margin-left:30px">
             <span class="label">標籤紙張（只有標籤可選；座位表與名單固定 A4）</span>
             <div class="row"><Seg<LabelPaper> label="標籤紙張" value={o.paper} onChange={(v) => set({ paper: v })} options={[{ value: 'B4', label: 'B4（一般，7×7）' }, { value: 'A3', label: 'A3（大尺寸，7×7）' }]} /></div>
-            <span class="hint">每格＝紙寬÷7、紙高÷7（B4 約 35.7×50.4 mm、A3 約 42.4×60.0 mm），格子排列與該教室座位表的排×深位一致；沒有座位或沒有考生的位置不印格子。</span>
+            <span class="hint">{labelSizeNote(o.paper)}；格子排列與該教室座位表的排×深位一致，沒有座位或沒有考生的位置不印格子。</span>
             {o.label && overRooms.length > 0 && <Alert tone="warn">{overRooms.map((r) => r.name).join('、')} 超過 7×7，標籤無法對應，這些教室不會輸出標籤；請回 ③ 縮小座位。</Alert>}
           </div>
           {!junior && ck('study', '抽離自習名單（A4）', '合併成一個檔案，每科一頁；只有名單與人數，不出座位表與標籤')}

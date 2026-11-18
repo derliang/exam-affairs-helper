@@ -4,7 +4,7 @@ import JSZip from 'jszip';
 import { renderToString } from 'preact-render-to-string';
 import { describe, expect, it } from 'vitest';
 import { createIncrementalSaver, createMemoryFS, loadDoc, saveDoc, studentCode, type ExamConfig, type ExamKind } from '../data';
-import { buildLabelPages, labelGrid, labelGridSize, labelNotePt, mmToTwip, renderDocx, renderPrintHtml, roomTooBigForLabel, PAPER_MM } from '../export';
+import { buildLabelPages, defaultLabelLayout, labelFit, labelGrid, labelGridSize, labelNotePt, mmToTwip, renderDocx, renderPrintHtml, roomTooBigForLabel, PAPER_MM } from '../export';
 import { makeFixture } from '../export/fixtures';
 import type { ExportInput } from '../export/model';
 import { DeleteExamModal, deleteNameMatches, Exams } from './pages/Exams';
@@ -165,14 +165,14 @@ describe('G14 標籤：每格＝紙寬÷7、紙高÷7，排列同座位表（學
         const x = await docXml(input);
         const g = grids(x).filter((w) => w.length === 5);
         expect(g).toHaveLength(1);
-        expect(new Set(g[0]!)).toEqual(new Set([Math.floor((W / 7 * 1440) / 25.4)]));
+        expect(new Set(g[0]!)).toEqual(new Set([Math.floor(((W - 12) / 7 * 1440) / 25.4)]));
         const heights = [...x.matchAll(/<w:trHeight w:val="(\d+)" w:hRule="exact"/g)].map((m) => Number(m[1]));
         expect(heights).toHaveLength(6);
-        expect(new Set(heights)).toEqual(new Set([mmToTwip(H / 7)]));
+        expect(new Set(heights)).toEqual(new Set([mmToTwip(labelFit(defaultLabelLayout(paper), 6, 3).h)])); // D136：深位 6 含注意事項時格子稍矮
         // 列印頁（PDF 用）也是同一組格大小
         const html = renderPrintHtml({ label: pages }, meta);
-        expect(html).toContain(`repeat(5,${+(W / 7).toFixed(2)}mm)`);
-        expect(html).toContain(`height:${+(H / 7).toFixed(2)}mm`);
+        expect(html).toContain(`repeat(5,${+((W - 12) / 7).toFixed(2)}mm)`);
+        expect(html).toContain(`height:${+labelFit(defaultLabelLayout(paper), 6, 3).h.toFixed(2)}mm`);
       });
     }
   }
@@ -200,14 +200,14 @@ describe('G14 標籤：每格＝紙寬÷7、紙高÷7，排列同座位表（學
     expect(x).not.toContain('EAE5D4'); // 舊的斜線底色
   });
 
-  it('滿 7 排×7 深位（49 座）仍放得進一張紙：列高扣掉標題頁尾，沒有空間時不印注意事項', async () => {
+  it('滿 7 排×7 深位（49 座）仍放得進一張紙：列高扣掉標題頁尾與注意事項，注意事項一定印（D136）', async () => {
     for (const paper of ['B4', 'A3'] as const) {
       const input = oneRoom('bcct', paper, 7, 7, 49);
       const p = buildLabelPages(input, 'class')[0]!;
       expect(labelGridSize(p)).toEqual({ cols: 7, rows: 7 });
-      expect(labelNotePt(p.layout, 7, p.notes.length, 13)).toBe(0);
+      expect(labelNotePt(p.layout, 7, p.notes.length)).toBeGreaterThan(0);
       const x = await docXml(input);
-      expect(x).not.toContain('注意事項：');
+      expect(x).toContain('注意事項：');
       const H = PAPER_MM[paper].h;
       const heights = [...x.matchAll(/<w:trHeight w:val="(\d+)" w:hRule="exact"/g)].map((m) => Number(m[1]));
       expect(heights).toHaveLength(7);

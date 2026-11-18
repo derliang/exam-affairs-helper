@@ -4,7 +4,7 @@
  * 座位表與標籤的樣式照設計系統成品頁「座位表與標籤」稿件（docs/design/mockups/設計系統.html #paper）：
  * 改這裡的版面要同步改稿件，反之亦然。
  */
-import { roomShown, footerText, isSpecial, labelBoxMm, labelGrid, labelGridSize, labelNotePt, landscapeFit, namePtFit, PAPER_MM, periodLineFontPt, personLayout, rotationPage, wideLayout, type PersonLine, SEAT_PAGE, seatGeometry, statLayout, SLOT_TIP, type CellModel, type LabelPageModel, type ListPageModel, type SeatPageModel, type TablePageModel } from './model';
+import { roomShown, footerText, isSpecial, LABEL_EDGE_MM, labelBoxMm, labelGrid, labelGridSize, labelNotePt, landscapeFit, namePtFit, PAPER_MM, periodLineFontPt, personLayout, rotationPage, wideLayout, type PersonLine, SEAT_PAGE, seatGeometry, statLayout, SLOT_TIP, type CellModel, type LabelPageModel, type ListPageModel, type SeatPageModel, type TablePageModel } from './model';
 
 export interface HtmlOptions {
   generatedAt: string;
@@ -91,17 +91,17 @@ ${p.slotMode ? `<div class="pp-sltip">${esc(SLOT_TIP)}</div>` : ''}${statsNext ?
 }
 
 function labelHtml(p: LabelPageModel, o: HtmlOptions): string {
-  const margin = o.labelMarginMm ?? 3;
+  const margin = o.labelMarginMm ?? LABEL_EDGE_MM;
   const { layout } = p;
   const paper = PAPER_MM[layout.paper];
   // 稿件：格高最多 35mm，格子下方才留得出注意事項與頁尾（Word 版待下一步對齊後再共用）
   const gs = labelGridSize(p);
-  const cell = labelBoxMm(layout, gs.rows);
+  const cell = labelBoxMm(layout, gs.rows, p.notes.length);
   const cells = labelGrid(p)
     .map((m) => (layout.wide ? wideHtml(m, cell.w, cell.h, layout.paper === 'B4') : cellHtml(m, cell.w, cell.h, 'label', layout.paper === 'B4')))
     .join('');
   const padX = cell.padX;
-  const notePt = labelNotePt(layout, gs.rows, p.notes.length, layout.paper === 'B4' ? 13 : 20);
+  const notePt = labelNotePt(layout, gs.rows, p.notes.length);
   const noteHtml = notePt
     ? `<div class="pp-note" style="margin-top:3mm;font-size:${notePt}pt;line-height:1.5;padding:2mm 4mm"><h4 style="font-size:${notePt + 1}pt;margin-bottom:1mm">注意事項：</h4>${p.notes.map((l) => `<div>${l.map((s) => (s.bold ? `<b>${esc(s.text)}</b>` : esc(s.text))).join('')}</div>`).join('')}</div>`
     : '';

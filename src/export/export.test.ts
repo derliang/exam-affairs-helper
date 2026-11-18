@@ -11,6 +11,7 @@ import {
   footerText,
   labelCellMm,
   LABEL_PAGE_FIXED_MM,
+  labelFit,
   defaultLabelLayout,
   wideLabelLayout,
   roomTooBigForLabel,
@@ -83,10 +84,10 @@ describe('版面模型', () => {
 
   it('標籤格大小（D113）：每格＝紙寬÷7、紙高÷7，B4 約 35.7×50.4、A3 約 42.4×60.0；滿 7 列要讓出標題頁尾', () => {
     const b4 = labelCellMm({ paper: 'B4', cols: 7, rows: 7 }, 5);
-    expect(b4.w).toBeCloseTo(250 / 7, 5);
+    expect(b4.w).toBeCloseTo((250 - 12) / 7, 5); // D136：左右各留 6mm 列印邊距
     expect(b4.h).toBeCloseTo(353 / 7, 5);
     const a3 = labelCellMm({ paper: 'A3', cols: 7, rows: 7 }, 5);
-    expect(a3.w).toBeCloseTo(297 / 7, 5);
+    expect(a3.w).toBeCloseTo((297 - 12) / 7, 5);
     expect(a3.h).toBeCloseTo(420 / 7, 5);
     expect(labelCellMm({ paper: 'A3', cols: 7, rows: 7 }, 7).h).toBeCloseTo((420 - LABEL_PAGE_FIXED_MM) / 7, 5);
     const pages = buildLabelPages(makeFixture(), 'class');
@@ -188,7 +189,7 @@ describe('Word 輸出（D44/D45）', () => {
       const grids = [...doc.matchAll(/<w:tblGrid>(.*?)<\/w:tblGrid>/g)].map((m) => [...m[1]!.matchAll(/w:w="(\d+)"/g)].map((x) => Number(x[1]))).filter((w) => w.length === 4);
       expect(grids).toHaveLength(2);
       expect(new Set(grids[0]!).size).toBe(1);
-      expect(grids[0]![0]!).toBe(Math.floor((W / 7 * 1440) / 25.4));
+      expect(grids[0]![0]!).toBe(Math.floor(((W - 12) / 7 * 1440) / 25.4));
       const heights = [...doc.matchAll(/<w:trHeight w:val="(\d+)" w:hRule="exact"/g)].map((m) => Number(m[1]));
       expect(heights).toHaveLength(5 * 2); // 5 個深位 × 2 間教室
       expect(new Set(heights)).toEqual(new Set([mmToTwip(H / 7)]));
@@ -200,9 +201,9 @@ describe('Word 輸出（D44/D45）', () => {
     f.settings.classrooms[0] = { ...f.settings.classrooms[0]!, rows: 7, depth: 7, seatCount: 49 };
     const doc = await (await unzip(await renderDocx({ label: buildLabelPages(f, 'class') }, { fonts, ...meta }))).text('word/document.xml');
     const widths = [...doc.matchAll(/<w:tblGrid>(.*?)<\/w:tblGrid>/g)].map((m) => [...m[1]!.matchAll(/w:w="(\d+)"/g)].map((x) => Number(x[1]))).find((w) => w.length === 7)!;
-    expect(widths).toEqual(Array(7).fill(Math.floor((297 / 7 * 1440) / 25.4)));
+    expect(widths).toEqual(Array(7).fill(Math.floor(((297 - 12) / 7 * 1440) / 25.4)));
     const heights = [...doc.matchAll(/<w:trHeight w:val="(\d+)" w:hRule="exact"/g)].map((m) => Number(m[1]));
-    expect(heights.slice(0, 7)).toEqual(Array(7).fill(mmToTwip((420 - LABEL_PAGE_FIXED_MM) / 7)));
+    expect(heights.slice(0, 7)).toEqual(Array(7).fill(mmToTwip(labelFit({ paper: 'A3', cols: 7, rows: 7 }, 7, 3).h)));
   });
 
   it('備案 separate-family：Bold 是獨立家族，粗體字用該家族', async () => {
@@ -285,7 +286,7 @@ describe('PDF 列印 HTML：照稿件版面（設計系統成品頁「座位表�
     expect(h).toContain('background:#FFE08A');
     expect(h).toContain('background:#fff');
     expect(h).not.toMatch(/background:#FBE7C6/); // 標籤不用班級色
-    expect(h).toContain(`repeat(4,${+(297 / 7).toFixed(2)}mm)`); // 4 排
+    expect(h).toContain(`repeat(4,${+((297 - 12) / 7).toFixed(2)}mm)`); // 4 排
     expect(h).toContain('注意事項：');
     expect(h).toContain('請使用<b>透明膠帶</b>黏貼');
   });
