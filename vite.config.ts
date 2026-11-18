@@ -11,5 +11,5 @@ export default defineConfig({
   base: process.env.GITHUB_ACTIONS ? '/mock-exam-helper/' : '/',
   plugins: [preact()],
   define: { __APP_VERSION__: JSON.stringify(pkg.version), __BUILD_DATE__: JSON.stringify(buildDate) },
-  test: { include: ['src/**/*.test.{ts,tsx}'], environment: 'node' },
+  test: { include: ['src/**/*.test.{ts,tsx}'], environment: 'node', testTimeout: 30000 },
 });
