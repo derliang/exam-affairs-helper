@@ -38,17 +38,24 @@ export interface AstOutputs {
   version: string;
 }
 
-/** A4 直式表格每頁大約放幾列（列高 9mm 起跳，扣邊界、標題與表頭；表頭每頁重複）。只用在預估頁數 */
-export const TABLE_ROWS_PER_PAGE = 26;
+/**
+ * A4 直式表格每頁放幾列（列高 9mm 起跳，扣邊界、標題與表頭；表頭每頁重複）。只用在預估頁數。
+ * 2026-11-18 用 Word 與 Chrome 列印實測（#269）：第一頁有標題與說明約 21～22 列，之後每頁約 23～24 列
+ * （以前一律算 26 列，輪流清單 338 列估 14 頁、實際 15 頁）。取保守值，寧可多估不要少估。
+ */
+export const TABLE_FIRST_PAGE_ROWS = 21;
+export const TABLE_ROWS_PER_PAGE = 23;
+/** 直式長表 n 列會印幾頁 */
+export const tablePages = (n: number): number => (n <= TABLE_FIRST_PAGE_ROWS ? 1 : 1 + Math.ceil((n - TABLE_FIRST_PAGE_ROWS) / TABLE_ROWS_PER_PAGE));
 
 /**
  * 某一類輸出實際會印出幾頁（#269）：標籤一張紙一頁；座位表＝每間一頁，加上 3 人以上輪流的座位清單（長表會跨頁）；
  * 其他表格 A4 橫式一頁，直式依列數估頁（原本一個表一律算 1 頁，輪流清單 13 頁卻只算 3 頁）
  */
 export function estimatePages(o: AstOutputs, k: 'label' | 'seat' | 'ann' | 'use' | 'reg' | 'study'): number {
-  const tbl = (t: TablePageModel): number => (t.landscape ? 1 : Math.max(1, Math.ceil(t.rows.length / TABLE_ROWS_PER_PAGE)));
+  const tbl = (t: TablePageModel): number => (t.landscape ? 1 : tablePages(t.rows.length));
   if (k === 'label') return o.label.length;
-  if (k === 'seat') return o.seat.reduce((n, p) => n + 1 + (p.rotation ? Math.max(1, Math.ceil(p.rotation.rows.length / TABLE_ROWS_PER_PAGE)) : 0), 0);
+  if (k === 'seat') return o.seat.reduce((n, p) => n + 1 + (p.rotation ? tablePages(p.rotation.rows.length) : 0), 0);
   return o[k].reduce((n, t) => n + tbl(t), 0);
 }
 

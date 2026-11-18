@@ -276,18 +276,22 @@ describe('分科輸出：整合標籤兩倍寬（#216／D107）', () => {
 
 describe('分科輸出：頁數預估（#269）', () => {
   it('座位表的預估頁數含輪流座位清單跨頁；橫式表一頁、直式長表依列數估', async () => {
-    const { estimatePages, TABLE_ROWS_PER_PAGE } = await import('./output');
+    const { estimatePages, tablePages } = await import('./output');
     const rows = Array.from({ length: 100 }, () => ['a']);
     const o = {
       label: [], ann: [], use: [], reg: [], study: [], version: 'x',
       seat: [{ rotation: { heads: ['h'], rows } }, {}],
     } as never as import('./output').AstOutputs;
     // 第一間：1 頁座位圖＋輪流清單 100 列；第二間：1 頁
-    expect(estimatePages(o, 'seat')).toBe(1 + Math.ceil(100 / TABLE_ROWS_PER_PAGE) + 1);
+    expect(estimatePages(o, 'seat')).toBe(1 + tablePages(100) + 1);
+    // Word 實測（2026-11-18，#269）：120 列＝6 頁、338 列＝15 頁；估計不得少於實測
+    expect(tablePages(120)).toBeGreaterThanOrEqual(6);
+    expect(tablePages(338)).toBeGreaterThanOrEqual(15);
+    expect(tablePages(21)).toBe(1);
     const t = (landscape: boolean, n: number) => ({ landscape, rows: Array.from({ length: n }, () => ['a']) });
     const o2 = { ...o, ann: [t(true, 45), t(true, 12)], reg: [t(false, 60)] } as never as import('./output').AstOutputs;
     expect(estimatePages(o2, 'ann')).toBe(2);
-    expect(estimatePages(o2, 'reg')).toBe(Math.ceil(60 / TABLE_ROWS_PER_PAGE));
+    expect(estimatePages(o2, 'reg')).toBe(tablePages(60));
   });
 });
 
