@@ -51,6 +51,8 @@ function build(sp: Spec): ExportInput {
 const specs: Spec[] = [
   // 會考 237 人／6 班：6 間 7 排×6 深位（42 座）
   { tag: '會考237', kind: 'bcct', division: 'junior', perClass: [40, 39, 40, 39, 40, 39], rooms: Array.from({ length: 6 }, (_, i) => ({ name: `國${i + 1}教室`, rows: 7, depth: 6 })), paper: 'B4' },
+  // 同上，A3（深位 6）
+  { tag: '會考237A3', kind: 'bcct', division: 'junior', perClass: [40, 39, 40, 39, 40, 39], rooms: Array.from({ length: 6 }, (_, i) => ({ name: `國${i + 1}教室`, rows: 7, depth: 6 })), paper: 'A3' },
   // 會考混 7 排與 6 排教室
   { tag: '會考混排', kind: 'bcct', division: 'junior', perClass: [40, 39, 40, 39, 40, 39], rooms: [7, 6, 7, 6, 7, 6].map((rw, i) => ({ name: `混${i + 1}教室`, rows: rw, depth: 7 })), paper: 'B4' },
   // 7 排×5 深位（有注意事項的情形）

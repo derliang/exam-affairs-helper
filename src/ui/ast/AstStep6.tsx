@@ -172,7 +172,7 @@ export function AstStep6(p: { doc: Doc; exam: ExamConfig; onGoStep: (n: 2 | 3 | 
       {outs && (
         <div class="card stack">
           <div class="row" style="justify-content:space-between">
-            <div><h3>預覽</h3><p class="small muted">與下載用同一份頁面；{tab === 'label' ? `標籤：每張 2 格寬（格＝紙寬÷7、紙高÷7），這頁共 ${(pages[idx] as { cells?: unknown[] } | undefined)?.cells?.length ?? 0} 張；一頁橫向最多 3 張、縱向最多 7 張，排數超過 3 的考場會分成多張紙。` : `共 ${pages.length} 頁。`}</p></div>
+            <div><h3>預覽</h3><p class="small muted">與下載用同一份頁面；{tab === 'label' ? `標籤：每張 2 格寬（四周留列印邊距，格寬＝扣邊距後÷7），這頁共 ${(pages[idx] as { cells?: unknown[] } | undefined)?.cells?.length ?? 0} 張；一頁橫向最多 3 張、縱向最多 7 張，排數超過 3 的考場會分成多張紙。` : `共 ${pages.length} 頁。`}</p></div>
             <Seg<Tab> label="預覽哪一份" value={tab} onChange={(v) => { setTab(v); setPi(0); }} options={tabs} />
           </div>
           {pages.length > 1 && <div class="row" style="flex-wrap:wrap"><Seg<string> label="預覽頁" value={String(idx)} onChange={(v) => setPi(Number(v))} options={pages.map((_, i) => ({ value: String(i), label: pageName(i) }))} /></div>}
