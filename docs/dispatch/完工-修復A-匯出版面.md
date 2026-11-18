@@ -1,6 +1,6 @@
-# 完工：修復包 A — 匯出紙面版面（v1.26.2）
+# 完工：修復包 A — 匯出紙面版面（v1.26.3）
 
-> 2026-11-18（台北），修復員（A 軌，調度員派工）。分支 `claude/fix-export-layout-bundle-a-fa3e12`，以 origin/main 1.26.1（`15e039c`）為底。**未併 main、未發布、未關 Issue。**
+> 2026-11-18（台北），修復員（A 軌，調度員派工）。分支 `claude/fix-export-layout-bundle-a-fa3e12`，以 origin/main 1.26.1（`15e039c`）為底；之後 main 由 PR #394 升到 1.26.2（並用掉 D134），已合入最新 main（`b93cac6`），本包改升 1.26.3。**未併 main、未發布、未關 Issue。**
 > 全部驗證用假資料（「甲生101」這類代號），公開 repo 不含真實學生資料。
 
 ## 一、逐 Issue 對照（原話 → 根因 → 做了什麼）
@@ -22,7 +22,7 @@
 - `src/ui/ast/output.ts`：`tablePages`（第一頁 21 列、之後 23 列）。
 - 測試：新增 `src/export/batchA.test.ts`（8 項迴歸）；`export.test.ts`、`batchE.test.ts`、`labelNotes.test.ts`、`src/ui/ast/output.test.tsx` 把寫死的 22 換成常數、深位 6 注意事項改為「不印」。
 - `scripts/verify-layout-a.ts`：假資料匯出驗證腳本（會考 237 人／6 班、7 排×5～7 深位、學測 270 人 B4／A3、預備教室 7×8、自習參考頁），給驗收員重跑。
-- 版號 1.26.2：`package.json`、`package-lock.json`、`public/version.json`。
+- 版號 1.26.3（原派 1.26.2 已被 PR #394 使用）：`package.json`、`package-lock.json`、`public/version.json`。
 
 ## 三、驗證證據
 指令與結果（本機，2026-11-18 13:18 起）：
@@ -66,5 +66,5 @@
 - 畫面文案（第 6 步「每格＝紙寬÷7、紙高÷7」）在滿 7 列時其實是扣掉標題頁尾後平分，文案沒改（屬設計員範圍，列為後續）。
 
 ## 七、後續（未做）
-- 建議新增決定條目記錄「標籤標題頁尾預算 36.5mm（實測）、深位 6 不印注意事項」，取代 D113 裡「22mm」那句（D113 原字未改）。
+- 建議新增決定條目（D134 已被 PR #394 使用，請用下一個號碼）記錄「標籤標題頁尾預算 36.5mm（實測）、深位 6 不印注意事項」，取代 D113 裡「22mm」那句（D113 原字未改）。
 - 第 6 步標籤說明文案與 DESIGN.md 第 89～97 行（舊 B4 6×8 規格敘述）需設計員更新。
