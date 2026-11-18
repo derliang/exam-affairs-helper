@@ -1,7 +1,9 @@
 /**
- * D138（使用者 2026-11-18「三種考試都加」每排深位 − ＋）：加了每排步進器之後，沒動座位時排座結果與座位表、標籤輸出完全不變。
- * ①畫出教室清單（含每排步進器）不會改資料；②排座結果、座位表、標籤的 sha256 與加步進器之前（origin/main 5f9c0fe）算出的值相同；
- * ③每排 +1 再 −1 回到原樣：教室資料相等、輸出 sha256 相同。
+ * D139（使用者 2026-11-18 夜：「拿掉！！！座位配置就照原來的在座位表上預覽的時候，點擊表示不能排的座位就好了」）：
+ * 座位編輯只剩整間橫排／深位步進器＋點座位，沒有「每一排的深位」步進器；舊資料的 rowDepths 仍照樣顯示、輸出不變。
+ * ①編輯卡沒有每排步進器；舊 rowDepths 資料畫出該排沒有的位置（淡斜線）；畫清單不會改資料；
+ * ②排座結果、座位表、標籤的 sha256 與 D138 之前（origin/main 5f9c0fe）算出的值相同；
+ * ③整間橫排、深位 +1 再 −1 回到原樣：教室資料相等、輸出 sha256 相同。
  */
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
@@ -10,8 +12,8 @@ import { classroomSeats } from '../data';
 import { runSeating } from '../core/run';
 import { makeFixture } from '../export/fixtures';
 import { buildLabelPages, buildSeatPages, type ExportInput } from '../export/model';
-import { RoomList } from './components/RoomList';
-import { setAllDepth, setRowCount, stepRowDepth } from './ast/roomEdit';
+import { RoomList, SeatGrid } from './components/RoomList';
+import { setAllDepth, setRowCount } from './ast/roomEdit';
 import { roomLimitsOf } from './rooms';
 
 const sha = (x: unknown): string => createHash('sha256').update(JSON.stringify(x, (_k, v) => (v instanceof Map ? [...v] : v instanceof Set ? [...v] : v))).digest('hex');
@@ -33,7 +35,29 @@ const GOLDEN = {
   label: 'c6b983df0389bae8f46762b3a14d7861d78ebac4208b6ffae18fea366d165407',
 };
 
-describe('D138 每排深位步進器：沒動座位時輸出不變', () => {
+describe('D139 拿掉每排深位步進器：座位編輯回到整間步進器＋點座位，舊資料輸出不變', () => {
+  it('座位編輯卡沒有「每一排的深位」步進器，只有整間橫排、深位兩個步進器', () => {
+    const f = makeFixture();
+    const room = f.settings.classrooms[0]!;
+    const html = render(<SeatGrid room={room} paper="B4" cap={49} lim={{ rows: 7, depth: 7 }} onClose={() => {}} onChange={() => {}} />);
+    expect(html).not.toContain('每一排的深位');
+    expect(html).not.toContain('rowdepths');
+    expect(html).toContain('橫排（左右）');
+    expect(html).toContain('深位（前後，整間）');
+    expect(html).not.toContain('第1排深位');
+  });
+  it('舊資料有 rowDepths（每排深位不同）仍照樣顯示：該排沒有的位置畫淡斜線，畫的時候不改資料', () => {
+    const f = makeFixture();
+    const r0 = f.settings.classrooms[0]!;
+    const rd = Array.from({ length: r0.rows }, (_, i) => (i === r0.rows - 1 ? r0.depth - 1 : r0.depth));
+    const room = { ...r0, rowDepths: rd, seatCount: rd.reduce((a, b) => a + b, 0) };
+    const before = sha(room);
+    let changed = false;
+    const html = render(<SeatGrid room={room} paper="B4" cap={49} lim={{ rows: 7, depth: 7 }} onClose={() => {}} onChange={() => { changed = true; }} />);
+    expect(html.match(/class="pc none"/g)?.length).toBe(1);
+    expect(changed).toBe(false);
+    expect(sha(room)).toBe(before);
+  });
   it('畫出教室清單（含每排步進器、展開前後）不會改到教室資料', () => {
     const f = makeFixture();
     const before = sha(f.settings.classrooms);
@@ -48,7 +72,7 @@ describe('D138 每排深位步進器：沒動座位時輸出不變', () => {
     expect(sha({ a: res.assignments, m: res.marks, d: res.detaches })).toBe(GOLDEN.seating);
     expect(out(f)).toEqual({ seat: GOLDEN.seat, label: GOLDEN.label });
   });
-  it('每一排 +1 再 −1、整間橫排 +1 再 −1、整間深位 +1 再 −1：座位一樣、排座與輸出 sha256 不變', () => {
+  it('整間橫排 +1 再 −1、整間深位 +1 再 −1：座位一樣、排座與輸出 sha256 不變', () => {
     const f = makeFixture();
     // 座位全開（沒有不排的座位）與有不排座位（disabled）兩種教室都驗
     const full = { ...f.settings.classrooms[0]!, seatCount: 20 };
@@ -56,7 +80,6 @@ describe('D138 每排深位步進器：沒動座位時輸出不變', () => {
     for (const room of [full, holes]) {
       const lim = { ...roomLimitsOf(room.kind), rows: roomLimitsOf(room.kind).rows };
       const trips = [
-        ...Array.from({ length: room.rows }, (_, i) => stepRowDepth(stepRowDepth(room, i + 1, 1, lim), i + 1, -1, lim)),
         setRowCount(setRowCount({ ...room, rowDepths: [room.depth, ...Array(room.rows - 1).fill(room.depth)] }, room.rows + 1, lim), room.rows, lim),
         setAllDepth(setAllDepth(room, room.depth + 1, lim), room.depth, lim),
       ];
