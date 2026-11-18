@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import JSZip from 'jszip';
 import { createMemoryFS, encode, DEFAULT_LABEL_NOTES, labelNoteLines, loadDoc, LABEL_NOTE_MAX_LINES, parseNoteLine } from '../data';
 import { makeFixture } from './fixtures';
-import { buildLabelPages, LABEL_PAGE_FIXED_MM, labelBoxMm, labelNotePt, renderDocx, renderPrintHtml } from './index';
+import { buildLabelPages, LABEL_PAGE_FIXED_MM, labelBoxMm, labelNoteBlockMm, labelNotePt, renderDocx, renderPrintHtml } from './index';
 
 const fontDir = new URL('./fonts/', import.meta.url);
 const fonts = {
@@ -69,18 +69,16 @@ describe('標籤注意事項（設定頁可改）', () => {
     expect(long.map((s) => s.text).join('')).toHaveLength(30);
   });
 
-  it('注意事項字級（D113）：格子固定＝紙高÷7，剩餘高度放不下就縮字、縮到不足 8pt 就不印', () => {
+  it('注意事項字級（D113、D136）：格子固定＝紙高÷7 時用原字級；深位 6、7 放不下就縮格子、字用下限，一定印', () => {
     const b4 = { paper: 'B4' as const, cols: 7, rows: 7 };
-    // 深位 5：剩餘空間夠，用原字級
-    expect(labelNotePt(b4, 5, 3, 13)).toBe(13);
-    // 深位 6、7：扣掉 Word 實測的標題頁尾（#372：約 36.5mm）後剩不到 8pt 三行的高度，不印（以前猜 22mm，Word 裡注意事項會被擠到下一頁）
-    expect(labelNotePt(b4, 6, 3, 13)).toBe(0);
-    expect(labelNotePt(b4, 7, 3, 13)).toBe(0);
-    expect(labelNotePt(b4, 5, 0, 13)).toBe(0);
-    // 格子加上標題頁尾與注意事項不超過紙高
-    for (const rows of [3, 4, 5, 6]) {
-      const pt = labelNotePt(b4, rows, 4, 13);
-      if (pt) expect(rows * labelBoxMm(b4, rows).h + LABEL_PAGE_FIXED_MM + 4 * (pt * 0.3528 * 1.5) + 4).toBeLessThanOrEqual(353);
+    expect(labelNotePt(b4, 5, 3)).toBe(13);
+    expect(labelNotePt(b4, 6, 3)).toBe(10);
+    expect(labelNotePt(b4, 7, 3)).toBe(10);
+    expect(labelNotePt(b4, 5, 0)).toBe(0);
+    for (const rows of [3, 4, 5, 6, 7]) {
+      const pt = labelNotePt(b4, rows, 4);
+      expect(pt).toBeGreaterThanOrEqual(10);
+      expect(rows * labelBoxMm(b4, rows, 4).h + LABEL_PAGE_FIXED_MM + labelNoteBlockMm('B4', pt, 4)).toBeLessThanOrEqual(353 + 1e-9);
     }
   });
 
@@ -90,7 +88,7 @@ describe('標籤注意事項（設定頁可改）', () => {
     expect(pages[0]!.notes).toHaveLength(4);
     const x = await docXml(f);
     const rowH = Number(x.match(/<w:trHeight w:val="(\d+)"/)![1]);
-    expect(rowH).toBe(Math.round((labelBoxMm(pages[0]!.layout, 5).h * 1440) / 25.4));
+    expect(rowH).toBe(Math.round((labelBoxMm(pages[0]!.layout, 5, 4).h * 1440) / 25.4));
     expect((x.match(/<w:sectPr/g) ?? []).length).toBe(pages.length);
   });
 

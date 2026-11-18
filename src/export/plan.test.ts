@@ -48,7 +48,7 @@ describe('匯出規劃', () => {
     expect(a3).toHaveLength(1);
     const z = await JSZip.loadAsync(a3[0]!.data as Uint8Array);
     const doc = await z.file('word/document.xml')!.async('string');
-    expect(doc).toContain('w:w="' + Math.floor((297 / 7 * 1440) / 25.4) + '"');
+    expect(doc).toContain('w:w="' + Math.floor(((297 - 21) / 7 * 1440) / 25.4) + '"');
     // 每頁有抬頭表（2 欄）、格子表（教室 4 排＝4 欄）、注意事項框（1 欄）；格子表 2 頁
     const grids = [...doc.matchAll(/<w:tblGrid>(.*?)<\/w:tblGrid>/g)].map((m) => [...m[1]!.matchAll(/<w:gridCol /g)].length);
     expect(grids.filter((n) => n === 4)).toHaveLength(2);
