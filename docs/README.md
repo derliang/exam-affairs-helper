@@ -7,7 +7,7 @@
 | 你是 | 先讀 |
 |---|---|
 | 任何人 | [todo.md](todo.md)（唯一待辦總表） |
-| 調度員 | [dispatch/調度交接-2026-11-12.md](dispatch/調度交接-2026-11-12.md)（最新交接）、[dispatch/調度長期指示.md](dispatch/調度長期指示.md)、[dispatch/調度員授權紀錄.md](dispatch/調度員授權紀錄.md) |
+| 調度員 | [dispatch/調度交接-2026-11-18-夜.md](dispatch/調度交接-2026-11-18-夜.md)（最新交接，接續 [下午](dispatch/調度交接-2026-11-18-下午.md)）、[dispatch/調度交接-2026-11-12.md](dispatch/調度交接-2026-11-12.md)（舊）、[dispatch/調度長期指示.md](dispatch/調度長期指示.md)、[dispatch/調度員授權紀錄.md](dispatch/調度員授權紀錄.md) |
 | 設計員 | [design/設計員交接-最新.md](design/設計員交接-最新.md)、[design/稿版號.md](design/稿版號.md)（實作基準以〈基準規則〉為準） |
 | 施工 | 派工單指定的項目，加上 [design/DESIGN.md](design/DESIGN.md) 與相關 D 編號 |
 
