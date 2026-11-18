@@ -173,7 +173,10 @@ export interface ExamConfig {
   /** 學測第幾次（1～4）；決定數學是否分 A/B 與英聽（D36/D52） */
   round?: number;
   participation: Participation;
-  /** D79：全科缺考者仍排座（預設不排） */
+  /**
+   * 沒有考科的人（全科缺考、未參加）排不排座。D137 取代 D79 的預設：沒設或 true＝排座（自習生也要有座位，D135③）；
+   * false＝學測使用者在 ② 明確選「不排座」（會考、分科不看這個設定，一律排）。舊存檔的 true 與預設同義
+   */
   seatFullyAbsent?: boolean;
   /** 預備教室排座方式（D94-4）：peer＝① 同學優先（沒設＝預設）、proctor＝② 監考優先 */
   reserveSeatMode?: 'peer' | 'proctor';

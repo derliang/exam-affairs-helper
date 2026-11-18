@@ -27,15 +27,16 @@ const counts = (i: RunSeatingInput) => {
   return { room: room[0]!, seated: r.result.assignments.length };
 };
 
-describe('領卷統計排除全科缺考者（D79）', () => {
-  it('預設（不排座）：份數只含有考該科的人', () => {
-    const { room, seated } = counts(base());
+describe('領卷統計排除全科缺考者（D79 份數規則；排座預設改 D137）', () => {
+  it('選「不排座」（學測）：份數只含有考該科的人', () => {
+    const b = base();
+    const { room, seated } = counts({ ...b, entries: b.entries.filter((e) => e.subjectIds.length > 0) });
     expect(seated).toBe(3);
     expect(room.subjects.map((s) => [s.subjectId, s.count])).toEqual([['x', 3], ['y', 2]]);
     expect(room.total).toBe(5);
   });
-  it('勾「仍排座」：全科缺考者佔座位，但領卷份數仍不計他', () => {
-    const { room, seated } = counts({ ...base(), seatFullyAbsent: true });
+  it('預設排座（D137）：全科缺考者佔座位，但領卷份數仍不計他', () => {
+    const { room, seated } = counts(base());
     expect(seated).toBe(4);
     expect(room.subjects.map((s) => [s.subjectId, s.count])).toEqual([['x', 3], ['y', 2]]);
     expect(room.total).toBe(5);

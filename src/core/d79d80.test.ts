@@ -1,6 +1,7 @@
-/** D79（全科缺考者不排座）與 D80（單人特例 purpose 以手動設定為準）的回歸測試 */
+/** D137（沒有考科的人預設排座，取代 D79 的預設）與 D80（單人特例 purpose 以手動設定為準）的回歸測試 */
 import { describe, expect, it } from 'vitest';
 import { roomStats, runSeating, seatingVersion, specialOf, type RunSeatingInput } from '../core';
+import { dataVersion } from '../core/version';
 
 const base = (): RunSeatingInput => ({
   examId: 'E',
@@ -21,28 +22,22 @@ const base = (): RunSeatingInput => ({
   now: '2026-11-08T08:00:00Z',
 });
 
-describe('D79 全科缺考者不排座', () => {
-  it('預設不排座、不佔座位，並列入 fullyAbsent', () => {
+describe('D137（取代 D79 的預設）引擎一律排輸入的每個人，含沒有考科的人', () => {
+  it('沒有考科的人也排座、佔座位', () => {
     const r = runSeating(base());
-    expect(r.ok).toBe(true);
-    if (!r.ok) return;
-    expect(r.result.assignments.map((a) => a.code)).toEqual(['0101', '0103']);
-    expect(r.fullyAbsent).toEqual(['0102']);
-  });
-  it('seatFullyAbsent: true 時仍排座', () => {
-    const r = runSeating({ ...base(), seatFullyAbsent: true });
     expect(r.ok && r.result.assignments.map((a) => a.code)).toEqual(['0101', '0102', '0103']);
-    expect(r.ok && r.fullyAbsent).toEqual([]);
   });
-  it('座位只夠實際參加者時不再報座位不足', () => {
+  it('座位不夠所有人（含沒有考科的人）就報不足；要不要排誰由呼叫端決定（輸入去掉他就夠）', () => {
     const i = base();
     i.classrooms[0]!.seatCount = 2;
-    expect(runSeating(i).ok).toBe(true);
-    expect(runSeating({ ...i, seatFullyAbsent: true }).ok).toBe(false);
+    expect(runSeating(i).ok).toBe(false);
+    expect(runSeating({ ...i, entries: i.entries.filter((e) => e.subjectIds.length > 0) }).ok).toBe(true);
   });
-  it('切換選項會改變資料版本碼（過期偵測），沒開時版本碼與舊版相同形式', () => {
-    expect(seatingVersion({ ...base(), seatFullyAbsent: true })).not.toBe(seatingVersion(base()));
-    expect(seatingVersion({ ...base(), seatFullyAbsent: false })).toBe(seatingVersion(base()));
+  it('版本碼：有沒考科的人且排了座＝沿用舊鍵 seatFullyAbsent（舊存檔選「仍排座」的結果不會變過期）；沒有這種人時與舊版相同', () => {
+    const none = { ...base(), entries: base().entries.filter((e) => e.subjectIds.length > 0) };
+    expect(seatingVersion(base())).not.toBe(seatingVersion(none));
+    expect(seatingVersion(none)).toBe(dataVersion({ examId: none.examId, division: none.division, classes: none.classes, classrooms: none.classrooms, entries: none.entries, subjects: none.subjects, markRules: none.markRules, overrides: none.overrides }));
+    expect(seatingVersion(base())).toBe(dataVersion({ examId: 'E', division: 'junior', classes: base().classes, classrooms: base().classrooms, entries: base().entries, subjects: base().subjects, markRules: [], overrides: [], seatFullyAbsent: true }));
   });
 });
 

@@ -174,9 +174,8 @@ describe.skipIf(!HAS_LOCAL)('本機真實檔案：只斷言結構與計數（不
     expect(r.ok, r.ok ? '' : r.errors.join('；')).toBe(true);
     if (r.ok) {
       expect(checkMainSeating(input, r.result)).toEqual([]);
-      // D79：全科缺考者（真實名單有 1 位）不排座
-      expect(r.result.assignments.length).toBe(res.entries.filter((e) => e.subjectIds.length > 0).length);
-      expect(r.fullyAbsent.length).toBe(res.entries.filter((e) => e.subjectIds.length === 0).length);
+      // D137（取代 D79 的預設）：全科缺考者（真實名單有 1 位）也排座，每人都有座位
+      expect(r.result.assignments.length).toBe(res.entries.length);
     }
   });
 });

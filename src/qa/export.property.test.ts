@@ -104,9 +104,10 @@ describe('輸出版面模型與排座結果逐筆一致', () => {
         expect(hit, `seed=${seed} 抽離 ${d.code}`).toBe(true);
       }
 
-      // INV-16 標籤：每間有人的教室一張，順序與座位表一致，格數不超過
+      // INV-16 標籤：每間有人的教室一張，順序與座位表一致，格數不超過；沒有考科的人（每節自習）有座位但不印標籤（D135⑤、D137）
       const labels = buildLabelPages(input, 'class');
-      expect(labels.reduce((a, p) => a + p.cells.length, 0), `seed=${seed}`).toBe(input.result.assignments.length);
+      const noSubject = new Set(input.entries.filter((e) => e.subjectIds.length === 0).map((e) => studentCode(e.classNo, e.seatNo)));
+      expect(labels.reduce((a, p) => a + p.cells.length, 0), `seed=${seed}`).toBe(input.result.assignments.filter((a) => !noSubject.has(a.code)).length);
       for (const p of labels) {
         const coords = p.cells.map((c) => c.coord);
         const sorted = [...coords].sort((a, b) => {

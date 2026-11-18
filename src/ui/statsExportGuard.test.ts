@@ -45,36 +45,37 @@ function docOf(entries: ExamEntry[], e: ExamConfig = exam(), reserveSeats = 4): 
   };
 }
 
-describe('#62 全科缺考者不計入標示建議、抽離預覽與容量', () => {
+describe('#62 全科缺考者與標示建議、抽離預覽、容量同一份名單（D137：預設排座＝都算；學測選「不排座」才不算）', () => {
+  const skip = exam({ seatFullyAbsent: false });
   for (const absentN of [0, 1, 3]) {
-    it(`全科缺考 ${absentN} 人：④統計只算要排座的人`, () => {
+    it(`全科缺考 ${absentN} 人：④統計算要排座的人（預設含他們；選不排座則不含）`, () => {
       const d = docOf(entriesOf(absentN, 6));
       const s = markSuggestions(d, exam()).find((x) => x.subjectId === 'soc')!;
-      expect(s.total).toBe(10 - absentN);
-      expect(s.taking).toBe(6);
+      expect([s.total, s.taking]).toEqual([10, 6]);
+      const s2 = markSuggestions(docOf(entriesOf(absentN, 6), skip), skip).find((x) => x.subjectId === 'soc')!;
+      expect([s2.total, s2.taking]).toEqual([10 - absentN, 6]);
     });
   }
 
-  it('跨 40% 門檻：含缺考者 6:4 要人決定；排除 3 人缺考後 6:1 自動標少數', () => {
-    const all = docOf(entriesOf(3, 6), exam({ seatFullyAbsent: true }));
-    expect(markRows(all, exam({ seatFullyAbsent: true })).find((r) => r.subjectId === 'soc')!.state).toBe('undecided');
-    const d = docOf(entriesOf(3, 6));
-    const row = markRows(d, exam()).find((r) => r.subjectId === 'soc')!;
+  it('跨 40% 門檻：含缺考者（預設）6:4 要人決定；選不排座排除 3 人後 6:1 自動標少數', () => {
+    const all = docOf(entriesOf(3, 6));
+    expect(markRows(all, exam()).find((r) => r.subjectId === 'soc')!.state).toBe('undecided');
+    const d = docOf(entriesOf(3, 6), skip);
+    const row = markRows(d, skip).find((r) => r.subjectId === 'soc')!;
     expect(row.notTaking).toBe(1);
     expect(row.state).toBe('auto');
   });
 
-  it('抽離預覽不替不排座的人要預備教室：預備教室只 1 座位也不報不足', () => {
+  it('抽離預覽替要排座的人要預備教室：預設 4 人自習、1 座位不夠；選不排座則只 1 人、夠', () => {
     const e = exam({ markRules: setMarkChoice(exam(), 'science', 'soc', 'mark-absent') });
-    const d = docOf(entriesOf(3, 6), e, 1);
-    expect(detachPreview(d, e).ok).toBe(true);
-    const e2 = { ...e, seatFullyAbsent: true };
-    expect(detachPreview(docOf(entriesOf(3, 6), e2, 1), e2).ok).toBe(false); // 仍排座則 4 人要自習，1 座位不夠
+    expect(detachPreview(docOf(entriesOf(3, 6), e, 1), e).ok).toBe(false);
+    const e2 = { ...e, seatFullyAbsent: false };
+    expect(detachPreview(docOf(entriesOf(3, 6), e2, 1), e2).ok).toBe(true);
   });
 
   it('一般教室容量與③一致', () => {
-    const c = classCapacity(docOf(entriesOf(3, 6)), exam());
-    expect(c.lines.find((l) => l.label === '理組')!.students).toBe(7);
+    expect(classCapacity(docOf(entriesOf(3, 6)), exam()).lines.find((l) => l.label === '理組')!.students).toBe(10);
+    expect(classCapacity(docOf(entriesOf(3, 6), skip), skip).lines.find((l) => l.label === '理組')!.students).toBe(7);
   });
 });
 
