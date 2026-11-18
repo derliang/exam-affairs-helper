@@ -1030,6 +1030,10 @@ details.more{font-size:14px;color:var(--text-2)}details.more summary{cursor:poin
 .roomtable td .field{min-width:130px}
 .roomtable td .info,.roomtable td.info{white-space:normal;min-width:130px}
 .roomtable tr.editrow td{white-space:normal}
+/* #357：表格比捲動容器寬時，列下展開的編輯面板仍完整顯示在容器可視寬度內（貼左、寬＝容器寬），不跟著表格被截；座位格再寬才在面板內自己捲動。
+   white-space：展開列的儲存格也是第一格，會吃到 .t.compact td:first-child 的不換行，說明文字整行撐寬面板，所以在面板上改回可換行 */
+.roomscroll{container-type:inline-size}
+.roomscroll .editpane{position:sticky;left:0;width:100cqw;box-sizing:border-box;white-space:normal}
 
 /* G37 環境確認（稿 v2.50）：只用既有 tokens；狀態不靠顏色，圖形＋文字＋左邊條 */
 .envone{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:10px 12px;border:1px solid var(--line);border-left:6px solid var(--ok-bar);border-radius:var(--r-md);background:var(--surface)}

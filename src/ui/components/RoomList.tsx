@@ -78,7 +78,7 @@ export function RoomList(p: {
   return (
     <div class="rw">
       <p class="muted small">座位上限：班級教室最多 7 排×7 深位（49 座）；預備教室最多 7 排×8 深位（56 座）。點「編輯座位」調整座位排列。</p>
-      <div class="scroll">
+      <div class="scroll roomscroll">
         <table class="t compact roomtable">
           <thead><tr><th>教室</th><th>座位配置</th><th>座位統計</th>{!junior && <th>組別</th>}<th>操作</th></tr></thead>
           <tbody>
@@ -139,7 +139,7 @@ export function RoomList(p: {
                   </td>
                 </tr>,
                 isOpen && (
-                  <tr key={`${shared.id}-edit`} class="editrow"><td colSpan={junior ? 4 : 5}>
+                  <tr key={`${shared.id}-edit`} class="editrow"><td colSpan={junior ? 4 : 5}><div class="editpane">
                     {canOv ? (
                       <div class="stack" style="gap:6px;margin-bottom:8px">
                         <div class="row"><span class="label">套用範圍</span>
@@ -153,7 +153,7 @@ export function RoomList(p: {
                     <SeatGrid paper={p.paper} room={editing} lim={lim} cap={lim.cap} steppers {...(examScope ? { examOnly: true } : {})} onClose={() => setOpen(null)}
                       onChange={(x) => (examScope ? p.onOverride!(r.id, layoutOf(x)) : upd(r.id, () => x))} />
                     {reasons.length > 0 && <p class="small hint">{reasons.join('；')}。</p>}
-                  </td></tr>
+                  </div></td></tr>
                 ),
               ];
             })}
