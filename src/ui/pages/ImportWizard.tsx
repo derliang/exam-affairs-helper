@@ -131,7 +131,7 @@ export function ImportWizard(p: {
       {res.allAbsent.length > 0 && (
         <div style="margin-top:16px"><Alert tone="warn">
           <b>有 {res.allAbsent.length} 位考生的標示涵蓋全部考科</b>
-          <p class="small">他們匯入後沒有任何考科（全科缺考），預設不排座、不計領卷份數，座位表與人數會比名單少。若不是要這樣，請回名單修正標示。</p>
+          <p class="small">他們匯入後沒有任何考科（全科缺考），預設照樣排座、每節都是自習生（不印標籤、不計領卷份數）。若不是要這樣，請回名單修正標示。</p>
           <details><summary class="small">列出是誰</summary><ul>{res.allAbsent.map((a) => <li key={`${a.classNo}-${a.seatNo}`}>{p.classNames[a.classNo - 1] ?? `第${a.classNo}班`} {a.seatNo} 號</li>)}</ul></details>
         </Alert></div>
       )}

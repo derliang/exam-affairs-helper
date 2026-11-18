@@ -2,7 +2,7 @@
  * 分科（D99）畫面的純邏輯：從 Doc 組出規劃輸入、跑引擎（planD99）、整理成 ③④⑤ 要顯示的資料。
  * 引擎契約在 src/core/astD99/contract.ts，這裡只讀、不改契約。全部純函式，可單元測試。
  * - 時段：依共用設定「節次與時長」的分科節次表；每節一個 slot（id＝`p<節次>`），同節的科目放同一 slot。
- * - 考生：本次考試名單（examEntries 去掉全缺考者）；文理組以考生自己的為準，沒有就看班級（D93）。
+ * - 考生：本次考試名單＋名冊有、名單沒有的人（rosterOnlyEntries，每節自習）；文理組以考生自己的為準，沒有就看班級（D93）。
  * - 教室：沿用步驟③ 勾選（ExamConfig.classroomIds），預備教室＝綜合教室（D99）。
  * - 排座模式、允許他班原班自習、已核可的替代方案存在 ExamConfig（astMode／astAllowOtherStudy／astApprovals）。
  */
@@ -15,7 +15,7 @@ import { toPlanRooms } from '../../core/astD99/rooms';
 import { refinePlan, type CarrySummary, type LockConflict } from '../../core/astD99/refine';
 import { buildCandidates, scheduleConflicts, scheduleNeedsApproval, type Candidate, type Days } from '../../core/astD99/schedule';
 import type { PrevSeat } from '../../data/types';
-import { examEntries, examRooms, seatableEntries } from '../seating';
+import { examEntries, examRooms, rosterOnlyEntries, seatableEntries } from '../seating';
 import { examYear, type Doc } from '../store';
 import { rosterFor } from '../rosterYears';
 import { dataVersion } from '../../core/version';
@@ -85,17 +85,13 @@ export function astStudents(doc: Doc, exam: ExamConfig, slots: readonly AstSlot[
     const track: Track | undefined = e.track ?? classTrack.get(e.classNo);
     return { classNo: e.classNo, seatNo: e.seatNo, name: e.name, takes, ...(track ? { track } : {}) };
   });
-  // D125（使用者 2026-11-18：「未參加就是自習，分科也是這樣」）：學生名單有、考試名單沒有的人＝未參加＝每節自習，
-  // 一樣排自習座位（不印標籤、座位表列班級座號姓名）。接在名單之後，名單裡沒有這種人時輸出與舊版逐位相同
-  // 還沒匯入考試名單＝還沒有方案可排（不把整份名冊當自習去跑引擎）
-  if (entries.length === 0) return listed;
-  const inList = new Set(entries.map((e) => codeOf(e)));
-  const notJoined: PlanStudent[] = (rosterFor(doc, exam)[exam.division] ?? [])
-    .filter((s) => !inList.has(codeOf(s)))
-    .map((s) => {
-      const track: Track | undefined = classTrack.get(s.classNo);
-      return { classNo: s.classNo, seatNo: s.seatNo, name: s.name, takes: {}, ...(track ? { track } : {}) };
-    });
+  // D125／D137：學生名單有、考試名單沒有的人＝未參加＝每節自習，一樣排自習座位（不印標籤、座位表列班級座號姓名）。
+  // 與學測、會考同一份「名冊有、名單沒有」的名單（rosterOnlyEntries），接在名單之後；沒有這種人時輸出與舊版逐位相同。
+  // 還沒匯入考試名單時 rosterOnlyEntries 為空（不把整份名冊當自習去跑引擎）
+  const notJoined: PlanStudent[] = rosterOnlyEntries(doc, exam).map((s) => {
+    const track: Track | undefined = classTrack.get(s.classNo);
+    return { classNo: s.classNo, seatNo: s.seatNo, name: s.name, takes: {}, ...(track ? { track } : {}) };
+  });
   return notJoined.length ? [...listed, ...notJoined] : listed;
 }
 

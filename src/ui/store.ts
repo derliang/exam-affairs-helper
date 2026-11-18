@@ -136,7 +136,7 @@ export function newExam(doc: Doc, kind: ExamKind, name: string, now: Date, opts:
     markRules: prev ? structuredClone(prev.markRules) : [], classroomIds: prev ? [...prev.classroomIds] : [],
     // 標籤格數待使用者定案（D72），這裡只是預設值，一律由參數帶
     labelLayout: prev ? structuredClone(prev.labelLayout) : defaultLabelLayout(doc.settings.defaultLabelPaper),
-    ...(prev?.seatFullyAbsent ? { seatFullyAbsent: true } : {}),
+    // 「沒有考科的人不排座」不沿用到新考試：新考試一律從預設（排座，D137）開始
     createdAt: now.toISOString(), updatedAt: now.toISOString(),
   };
   return { ok: true, doc: { ...doc, exams: [...doc.exams, exam] } };

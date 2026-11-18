@@ -222,7 +222,7 @@ export interface BuildResult {
   /** 使用者明確選擇略過的列數 */
   skippedByUser: number;
   markStats: MarkStats;
-  /** 標示涵蓋全部考科、結果全科缺考的考生（D79 預設不排座，匯入檢查要警示，#233） */
+  /** 標示涵蓋全部考科、結果全科缺考的考生（D137 起預設照樣排座、每節自習；匯入檢查仍提醒，#233） */
   allAbsent: { classNo: number; seatNo: number }[];
   /** 看不懂的標示還沒被使用者確認 */
   pendingUnreadable: boolean;

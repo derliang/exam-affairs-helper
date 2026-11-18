@@ -225,13 +225,13 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
           <div class="card stack" style="gap:12px">
             <div class="row" style="justify-content:space-between">
               <Badge tone="warn">{`${fullyAbsent} 人全科缺考`}</Badge>
-              <Badge tone="ok">{`目前：${exam.seatFullyAbsent ? '仍排座' : '列入缺考清單，不排座'}`}</Badge>
+              <Badge tone="ok">{`目前：${exam.kind === 'gsat' && exam.seatFullyAbsent === false ? '列入缺考清單，不排座' : '仍排座'}`}</Badge>
             </div>
             <div class="fact"><b>考試名單</b>{(entries ?? []).filter((e) => e.subjectIds.length === 0).map((e) => who(e)).join('、')}（備註：全科缺考）</div>
-            <Seg<'list' | 'seat'> label="全科缺考處理方式" value={exam.seatFullyAbsent ? 'seat' : 'list'}
+            <Seg<'list' | 'seat'> label="全科缺考處理方式" value={exam.seatFullyAbsent === false ? 'list' : 'seat'}
               onChange={(v) => { const r = updateExam(doc, exam.id, { seatFullyAbsent: v === 'seat' }); if (r.ok) p.onChange(r.doc); }}
               options={[{ value: 'list', label: '列入缺考清單，不排座' }, { value: 'seat', label: '仍排座' }]} />
-            <span class="hint">全科缺考的人不佔座位，座位表與領卷份數都不含；也可以改成仍排座。這一項已有預設，不必選也能繼續。</span>
+            <span class="hint">預設照樣排座：他們每節都是自習生，跟考生一樣有座位（不印標籤、不計領卷份數）。學測可改成列入缺考清單、不排座，但考前對帳會因為他們沒有座位而不通過；會考、分科一律排座。這一項已有預設，不必選也能繼續。</span>
           </div>
         )}
         {applyErr && <Alert tone="danger"><b>沒有套用，兩份名單都維持原樣。</b>{applyErr}</Alert>}
@@ -358,16 +358,16 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
         </div>
         <p class="small muted">匯入接受 .xlsx 檔；舊版 .xls 請先用 Excel 另存新檔成 .xlsx。</p>
         <p class="small muted">學生名單＝全體學生；考試名單＝每位學生報名這次考試的情況。學生名單裡有、但考試名單沒有的人，{exam.kind !== 'bcct'
-          ? '視為未參加、每節都自習（D125）：不算考生、不印標籤，一樣排自習座位，座位表上列出班級、座號、姓名（第 6 步可取消「含自習參考座位頁」），人數顯示在下方。'
-          : '視為未參加：不排座、不出現在座位表，只在下方顯示人數。'}</p>
+          ? '視為未參加、每節都是自習生：不算考生、不印標籤，一樣進排座（考生多數則自習生抽離，反之考生抽離），座位表上列出班級、座號、姓名，人數顯示在下方。'
+          : '視為未參加，但會考不可不參加：一樣排座位（頂多該座位沒人坐），座位表上列出、不印標籤，人數顯示在下方。'}</p>
         {entries && exam.kind === 'gsat' && roster.length > 0 && notJoin / roster.length >= 0.2 && (
           <Alert tone="warn">考試名單有 {notJoin} 人（{Math.round((notJoin / roster.length) * 100)}%）不在名單內、被視為未參加（自習）。學測通常人人報名，請確認是否漏列。</Alert>
         )}
         {fullyAbsent > 0 && (
           <Alert tone="info">
-            其中 {fullyAbsent} 位全科缺考：{exam.seatFullyAbsent ? '目前照樣排座。' : `預設不排考試座位、不計領卷份數，⑤ 的考生人數會比這裡少。${exam.kind !== 'bcct' ? '他們每節都自習，座位表上會排自習座位。' : ''}`}
+            其中 {fullyAbsent} 位全科缺考：{exam.kind === 'gsat' && exam.seatFullyAbsent === false ? '已選不排座，⑤ 的人數會比這裡少；考前對帳會因為他們沒有座位而不通過。' : '照樣排座，每節都是自習生（不印標籤、不計領卷份數）。'}
             <details><summary class="small">列出是誰</summary><ul>{(entries ?? []).filter((e) => e.subjectIds.length === 0).map((e) => <li key={`${e.classNo}-${e.seatNo}`}>{who(e).replace(/　.*$/, '')}</li>)}</ul></details>
-            <label style="margin-left:12px"><input type="checkbox" checked={!!exam.seatFullyAbsent}
+            <label style="margin-left:12px"><input type="checkbox" checked={exam.seatFullyAbsent !== false}
               onChange={(e) => { const r = updateExam(doc, exam.id, { seatFullyAbsent: (e.target as HTMLInputElement).checked }); if (r.ok) p.onChange(r.doc); }} /> 全科缺考者仍排座</label>
           </Alert>
         )}
