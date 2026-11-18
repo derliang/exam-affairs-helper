@@ -38,12 +38,25 @@ export async function downloadMany(files: OutputFile[], gapMs = 600): Promise<vo
   }
 }
 
-/** 下載後的提示文字：只說「已送出」，不宣稱檔案已存好（#203） */
-export function wordNoticeText(n: number): string {
-  return n > 1
+/**
+ * 下載後的提示文字：只說「已送出」，不宣稱檔案已存好（#203）。
+ * n＝存進下載資料夾的檔案數；pages＝在新分頁開啟、不存檔的列印頁數（例如列印對位測試頁，#358），分開說，不混算成檔案。
+ */
+export function wordNoticeText(n: number, pages = 0): string {
+  const pageText = pages > 0 ? `另有 ${pages} 個列印頁已在新分頁開啟（不會存進下載資料夾），請從那一頁列印；關掉了可在下表按「再開啟」。` : '';
+  if (n === 0) return pages > 0 ? `已在新分頁開啟 ${pages} 個列印頁（不會存進下載資料夾），請從那一頁列印；關掉了可在下表按「再開啟」。` : '';
+  return (n > 1
     ? `已送出 ${n} 個下載要求。瀏覽器可能會詢問「是否允許下載多個檔案」，請按「允許」，再到下載資料夾確認 ${n} 個檔案都在；缺的檔可在下表按該檔的「再下載」。`
-    : '已送出 1 個下載要求，請到瀏覽器的下載資料夾確認。';
+    : '已送出 1 個下載要求，請到瀏覽器的下載資料夾確認。') + pageText;
 }
+
+/** 「下載 Word」鈕下的提示：存檔數與列印頁數分開寫（#358） */
+export const wordButtonHint = (files: number, pages: number): string =>
+  pages > 0 ? (files > 0 ? `將下載 ${files} 個 Word 檔案，另在新分頁開啟 ${pages} 個列印頁` : `將在新分頁開啟 ${pages} 個列印頁（不存檔）`) : `將下載 ${files} 個 Word 檔案`;
+
+/** 下載結果分成「存檔的」與「列印頁」兩種計數（#358） */
+export const noticeOf = (files: readonly OutputFile[]): string =>
+  wordNoticeText(files.filter((f) => f.mime !== 'text/html').length, files.filter((f) => f.mime === 'text/html').length);
 
 /** PDF：開新視窗顯示列印用頁面，使用者選「另存為 PDF」（D29，不直接列印 D69） */
 export function openPrintPage(f: OutputFile): boolean {
@@ -270,7 +283,7 @@ export function Step6(p: {
         <div class="dlbtns row" style="align-items:flex-start;gap:24px;flex-wrap:wrap">
           <div class="stack" style="gap:6px">
             <FormatButton kind="word" disabled={noDl || busy} onClick={() => go('word')}>{busy ? '產生中…' : '下載 Word'}</FormatButton>
-            <span class="small muted">{noDl ? noDlWhy : `將下載 ${files.length + chosenExtras.length} 個 Word 檔案`}</span>
+            <span class="small muted">{noDl ? noDlWhy : wordButtonHint(files.length + chosenExtras.filter((x) => !x.printPageOnly).length, chosenExtras.filter((x) => x.printPageOnly).length)}</span>
           </div>
           <div class="stack" style="gap:6px">
             <FormatButton kind="pdf" disabled={noDl || busy} onClick={() => go('pdf')}>下載 PDF（開啟列印頁）</FormatButton>
@@ -282,12 +295,12 @@ export function Step6(p: {
         <div class="psec">
           <Alert tone="ok">
             <b>{doneFmt === 'word' ? '下載已送出' : '已開啟列印用頁面'}</b>
-            {doneFmt === 'word' ? wordNoticeText(results.length) : '，請在新視窗選「列印」→ 目的地選「另存為 PDF」。'}
+            {doneFmt === 'word' ? noticeOf(results) : '，請在新視窗選「列印」→ 目的地選「另存為 PDF」。'}
           </Alert>
           <div style="overflow-x:auto"><table class="t compact">
             <thead><tr><th>檔案</th><th>內容</th><th>大小</th>{doneFmt === 'word' && <th></th>}</tr></thead>
             <tbody>{results.map((f) => (
-              <tr key={f.name}><td><b>{f.name}</b></td><td class="muted">{f.desc}</td><td>{kb(typeof f.data === 'string' ? f.data.length : f.data.byteLength)}</td>{doneFmt === 'word' && <td><Button small onClick={() => download(f)}>再下載</Button></td>}</tr>
+              <tr key={f.name}><td><b>{f.name}</b></td><td class="muted">{f.desc}</td><td>{kb(typeof f.data === 'string' ? f.data.length : f.data.byteLength)}</td>{doneFmt === 'word' && <td>{f.mime === 'text/html' ? <Button small onClick={() => openPrintPage(f)}>再開啟</Button> : <Button small onClick={() => download(f)}>再下載</Button>}</td>}</tr>
             ))}</tbody>
           </table></div>
           <p class="small muted">本次文件版本：<Badge>{prepared.ok ? prepared.input.result.dataVersion : ''}</Badge>（頁尾相同）</p>

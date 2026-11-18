@@ -1,5 +1,6 @@
 /** 批次 B 第 3 步教室（G21、G22、G25、G30）：學測、分科、會考各自驗證；全部假資料 */
 import { renderToString } from 'preact-render-to-string';
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { Classroom, ExamConfig, ExamKind } from '../data';
 import { RoomList } from './components/RoomList';
@@ -82,6 +83,18 @@ describe('G22 三種類型：班級教室跟名冊走', () => {
   it('新增預備教室仍可用（addRoom reserve）；國中部不行', () => {
     expect(addRoom([], 'reserve', 'senior')[0]).toMatchObject({ kind: 'reserve', name: '預備教室1' });
     expect(addRoom([], 'reserve', 'junior')).toEqual([]);
+  });
+});
+
+describe('#357 展開的編輯座位面板不被橫向捲動容器截斷', () => {
+  it('表格容器是 roomscroll（容器查詢），面板貼左、寬度＝容器可視寬度', () => {
+    const html = renderToString(<RoomList rooms={[room()]} paper="B4" onChange={noop} selected={['r1']} onSelect={noop} />);
+    expect(html).toContain('class="scroll roomscroll"');
+    const css = readFileSync(new URL('../styles/app.css', import.meta.url), 'utf-8');
+    expect(css).toMatch(/\.roomscroll\{container-type:inline-size\}/);
+    expect(css).toMatch(/\.roomscroll \.editpane\{position:sticky;left:0;width:100cqw;box-sizing:border-box;white-space:normal\}/);
+    const src = readFileSync(new URL('./components/RoomList.tsx', import.meta.url), 'utf-8');
+    expect(src).toMatch(/class="editrow"><td colSpan=\{junior \? 4 : 5\}><div class="editpane">/);
   });
 });
 

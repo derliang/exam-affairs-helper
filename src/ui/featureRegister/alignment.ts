@@ -6,7 +6,8 @@ import { registerFeature, type ExportExtra } from '../features';
 export const alignmentExport: ExportExtra = {
   key: 'print-alignment',
   title: '列印對位測試頁（A4、B4、A3）',
-  sub: '先印這張確認 100% 縮放與邊界沒被裁掉，再印正式座位表與標籤；Word 與 PDF 都給列印用頁面',
+  sub: '先印這張確認 100% 縮放與邊界沒被裁掉，再印正式座位表與標籤；Word 與 PDF 都是在新分頁開啟列印頁，不存檔',
+  printPageOnly: true,
   run: async (): Promise<OutputFile[]> => [{
     name: '列印對位測試頁-列印用頁面.html',
     mime: 'text/html',

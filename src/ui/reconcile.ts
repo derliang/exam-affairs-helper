@@ -14,7 +14,7 @@ import { specialOf } from '../core/stats';
 import { dataVersion } from '../core/version';
 import { buildLabelPages, buildSeatPages, PREP_TAG, type ExportInput } from '../export/model';
 import { studyCapacity } from './capacity';
-import { currentSeatingVersion, effectiveMarkRules, examEntries, examResult, examRooms, isStale, seatableEntries } from './seating';
+import { currentSeatingVersion, effectiveMarkRules, examClasses, examEntries, examResult, examRooms, isStale, seatableEntries } from './seating';
 import { rosterFor } from './rosterYears';
 import type { Doc } from './store';
 import { astCapacity, astPlan, astSlots, astSnapshotMismatch, astFingerprint } from './ast/model';
@@ -148,7 +148,9 @@ export function reconcileStandard(doc: Doc, exam: ExamConfig): Reconcile {
   for (const a of result.assignments) homeRoom.set(a.code, [...(homeRoom.get(a.code) ?? []), a.classroomId]);
   const special = specialOf(result);
   const { rules } = effectiveMarkRules(doc, exam);
-  const classTrack = new Map(settings.classes.map((c) => [c.no, c.track]));
+  // #356：只取本部別的班級（與排座引擎、標示規則同一份 examClasses）；國中、高中班號重疊時，
+  // 用全部班級建表會讓沒有組別的國中班蓋掉高中班的組別，「＋標考的」未標者就被誤算成考試
+  const classTrack = new Map(examClasses(doc, exam).map((c) => [c.no, c.track]));
   const periods = examSubjectPeriods(exam, settings);
   const groups = periodGroups(exam.subjects, periods);
   const subjName = new Map(exam.subjects.map((s) => [s.id, s.name]));
@@ -172,8 +174,12 @@ export function reconcileStandard(doc: Doc, exam: ExamConfig): Reconcile {
     const mk1 = result.marks.find((m) => m.code === code && ids.has(m.subjectId));
     const e = enrolled.get(code);
     const track = e?.track ?? classTrack.get(Number(code.slice(0, 2)));
+    // 沒有標示、留在原班的人：「＋標考的」科目＝不考（留班自習）
     const minority = rules.some((r) => r.track === track && ids.has(r.subjectId) && r.mode === 'mark-extra');
-    const kind: 'exam' | 'study' = mk1 ? (mk1.mode === 'absent' ? 'study' : 'exam') : minority ? 'study' : 'exam';
+    // 該組這科全不考（D11 全考或全不考的科不標，所以沒有規則也沒有標示）：留在原班的人也是自習。
+    // 有規則卻沒標示的（例如 X 標示漏標）不走這條，照舊算考試，真正不平仍會紅
+    const allSkip = !bcct && !!e && !rules.some((r) => r.track === track && ids.has(r.subjectId)) && !e.subjectIds.some((id) => ids.has(id));
+    const kind: 'exam' | 'study' = mk1 ? (mk1.mode === 'absent' ? 'study' : 'exam') : minority || allSkip ? 'study' : 'exam';
     return { kind, where: 'home', places, room: homes[0]! };
   };
 
