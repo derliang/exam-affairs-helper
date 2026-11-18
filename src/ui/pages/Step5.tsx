@@ -152,7 +152,7 @@ export function Step5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
       {resSel && (
         <div class="card stack">
           {statsBar}
-          <div><h3>座位表預覽</h3><p class="small muted">預備教室只排「抽離考試」的人；抽離自習不排座位、不印標籤，只出名單。</p></div>
+          <div><h3>座位表預覽</h3><p class="small muted">預備教室的考試座位只排「抽離考試」的人；抽離自習的人排在另外的參考座位頁（不印標籤），名單另出。</p></div>
           <Seg label="教室" value={resSel.id} onChange={(v) => { setRoomId(v); setOnly(''); }} options={roomOptions} />
           {(() => {
             const here = pulls.filter((x) => x.roomId === resSel.id);
@@ -163,7 +163,7 @@ export function Step5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
                 {here.length > 1 && <Seg label="抽離考試科目" value={cur.key} onChange={setPullKey} options={here.map((x) => ({ value: x.key, label: x.name }))} />}
                 <SeatChart model={m} title={`【${exam.name}】抽離考試（＋${cur.name}）座位表`} sub={`${resSel.name}　考生 ${m.count} 人`} pull />
               </>
-            ) : <Alert tone="info">這間預備教室目前沒有抽離考試的人：抽離自習不排座位、不印標籤，只出名單。</Alert>;
+            ) : <Alert tone="info">這間預備教室目前沒有抽離考試的人：抽離自習的人只排參考座位頁、不印標籤，名單另出。</Alert>;
           })()}
         </div>
       )}
