@@ -28,7 +28,8 @@ export function Init(p: { repo: Repository; fsSupported: boolean; fs?: FsReposit
     } finally { setBusy(false); }
   };
 
-  const pick = () => !busy && run(() => p.repo.chooseFolder());
+  // 不支援資料夾授權（iPhone／iPad 所有瀏覽器、Safari、Firefox）時不得進入「選好資料夾了」的假狀態（D140）
+  const pick = () => p.fsSupported && !busy && run(() => p.repo.chooseFolder());
   if (p.fs && p.doc && p.repo.hasFolder() && p.onDialog) {
     const d = p.doc;
     return (
@@ -53,6 +54,7 @@ export function Init(p: { repo: Repository; fsSupported: boolean; fs?: FsReposit
         </div>
         <div><h1>考務小幫手</h1><p class="muted">安排模擬考座位、製作標籤與抽離名單</p></div>
       </div>
+      {!p.fsSupported ? <Unsupported /> : <>
       {lost && p.onDialog && <RestoreMissing name={lost.name} busy={busy} onRelink={() => p.onDialog!('relink')} onOther={pick} />}
       <div class="card stack">
         <h2 style="font-size:18px">選擇資料儲存資料夾</h2>
@@ -78,9 +80,24 @@ export function Init(p: { repo: Repository; fsSupported: boolean; fs?: FsReposit
         </div>
         {err && <Alert tone="danger">{err}</Alert>}
       </div>
-      {p.fsSupported
-        ? <Alert tone="info">每次模擬考會建立獨立資料夾，避免覆蓋其他考試資料。</Alert>
-        : <Alert tone="danger">目前瀏覽器無法儲存資料。請用 Chrome 開啟本網站。</Alert>}
+      <Alert tone="info">每次模擬考會建立獨立資料夾，避免覆蓋其他考試資料。</Alert>
+      </>}
+    </div>
+  );
+}
+
+/**
+ * 不支援的瀏覽器（稿 v2.65、D140；使用者 2026-11-19 決定 iPhone 不支援、只提示用電腦）：
+ * 不畫拖曳區與「選擇資料夾」鈕，沒有任何會選資料夾的地方，只說明這個瀏覽器不能用、請改用電腦的 Chrome 或 Edge。
+ */
+function Unsupported() {
+  const site = typeof location === 'undefined' ? '' : location.host + location.pathname;
+  return (
+    <div class="card stack">
+      <h2 style="font-size:18px">這個瀏覽器無法使用考務小幫手</h2>
+      <Alert tone="danger"><b>iPhone、iPad 無法使用。</b>考務小幫手要把學生名單與座位結果存進你電腦上的資料夾，iPhone、iPad 上的所有瀏覽器（包括 Chrome），以及電腦上的 Safari、Firefox 都做不到。</Alert>
+      <p>請改用電腦（Windows 或 Mac）上的 <a href="https://www.google.com/intl/zh-TW/chrome/" target="_blank" rel="noopener noreferrer">Chrome</a> 或 Edge 開啟本網站{site ? <>：<b>{site}</b></> : '。'}</p>
+      <p class="small muted">學生名單與座位結果只存在你的電腦，本網站不會把它們上傳到網路。</p>
     </div>
   );
 }
