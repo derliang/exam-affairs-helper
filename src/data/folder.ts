@@ -12,6 +12,7 @@
  *   exams/<id>/diffs.json    名單比對的處理結果 RosterDiff[]
  *   exams/<id>/overrides.json 個別覆寫（獨立檔案，D23）
  *   exams/<id>/result.json   排座結果 SeatingResult（D22）
+ *   makeups/<id>/makeup.json 補考場次 MakeupSession（K2；名單含姓名，只存本機）
  *
  * 每次覆寫前先把仍然完好的舊檔留成 <檔名>.bak；主檔損壞時自動改讀 .bak 並回報警告。
  */
@@ -31,6 +32,7 @@ import type {
 } from './types';
 import type { Doc } from '../ui/store';
 import type { YearData } from '../ui/rosterYears';
+import type { MakeupSession } from '../ui/makeup/model';
 
 export class StorageError extends Error {
   constructor(
@@ -94,6 +96,8 @@ const isRosterYear = (v: unknown): v is { year: number } => isObj(v) && typeof v
 const isYearData = (v: unknown): v is YearData =>
   isObj(v) && isObj(v.rosters) && isStudents(v.rosters.senior) && isStudents(v.rosters.junior) && isArr(v.classes);
 const examDir = (id: string) => `exams/${id}`;
+const makeupDir = (id: string) => `makeups/${id}`;
+const isMakeup = (v: unknown): v is MakeupSession => isObj(v) && typeof v.id === 'string' && typeof v.name === 'string' && isObj(v.settings) && isArr(v.resolutions);
 
 const emptySettings = (): Settings => ({
   schoolName: '',
@@ -130,6 +134,12 @@ export async function loadDoc(fs: DirFS): Promise<Loaded<Doc>> {
     if (e) exams.push(e);
   }
   exams.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  const makeups: MakeupSession[] = [];
+  for (const id of await fs.listDirs('makeups')) {
+    const m = note(await readFile(fs, `${makeupDir(id)}/makeup.json`, isMakeup));
+    if (m) makeups.push(m);
+  }
+  makeups.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   const examFiles: NonNullable<Doc['examFiles']> = {};
   for (const e of exams) {
     const files: Partial<ExamFiles> = {};
@@ -143,6 +153,7 @@ export async function loadDoc(fs: DirFS): Promise<Loaded<Doc>> {
   if (ry) doc.rosterYear = ry.year;
   if (Object.keys(otherYears).length) doc.otherYears = otherYears;
   if (Object.keys(examFiles).length) doc.examFiles = examFiles;
+  if (makeups.length) doc.makeups = makeups;
   return warnings.length ? { data: doc, warning: warnings.join('；') } : { data: doc };
 }
 
@@ -181,6 +192,17 @@ export async function saveDoc(fs: DirFS, doc: Doc): Promise<void> {
       await fs.remove(`${examDir(id)}/${f}.bak`);
     }
   }
+  const keepMk = new Set<string>();
+  for (const m of doc.makeups ?? []) {
+    assertSafeId(m.id);
+    keepMk.add(m.id);
+    await writeFile(fs, `${makeupDir(m.id)}/makeup.json`, m);
+  }
+  for (const id of await fs.listDirs('makeups')) {
+    if (keepMk.has(id)) continue;
+    await fs.remove(`${makeupDir(id)}/makeup.json`);
+    await fs.remove(`${makeupDir(id)}/makeup.json.bak`);
+  }
 }
 
 const REMOVED = Symbol('removed');
@@ -197,6 +219,7 @@ export function createIncrementalSaver(fs: DirFS): (doc: Doc) => Promise<void> {
   const written = new Map<string, unknown>();
   let scannedIds: string | null = null;
   let scannedYears = false;
+  let scannedMakeups = false;
   const put = async (path: string, data: unknown) => {
     if (written.get(path) === data) return;
     await writeFile(fs, path, data);
@@ -231,6 +254,12 @@ export function createIncrementalSaver(fs: DirFS): (doc: Doc) => Promise<void> {
         else await drop(`${examDir(e.id)}/${key}.json`);
       }
     }
+    // 補考場次：只在曾寫過、或第一次存檔時才掃描 makeups/，沒變動時不碰磁碟
+    const mk = new Set<string>();
+    for (const m of doc.makeups ?? []) { assertSafeId(m.id); mk.add(m.id); await put(`${makeupDir(m.id)}/makeup.json`, m); }
+    const goneMk = new Set([...written.keys()].filter((q) => /^makeups\//.test(q) && written.get(q) !== REMOVED).map((q) => q.split('/')[1]!).filter((id) => !mk.has(id)));
+    if (!scannedMakeups) { for (const id of await fs.listDirs('makeups')) if (!mk.has(id)) goneMk.add(id); scannedMakeups = true; }
+    for (const id of goneMk) { await drop(`${makeupDir(id)}/makeup.json`); await fs.remove(`${makeupDir(id)}/makeup.json.bak`); }
     const ids = [...keep].sort().join('\n');
     if (ids === scannedIds) return;
     for (const id of await fs.listDirs('exams')) {

@@ -6,19 +6,24 @@ import { rosterChanged } from '../rosterIO';
 import { examFullyAbsent, examHeadcount, examLevel, examProgress, formatModified, sortExams } from '../examList';
 import { examLabel, lastModified, examYear, type Doc } from '../store';
 import { envBanner } from '../env';
+import { makeupProgress, sortMakeups, termText, type MakeupSession } from '../makeup/model';
 
 /** 模擬考列表（DESIGN 10.x）：頁首 h1＋資料夾 chip，每列有六格進度條、學年與人數、最後修改；依最後修改由新到舊 */
 /** 刪除考試前的確認（G1）：寫明會刪什麼、不會動什麼，並要輸入考試名稱才能刪 */
 export const deleteNameMatches = (examName: string, typed: string): boolean => typed.trim() === examName;
 
-export function DeleteExamModal(p: { exam: ExamConfig; onConfirm: () => void; onClose: () => void }) {
+export function DeleteExamModal(p: { exam: Pick<ExamConfig, 'name'>; onConfirm: () => void; onClose: () => void; /** 補考場次（K2）：換成補考的說明文字 */ makeup?: boolean }) {
   const [typed, setTyped] = useState('');
   const ok = deleteNameMatches(p.exam.name, typed);
   return (
     <Modal title={`刪除「${p.exam.name}」？`} onClose={p.onClose} actions={<><Button onClick={p.onClose}>取消</Button><button type="button" class="btn btn-danger" disabled={!ok} onClick={() => { p.onClose(); p.onConfirm(); }}>刪除這次模擬考</button></>}>
+      {p.makeup ? <>
+      <p><b>會刪掉：</b>這次補考場次在 App 裡的資料——設定、匯入的補考名單與問題列處理、教室與考程調整。刪除後無法從列表找回，只有這次開啟 App 期間還能用上方「↶ 復原」。</p>
+      <p style="margin-top:8px"><b>不會動：</b>你已經下載到電腦的檔案、原始的教務匯出檔，以及「共用設定」。</p>
+      </> : <>
       <p><b>會刪掉：</b>這次模擬考在 App 裡的資料——考試設定、本次考試名單、名單比對結果、標示與抽離設定、座位與排座結果（分科含時程與版本紀錄）。刪除後無法從列表找回，只有這次開啟 App 期間還能用上方「↶ 復原」。</p>
       <p style="margin-top:8px"><b>不會動：</b>你已經下載到電腦的 Word、PDF 等檔案，以及「共用設定」裡的學校、班級、教室與學生名單。</p>
-      <p style="margin-top:8px">如果只是暫時不用，建議改用「封存」，之後還能查看與還原。</p>
+      <p style="margin-top:8px">如果只是暫時不用，建議改用「封存」，之後還能查看與還原。</p></>}
       <label class="field" style="margin-top:12px"><span class="label">請輸入考試名稱「{p.exam.name}」確認刪除</span>
         <input type="text" value={typed} aria-label="輸入考試名稱確認刪除" onInput={(e) => setTyped(e.currentTarget.value)} />
       </label>
@@ -35,8 +40,12 @@ export function Exams(p: {
   /** G16：資料夾找不到時取代列表的錯誤狀態（不顯示「還沒有模擬考」） */
   listError?: ComponentChildren;
   onArchive?: (examId: string) => void; onRestore?: (examId: string) => void; onDelete?: (examId: string) => void;
+  /** 補考場次（K2，S-1）：開啟、刪除；沒給 onOpenMakeup 就不顯示補考區 */
+  onOpenMakeup?: (id: string) => void; onDeleteMakeup?: (id: string) => void;
 }) {
   const [del, setDel] = useState<ExamConfig | null>(null);
+  const [delMk, setDelMk] = useState<MakeupSession | null>(null);
+  const makeups = p.onOpenMakeup ? sortMakeups(p.doc.makeups ?? []) : [];
   const [envHide, setEnvHide] = useState(false);
   const banner = p.onEnv && !p.listError ? envBanner(p.doc) : 'none';
   const all = sortExams(p.doc.exams);
@@ -87,10 +96,11 @@ export function Exams(p: {
           </Alert>
         </div>
       )}
-      {p.listError ? p.listError : all.length === 0 ? (
+      {p.listError ? p.listError : all.length === 0 && makeups.length === 0 ? (
         <EmptyState title="還沒有模擬考" action={<Button kind="primary" onClick={p.onNew}>新增模擬考</Button>}>按「新增模擬考」開始。</EmptyState>
       ) : (
         <>
+        {all.length > 0 && <>
         <h2 class="exam-sec">進行中<span class="muted small">（{exams.length}）</span></h2>
         {exams.length === 0 && <p class="muted small">目前沒有進行中的模擬考；可以新增，或到下方「已封存」還原。</p>}
         <div class="exam-list">
@@ -103,8 +113,32 @@ export function Exams(p: {
             <div class="exam-list">{archived.map(card)}</div>
           </>
         )}
+        </>}
+        {makeups.length > 0 && (
+          <>
+            <h2 class="exam-sec" style={all.length > 0 ? 'margin-top:20px' : undefined}>補考場次<span class="muted small">（{makeups.length}）</span></h2>
+            <div class="exam-list">{makeups.map((m) => {
+              const pr = makeupProgress(m);
+              return (
+                <article class="exam" key={m.id}>
+                  <div><h3>{m.name}</h3><div class="meta"><Badge>補考</Badge><span>{m.schoolYear} 學年{termText(m.semester)}・{m.source ? `${m.source.fileName}` : '尚未匯入名單'}</span></div></div>
+                  <div>
+                    <div class="dots" aria-hidden="true">{pr.cells.map((c, i) => <i key={i} class={c} />)}</div>
+                    <div class="prog">{pr.headline}<span class={pr.tone}>・{pr.detail}</span></div>
+                    <div class="small muted" style="margin-top:4px">最後修改 {formatModified(m.updatedAt ?? m.createdAt)}</div>
+                  </div>
+                  <div class="row" style="flex-wrap:wrap">
+                    <Button kind="primary" onClick={() => p.onOpenMakeup!(m.id)}>查看／安排</Button>
+                    {p.onDeleteMakeup && <Button kind="danger" onClick={() => setDelMk(m)}>刪除</Button>}
+                  </div>
+                </article>
+              );
+            })}</div>
+          </>
+        )}
         </>
       )}
+      {delMk && <DeleteExamModal makeup exam={delMk} onClose={() => setDelMk(null)} onConfirm={() => p.onDeleteMakeup?.(delMk.id)} />}
       {del && <DeleteExamModal exam={del} onClose={() => setDel(null)} onConfirm={() => p.onDelete?.(del.id)} />}
       <div style="margin-top:14px">
         <More title="說明：進度條怎麼看">

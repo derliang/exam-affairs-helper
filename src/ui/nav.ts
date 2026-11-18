@@ -14,7 +14,9 @@ export type Route =
   | { page: 'step'; examId: string; step: 1 | 2 | 3 | 4 | 5 | 6 }
   | { page: 'reconcile'; examId: string }
   | { page: 'override'; examId: string }
-  | { page: 'reserve'; examId: string };
+  | { page: 'reserve'; examId: string }
+  /** 補考場次工作區（K2）：①補考設定 ②匯入名單 ③教室設定 ④人數統計 ⑤考程編排 */
+  | { page: 'makeup'; makeupId: string; step: 1 | 2 | 3 | 4 | 5 };
 
 export interface BackEntry {
   route: Route;

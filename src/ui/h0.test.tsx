@@ -48,26 +48,23 @@ describe('H0 舊備份檔照常可匯入', () => {
   });
 });
 
-describe('H0 補考佔位卡', () => {
+describe('H0 補考卡（K2 起可選，不再是佔位）', () => {
   const html = renderToString(<NewExam doc={demoDoc()} onCancel={noop} onCreate={noop} now={() => new Date('2026-09-01T02:00:00Z')} />);
   const cards = html.split('<button').filter((x) => x.includes('class="tcard"'));
-  it('有四張類型卡，補考 disabled、不能選、有 aria-describedby 說明', () => {
+  it('有四張類型卡，補考可選（不 disabled、有 aria-pressed）、不再寫「即將推出」', () => {
     expect(cards.length).toBe(4);
     const mk = cards.find((c) => c.includes('<strong>補考</strong>'))!;
-    expect(mk).toContain('disabled');
-    expect(mk).toContain('aria-describedby="soon-note"');
-    expect(mk).not.toContain('aria-pressed');
+    expect(mk).not.toContain('disabled');
+    expect(mk).toContain('aria-pressed');
     expect(mk).toContain('高中部、國中部');
-    expect(html).toContain('id="soon-note"');
-    expect(html).toContain('補考即將推出，現在還不能選');
+    expect(html).not.toContain('即將推出');
+    expect(html).not.toContain('soon-note');
   });
-  it('「即將推出」徽章只在補考卡；學測、分科、會考仍可選', () => {
-    expect(html.match(/即將推出<\/span>/g)?.length).toBe(1);
+  it('學測、分科、會考照常可選', () => {
     for (const t of ['學測模擬考', '分科模擬考', '會考模擬考']) {
       const c = cards.find((x) => x.includes(`<strong>${t}</strong>`))!;
       expect(c).toBeTruthy();
       expect(c).not.toContain('disabled');
-      expect(c).not.toContain('即將推出');
     }
   });
 });

@@ -7,6 +7,8 @@ import { diffsStale, refreshDiffs, type CompareOptions } from '../import/compare
 import { defaultSubjects, isCustomized } from './subjects';
 import { rosterFor, viewForYear, type YearData } from './rosterYears';
 
+import type { MakeupSession } from './makeup/model';
+
 export interface Doc {
   settings: Settings;
   /** 目前作用中學年度的學生名單（#208：其他學年度在 otherYears，見 rosterYears.ts） */
@@ -18,6 +20,8 @@ export interface Doc {
   exams: ExamConfig[];
   /** 每次模擬考底下的其他檔案（考試名單、比對、覆寫、排座結果），以考試 id 為鍵；跟著復原 */
   examFiles?: Record<string, Partial<ExamFiles>>;
+  /** 補考場次（K2）：每場一個資料夾 makeups/<id>/makeup.json；跟著復原 */
+  makeups?: MakeupSession[];
 }
 
 export type Result<T> = { ok: true; doc: T } | { ok: false; error: string };
