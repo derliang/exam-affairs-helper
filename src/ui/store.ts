@@ -6,6 +6,7 @@ import { defaultLabelLayout } from '../export/model';
 import { diffsStale, refreshDiffs, type CompareOptions } from '../import/compare';
 import { defaultSubjects, isCustomized } from './subjects';
 import { rosterFor, viewForYear, type YearData } from './rosterYears';
+import type { MakeupSession } from './makeup/session';
 
 export interface Doc {
   settings: Settings;
@@ -18,6 +19,8 @@ export interface Doc {
   exams: ExamConfig[];
   /** 每次模擬考底下的其他檔案（考試名單、比對、覆寫、排座結果），以考試 id 為鍵；跟著復原 */
   examFiles?: Record<string, Partial<ExamFiles>>;
+  /** 補考場次（K2，D113）：一個場次一個資料夾 `makeup/<id>/`；沒有補考的舊資料夾沒有這個欄位 */
+  makeups?: MakeupSession[];
 }
 
 export type Result<T> = { ok: true; doc: T } | { ok: false; error: string };

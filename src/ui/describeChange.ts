@@ -72,6 +72,24 @@ function filesLabel(prev: Doc['examFiles'], next: Doc['examFiles']): string | un
   return '修改考試檔案';
 }
 
+/** 補考場次（K2）：新增／刪除場次，或看是哪一塊變了 */
+function makeupLabel(prev: Doc['makeups'], next: Doc['makeups']): string | undefined {
+  const a = prev ?? []; const b = next ?? [];
+  if (same(a, b)) return undefined;
+  if (b.length > a.length) return '新增補考場次';
+  if (b.length < a.length) return '刪除補考場次';
+  const i = b.findIndex((m, k) => !same(m, a[k]));
+  const x = a[i]; const y = b[i];
+  if (!x || !y) return '修改補考';
+  if (!same(x.parse, y.parse)) return '匯入補考名單';
+  if (!same(x.resolutions, y.resolutions)) return '處理補考名單問題列';
+  if (!same(x.rooms, y.rooms) || !same(x.roomOff, y.roomOff)) return '修改補考教室';
+  if (!same(x.plan, y.plan)) return '調整補考考程';
+  if (!same(x.trackSplit, y.trackSplit)) return '修改選組拆分';
+  if (!same(x.days, y.days) || !same(x.gradeDay, y.gradeDay)) return '修改補考考日';
+  return '修改補考設定';
+}
+
 /** 同一次變更碰到多處時，以一句話涵蓋；找不到就回 undefined（由呼叫端用預設名稱） */
 export function describeChange(prev: Doc, next: Doc): string | undefined {
   const parts: string[] = [];
@@ -82,6 +100,7 @@ export function describeChange(prev: Doc, next: Doc): string | undefined {
   const x = examLabel(prev.exams, next.exams); if (x) parts.push(x);
   const s = settingsLabel(prev.settings, next.settings); if (s) parts.push(s);
   const f = filesLabel(prev.examFiles, next.examFiles); if (f) parts.push(f);
+  const mk = makeupLabel(prev.makeups, next.makeups); if (mk) parts.push(mk);
   if (parts.length === 0) return undefined;
   // 名單比對套用會同時動學生名單與考試名單：用較能描述整件事的那個
   if (parts.length > 1 && parts.includes('處理名單比對')) return '套用名單比對';

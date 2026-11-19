@@ -14,7 +14,11 @@ export type Route =
   | { page: 'step'; examId: string; step: 1 | 2 | 3 | 4 | 5 | 6; /** 進入第 1 步時直接開「修改基本資料」（列表卡片的「修改日期」，#473） */ edit?: 'basic' }
   | { page: 'reconcile'; examId: string }
   | { page: 'override'; examId: string }
-  | { page: 'reserve'; examId: string };
+  | { page: 'reserve'; examId: string }
+  /** 補考（K2，D113）：場次列表、新增場次、場次的七步驟工作區 */
+  | { page: 'makeup' }
+  | { page: 'makeupNew' }
+  | { page: 'makeupStep'; id: string; step: 1 | 2 | 3 | 4 | 5 | 6 | 7 };
 
 export interface BackEntry {
   route: Route;

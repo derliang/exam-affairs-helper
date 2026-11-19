@@ -33,6 +33,11 @@ import { Step5 } from './pages/Step5';
 import { Step6 } from './pages/Step6';
 import { AstStep6 } from './ast/AstStep6';
 import { ReservePage } from './pages/ReservePage';
+import { makeupEnabled } from './makeup/gate';
+import { MakeupList } from './makeup/pages/MakeupList';
+import { MakeupNew } from './makeup/pages/MakeupNew';
+import { MakeupWorkspace } from './makeup/pages/MakeupWorkspace';
+import { addMakeup, carrySourceOf, deleteMakeup, findMakeup, makeupsOf, newMakeupId, newMakeupSession, updateMakeup } from './makeup/session';
 import { createFsRepository, encode, isFsAccessSupported } from '../data';
 import { downloadBytes } from './download';
 import { DiscardDialog, FolderDialog, FolderListError, FolderLostAlert, type FolderMode } from './pages/FolderUi';
@@ -144,7 +149,9 @@ export function App() {
   const go = (r: Route) => setNav((s) => goTo(s, r));
   const go2 = (r: Route, from: { route: Route; label: string }) => setNav((s) => pushTo(s, r, from));
   const lookupOn = enabledNav({ settings: hist.present.settings }).some((n) => n.route.page === 'lookup');
-  const allowed = (rt: Route) => rt.page !== 'lookup' || lookupOn;
+  // 補考（K2）：品牌列入口由 K5 處理，這裡先用網址參數開關（?makeup）讓畫面可進入；沒開時補考頁一律擋回列表
+  const makeupOn = makeupEnabled();
+  const allowed = (rt: Route) => (rt.page !== 'lookup' || lookupOn) && (!rt.page.startsWith('makeup') || makeupOn);
   const gnav = guardNav(nav, allowed);
   const back = () => setNav(goBack(gnav));
   const r = gnav.route;
@@ -180,6 +187,7 @@ export function App() {
   const barItems: AppBarItem[] = [
     { id: 'init', label: '資料夾設定', current: r.page === 'init', onClick: () => go({ page: 'init' }) },
     { id: 'exams', label: '模擬考列表', current: ['exams', 'new', 'wizard', 'step', 'reconcile', 'override', 'reserve'].includes(r.page), disabled: !hasFolder, onClick: () => go({ page: 'exams' }) },
+    ...(makeupOn ? [{ id: 'makeup', label: '補考', current: r.page.startsWith('makeup'), disabled: !hasFolder, onClick: () => go({ page: 'makeup' }) }] : []),
     ...(hasFolder ? enabledNav({ settings: hist.present.settings }).map((n) => ({ id: n.id, label: n.label, current: r.page === n.route.page, onClick: () => go2(n.route, barFrom) })) : []),
     { id: 'features', label: '選用功能', current: inSettings && r.tab === 'features', disabled: !hasFolder, onClick: () => toSettings({ page: 'settings', tab: 'features' }) },
     { id: 'settings', label: '共用設定', current: inSettings && r.tab !== 'features', disabled: !hasFolder, onClick: () => toSettings({ page: 'settings', ...(lastExam && r.page === 'step' ? { division: lastExam.division } : {}) }) },
@@ -230,6 +238,23 @@ export function App() {
         {r.page === 'lookup' && <Lookup doc={hist.present} examId={r.examId} crumbs={pathCrumbs} onGoStep={(examId, step) => go({ page: 'step', examId, step })} onExams={() => go({ page: 'exams' })} />}
         {r.page === 'settings' && <Settings doc={hist.present} onChange={edit} tab={r.tab} onTab={(tab) => setNav((s) => (s.route.page === 'settings' ? { ...s, route: { ...s.route, tab } } : s))} {...(r.division ? { division: r.division } : {})} />}
         {r.page === 'step' && <Workspace route={r} doc={stepDoc} onToRooms={(division) => go2({ page: 'settings', tab: 'rooms', division }, { route: r, label: pageName(r, hist.present) })} onToSchool={() => go2({ page: 'settings', tab: 'school' }, { route: r, label: pageName(r, hist.present) })} onToSched={() => go2({ page: 'settings', tab: 'sched' }, { route: r, label: pageName(r, hist.present) })} onToRoster={(division) => go2({ page: 'settings', tab: 'roster', division }, { route: r, label: pageName(r, hist.present) })} onChange={edit} onStep={(step) => go({ page: 'step', examId: r.examId, step })} onFix={(step) => go2({ page: 'step', examId: r.examId, step }, { route: r, label: pageName(r, hist.present) })} onReserve={() => go({ page: 'reserve', examId: r.examId })} ret={retStep} onRet={back} onExams={() => go({ page: 'exams' })} />}
+        {r.page === 'makeup' && <MakeupList sessions={makeupsOf(hist.present)} folder={repo.folderName?.()} {...(folderMissing ? { listError: <FolderListError onRelink={() => openFolderDlg('relink')} /> } : {})} onNew={() => go({ page: 'makeupNew' })} onOpen={(id, step) => go({ page: 'makeupStep', id, step: step ?? 1 })} onDelete={(id) => edit(deleteMakeup(hist.present, id))} />}
+        {r.page === 'makeupNew' && <MakeupNew now={new Date()} prev={carrySourceOf(hist.present)} onCancel={() => go({ page: 'makeup' })} onCreate={(o) => {
+          const now = new Date();
+          const id = newMakeupId(makeupsOf(hist.present).map((m) => m.id), now);
+          edit(addMakeup(hist.present, newMakeupSession({ id, ...o, now, prev: carrySourceOf(hist.present) })));
+          go({ page: 'makeupStep', id, step: 1 });
+        }} />}
+        {r.page === 'makeupStep' && (() => {
+          const ms = findMakeup(hist.present, r.id);
+          if (!ms) return <section><EmptyState title="找不到這個補考場次" action={<Button kind="primary" onClick={() => go({ page: 'makeup' })}>回補考列表</Button>}>它可能已被刪除，或資料夾換了。</EmptyState></section>;
+          return (
+            <>
+              <PageHead crumbs={[{ label: '補考', onClick: () => go({ page: 'makeup' }) }]} title={ms.name} badge="補考模式" status="已儲存到資料夾">{undoCtl}</PageHead>
+              <MakeupWorkspace s={ms} step={r.step} onChange={(n) => edit(updateMakeup(hist.present, ms.id, () => n))} onStep={(step) => go({ page: 'makeupStep', id: ms.id, step })} onList={() => go({ page: 'makeup' })} />
+            </>
+          );
+        })()}
         {r.page === 'reserve' && <ReservePage doc={hist.present} examId={r.examId} crumbs={reserveCrumbs(r.examId)} onGoStep={(step) => go({ page: 'step', examId: r.examId, step })} onExams={() => go({ page: 'exams' })} />}
         {(r.page === 'reconcile' || r.page === 'override') && <section><h2>{r.page}</h2><p class="muted">施工中</p></section>}
       </main>
