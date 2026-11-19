@@ -151,6 +151,14 @@ export function seatLimitNote(r: Classroom): string | null {
     ? `橫排最多 ${l.rows}、深位最多 ${l.depth}，總座位最多 ${l.cap}（8×7、7×8 可以，8×8 不行）。` : null;
 }
 
+/** 切換班級教室的「不排座」（#369、D159）；改回排座就把欄位拿掉（存檔與舊資料一樣）。預備教室沒有這個概念，原樣回傳 */
+export function setNoSeat(r: Classroom, on: boolean): Classroom {
+  if (r.kind !== 'class') return r;
+  const { noSeat: _drop, ...rest } = r;
+  void _drop;
+  return on ? { ...rest, noSeat: true } : rest;
+}
+
 /** 屬於某部別的教室（保留原順序）；沒給推斷資料時，沒標部別的教室當高中部 */
 export const roomsOfDivision = (rooms: Classroom[], division: Division, ctx: RoomDivisionContext = { classes: [], exams: [] }): Classroom[] =>
   rooms.filter((r) => roomDivision(r, ctx) === division);

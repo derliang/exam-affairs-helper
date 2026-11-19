@@ -5,7 +5,7 @@ import { effectiveRoom, roomDivision, rowDepthOf, seatLabel, seatSlotCount } fro
 import { Alert, Badge, Button, ConfirmButton, EmptyState, Modal, Seg, Stepper, Switch } from './index';
 import { confirmCopy, UNDO_HINT } from '../flow';
 import { classColorVars } from '../colors';
-import { addRoom, clickSeat, duplicateRoom, fillDefaultTracks, isSeatActive, patchRoom, removeRoom, labelSplitNote, resize, roomLimitsOf, seatLimitNote, stepMax, setRoomDivision, setRoomTrack } from '../rooms';
+import { addRoom, clickSeat, duplicateRoom, fillDefaultTracks, isSeatActive, patchRoom, removeRoom, labelSplitNote, resize, roomLimitsOf, seatLimitNote, stepMax, setNoSeat, setRoomDivision, setRoomTrack } from '../rooms';
 import { rowDepthsOf, setAllDepth, setRowCount, toggleSeat } from '../ast/roomEdit';
 
 /** G22：班級教室＝名冊班級（跟名冊走、不能手動新增或刪除）；沒有對應班級的班級教室是「名冊已沒有這個班」的舊教室 */
@@ -72,6 +72,8 @@ export function RoomList(p: {
   reserveName?: string;
   /** 每列的額外欄（分科自習容量、共用設定所屬部別、精靈學生人數）；room＝本次生效的教室，shared＝共用清單原樣 */
   extra?: (room: Classroom, shared: Classroom) => ComponentChildren;
+  /** 班級教室每列多一顆「不排座／改回排座」（首次設定步驟 4、共用設定；考試 ③ 有列入開關，不傳；#369、D155、D159） */
+  noSeatToggle?: boolean;
   /** 表尾新增鈕；null＝不顯示（預設「＋ 新增預備教室」，國中部不顯示） */
   addLabel?: string | null;
 }) {
@@ -122,9 +124,11 @@ export function RoomList(p: {
           const shape = shapeText(r);
           const trackOf = r.track ?? p.classes?.find((c) => c.name === r.name)?.track;
           const stop = (e: Event) => e.stopPropagation();
+          const noSeat = !!r.noSeat && r.kind === 'class'; // D159：不排座列降一階、編輯座位停用，只剩「改回排座」
+          const canNoSeat = !!p.noSeatToggle && r.kind === 'class';
           return (
             <div key={shared.id} class="rw">
-              <div class={`roomrow${isOpen ? ' on' : ''}${p.selected && !on ? ' off' : ''}`} aria-expanded={isOpen} onClick={() => openEditor(shared.id, hasOv, canOv)}>
+              <div class={`roomrow${isOpen ? ' on' : ''}${(p.selected && !on) || (noSeat && canNoSeat) ? ' off' : ''}`} aria-expanded={isOpen} onClick={() => (noSeat && canNoSeat ? undefined : openEditor(shared.id, hasOv, canOv))}>
                 <div class="swf" onClick={stop}>
                   {p.selected && p.onSelect ? (
                     <Switch label={swLabel} ariaLabel={`${swLabel}：${r.name}`} checked={on}
@@ -133,7 +137,8 @@ export function RoomList(p: {
                 </div>
                 <div class="field"><label class="small" for={`rn-${r.id}`}>{isReserve ? reserveName : '教室'}</label>
                   <input id={`rn-${r.id}`} class="input" value={r.name} onClick={stop} onChange={(e) => upd(r.id, (x) => ({ ...x, name: e.currentTarget.value.trim() || x.name }))} />
-                  {orphan && <span class="hint">名冊已沒有這個班</span>}</div>
+                  {orphan && <span class="hint">名冊已沒有這個班</span>}
+                  {noSeat && <span><Badge>不排座</Badge></span>}</div>
                 <div class="row roomcfg"><SeatThumb room={r} /><span><b>{r.rows}</b> 排×<b>{r.depth}</b> 深位{hasOv && <> <Badge tone="info">本次專用</Badge></>}{shape && <><br /><span class="small muted">{shape}</span></>}</span></div>
                 <div class="info">座位 <b>{slots}</b>・不排 <b>{slots - r.seatCount}</b>・可排 <b>{r.seatCount}</b>{isReserve ? <><br />{reserveName}，不計入教室座位合計</> : null}</div>
                 {trackMode === 'seg' && r.kind === 'class' && (
@@ -146,7 +151,8 @@ export function RoomList(p: {
                 {trackMode === 'badge' && trackOf && <Badge>{trackOf === 'science' ? '理組教室' : '文組教室'}</Badge>}
                 {p.extra && <div onClick={stop}>{p.extra(r, shared)}</div>}
                 <div class="btnrow" onClick={stop}>
-                  <Button small {...(isOpen ? { kind: 'primary' as const } : {})} onClick={() => openEditor(shared.id, hasOv, canOv)}>{isOpen ? '收合座位 ▴' : '編輯座位 ▾'}</Button>
+                  <Button small disabled={noSeat && canNoSeat} {...(isOpen ? { kind: 'primary' as const } : {})} onClick={() => openEditor(shared.id, hasOv, canOv)}>{isOpen ? '收合座位 ▴' : '編輯座位 ▾'}</Button>
+                  {canNoSeat && <Button small onClick={() => { if (isOpen) setOpen(null); upd(r.id, (x) => setNoSeat(x, !x.noSeat)); }}>{noSeat ? '改回排座' : '不排座'}</Button>}
                   {(isReserve || orphan) && (p.selected && p.onSelect
                     ? <RoomRemove name={r.name} inThis={on} inUse={!!p.inUse?.(r.id)} onThis={() => p.onSelect!(p.selected!.filter((x) => x !== r.id))} onShared={() => p.onChange(removeRoom(p.rooms, r.id))} />
                     : <ConfirmButton small copy={confirmCopy.deleteRoom(r.name, !!p.inUse?.(r.id))} onConfirm={() => p.onChange(removeRoom(p.rooms, r.id))}>刪除</ConfirmButton>)}
@@ -209,7 +215,7 @@ export function RoomTable(p: {
     <div class="stack">
       <Alert tone="info"><b>所屬部別</b>決定這間教室在高中部或國中部的清單出現。舊資料讀進來時程式會依內容推斷；推斷錯了，直接在這一欄改，改完馬上換到另一個部別的清單。</Alert>
       <RoomList rooms={p.rooms} paper={p.paper} division={p.division} onChange={p.onChange} track="none"
-        {...(p.inUse ? { inUse: p.inUse } : {})} {...(p.classes ? { classes: p.classes } : {})} {...(p.exams ? { exams: p.exams } : {})} {...(p.onGoSchool ? { onGoSchool: p.onGoSchool } : {})}
+        noSeatToggle {...(p.inUse ? { inUse: p.inUse } : {})} {...(p.classes ? { classes: p.classes } : {})} {...(p.exams ? { exams: p.exams } : {})} {...(p.onGoSchool ? { onGoSchool: p.onGoSchool } : {})}
         extra={(r) => (
           <div class="field"><label class="small" for={`rd-${r.id}`}>所屬部別</label>
             <select id={`rd-${r.id}`} class="input" aria-label={`${r.name} 所屬部別`} value={p.division}

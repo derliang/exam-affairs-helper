@@ -85,9 +85,10 @@ function classLines(doc: Doc, division: Division, kind?: ExamKind): EnvLine[] {
   const groups = new Map<string, { n: number; s: number }>();
   for (const x of withStu) {
     const room: Classroom | undefined = rooms.find((r) => r.kind === 'class' && r.name === x.c.name);
-    const s = room ? room.seatCount : (() => { const g = defaultSeatGrid(x.n); return g.rows * g.depth; })();
-    seats += s; sig.push([x.c.name, s]);
-    if (s < x.n) over.push(`「${x.c.name}」${x.n} 人、教室座位 ${s}`);
+    // 標了「不排座」的班級教室不算座位（D159）；這個班的學生會排進同組其他班級教室，所以也不報「座位比人數少」
+    const s = room?.noSeat ? 0 : room ? room.seatCount : (() => { const g = defaultSeatGrid(x.n); return g.rows * g.depth; })();
+    seats += s; sig.push(room?.noSeat ? [x.c.name, 'noSeat'] : [x.c.name, s]);
+    if (s < x.n && !room?.noSeat) over.push(`「${x.c.name}」${x.n} 人、教室座位 ${s}`);
     const gk = division === 'junior' ? 'all' : (x.c.track ?? 'none');
     const g = groups.get(gk) ?? { n: 0, s: 0 };
     groups.set(gk, { n: g.n + x.n, s: g.s + s });
