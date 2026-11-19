@@ -5,7 +5,7 @@
  */
 import { useState } from 'preact/hooks';
 import { Alert, Button, EmptyState } from '../components';
-import { LIGHT_ICON, LIGHT_TEXT, type Check, type Gate, type Reconcile } from '../reconcile';
+import { LIGHT_ICON, LIGHT_TEXT, ledgerWant, type Check, type Gate, type Reconcile } from '../reconcile';
 
 const STEP_NAME: Record<2 | 3 | 5, string> = { 2: '② 考試名單', 3: '③ 教室設定', 5: '⑤ 排座與預覽' };
 const LABELS: Record<'tri' | 'cap', [string, string, string]> = { tri: ['應有', '實有', '差異'], cap: ['上限', '使用', '餘額'] };
@@ -89,7 +89,7 @@ export function ReconcilePanel(p: {
           <tbody>{r.ledger.map((l) => (
             <tr key={l.key} data-ledger-ok={l.ok} class={l.ok ? '' : 'rc-bad'}>
               <td>{l.when}</td><td>{l.subject}</td><td>{l.scope}</td><td>{l.exam}</td>{r.hasStudy && <td>{l.study}</td>}{r.hasAbsent && <td>{l.absent}</td>}
-              <td>{l.seat} {l.seat === l.exam ? '✓' : '✕'}</td><td>{l.label} {l.label === l.exam ? '✓' : '✕'}</td><td>{l.room} {l.room === l.exam ? '✓' : '✕'}</td>
+              <td>{l.seat} {l.seat === ledgerWant(l).seat ? '✓' : '✕'}</td><td>{l.label} {l.label === ledgerWant(l).label ? '✓' : '✕'}</td><td>{l.room} {l.room === ledgerWant(l).room ? '✓' : '✕'}</td>
               <td>{l.ok ? '✓ 平' : '✕ 不平'}</td>
             </tr>
           ))}</tbody>
