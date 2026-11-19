@@ -26,7 +26,7 @@ export function gsatDoc(opts: { absentRoster?: number } = {}): { doc: Doc; exam:
   const math = ids.find((id) => /ma/.test(id)) ?? ids[2]!;
   const entries: ExamEntry[] = roster.filter((s) => s.seatNo <= 10 - (opts.absentRoster ?? 0)).map((s) => ({ classNo: s.classNo, seatNo: s.seatNo, name: s.name, subjectIds: s.seatNo % 4 === 0 ? ids.filter((i) => i !== math) : [...ids] }));
   doc = { ...doc, examFiles: { ...(doc.examFiles ?? {}), [exam0.id]: { entries, diffs: [], overrides: [] } } };
-  // 有未參加者時（D137 起他們進排座、算進標示人數），數學不考的比例接近一半，照使用者會做的選擇鎖定 X；沒有未參加者時與舊版相同
+  // 有不參加者時（D137 起他們進排座、算進標示人數），數學不考的比例接近一半，照使用者會做的選擇鎖定 X；沒有不參加者時與舊版相同
   const lock = opts.absentRoster ? { locked: true } : {};
   const u = updateExam(doc, exam0.id, { classroomIds: rooms.map((x) => x.id), markRules: [{ track: 'science', subjectId: math, mode: 'mark-absent', ...lock }, { track: 'liberal', subjectId: math, mode: 'mark-absent', ...lock }] });
   if (!u.ok) throw new Error(u.error);
@@ -42,7 +42,7 @@ export function gsatDoc(opts: { absentRoster?: number } = {}): { doc: Doc; exam:
  * 理組 1～3 班 46／46／47 人、文組 4～6 班 44／44／43 人，共 270。
  * 理組：11 人不考數B、46 人不考社會，其餘全考；文組：2 人考自然、39 人考數A、全部考數B（libMathB='none' 則全不考數B）。
  * junior：另有國中部 1～6 班（沒有組別），排在高中班之後，與高中班號重疊（真實學校常見）。
- * notJoined：第 1、4 班各最後 N 人不在考試名單（未參加，#400 WP-1 的實測情境）；fullyAbsent：第 2、5 班各前 N 人全科缺考（名單上沒有考科）；
+ * notJoined：第 1、4 班各最後 N 人不在考試名單（不參加，#400 WP-1 的實測情境）；fullyAbsent：第 2、5 班各前 N 人全科缺考（名單上沒有考科）；
  * reserve2：多一間預備教室（49 座）；noSeat：不自動排座（測容量不足時用）。
  */
 export function gsat270Doc(opts: { junior?: boolean; libMathB?: 'all' | 'none'; notJoined?: number; fullyAbsent?: number; reserve2?: boolean; noSeat?: boolean } = {}) {

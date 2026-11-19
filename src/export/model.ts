@@ -681,6 +681,21 @@ export function buildSeatPages(input: ExportInput, scope: Scope = 'all'): SeatPa
     pg.chips = chipsOf(pg.stats.total, cells.values(), input.exam.subjects);
     const notes = applyCorners([...cells.values()], input.exam.subjects.map((s) => s.name));
     if (notes.length) { pg.flipNotes = notes; pg.chips.push(...notes); }
+    // D146：學測原班座位表，不參加的人有正式座位，格內黑底小牌「X 不參加」（不逐科列 X），每節到預備教室自習
+    if (input.exam.kind === 'gsat' && room.kind !== 'reserve') {
+      const none = new Set(input.entries.filter((e) => e.subjectIds.length === 0).map((e) => studentCode(e.classNo, e.seatNo)));
+      const mineNo = [...cells.values()].filter((c) => none.has(c.code));
+      if (mineNo.length > 0) {
+        for (const c of mineNo) c.corners = [{ kind: 'x', text: 'X 不參加' }];
+        pg.chips.splice(1, 0, `不參加 ${mineNo.length} 人（每節到預備教室自習）`);
+        const nos = pg.stats.table.classes;
+        pg.stats.table.rows.push({
+          label: '不參加（每節到預備教室自習，不印標籤）',
+          per: nos.map((n) => mineNo.filter((c) => ctx.classes.get(Number(c.code.slice(0, 2)))?.name === n || String(Number(c.code.slice(0, 2))) === n).length),
+          total: mineNo.length,
+        });
+      }
+    }
   }
   if (scope !== 'class') {
     // 預備教室座位表（時段版，稿 v2.28）：一間預備教室一頁，格內每行一個時段；抽離自習不排座位
