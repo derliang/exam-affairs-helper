@@ -122,7 +122,7 @@ export function AstStep6(p: { doc: Doc; exam: ExamConfig; onGoStep: (n: 2 | 3 | 
         <Alert key={b.text} tone="danger" action={<Button small kind="primary" onClick={() => p.onGoStep(b.step)}>{b.step === 2 ? '到 ② 考試名單 ›' : b.step === 3 ? '到 ③ 教室 ›' : '到 ⑤ 看方案 ›'}</Button>}><b>還不能下載：</b>{b.text}</Alert>
       ))}
       {built && !built.ok && <Alert tone="danger"><b>這份方案的標籤排不出來</b>：{built.error}。請回 ③ 調整教室的橫排或深位。</Alert>}
-      {p.onChange && !exam.archived && <PhaseCard doc={doc} exam={exam} onChange={p.onChange} />}
+      {p.onChange && <PhaseCard doc={doc} exam={exam} onChange={p.onChange} />}
       {outs && planning && <Alert tone="warn"><b>規劃中：只能預覽，不能下載正式檔。</b>標籤與班級公告要用同一版，所以要先在上面「目前階段」按「確認定案」，才能下載。五份輸出共用同一份方案，頁尾印同一個版本碼 <Badge>{outs.version}</Badge>。</Alert>}
       {outs && !planning && <Alert tone="ok"><b>方案通過驗證，可以下載。</b>五份輸出共用同一份方案，頁尾印同一個版本碼 <Badge>{outs.version}</Badge>，標籤與班級公告不會混用不同版本。</Alert>}
 
@@ -181,7 +181,7 @@ export function AstStep6(p: { doc: Doc; exam: ExamConfig; onGoStep: (n: 2 | 3 | 
             : <Alert tone="info">這一份沒有內容：{tab === 'study' ? '所有考生都留在原班自習，不用布置自習教室。' : '沒有可預覽的頁面。'}</Alert>}
         </div>
       )}
-      {p.onChange && !exam.archived && <VersionCard doc={doc} exam={exam} onChange={p.onChange} />}
+      {p.onChange && <VersionCard doc={doc} exam={exam} onChange={p.onChange} />}
     </section>
   );
 }

@@ -168,8 +168,11 @@ export interface ExamConfig {
   name: string;
   /** 最近一次在 ⑥ 下載任意檔案的時間（ISO，#397）：有值且排座沒過期，列表進度條的「下載」才算完成；舊存檔沒有＝尚未下載 */
   downloadedAt?: string;
-  /** 已封存（G1）：列表收進「已封存」區，可查看與下載但不能編輯；要編輯先還原。沒設＝進行中 */
+  /** 已封存（G1）。**1.26.25 起封存功能拿掉（D163）**：欄位保留讓舊備份讀得回來，畫面不再使用；列表只看考試日期分群，
+   * 舊的已封存且沒日期的考試一次性歸「已經結束」（D164 A）。 */
   archived?: boolean;
+  /** 考試日期（#389、D164 H）：'YYYY-MM-DD'，第 1 天、第 2 天…；沒填＝沒有欄位。星期由日期算出（examDates.ts），不另存 */
+  examDates?: string[];
   kind: ExamKind;
   division: Division;
   semester: Semester;

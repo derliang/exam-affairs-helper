@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks';
 import type { ExamConfig, Semester, Subject } from '../../data';
 import { Alert, Badge, Button, ConfirmButton, Modal, More, Seg, StepHead } from '../components';
+import { ExamDatesFields, packDates } from './ExamDatesFields';
 import { carryMode, carryRows, carrySource, resumeCarry, stopCarry } from '../carry';
 import { confirmCopy } from '../flow';
 import { updateExam, examLabel, examYear, KIND_LABEL, type Doc } from '../store';
@@ -116,6 +117,8 @@ function BasicModal(p: { exam: ExamConfig; onClose: () => void; onSave: (patch: 
   const [year, setYear] = useState(String(examYear(exam)));
   const [semester, setSemester] = useState<Semester>(exam.semester);
   const [round, setRound] = useState(exam.round ?? 1);
+  const [day1, setDay1] = useState(exam.examDates?.[0] ?? '');
+  const [day2, setDay2] = useState(exam.examDates?.[1] ?? '');
   const [err, setErr] = useState('');
   const rounds = Array.from({ length: Math.max(4, round) }, (_, i) => i + 1);
   const save = () => {
@@ -123,7 +126,7 @@ function BasicModal(p: { exam: ExamConfig; onClose: () => void; onSave: (patch: 
     if (!Number.isInteger(y) || y < 90 || y > 200) { setErr('學年度要是民國年（例如 114）'); return; }
     const oldRound = exam.round ?? 1;
     p.onSave({
-      name, schoolYear: y, semester,
+      name, schoolYear: y, semester, examDates: packDates(day1, day2),
       ...(gsat ? { round, ...(round !== oldRound && !isCustomized(exam.subjects) ? { subjects: defaultSubjects(exam.kind, round) } : {}) } : {}),
     });
   };
@@ -143,6 +146,7 @@ function BasicModal(p: { exam: ExamConfig; onClose: () => void; onSave: (patch: 
               <button type="button" key={v} class="tcard term" aria-pressed={semester === v} onClick={() => setSemester(v)}><strong>{l}</strong>{semester === v && <span class="tick badge b-acc">已選</span>}</button>
             ))}
           </div></div>
+        <ExamDatesFields day1={day1} day2={day2} onChange={(a, b) => { setDay1(a); setDay2(b); }} />
         {gsat && (
           <div class="field"><span class="label">次別</span>
             <Seg<string> label="次別" value={String(round)} onChange={(v) => setRound(Number(v))} options={rounds.map((n) => ({ value: String(n), label: `第${CN[n] ?? n}次` }))} />
