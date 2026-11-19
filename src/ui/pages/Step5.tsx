@@ -1,10 +1,13 @@
-import { useEffect, useRef, useState } from 'preact/hooks';
-import type { ExamConfig, SeatingResult } from '../../data';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import type { Classroom, ExamConfig, SeatingResult } from '../../data';
 import { seatLabel, studentCode } from '../../data';
 import { mixedMarkCodes, overridePurpose } from '../../core/detach';
 import { Alert, Badge, Button, ConfirmButton, EmptyState, Modal, More, Seg, StatsBar, StepHead } from '../components';
 import { confirmCopy } from '../flow';
 import { ChartLegend, SeatChart } from '../components/SeatChart';
+import { LabelPreview } from '../components/LabelPreview';
+import { prepareExport } from '../exportInput';
+import { defaultOptions } from '../../export/plan';
 import {
   afterOverrideChange, autoSeat, chartModel, detachChartModel, seatableEntries, detachSummary, nameMapOf, examClasses, examEntries, examOverrides, examResult, examRooms,
   isStale, overrideNotes, removeOverride, reseat, roomStatTable, seatingBlockers, setOverride, validationChecks, type StepNo,
@@ -13,6 +16,22 @@ import { roomCapacity } from '../rooms';
 import { studyCapacity } from '../capacity';
 import { shortText, StudyNeedDetail, StudySlotTable } from './StudyCapacityView';
 import type { Doc } from '../store';
+
+/** 預覽類型「座位表｜標籤」（D171④）：標籤與 ⑥ 預覽卡同一個元件；紙張用共用設定預設，下載選項在 ⑥ 調整。過期時不顯示標籤 */
+function LabelPane(p: { doc: Doc; exam: ExamConfig; room: Classroom; stale: boolean }) {
+  const prepared = useMemo(() => (p.stale ? null : prepareExport(p.doc, p.exam)), [p.doc, p.exam, p.stale]);
+  const paper = defaultOptions(p.exam.labelLayout.paper).paper;
+  if (p.stale) return <Alert tone="info">名單或設定在排座之後改過，標籤預覽要等重新排座。</Alert>;
+  if (!prepared || !prepared.ok) return <Alert tone="info">{prepared && !prepared.ok ? prepared.errors[0] : '標籤預覽暫時無法產生。'}</Alert>;
+  return (
+    <>
+      <LabelPreview input={prepared.input} paper={paper} room={p.room} />
+      <p class="small muted">標籤紙張與下載選項在 ⑥ 調整。自習生、不參加的人不印標籤。</p>
+    </>
+  );
+}
+
+const PREVIEW_KINDS: { value: 'seat' | 'label'; label: string }[] = [{ value: 'seat', label: '座位表' }, { value: 'label', label: '標籤' }];
 
 const PLACES = ['教務處', '圖書館', '輔導室'];
 const taipei = (iso: string) => new Date(iso).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false });
@@ -37,6 +56,7 @@ export function Step5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
   const [roomId, setRoomId] = useState('');
   const [only, setOnly] = useState('');
   const [pullKey, setPullKey] = useState('');
+  const [pv, setPv] = useState<'seat' | 'label'>('seat');
   const [editing, setEditing] = useState<{ code: string; co: string } | null>(null);
   const [managing, setManaging] = useState(false);
 
@@ -147,8 +167,9 @@ export function Step5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
         <div class="card stack">
           {statsBar}
           <div><h3>座位表預覽</h3><p class="small muted">預備教室的考試座位只排「抽離考試」的人；抽離自習的人排在另外的自習座位頁（不印標籤），名單另出。</p></div>
+          <Seg<'seat' | 'label'> label="預覽類型" value={pv} onChange={setPv} options={PREVIEW_KINDS} />
           <Seg label="教室" value={resSel.id} onChange={(v) => { setRoomId(v); setOnly(''); }} options={roomOptions} />
-          {(() => {
+          {pv === 'label' ? <LabelPane doc={doc} exam={exam} room={resSel} stale={stale} /> : (() => {
             const here = pulls.filter((x) => x.roomId === resSel.id);
             const cur = here.find((x) => x.key === pullKey) ?? here[0];
             const m = cur ? detachChartModel(doc, exam, result, resSel, cur.subjectId) : null;
@@ -169,9 +190,11 @@ export function Step5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
             <div><h3>座位表預覽</h3><p class="small muted">班級色；橫排（左右）與深位（前後）；點任一格可做個別覆寫。</p></div>
             <ConfirmButton kind="default" copy={confirmCopy.reseat(overrides.length)} onConfirm={run}>重新排座</ConfirmButton>
           </div>
+          <Seg<'seat' | 'label'> label="預覽類型" value={pv} onChange={setPv} options={PREVIEW_KINDS} />
           {roomOptions.length > 1 && (
             <Seg label="教室" value={room.id} onChange={(v) => { setRoomId(v); setOnly(''); }} options={roomOptions} />
           )}
+          {pv === 'label' ? <LabelPane doc={doc} exam={exam} room={room} stale={stale} /> : (<>
           {present.length > 1 && (
             <Seg label="檢視班級" value={only} onChange={setOnly} options={[{ value: '', label: '全部班級' }, ...present.map((c) => ({ value: String(c), label: `只看${classes.find((x) => x.no === c)?.name ?? c}` }))]} />
           )}
@@ -196,6 +219,7 @@ export function Step5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
               </div>
             </div>
           )}
+          </>)}
         </div>
       )}
 
