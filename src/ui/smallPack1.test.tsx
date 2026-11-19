@@ -68,26 +68,26 @@ describe('領卷清單預設關（裁決 9：現況已是預設關，這裡守�
 });
 
 describe('#147：教室橫排／深位各自受標籤版型限制', () => {
-  it('G14：上限與紙張無關，一律 7 排×7 深位、49 座', () => {
-    expect(seatLimits('B4')).toEqual({ rows: 7, depth: 7 });
-    expect(seatLimits('A3')).toEqual({ rows: 7, depth: 7 });
+  it('D154：上限與紙張無關，一律橫排、深位各 ≤ 8（總座位 ≤ 56）', () => {
+    expect(seatLimits('B4')).toEqual({ rows: 8, depth: 8 });
+    expect(seatLimits('A3')).toEqual({ rows: 8, depth: 8 });
   });
-  it('橫排、深位各自有 7 的上限：改大超過被擋', () => {
+  it('橫排、深位各自有 8 的上限：改大超過被擋', () => {
     const lim = seatLimits('B4');
     const r6 = room({ rows: 6, depth: 6, seatCount: 36 });
-    expect(resize(r6, { rows: 8 }, 49, lim)).toBe(r6); // 排數超過 7
-    expect(resize(r6, { depth: 7 }, 49, lim).depth).toBe(7);
+    expect(resize(r6, { rows: 9 }, 56, lim)).toBe(r6); // 排數超過 8
+    expect(resize(r6, { depth: 8 }, 56, lim).depth).toBe(8);
     const r67 = room({ rows: 6, depth: 7, seatCount: 42 });
-    expect(resize(r67, { rows: 5 }, 49, lim).rows).toBe(5);
+    expect(resize(r67, { rows: 5 }, 56, lim).rows).toBe(5);
   });
-  it('舊資料 8 排×6 深位：檢查找得出來（標籤停用、提示縮小）；允許改小', () => {
-    const bad = room({ rows: 8, depth: 6, seatCount: 48 });
+  it('舊資料 9 排×6 深位：檢查找得出來（標籤停用、提示縮小）；允許改小', () => {
+    const bad = room({ rows: 9, depth: 6, seatCount: 54 });
     expect(roomsOverLabel([bad, room()], 'B4')).toEqual([bad]);
-    expect(resize(bad, { rows: 6 }, 49, seatLimits('B4')).rows).toBe(6);
+    expect(resize(bad, { rows: 6 }, 56, seatLimits('B4')).rows).toBe(6);
   });
-  it('超過 7×7 的教室不輸出標籤、不丟錯（⑥ 預覽不白屏）；沒超過的照常印', () => {
+  it('超過 8 的教室不輸出標籤、不丟錯（⑥ 預覽不白屏）；沒超過的照常印', () => {
     const f = makeFixture();
-    const wide = { ...f, settings: { ...f.settings, classrooms: f.settings.classrooms.map((c) => (c.id === 'r1' ? { ...c, rows: 8, depth: 6 } : c)) } };
+    const wide = { ...f, settings: { ...f.settings, classrooms: f.settings.classrooms.map((c) => (c.id === 'r1' ? { ...c, rows: 9, depth: 6 } : c)) } };
     const pages = buildLabelPages(wide, 'class');
     expect(pages.map((p) => p.roomName)).toEqual(['乙教室']);
   });
