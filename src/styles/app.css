@@ -1042,12 +1042,9 @@ ul.plain{margin:4px 0 0;padding-left:1.2em}
 .rc-more{background:none;border:0;color:var(--accent);font-weight:700;cursor:pointer;padding:4px 6px}
 .rc-detail{grid-column:1/-1;display:grid;gap:6px;padding-top:6px;border-top:1px dashed var(--line)}
 .rc-issue{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-.rc-table .rc-bad td,.rc-pcard.rc-bad{background:var(--danger-soft)}
-.rc-cards{display:none;gap:8px}
-.rc-pcard{border:1px solid var(--line);border-radius:var(--r-md);padding:10px 12px;display:grid;gap:4px}
+.rc-bad td{background:var(--danger-soft)}
 @media (max-width:640px){
   .rc-row{grid-template-columns:1fr}
-  .rc-table{display:none}.rc-cards{display:grid}
 }
 
 
