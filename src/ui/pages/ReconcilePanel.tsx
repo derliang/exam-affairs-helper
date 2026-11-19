@@ -10,9 +10,10 @@ import { LIGHT_ICON, LIGHT_TEXT, ledgerWant, type Check, type Gate, type Reconci
 const STEP_NAME: Record<2 | 3 | 5, string> = { 2: '② 考試名單', 3: '③ 教室設定', 5: '⑤ 排座與預覽' };
 const LABELS: Record<'tri' | 'cap', [string, string, string]> = { tri: ['應有', '實有', '差異'], cap: ['上限', '使用', '餘額'] };
 
-const Lamp = (p: { light: Check['light'] }) => <span class={`rc-lamp rc-${p.light}`}><span aria-hidden="true">{LIGHT_ICON[p.light]}</span> {LIGHT_TEXT[p.light]}</span>;
+export const Lamp = (p: { light: Check['light'] }) => <span class={`rc-lamp rc-${p.light}`}><span aria-hidden="true">{LIGHT_ICON[p.light]}</span> {LIGHT_TEXT[p.light]}</span>;
 
-function CheckRow(p: { c: Check; onGo: (n: 2 | 3 | 5) => void }) {
+/** 一列檢核（燈號、應有／實有／差異、明細）；考前對帳與補考儀表板共用（D120、G35） */
+export function CheckRow(p: { c: Check; onGo: (n: 2 | 3 | 5) => void }) {
   const { c } = p;
   // 紅、琥珀列預設展開；通過與不適用預設收起
   const [open, setOpen] = useState(c.light === 'fail' || c.light === 'warn');
@@ -35,10 +36,10 @@ function CheckRow(p: { c: Check; onGo: (n: 2 | 3 | 5) => void }) {
           {c.issues.map((i) => (
             <div key={i.text} class="rc-issue">
               <span>{i.text}</span>
-              {i.step && <Button small onClick={() => p.onGo(i.step!)}>到 {STEP_NAME[i.step]} ›</Button>}
+              {i.go ? <Button small onClick={i.go.run}>到 {i.go.label} ›</Button> : i.step && <Button small onClick={() => p.onGo(i.step!)}>到 {STEP_NAME[i.step]} ›</Button>}
             </div>
           ))}
-          <div class="small muted">檢核公式：{c.formula}</div>
+          {c.formula && <div class="small muted">檢核公式：{c.formula}</div>}
         </div>
       )}
     </div>

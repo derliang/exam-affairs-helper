@@ -15,10 +15,10 @@ const ws = (s: ReturnType<typeof fakeSession>, step: 1 | 2 | 3 | 4 | 5 | 6 | 7) 
 
 describe('補考畫面（伺服器端渲染煙霧測試＋文案）', () => {
   const s = { ...fakeSession({ rooms: rooms(6) }), days: [{ id: 'd1', date: '2027-01-16', start: 480 }] };
-  it('七個步驟都畫得出來；⑥ ⑦ 是說明頁', () => {
+  it('七個步驟都畫得出來', () => {
     for (const step of [1, 2, 3, 4, 5] as const) expect(ws(s, step)).toContain('補考');
-    expect(ws(s, 6)).toContain('這一步還沒開放');
-    expect(ws(s, 7)).toContain('這一步還沒開放');
+    expect(ws(s, 6)).toContain('檢核與對帳');
+    expect(ws(s, 7)).toContain('下載 Word');
   });
   it('① 設定：日期已過、年級未指定都有說明；暫定項標暫定', () => {
     const past = { ...s, days: [{ id: 'd1', date: '2020-01-01', start: 480 }] };
@@ -96,12 +96,12 @@ describe('補考列表與新增', () => {
 });
 
 describe('步驟狀態', () => {
-  it('③ 教室不夠就不算完成；⑥ ⑦ 在 K3 完成前一律未完成', () => {
+  it('③ 教室不夠就不算完成；⑥ 沒有紅燈就算完成、⑦ 還沒下載就未完成', () => {
     const ok = { ...fakeSession({ rooms: rooms(6) }), days: [{ id: 'd1', date: '2027-01-16', start: 480 }] };
     const d = stepDone(ok, '2026-11-20');
-    expect(d).toMatchObject({ 1: true, 2: true, 3: true, 4: true, 5: true, 6: false, 7: false });
+    expect(d).toMatchObject({ 1: true, 2: true, 3: true, 4: true, 5: true, 6: true, 7: false });
     expect(stepDone({ ...ok, rooms: [] }, '2026-11-20')).toMatchObject({ 3: false, 5: false });
-    expect(stepStates(ok, 3, '2026-11-20').map((x) => x.state)).toEqual(['done', 'done', 'cur', 'done', 'done', 'todo', 'todo']);
+    expect(stepStates(ok, 3, '2026-11-20').map((x) => x.state)).toEqual(['done', 'done', 'cur', 'done', 'done', 'done', 'todo']);
   });
 });
 
