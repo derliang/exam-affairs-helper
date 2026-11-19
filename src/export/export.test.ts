@@ -116,15 +116,16 @@ describe('版面模型', () => {
     expect(wideLabelLayout('B4')).toEqual({ paper: 'B4', cols: 6, rows: 7, wide: true });
   });
 
-  it('標籤：沒人坐的位置不印格子（空位不印）；超過 7×7 的教室停用標籤輸出（D113）', () => {
+  it('標籤：沒人坐的位置不印格子（空位不印）；橫排或深位超過 8 的教室停用標籤輸出（D113、D154）', () => {
     const f = makeFixture();
     const pages = buildLabelPages(f, 'class');
     expect(pages.map((p) => p.cells.length)).toEqual([18, 12]); // 只印有考生的座位
-    f.settings.classrooms[0] = { ...f.settings.classrooms[0]!, rows: 8, depth: 5, seatCount: 40 };
+    f.settings.classrooms[0] = { ...f.settings.classrooms[0]!, rows: 9, depth: 5, seatCount: 45 };
     const after = buildLabelPages(f, 'class');
-    expect(after.map((p) => p.roomName)).toEqual(['乙教室']); // 甲教室超過 7×7，不輸出
+    expect(after.map((p) => p.roomName)).toEqual(['乙教室']); // 甲教室 9 排，超過 8，不輸出
     expect(roomTooBigForLabel({ rows: 7, depth: 7 })).toBe(false);
-    expect(roomTooBigForLabel({ rows: 3, depth: 8 })).toBe(true);
+    expect(roomTooBigForLabel({ rows: 3, depth: 8 })).toBe(false);
+    expect(roomTooBigForLabel({ rows: 3, depth: 9 })).toBe(true);
   });
 
   it('抽離名單：抽離考試／自習／單人特例都列', () => {

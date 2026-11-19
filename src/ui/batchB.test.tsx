@@ -19,30 +19,31 @@ const docWith = (kind: ExamKind): { doc: Doc; exam: ExamConfig } => {
 };
 
 describe('G30 座位上限依教室類型', () => {
-  it('班級教室 7×7＝49；預備教室 7 排×8 深位＝56', () => {
-    expect(roomLimitsOf('class')).toEqual({ rows: 7, depth: 7, cap: 49 });
-    expect(roomLimitsOf('reserve')).toEqual({ rows: 7, depth: 8, cap: 56 });
+  it('D154：班級教室與預備教室同一套：橫排、深位各 ≤ 8、總座位 ≤ 56', () => {
+    expect(roomLimitsOf('class')).toEqual({ rows: 8, depth: 8, cap: 56 });
+    expect(roomLimitsOf('reserve')).toEqual({ rows: 8, depth: 8, cap: 56 });
   });
   it('班級教室預設座位：42 人→6×7、45 人→7×7、超過 49 人仍 7×7', () => {
     expect(defaultSeatGrid(42)).toEqual({ rows: 6, depth: 7 });
     expect(defaultSeatGrid(45)).toEqual({ rows: 7, depth: 7 });
     expect(defaultSeatGrid(60)).toEqual({ rows: 7, depth: 7 });
   });
-  it('resize：班級教室深位加到 8 被擋；預備教室可到 7×8、不能到 9 或 8 排', () => {
-    const c = room({ rows: 7, depth: 7, seatCount: 49 });
-    const cl = roomLimitsOf('class');
-    expect(resize(c, { depth: 8 }, cl.cap, cl)).toBe(c);
-    const rv = room({ kind: 'reserve', rows: 7, depth: 7, seatCount: 49 });
-    const rl = roomLimitsOf('reserve');
-    const up = resize(rv, { depth: 8 }, rl.cap, rl);
-    expect(up).toMatchObject({ rows: 7, depth: 8, seatCount: 56 });
-    expect(resize(up, { depth: 9 }, rl.cap, rl)).toBe(up);
-    expect(resize(up, { rows: 8 }, rl.cap, rl)).toBe(up);
+  it('resize：班級、預備教室都能到 7×8 或 8×7；到 9 排、9 深位、8×8（64）被擋', () => {
+    for (const kind of ['class', 'reserve'] as const) {
+      const c = room({ kind, rows: 7, depth: 7, seatCount: 49 });
+      const lim = roomLimitsOf(kind);
+      const up = resize(c, { depth: 8 }, lim.cap, lim);
+      expect(up).toMatchObject({ rows: 7, depth: 8, seatCount: 56 });
+      expect(resize(up, { depth: 9 }, lim.cap, lim)).toBe(up);
+      expect(resize(up, { rows: 8 }, lim.cap, lim)).toBe(up); // 8×8＝64 超過總座位 56
+      const side = resize(c, { rows: 8 }, lim.cap, lim);
+      expect(side).toMatchObject({ rows: 8, depth: 7, seatCount: 56 });
+    }
   });
-  it('提示：預備教室 7×8 不叫人縮小；到上限的說明依類型', () => {
+  it('提示：7×8、8×7 不叫人縮小；到上限的說明兩種教室相同', () => {
     expect(labelSplitNote(room({ kind: 'reserve', rows: 7, depth: 8, seatCount: 56 }))).toBeNull();
-    expect(seatLimitNote(room({ kind: 'reserve', rows: 7, depth: 8, seatCount: 56 }))).toContain('預備教室上限 7×8');
-    expect(seatLimitNote(room({ rows: 7, depth: 7, seatCount: 49 }))).toContain('班級教室上限 7×7');
+    expect(labelSplitNote(room({ rows: 8, depth: 7, seatCount: 56 }))).toBeNull();
+    for (const kind of ['class', 'reserve'] as const) expect(seatLimitNote(room({ kind, rows: 7, depth: 8, seatCount: 56 }))).toContain('總座位最多 56');
   });
   it('預備教室卡片顯示 7×8 的座位數 56', () => {
     const html = renderToString(<RoomList rooms={[room({ kind: 'reserve', rows: 7, depth: 8, seatCount: 56, track: undefined })]} paper="B4" onChange={noop} selected={['r1']} onSelect={noop} />);

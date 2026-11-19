@@ -597,7 +597,7 @@ function labelSection(page: LabelPageModel, opts: DocxOptions): ISectionOptions 
   const { layout } = page;
   const paper = PAPER_MM[layout.paper];
   const gs = labelGridSize(page);
-  const box = labelBoxMm(layout, gs.rows, page.notes.length);
+  const box = labelBoxMm(layout, gs.rows, page.notes.length, gs.cols);
   const tw = (mm: number) => mmToTwip(mm);
   const isB4 = layout.paper === 'B4';
   const physCols = gs.cols * (layout.wide ? 2 : 1);

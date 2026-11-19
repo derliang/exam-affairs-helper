@@ -5,7 +5,7 @@ import { effectiveRoom, roomDivision, rowDepthOf, seatLabel, seatSlotCount } fro
 import { Alert, Badge, Button, ConfirmButton, EmptyState, Modal, Seg, Stepper, Switch } from './index';
 import { confirmCopy, UNDO_HINT } from '../flow';
 import { classColorVars } from '../colors';
-import { addRoom, clickSeat, duplicateRoom, fillDefaultTracks, isSeatActive, patchRoom, removeRoom, labelSplitNote, resize, roomLimitsOf, seatLimitNote, setRoomDivision, setRoomTrack } from '../rooms';
+import { addRoom, clickSeat, duplicateRoom, fillDefaultTracks, isSeatActive, patchRoom, removeRoom, labelSplitNote, resize, roomLimitsOf, seatLimitNote, stepMax, setRoomDivision, setRoomTrack } from '../rooms';
 import { rowDepthsOf, setAllDepth, setRowCount, toggleSeat } from '../ast/roomEdit';
 
 /** G22：班級教室＝名冊班級（跟名冊走、不能手動新增或刪除）；沒有對應班級的班級教室是「名冊已沒有這個班」的舊教室 */
@@ -33,14 +33,15 @@ function SeatThumb(p: { room: Classroom }) {
 /** 「＋」停用原因：到上限時寫在欄位下方（G21） */
 const limitReason = (r: Classroom, key: 'rows' | 'depth'): string | null => {
   const l = roomLimitsOf(r.kind);
-  return r[key] >= l[key] ? `${key === 'rows' ? '橫排' : '深位'}已達上限 ${l[key]}` : null;
+  if (r[key] >= l[key]) return `${key === 'rows' ? '橫排' : '深位'}已達上限 ${l[key]}`;
+  return r[key] >= stepMax(r, key, l) ? `總座位已達上限 ${l.cap}` : null; // D154：另一邊已經大了，這邊再加會超過總座位上限
 };
 
 /**
  * 教室清單（全站同一個元件；稿 v2.61、DESIGN 10.31、D138）：考試 ③（學測、會考、分科）、共用設定教室清單、首次設定精靈步驟 4 都用它。
  * 一間一列（可換行，不橫向捲動）：〔考試才有〕列入開關＋名稱｜座位縮圖與排×深位｜座位統計｜〔選用〕組別、額外欄｜「編輯座位」「刪除」；
  * 點整列或「編輯座位」就地展開座位編輯區（一次一間），考試頁上方可選套用範圍（只這次考試／共用設定）。
- * G22：班級教室跟名冊班級走，不能新增、不能刪；只能新增預備教室。座位上限：班級教室 7×7、預備教室 7 排×8 深位（G30）。
+ * G22：班級教室跟名冊班級走，不能新增、不能刪；只能新增預備教室。座位上限：班級、預備教室一律橫排、深位各 8、總座位 56（D154）。
  */
 export function RoomList(p: {
   rooms: Classroom[]; paper: LabelPaper; onChange: (r: Classroom[]) => void;
@@ -101,7 +102,7 @@ export function RoomList(p: {
   const addLabel = p.addLabel === undefined ? (junior ? null : '＋ 新增預備教室') : p.addLabel;
   return (
     <div class="rw">
-      <p class="muted small">座位上限：班級教室最多 7 排×7 深位（49 座）；{reserveName}最多 7 排×8 深位（56 座）。點整列或「編輯座位」調整座位排列。</p>
+      <p class="muted small">座位上限：橫排、深位各最多 8，總座位不超過 56（8×7、7×8 可以，8×8 不行）。點整列或「編輯座位」調整座位排列。</p>
       <div class="roomlist">
         {shown.map((shared, idx) => {
           const on = p.selected?.includes(shared.id) ?? false;
@@ -284,13 +285,13 @@ export function SeatGrid(p: { room: Classroom; paper: LabelPaper; cap: number; l
   return (
     <div class="roomedit prev">
       <div class="row" style="justify-content:space-between"><div><h4>{p.examOnly ? <><Badge tone="info">本次專用</Badge>調整本次座位表：</> : '編輯座位表：'}{room.name}</h4>
-        <p class="small muted">橫排 {room.rows} × 深位 {varied ? `每排不同（${per.join('、')}）` : room.depth} ＝ {slots} 個座位，可排 {room.seatCount}、不排 {slots - room.seatCount}。這類教室最多 {p.lim.rows} 排×{p.lim.depth} 深位（{p.cap} 個座位）。{p.examOnly ? '這裡的調整只用在這次考試，不會改動共用教室清單。' : ''}</p>
+        <p class="small muted">橫排 {room.rows} × 深位 {varied ? `每排不同（${per.join('、')}）` : room.depth} ＝ {slots} 個座位，可排 {room.seatCount}、不排 {slots - room.seatCount}。橫排、深位各最多 {p.lim.rows}，總座位最多 {p.cap}。{p.examOnly ? '這裡的調整只用在這次考試，不會改動共用教室清單。' : ''}</p>
         {seatLimitNote(room) && <p class="small muted">{seatLimitNote(room)}</p>}
         {labelSplitNote(room, p.paper) && <p class="small hint">{labelSplitNote(room, p.paper)}</p>}</div>
         <Button small onClick={p.onClose}>收合</Button></div>
       <div class="row">
-        <div class="field" style="gap:2px"><span class="small muted">橫排（左右）</span><Stepper label="橫排" value={room.rows} max={p.lim.rows} onChange={setRows} /></div>
-        <div class="field" style="gap:2px"><span class="small muted">深位（前後，整間）</span><Stepper label="深位" value={room.depth} max={p.lim.depth} onChange={setDepth} /></div>
+        <div class="field" style="gap:2px"><span class="small muted">橫排（左右）</span><Stepper label="橫排" value={room.rows} max={stepMax(room, 'rows')} onChange={setRows} /></div>
+        <div class="field" style="gap:2px"><span class="small muted">深位（前後，整間）</span><Stepper label="深位" value={room.depth} max={stepMax(room, 'depth')} onChange={setDepth} /></div>
       </div>
       <p class="muted small">座標是「排－深位」。點座位切換「可排／不排」（不排會打斜線，例如壞掉的桌椅或走道）；不排的座位不會安排考生，人由前往後連續坐。</p>
       <div class="pgrid" style={{ gridTemplateColumns: `repeat(${room.rows}, minmax(0, 52px))` }} role="grid" aria-label={`${room.name}座位表`}>

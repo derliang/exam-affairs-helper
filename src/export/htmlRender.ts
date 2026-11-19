@@ -103,7 +103,7 @@ function labelHtml(p: LabelPageModel, o: HtmlOptions): string {
   const paper = PAPER_MM[layout.paper];
   // 稿件：格高最多 35mm，格子下方才留得出注意事項與頁尾（Word 版待下一步對齊後再共用）
   const gs = labelGridSize(p);
-  const cell = labelBoxMm(layout, gs.rows, p.notes.length);
+  const cell = labelBoxMm(layout, gs.rows, p.notes.length, gs.cols);
   const cells = labelGrid(p)
     .map((m) => (layout.wide ? wideHtml(m, cell.w, cell.h, layout.paper === 'B4') : cellHtml(m, cell.w, cell.h, 'label', layout.paper === 'B4')))
     .join('');
