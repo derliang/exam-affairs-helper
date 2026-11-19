@@ -117,12 +117,33 @@ function takeExamRooms(rooms: readonly Classroom[], start: number, need: number,
 
 /**
  * 抽離自習的教室（WP-2，D141）：每組節次各間收幾人照舊（依教室順序坐滿，最後一間收剩下的），
- * 誰去哪一間改成「盡量同一地點」：①前幾組節次已有自習教室的人，這組有同一間且還有空位就回同一間；
+ * 誰去哪一間改成「盡量同一地點」：①前幾組節次待過的自習教室（先待過的優先），這組有同一間且還有空位就回去；
  * ②其餘依班級、座號，去同班同學已經最多的那間（同班盡量同處），一樣多就依教室順序。
- * 沒有人有前幾組的教室時，結果與「依教室順序、班級座號切片」完全相同。
+ * ③G32②（D144）：同時算舊排法（依教室順序、班級座號切片），哪個讓「去沒待過的教室」的人比較少就用哪個（一樣多用①②），
+ *   最後整份再與舊排法比「換教室人次」，取少的（保證不比舊排法差）。沒有人有前幾組的教室時，結果與舊排法完全相同。
  */
 function stickyStudyRooms(studyCodes: readonly string[][], roomsOf: readonly Classroom[][]): Map<string, string>[] {
-  const anchor = new Map<string, string>();
+  const sticky = stickyPass(studyCodes, roomsOf);
+  const plain = studyCodes.map((codes, gi) => sliceRooms(codes, roomsOf[gi]!));
+  return studyMoves(plain) < studyMoves(sticky) ? plain : sticky; // 整份比：保證不比舊排法多換教室
+}
+/** 依教室順序、班級座號切片（舊排法） */
+function sliceRooms(codes: readonly string[], rooms: readonly Classroom[]): Map<string, string> {
+  const out = new Map<string, string>();
+  let i = 0;
+  for (const r of rooms) for (const c of codes.slice(i, (i += r.seatCount))) out.set(c, r.id);
+  return out;
+}
+/** 換自習教室人次：每人待過的自習教室數 − 1 加總 */
+function studyMoves(plan: readonly Map<string, string>[]): number {
+  const rooms = new Map<string, Set<string>>();
+  for (const m of plan) for (const [c, id] of m) rooms.set(c, (rooms.get(c) ?? new Set<string>()).add(id));
+  let n = 0;
+  for (const s of rooms.values()) n += s.size - 1;
+  return n;
+}
+function stickyPass(studyCodes: readonly string[][], roomsOf: readonly Classroom[][]): Map<string, string>[] {
+  const seen = new Map<string, string[]>(); // 前幾組待過的自習教室，依先後
   const classOf = (c: string) => parseStudentCode(c)?.classNo ?? c;
   return studyCodes.map((codes, gi) => {
     const rooms = roomsOf[gi]!;
@@ -137,9 +158,10 @@ function stickyStudyRooms(studyCodes: readonly string[][], roomsOf: readonly Cla
       const k = `${id}|${classOf(c)}`;
       classIn.set(k, (classIn.get(k) ?? 0) + 1);
     };
+    const slice = sliceRooms(codes, rooms);
     for (const c of codes) {
-      const a = anchor.get(c);
-      if (a !== undefined && (cap.get(a) ?? 0) > 0) put(c, a);
+      const a = (seen.get(c) ?? []).find((id) => (cap.get(id) ?? 0) > 0);
+      if (a !== undefined) put(c, a);
     }
     for (const c of codes) {
       if (out.has(c)) continue;
@@ -152,8 +174,10 @@ function stickyStudyRooms(studyCodes: readonly string[][], roomsOf: readonly Cla
       }
       if (best !== undefined) put(c, best);
     }
-    for (const [c, id] of out) if (!anchor.has(c)) anchor.set(c, id);
-    return out;
+    const fresh = (m: Map<string, string>) => [...m].filter(([c, id]) => seen.has(c) && !seen.get(c)!.includes(id)).length;
+    const pick = fresh(slice) < fresh(out) ? slice : out;
+    for (const [c, id] of pick) { const l = seen.get(c) ?? []; if (!l.includes(id)) l.push(id); seen.set(c, l); }
+    return pick;
   });
 }
 
