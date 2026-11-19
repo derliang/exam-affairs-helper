@@ -125,6 +125,9 @@ export function downloadGate(o: { stale: boolean; blocked: boolean; nothing: boo
   return o.stale ? '排座已過期，請先重新排座。' : o.nothing ? '尚未勾選任何下載內容，請先在上方勾選。' : o.blocked ? '上方還有必須處理的問題，處理後才能下載。' : '';
 }
 
+/** #397：記下這場考試下載過檔案（時間用 ISO；與 stampModified 一樣由呼叫端提供現在時間） */
+export const markDownloaded = (doc: Doc, examId: string, now = new Date()): Doc => ({ ...doc, exams: doc.exams.map((e) => (e.id === examId ? { ...e, downloadedAt: now.toISOString() } : e)) });
+
 export const kb = (n: number) => (n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
 
 /** ⑥ 匯出（DESIGN 10.4、D29、D57、D69）：Word 為主、PDF 為輔；每類合併成一個多頁檔 */
@@ -137,6 +140,8 @@ export function Step6(p: {
   unresolvedDiffs?: number;
   unappliedDiffs?: number;
   onGoStep: (n: 2 | 3 | 5) => void;
+  /** 下載後記錄「已下載」（#397，供列表進度條）；沒傳就不記錄 */
+  onChange?: (d: Doc) => void;
   /** 完成後「回模擬考列表」 */
   onExams?: () => void;
   /** 測試或預覽可注入字型載入；預設延遲載入真實字型 */
@@ -209,6 +214,7 @@ export function Step6(p: {
       await downloadMany(out.filter((x) => x.mime !== 'text/html'));
       setDoneFmt(fmt);
       setResults(out);
+      p.onChange?.(markDownloaded(p.doc, exam.id));
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
     } finally {
