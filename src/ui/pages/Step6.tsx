@@ -302,7 +302,7 @@ export function Step6(p: {
             <b>{doneFmt === 'word' ? '下載已送出' : '已開啟列印用頁面'}</b>
             {doneFmt === 'word' ? noticeOf(results) : '，請在新視窗選「列印」→ 目的地選「另存為 PDF」。'}
           </Alert>
-          <div style="overflow-x:auto"><table class="t compact">
+          <div class="rtw"><table class="t compact rt-t rt-a">
             <thead><tr><th>檔案</th><th>內容</th><th>大小</th>{doneFmt === 'word' && <th></th>}</tr></thead>
             <tbody>{results.map((f) => (
               <tr key={f.name}><td><b>{f.name}</b></td><td class="muted">{f.desc}</td><td>{kb(typeof f.data === 'string' ? f.data.length : f.data.byteLength)}</td>{doneFmt === 'word' && <td>{f.mime === 'text/html' ? <Button small onClick={() => openPrintPage(f)}>再開啟</Button> : <Button small onClick={() => download(f)}>再下載</Button>}</td>}</tr>

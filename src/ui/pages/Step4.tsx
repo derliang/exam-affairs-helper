@@ -141,8 +141,8 @@ export function Step4(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
             </Alert>
           )
           : (
-            <div class="scroll">
-              <table class="t compact">
+            <div class="rtw">
+              <table class="t compact rt-t rt-a">
                 <thead><tr><th>科目</th><th>抽離考試</th><th>抽離自習</th>{preview.special.length > 0 && <th>單人特例</th>}</tr></thead>
                 <tbody>
                   {exam.subjects.map((s) => {

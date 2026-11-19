@@ -42,8 +42,8 @@ export function LeaveCard(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) =>
             <div class={maxAll > cap ? 'bad' : ''}><small>綜合教室自習容量</small><strong>{cap} 位</strong></div>
           </div>
         )}
-      <div class="scroll">
-        <table class="t compact">
+      <div class="rtw">
+        <table class="t compact rt-t rt-a">
           <thead><tr><th>班級</th><th>報名人數</th><th>請假人數</th></tr></thead>
           <tbody>
             {classes.map((c) => (
