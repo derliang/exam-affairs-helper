@@ -15,7 +15,7 @@ export interface FlowIssue {
   /** 要去哪一步處理 */
   step: StepNo;
   text: string;
-  /** 「前往」按鈕上的字，例：去 ② 匯入考試名單 */
+  /** 「前往」按鈕上的字，例：到 ② 匯入考試名單 › */
   fix: string;
   /** block＝擋下後面的步驟；warn＝提醒 */
   level: 'block' | 'warn';
@@ -67,12 +67,12 @@ export function flowOf(doc: Doc, exam: ExamConfig, current: StepNo): Flow {
 
   // ① 考試設定
   const s1 = exam.subjects.length > 0;
-  if (!s1) add({ step: 1, text: '① 考科表是空的，沒有任何科目', fix: '去 ① 還原預設考科', level: 'block' });
+  if (!s1) add({ step: 1, text: '① 考科表是空的，沒有任何科目', fix: '到 ① 還原預設考科 ›', level: 'block' });
 
   // ② 考試名單與比對（沿用排座的擋下條件，文字統一）
   const blockers = seatingBlockers(doc, exam);
   const b2 = blockers.filter((b) => b.step === 2);
-  for (const b of b2) add({ step: 2, text: b.text, fix: b.text.includes('比對') ? '去 ② 處理比對' : '去 ② 匯入考試名單', level: 'block' });
+  for (const b of b2) add({ step: 2, text: b.text, fix: b.text.includes('比對') ? '到 ② 處理比對 ›' : '到 ② 匯入考試名單 ›', level: 'block' });
   const s2 = students > 0 && b2.length === 0;
 
   let s3: boolean; let s4: boolean; let s5: StepState;
@@ -84,17 +84,17 @@ export function flowOf(doc: Doc, exam: ExamConfig, current: StepNo): Flow {
   } else {
     // ③ 教室
     const classRooms = rooms.filter((r) => r.kind === 'class');
-    if (classRooms.length === 0) add({ step: 3, text: '③ 還沒有選教室', fix: '去 ③ 勾選教室', level: 'block' });
+    if (classRooms.length === 0) add({ step: 3, text: '③ 還沒有選教室', fix: '到 ③ 勾選教室 ›', level: 'block' });
     else if (students > 0 && checkSeats(classSeats, students).level === 'block') {
-      add({ step: 3, text: `③ 座位 ${classSeats} 少於考生 ${students}，還差 ${students - classSeats} 個`, fix: '去 ③ 增加座位', level: 'block', need: students, have: classSeats, lack: students - classSeats });
+      add({ step: 3, text: `③ 座位 ${classSeats} 少於考生 ${students}，還差 ${students - classSeats} 個`, fix: '到 ③ 增加座位 ›', level: 'block', need: students, have: classSeats, lack: students - classSeats });
     }
     const noTrack = roomsMissingTrack(classRooms, exam.division);
-    if (noTrack.length) add({ step: 3, text: `③ 教室「${noTrack.map((r) => r.name).join('、')}」還沒指定理組／文組，排座時分不出誰坐哪間`, fix: '去 ③ 指定理組／文組', level: 'block' });
+    if (noTrack.length) add({ step: 3, text: `③ 教室「${noTrack.map((r) => r.name).join('、')}」還沒指定理組／文組，排座時分不出誰坐哪間`, fix: '到 ③ 指定理組／文組 ›', level: 'block' });
     s3 = classRooms.length > 0 && spare >= 0 && noTrack.length === 0;
 
     // ④ 標示與抽離
     const b4 = blockers.filter((b) => b.step === 4);
-    for (const b of b4) add({ step: 4, text: b.text, fix: '去 ④ 選標示', level: 'block' });
+    for (const b of b4) add({ step: 4, text: b.text, fix: '到 ④ 選標示 ›', level: 'block' });
     s4 = s2 && s3 && b4.length === 0; // 會考不需要這一步，needsMarks 為 false 時 b4 必為空
 
     // ⑤ 排座、過期、驗證
@@ -102,13 +102,13 @@ export function flowOf(doc: Doc, exam: ExamConfig, current: StepNo): Flow {
     const stale = !!result && isStale(doc, exam);
     s5 = 'todo';
     if (!result) {
-      add({ step: 5, text: '⑤ 還沒有排座結果', fix: '去 ⑤ 開始排座', level: 'block', todo: true });
+      add({ step: 5, text: '⑤ 還沒有排座結果', fix: '到 ⑤ 開始排座 ›', level: 'block', todo: true });
     } else if (stale) {
       s5 = 'stale';
-      add({ step: 5, text: '⑤ 名單或設定在排座後改過，需要重新排座', fix: '去 ⑤ 重新排座', level: 'block' });
+      add({ step: 5, text: '⑤ 名單或設定在排座後改過，需要重新排座', fix: '到 ⑤ 重新排座 ›', level: 'block' });
     } else {
       const bad = validationChecks(doc, exam, result).filter((c) => !c.ok);
-      if (bad.length) add({ step: 5, text: `⑤ 驗證有 ${bad.length} 項不通過：${bad.map((c) => c.title).join('、')}`, fix: '去 ⑤ 看驗證', level: 'block' });
+      if (bad.length) add({ step: 5, text: `⑤ 驗證有 ${bad.length} 項不通過：${bad.map((c) => c.title).join('、')}`, fix: '到 ⑤ 看驗證 ›', level: 'block' });
       else s5 = 'done';
     }
   }
@@ -126,7 +126,7 @@ export function flowOf(doc: Doc, exam: ExamConfig, current: StepNo): Flow {
   for (const no of [1, 2, 3, 4] as StepNo[]) {
     if (no === 4 && !needsMarks(exam)) continue;
     if (done[no] !== 'done' && !issues.some((i) => i.step === no)) {
-      add({ step: no, text: `${'①②③④'[no - 1]} ${names[no - 1]}尚未完成`, fix: '前往處理', level: 'warn', todo: true });
+      add({ step: no, text: `${'①②③④'[no - 1]} ${names[no - 1]}尚未完成`, fix: '到該步處理 ›', level: 'warn', todo: true });
     }
   }
   // G5：依步驟編號排序（同一步內真問題在前、「尚未完成」在後）；摘要列只提醒目前步驟之前的步驟
@@ -152,7 +152,7 @@ export function nextAction(flow: Flow, current: StepNo): NextAction {
   let to = (current + 1) as StepNo;
   if (flow.steps.find((s) => s.no === to)?.state === 'skip' && to < 6) to = (to + 1) as StepNo;
   const name = `${'①②③④⑤⑥'[to - 1]} ${stepNamesOf(flow.kind)[to - 1]}`;
-  const label = `前往 ${name}`; // G33：沒有「完成此步」；完成狀態由資料算出，按下一步不需另外標記
+  const label = `到 ${name} ›`; // G33：沒有「完成此步」；完成狀態由資料算出，按下一步不需另外標記
   // 前面的步驟（含目前這步）還有 block 問題就標示；進 ⑥ 時 ⑤ 本身也要完成
   const need = prerequisites(flow, to);
   const first = need[0];

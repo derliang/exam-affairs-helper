@@ -243,9 +243,9 @@ export function Step6(p: {
           <b>還不能下載：</b>
           <ul>{shownErrors.map((e) => <li key={e}>{e}</li>)}</ul>
           <div class="row" style="margin-top:8px">
-            {shownErrors.some((e) => e.startsWith('缺考試名單')) && <Button small kind="primary" onClick={() => p.onGoStep(2)}>去 ② 匯入考試名單</Button>}
+            {shownErrors.some((e) => e.startsWith('缺考試名單')) && <Button small kind="primary" onClick={() => p.onGoStep(2)}>到 ② 匯入考試名單 ›</Button>}
             {shownErrors.some((e) => e.startsWith('缺排座結果') || e.startsWith('排座已過期') || e.startsWith('排座驗證未通過')) && <Button small kind="primary" onClick={() => p.onGoStep(5)}>回 ⑤ 排座</Button>}
-            {shownErrors.some((e) => e.startsWith('缺教室')) && <Button small kind="primary" onClick={() => p.onGoStep(3)}>去 ③ 勾選教室</Button>}
+            {shownErrors.some((e) => e.startsWith('缺教室')) && <Button small kind="primary" onClick={() => p.onGoStep(3)}>到 ③ 勾選教室 ›</Button>}
           </div>
         </Alert></div>
       )}

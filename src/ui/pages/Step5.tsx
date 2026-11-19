@@ -21,7 +21,7 @@ const taipei = (iso: string) => new Date(iso).toLocaleString('zh-TW', { timeZone
 function SeatError(p: { errors: string[]; onStep: (n: StepNo) => void }) {
   const seats = p.errors.some((e) => /座位不足|不夠|容量/.test(e));
   return (
-    <Alert tone="danger" action={<Button onClick={() => p.onStep(3)}>前往 ③ 教室設定</Button>}>
+    <Alert tone="danger" action={<Button onClick={() => p.onStep(3)}>到 ③ 教室設定 ›</Button>}>
       <b>排座失敗，座位表沒有更新：</b>
       <ul style="margin:6px 0 0 18px">{p.errors.slice(0, 5).map((e) => <li key={e}>{e}</li>)}</ul>
       {p.errors.length > 5 && <div class="small">…共 {p.errors.length} 項</div>}
@@ -64,7 +64,7 @@ export function Step5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
         <div class="card stack">
           <Alert tone="danger"><b>還不能排座：</b>下面的事項要先處理完，系統不會輸出不合規則的結果。</Alert>
           {blockers.map((b) => (
-            <div class="blk-row" key={b.text}><span>{b.text}</span><Button small onClick={() => p.onStep(b.step)}>{`前往 ${'①②③④⑤⑥'[b.step - 1]} 處理`}</Button></div>
+            <div class="blk-row" key={b.text}><span>{b.text}</span><Button small onClick={() => p.onStep(b.step)}>{`到 ${'①②③④⑤⑥'[b.step - 1]} 處理 ›`}</Button></div>
           ))}
         </div>
         {result && <p class="small muted">之前排過的座位表只供參考，不能直接使用；處理完後請重新排座。</p>}
@@ -204,7 +204,7 @@ export function Step5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
           <div><h3>各時段自習</h3><p class="small muted">不考的人也要有位子：被標 ✕ 的抽離自習去預備教室（有自習座位表，不出標籤），其他不考的人留在原班教室。</p></div>
           <StudySlotTable sc={sc} classNames={new Map(classes.map((c) => [c.no, c.name]))} />
           <StudyNeedDetail sc={sc} compact />
-          {!sc.ok && <div class="row"><Button onClick={() => p.onStep(3)}>前往 ③ 教室設定，增加預備教室或座位</Button></div>}
+          {!sc.ok && <div class="row"><Button onClick={() => p.onStep(3)}>到 ③ 教室設定 ›，增加預備教室或座位</Button></div>}
         </div>
       )}
 

@@ -76,20 +76,20 @@ export function AstStep5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
   if (examEntries(doc, exam).length === 0) {
     return (
       <section class="stack"><StepHead title="⑤ 時段教室與座位" blurb={AST_STEP_BLURBS[4]} />
-        <Alert tone="info" action={<Button onClick={() => p.onStep(2)}>前往 ② 考試名單</Button>}><b>還沒有考試名單。</b>教室用途與座位要依考試名單排，請先到 ② 匯入考生名單。</Alert></section>
+        <Alert tone="info" action={<Button onClick={() => p.onStep(2)}>到 ② 考試名單 ›</Button>}><b>還沒有考試名單。</b>教室用途與座位要依考試名單排，請先到 ② 匯入考生名單。</Alert></section>
     );
   }
   if (!plan) {
     return (
       <section class="stack"><StepHead title="⑤ 時段教室與座位" blurb={AST_STEP_BLURBS[4]} />
-        <Alert tone="info" action={<Button onClick={() => p.onStep(3)}>前往 ③ 教室與自習空間</Button>}><b>還沒有勾選可用的教室。</b>請先到 ③ 勾選班級教室與綜合教室。</Alert></section>
+        <Alert tone="info" action={<Button onClick={() => p.onStep(3)}>到 ③ 教室與自習空間 ›</Button>}><b>還沒有勾選可用的教室。</b>請先到 ③ 勾選班級教室與綜合教室。</Alert></section>
     );
   }
 
   if (plan.infeasible) {
     return (
       <section class="stack"><StepHead title="⑤ 時段教室與座位" blurb={AST_STEP_BLURBS[4]} />
-        <Alert tone="danger" action={<Button onClick={() => p.onStep(3)}>前往 ③ 教室與自習空間</Button>}><b>座位不夠，排不出方案。</b>有時段的考生比本次勾選的考場座位多。請到 ③ 勾選更多教室或增加座位，補足後這裡才會出現教室用途與座位圖。</Alert></section>
+        <Alert tone="danger" action={<Button onClick={() => p.onStep(3)}>到 ③ 教室與自習空間 ›</Button>}><b>座位不夠，排不出方案。</b>有時段的考生比本次勾選的考場座位多。請到 ③ 勾選更多教室或增加座位，補足後這裡才會出現教室用途與座位圖。</Alert></section>
     );
   }
   const roomData = new Map(effectiveRooms(exam, doc.settings.classrooms).map((c) => [c.id, c]));
@@ -200,7 +200,7 @@ export function AstStep5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
           );
         })}
         {unplaced > 0 && plan.pending.length === 0 && (
-          <Alert tone="danger" action={<Button small onClick={() => p.onStep(3)}>前往 ③ 調整</Button>}>
+          <Alert tone="danger" action={<Button small onClick={() => p.onStep(3)}>到 ③ 調整 ›</Button>}>
             <b>有 {unplaced} 人排不進自習空間，也沒有可用的替代教室。</b>請到 ③ 調高自習容量、勾選更多綜合教室，或開啟「允許自習去他班原班教室」。
           </Alert>
         )}

@@ -119,7 +119,7 @@ export function AstStep6(p: { doc: Doc; exam: ExamConfig; onGoStep: (n: 2 | 3 | 
       <StepHead title="⑥ 下載" blurb={AST_STEP_BLURBS[5]} />
       <ReconcilePanel r={rec} gate={gate} at={at} onRecheck={() => setRecheck((n) => n + 1)} onGo={(n) => p.onGoStep(n)} />
       {blockers.map((b) => (
-        <Alert key={b.text} tone="danger" action={<Button small kind="primary" onClick={() => p.onGoStep(b.step)}>{b.step === 2 ? '去 ② 考試名單' : b.step === 3 ? '去 ③ 教室' : '去 ⑤ 看方案'}</Button>}><b>還不能下載：</b>{b.text}</Alert>
+        <Alert key={b.text} tone="danger" action={<Button small kind="primary" onClick={() => p.onGoStep(b.step)}>{b.step === 2 ? '到 ② 考試名單 ›' : b.step === 3 ? '到 ③ 教室 ›' : '到 ⑤ 看方案 ›'}</Button>}><b>還不能下載：</b>{b.text}</Alert>
       ))}
       {built && !built.ok && <Alert tone="danger"><b>這份方案的標籤排不出來</b>：{built.error}。請回 ③ 調整教室的橫排或深位。</Alert>}
       {p.onChange && !exam.archived && <PhaseCard doc={doc} exam={exam} onChange={p.onChange} />}

@@ -71,18 +71,18 @@ export function AstStep4(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
       <PhaseGuard exam={exam}>
       <ScheduleCard doc={doc} exam={exam} onChange={p.onChange} />
       {!hasList && (
-        <Alert tone="info" action={<Button onClick={() => p.onStep(2)}>前往 ② 考試名單</Button>}>
+        <Alert tone="info" action={<Button onClick={() => p.onStep(2)}>到 ② 考試名單 ›</Button>}>
           <b>還沒有考試名單。</b>兩種模式的結果要依考試名單算，請先到 ② 匯入考生名單；選好的模式會保留。
         </Alert>
       )}
       {hasList && !plans[mode] && (
-        <Alert tone="info" action={<Button onClick={() => p.onStep(3)}>前往 ③ 教室與自習空間</Button>}>
+        <Alert tone="info" action={<Button onClick={() => p.onStep(3)}>到 ③ 教室與自習空間 ›</Button>}>
           <b>還沒有勾選可用的教室。</b>方案要依教室算，請先到 ③ 勾選班級教室與綜合教室。
         </Alert>
       )}
 
       {issues.length > 0 && (
-        <Alert tone="warn" action={<Button onClick={() => p.onStep(3)}>前往 ③ 教室與自習空間</Button>}>
+        <Alert tone="warn" action={<Button onClick={() => p.onStep(3)}>到 ③ 教室與自習空間 ›</Button>}>
           <b>有 {issueN} 位參加者沒有可留的原班教室。</b>
           {issues.map((i) => i.detail).join('；')}。
           這些人不考試時沒地方留在原班，只能去綜合教室自習，「少移動優先」也幫不上忙。請把班級教室名稱改成與班級名稱一致（可加「高三」等年級前綴），且已在 ③ 勾選、自習容量夠。

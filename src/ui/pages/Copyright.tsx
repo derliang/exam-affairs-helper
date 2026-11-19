@@ -46,7 +46,7 @@ export function Copyright(p: { backLabel?: string; onBack: () => void; onPrivacy
   return (
     <section class="lic">
       <div class="pagehead">
-        <Button kind="ghost" onClick={p.onBack}>← {p.backLabel ? `回到 ${p.backLabel}` : '返回'}</Button>
+        <Button kind="ghost" onClick={p.onBack}>← {p.backLabel ? `回到 ${p.backLabel}` : '回到上一頁'}</Button>
         <span class="small muted">使用授權｜{APP_NAME}</span>
       </div>
       <article class="stack lic-doc">

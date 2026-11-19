@@ -121,10 +121,10 @@ export function Step3(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
               <p class="small muted">每班的班級教室已依學生名單自動帶出，只要調整座位配置；班級教室跟名冊班級走、不能手動新增；手動新增的只有預備教室。</p>
               <More title="說明：座位表與教室來源">{senior ? '預備教室座位另計，不計入教室座位合計。' : ''}教室清單是所有模擬考共用的：修改教室會影響其他使用這間教室的模擬考；只想改這次考試的座位，請在「編輯座位」上方選「只這次考試」。</More>
             </div>
-            {p.onToRooms && <Button onClick={p.onToRooms}>到共用設定看教室清單</Button>}
+            {p.onToRooms && <Button onClick={p.onToRooms}>到共用設定的教室清單 ›</Button>}
           </div>
           {rosterCount === 0 && (
-            <Alert tone="info" action={p.onToRoster && <Button small onClick={p.onToRoster}>到學生名單</Button>}><b>還沒有學生名單：</b>匯入學生名單後，會依班級自動帶出每班的班級教室。</Alert>
+            <Alert tone="info" action={p.onToRoster && <Button small onClick={p.onToRoster}>到學生名單 ›</Button>}><b>還沒有學生名單：</b>匯入學生名單後，會依班級自動帶出每班的班級教室。</Alert>
           )}
           {rosterCount > 0 && lackRooms > 0 && exam.classroomIds.length > 0 && (
             <Alert tone="warn" action={<Button small kind="primary" onClick={() => p.onChange(syncClassRooms(doc, exam))}>依班級補齊教室</Button>}>有 {lackRooms} 個班級還沒有列入本次考試的班級教室：{classRoomRows(doc, exam).filter((r) => !r.inExam).map((r) => r.cls.name).join('、')}。</Alert>
