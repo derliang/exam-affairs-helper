@@ -1,6 +1,6 @@
 import { useEffect } from 'preact/hooks';
 import type { ExamConfig, RoomSeatLayout, Track } from '../../data';
-import { Alert, Badge, Button, More, Seg, StepHead } from '../components';
+import { Alert, Badge, Button, EmptyState, More, Seg, StepHead } from '../components';
 import { RoomList } from '../components/RoomList';
 import { PrepCard } from './PrepCard';
 import { classRoomRows, missingClassRooms, syncClassRooms } from '../classRooms';
@@ -110,7 +110,7 @@ export function Step3(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
                 </div>
               ))}
             </div>
-            {classes.length === 0 && <p class="small muted">共用設定還沒有高中部的班級。</p>}
+            {classes.length === 0 && <EmptyState title="共用設定還沒有高中部的班級" />}
             {noTrack > 0 && <Alert tone="warn">有 {noTrack} 個班級還沒分理組、文組，排座會被擋下。</Alert>}
           </>
         ) : <Alert tone="info">會考不分文理組，所有班級打散到所有教室。</Alert>}

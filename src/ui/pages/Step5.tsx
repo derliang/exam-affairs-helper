@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import type { ExamConfig, SeatingResult } from '../../data';
 import { seatLabel, studentCode } from '../../data';
 import { mixedMarkCodes, overridePurpose } from '../../core/detach';
-import { Alert, Badge, Button, ConfirmButton, Modal, More, Seg, StatsBar, StepHead } from '../components';
+import { Alert, Badge, Button, ConfirmButton, EmptyState, Modal, More, Seg, StatsBar, StepHead } from '../components';
 import { confirmCopy } from '../flow';
 import { ChartLegend, SeatChart } from '../components/SeatChart';
 import {
@@ -235,7 +235,7 @@ export function Step5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
             <Button disabled={stale} onClick={() => setManaging(true)}>管理覆寫</Button>
           </div>
           {overrides.length === 0
-            ? <p class="small muted">目前沒有個別覆寫。</p>
+            ? <EmptyState title="目前沒有個別覆寫" />
             : overrides.map((o) => (
               <div class="blk-row" key={o.code}>
                 <span><b>{o.code}</b>　{names.get(o.code) ?? ''}　→　{o.location}{notes.has(o.code) && <>　<Badge tone="warn">{notes.get(o.code)}</Badge></>}</span>
@@ -353,7 +353,7 @@ function ManageOverridesModal(p: {
   return (
     <Modal title="管理個別覆寫" onClose={p.onClose} actions={<Button kind="primary" onClick={p.onClose}>關閉</Button>}>
       {list.length === 0
-        ? <p class="small muted">目前沒有個別覆寫。</p>
+        ? <EmptyState title="目前沒有個別覆寫" />
         : list.map((o) => (
           <div class="blk-row" key={o.code}>
             <span><b>{o.code}</b>　{p.names.get(o.code) ?? ''}　→　{o.location}（{o.purpose === 'exam' ? '考試' : '自習'}）{p.notes.has(o.code) && <>　<Badge tone="warn">{p.notes.get(o.code)}</Badge></>}</span>

@@ -2,7 +2,7 @@ import { useState } from 'preact/hooks';
 import type { Classroom, ExamConfig } from '../../data';
 import { classroomSeats, effectiveRooms, rowDepthOf } from '../../data';
 import type { PlanRoom } from '../../core/astD99/contract';
-import { Alert, Badge, Button, StepHead } from '../components';
+import { Alert, Badge, Button, EmptyState, StepHead } from '../components';
 import { AST_STEP_BLURBS } from '../nav';
 import { normColor } from '../colors';
 import { updateExam, type Doc } from '../store';
@@ -244,7 +244,7 @@ export function AstStep5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
               onSeat={(code, row, depth) => { const r = updateExam(doc, exam.id, { astLocks: toggleSeatLock(exam, { slotId: slot.id, code, roomId, row, depth }) }); if (r.ok) p.onChange(r.doc); }} />
           </>
         )}
-        {!roomId && <p class="small muted">這個時段沒有考場。</p>}
+        {!roomId && <EmptyState title="這個時段沒有考場" />}
         <div class="small muted"><b>教室內怎麼排（第二階段，順序固定、不權衡）：</b>①同班依座號由小到大，同一排只放同一班、各班各自連續；②不同科盡量分排，同排混科只准「連續分區」、不准逐位交錯；③跨科盡量同座位，但輸給①（發卷核對與座號依序優先）。</div>
         {plan.out.mixedRows.length > 0 && <Alert tone="warn"><b>有 {plan.out.mixedRows.length} 排同排混科。</b>同排混科只准連續分區，發卷時請一科一區。</Alert>}
       </div>
