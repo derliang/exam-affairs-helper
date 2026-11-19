@@ -7,7 +7,7 @@ import { applyImport, clearRoster, examsAffectedByClear, planImport } from './ro
 import { PROBLEM_KIND_TEXT, problemBlockers, resolveProblems, type ProblemDecision } from './rosterProblems';
 import { Step2 } from './pages/Step2';
 import { RowFix } from './pages/RowFix';
-import { ClearRoster, CLEAR_KEYWORD } from './pages/RosterIO';
+import { ClearRoster } from './pages/RosterIO';
 import { demoDoc } from './repository';
 import { describeChange } from './describeChange';
 import { reseat } from './seating';
@@ -110,7 +110,6 @@ describe('G9 刪除全部名單', () => {
     expect(html).not.toContain('disabled');
     const empty = renderToString(<ClearRoster doc={clearRoster(doc, 'senior')} division="senior" onChange={noop} />);
     expect(empty).toContain('disabled');
-    expect(CLEAR_KEYWORD).toBe('刪除全部名單');
   });
 });
 

@@ -182,10 +182,11 @@ export function TopBar(p: { backLabel?: string; onBack?: () => void }): JSX.Elem
 }
 
 /** 破壞性動作的二次確認：說明會失去什麼，並提示可用「↶ 復原」找回（DESIGN 10.7） */
-export function ConfirmModal(p: { copy: ConfirmCopy; onConfirm: () => void; onClose: () => void; undoable?: boolean }) {
+export function ConfirmModal(p: { copy: ConfirmCopy; onConfirm: () => void; onClose: () => void; undoable?: boolean; children?: ComponentChildren }) {
   return (
     <Modal title={p.copy.title} onClose={p.onClose} actions={<><Button onClick={p.onClose}>取消</Button><Button kind="danger" onClick={() => { p.onClose(); p.onConfirm(); }}>{p.copy.confirm}</Button></>}>
       <p>{p.copy.body}</p>
+      {p.children}
       {p.undoable !== false && <p class="small muted" style="margin-top:8px">{UNDO_HINT}</p>}
     </Modal>
   );

@@ -7,7 +7,7 @@ import { createIncrementalSaver, createMemoryFS, loadDoc, saveDoc, studentCode, 
 import { buildLabelPages, defaultLabelLayout, labelFit, labelGrid, labelGridSize, labelNotePt, mmToTwip, renderDocx, renderPrintHtml, roomTooBigForLabel, PAPER_MM } from '../export';
 import { makeFixture } from '../export/fixtures';
 import { LABEL_PAGE_FIXED_MM, type ExportInput } from '../export/model';
-import { DeleteExamModal, deleteNameMatches, Exams } from './pages/Exams';
+import { DeleteExamModal, Exams } from './pages/Exams';
 import { downloadGate, Step6 } from './pages/Step6';
 import { AstStep6 } from './ast/AstStep6';
 import { demoDoc } from './repository';
@@ -91,18 +91,16 @@ describe('G1 列表：封存、還原、刪除（學測、分科、會考）', (
     expect(html).not.toContain('>改名<');
   });
 
-  it('刪除確認：寫明會刪什麼、不碰已下載的檔案；名稱要完全一致才能刪', () => {
+  it('刪除確認：寫明會刪什麼、不碰已下載的檔案；標準確認視窗，不用輸入名稱', () => {
     const e = docWith().exams[0]! as ExamConfig;
     const html = renderToString(<DeleteExamModal exam={e} onClose={noop} onConfirm={noop} />);
     expect(html).toContain('會刪掉');
     expect(html).toContain('考試設定');
     expect(html).toContain('已經下載到電腦的');
     expect(html).toContain('不會動');
-    expect(html).toMatch(/<button[^>]*disabled[^>]*>刪除這次模擬考<\/button>/);
-    expect(deleteNameMatches(e.name, e.name)).toBe(true);
-    expect(deleteNameMatches(e.name, ` ${e.name} `)).toBe(true);
-    expect(deleteNameMatches(e.name, e.name.slice(0, -1))).toBe(false);
-    expect(deleteNameMatches(e.name, '')).toBe(false);
+    expect(html).not.toContain('輸入考試名稱');
+    expect(html).not.toMatch(/<button[^>]*disabled[^>]*>刪除這次模擬考<\/button>/);
+    expect(html).toContain('刪除這次模擬考');
   });
 
   it('封存的分科考試：⑥ 不出現「確認定案」與版本紀錄卡（不能編輯）', () => {

@@ -221,6 +221,10 @@ export const confirmCopy = {
   resetSchedule: (label: string, isDefault: boolean): ConfirmCopy => (isDefault
     ? { title: '已與預設相同', body: '目前已與預設相同，不會有任何變更。', confirm: '確定' }
     : { title: '還原預設節次？', body: `要把「${label}」的節次與時長還原成預設嗎？你改過的科目與時長會被取代（上方「↶ 復原」可回上一步）。`, confirm: '還原預設' }),
+  /** #413 第 3 項：標籤注意事項「還原預設」同節次表，常駐可按、先確認；已是預設時只告知 */
+  resetNotes: (isDefault: boolean): ConfirmCopy => (isDefault
+    ? { title: '已與預設相同', body: '標籤注意事項目前已與預設相同，不會有任何變更。', confirm: '確定' }
+    : { title: '還原預設注意事項？', body: '你改過的標籤注意事項會被取代成預設內容（上方「↶ 復原」可回上一步）。', confirm: '還原預設' }),
   resetSubjects: (): ConfirmCopy => ({
     title: '還原本次的預設考科？', body: '你對本次考科表做的新增、修改、刪除都會被取代成預設值。', confirm: '還原本次考科',
   }),

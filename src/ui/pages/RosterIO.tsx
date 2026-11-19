@@ -1,7 +1,7 @@
 import { useRef, useState } from 'preact/hooks';
 import type { Division, Track } from '../../data';
 import { readXlsx, writeXlsx, XlsError, type RosterProblem } from '../../import';
-import { Alert, Button, FormatButton, Modal } from '../components';
+import { Alert, Button, ConfirmModal, FormatButton, Modal } from '../components';
 import { downloadBytes, XLSX_MIME } from '../download';
 import { applyImport, clearRoster, examsAffectedByClear, examsMadeStale, exportRows, importOutcome, planImport, templateRows, type UnknownClassAction } from '../rosterIO';
 import { CONFIRMABLE, PROBLEM_KIND_TEXT, problemBlockers, resolveProblems, type ProblemDecision } from '../rosterProblems';
@@ -14,7 +14,6 @@ import { RowFix } from './RowFix';
 const DIV_NAME: Record<Division, string> = { senior: '高中部', junior: '國中部' };
 
 /** G9 確認視窗要求輸入的字樣 */
-export const CLEAR_KEYWORD = '刪除全部名單';
 
 /**
  * 設定頁學生名單的 Excel 範本下載／匯入／下載（DESIGN 10.3，UI-09/10）。
@@ -161,24 +160,18 @@ export function RosterIO(p: { doc: Doc; division: Division; onChange: (d: Doc) =
  */
 export function ClearRoster(p: { doc: Doc; division: Division; onChange: (d: Doc) => void }) {
   const [open, setOpen] = useState(false);
-  const [text, setText] = useState('');
   const n = p.doc.rosters[p.division].length;
   const year = rosterYearOf(p.doc);
   const affected = open ? examsAffectedByClear(p.doc, p.division) : [];
-  const close = () => { setOpen(false); setText(''); };
-  const ok = text.trim() === CLEAR_KEYWORD;
   return (
     <>
       <span style="margin-left:auto" />
       <Button kind="danger" disabled={n === 0} title={n === 0 ? '名單已經是空的' : undefined} onClick={() => setOpen(true)}>刪除全部名單</Button>
       {open && (
-        <Modal title={`刪除全部名單：${DIV_NAME[p.division]}　${year} 學年度`} onClose={close}
-          actions={<><Button onClick={close}>取消</Button>
-            <Button kind="danger" disabled={!ok} onClick={() => { p.onChange(syncDiffs(clearRoster(p.doc, p.division))); close(); }}>刪除全部 {n} 人</Button></>}>
-          <Alert tone="danger">
-            <div>即將刪除<b>{DIV_NAME[p.division]}　{year} 學年度</b>的整份學生名單，共 <b>{n}</b> 人。其他學年度、另一個部別的名單與班級資料都不會動。</div>
-            <div style="margin-top:6px"><b>刪除後無法還原。</b>只有在關閉或重新整理頁面之前，才能按頁首「↶ 復原」找回；想保險請先匯出備份。</div>
-          </Alert>
+        <ConfirmModal
+          copy={{ title: `刪除全部名單：${DIV_NAME[p.division]}　${year} 學年度`, body: `會刪掉：${DIV_NAME[p.division]}　${year} 學年度的整份學生名單，共 ${n} 人。不會動：其他學年度、另一個部別的名單與班級資料。`, confirm: `刪除全部 ${n} 人` }}
+          onConfirm={() => { p.onChange(syncDiffs(clearRoster(p.doc, p.division))); }} onClose={() => setOpen(false)}>
+          <Alert tone="danger"><b>刪除後無法還原。</b>只有在關閉或重新整理頁面之前，才能按頁首「↶ 復原」找回；想保險請先匯出備份。</Alert>
           <div><Button onClick={async () => downloadBytes(`${DIV_NAME[p.division]}${year}學年度學生名單備份.xlsx`, await writeXlsx(exportRows(p.doc.rosters[p.division]), '學生名單'), XLSX_MIME)}>先匯出備份（下載 .xlsx）</Button></div>
           {affected.length > 0 ? (
             <Alert tone="warn">
@@ -186,10 +179,7 @@ export function ClearRoster(p: { doc: Doc; division: Division; onChange: (d: Doc
               <ul style="margin:6px 0 0;padding-left:18px">{affected.map((a) => <li key={a.name}>{a.name}{a.willBeStale ? '（已排座，會變過期）' : ''}</li>)}</ul>
             </Alert>
           ) : <p class="small muted">目前沒有模擬考使用這份名單。</p>}
-          <div class="field"><label for="clear-kw">要刪除請輸入「{CLEAR_KEYWORD}」</label>
-            <input id="clear-kw" class="input" autocomplete="off" value={text} placeholder={CLEAR_KEYWORD} onInput={(e) => setText(e.currentTarget.value)} />
-            <span class="hint">輸入正確才能按「刪除全部」。</span></div>
-        </Modal>
+        </ConfirmModal>
       )}
     </>
   );
