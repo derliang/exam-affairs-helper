@@ -3,7 +3,7 @@ import type { FsRepository } from '../../data';
 import { Alert, More, PageHead } from '../components';
 import type { Repository } from '../repository';
 import type { Doc } from '../store';
-import { FolderCard, RestoreMissing, type FolderMode } from './FolderUi';
+import { FolderCard, RestoreMissing, RestoreNeedsAction, type FolderMode } from './FolderUi';
 
 /** 初始化：選資料夾 ＋ 拖拉資料夾（UI-03）。標題列不借用進度條樣式（UI-01/02） */
 /**
@@ -15,12 +15,13 @@ export function Init(p: { repo: Repository; fsSupported: boolean; fs?: FsReposit
   const [over, setOver] = useState(false);
   const [err, setErr] = useState('');
 
-  const run = async (f: () => Promise<boolean | void>) => {
+  const run = async (f: () => Promise<boolean | void>, explained = false) => {
     setBusy(true); setErr('');
     try {
       const r = await f();
-      // 使用者按了取消或沒授權寫入：資料夾沒有生效
-      if (r === false || !p.repo.hasFolder()) setErr('無法存取資料夾。請確認選的是資料夾（不是檔案）並允許讀寫，或改用「選擇資料夾」。');
+      // 使用者按了取消或沒授權寫入：資料夾沒有生效（還原上次資料夾失敗時，上方說明卡已寫明原因，不再重複通用句）
+      if (explained && !p.repo.hasFolder() && p.fs?.restoreProblem()) { /* 原因見說明卡 */ }
+      else if (r === false || !p.repo.hasFolder()) setErr('無法存取資料夾。請確認選的是資料夾（不是檔案）並允許讀寫，或改用「選擇資料夾」。');
       else p.onDone();
     } catch (e) {
       // 使用者取消選擇視窗不算錯誤
@@ -55,7 +56,8 @@ export function Init(p: { repo: Repository; fsSupported: boolean; fs?: FsReposit
         <div><h1>考務小幫手</h1><p class="muted">安排模擬考座位、製作標籤與抽離名單</p></div>
       </div>
       {!p.fsSupported ? <Unsupported /> : <>
-      {lost && p.onDialog && <RestoreMissing name={lost.name} busy={busy} onRelink={() => p.onDialog!('relink')} onOther={pick} />}
+      {lost?.kind === 'missing' && p.onDialog && <RestoreMissing name={lost.name} busy={busy} onRelink={() => p.onDialog!('relink')} onOther={pick} />}
+      {lost && lost.kind !== 'missing' && <RestoreNeedsAction problem={lost} busy={busy} onRetry={() => p.onRestore && run(() => p.onRestore!(), true)} onOther={pick} />}
       <div class="card stack">
         <h2 style="font-size:18px">選擇資料儲存資料夾</h2>
         <p class="muted">學生名單與座位結果只存在你的電腦，本網站不會把它們上傳到網路。請選一個你找得到的資料夾。</p>
@@ -75,7 +77,7 @@ export function Init(p: { repo: Repository; fsSupported: boolean; fs?: FsReposit
         <div class="row">
           <span class="small muted">或者</span>
           <button type="button" class="btn btn-primary btn-lg" disabled={busy || !p.fsSupported} onClick={pick}>選擇資料夾</button>
-          {p.onRestore && <button type="button" class="btn btn-lg" disabled={busy} onClick={() => run(() => p.onRestore!())}>使用上次資料夾</button>}
+          {p.onRestore && <button type="button" class="btn btn-lg" disabled={busy} onClick={() => run(() => p.onRestore!(), true)}>使用上次資料夾</button>}
           <span class="small muted">限使用 <a href="https://www.google.com/intl/zh-TW/chrome/" target="_blank" rel="noopener noreferrer">Chrome</a> 瀏覽器</span>
         </div>
         {err && <Alert tone="danger">{err}</Alert>}

@@ -43,12 +43,20 @@ async function ensurePermission(h: PermHandle): Promise<boolean> {
 }
 
 export interface FsRepository extends Repository {
-  /** 重開頁面時嘗試還原上次選的資料夾；需要使用者手勢才能重新授權 */
-  restore(): Promise<boolean>;
+  /**
+   * 還原上次選的資料夾。啟動時（沒有使用者手勢）只查授權、不開授權視窗；使用者按鈕時（gesture）才呼叫 requestPermission，
+   * 而且那是點擊後的第一個動作（Chrome 要求授權視窗在點擊有效期內開，中間不能先 await 別的事；#464）。
+   * 失敗原因記在 restoreProblem()，不再一律當成「無法存取」。
+   */
+  restore(opts?: { gesture?: boolean }): Promise<boolean>;
   /** 最近一次 load 的警告（例如主檔損壞、已改用備份） */
   lastWarning(): string | undefined;
-  /** 啟動還原失敗的原因（G16）：上次的資料夾已經不存在 */
-  restoreProblem(): { kind: 'missing'; name: string } | undefined;
+  /**
+   * 還原失敗的原因（G16、#464）：missing＝資料夾不在了；needPermission＝瀏覽器要你再允許一次（要按鈕才能開授權視窗）；
+   * denied＝你剛剛按了「不允許」或授權視窗被擋；noHandle＝這個瀏覽器沒有記住任何資料夾（清過網站資料、無痕或第一次用）；
+   * error＝其他讀取錯誤（detail 是瀏覽器回報的訊息）
+   */
+  restoreProblem(): RestoreProblem | undefined;
   /** 目前資料夾還在嗎（G16）：偵測到不見了會把存檔狀態改成 missing；沒有資料夾回 true */
   checkFolder(): Promise<boolean>;
   /** 尚未存進資料夾的修改次數、最近一次存妥的時間 */
@@ -63,6 +71,10 @@ export interface FsRepository extends Repository {
   /** 搬到新位置（G24）：只接受空資料夾；整份複製、逐檔核對成功後才改用；失敗清掉已複製的檔案並丟錯，不切換；舊資料夾不動 */
   moveTo(pick: FolderPick, onProgress?: (done: number, total: number, phase: 'copy' | 'verify') => void, signal?: { aborted: boolean }): Promise<{ files: number }>;
 }
+
+export type RestoreProblem =
+  | { kind: 'missing' | 'needPermission' | 'denied' | 'noHandle'; name: string }
+  | { kind: 'error'; name: string; detail: string };
 
 /** 選到的資料夾的檢查結果（G24） */
 export interface FolderPick {
@@ -90,6 +102,10 @@ export interface FsRepositoryDeps {
   permission?: (h: PermHandle) => Promise<boolean>;
   makeFs?: (h: PermHandle) => DirFS;
   remember?: (h: PermHandle) => Promise<void>;
+  /** 讀出上次記住的資料夾（預設讀 IndexedDB） */
+  recall?: () => Promise<PermHandle | undefined>;
+  /** 只查詢、不開授權視窗：已經允許讀寫嗎（預設 queryPermission） */
+  granted?: (h: PermHandle) => Promise<boolean>;
 }
 
 export function createFsRepository(deps: FsRepositoryDeps = {}): FsRepository {
@@ -99,11 +115,15 @@ export function createFsRepository(deps: FsRepositoryDeps = {}): FsRepository {
   let folder = '';
   let status: SaveStatus = { state: 'idle' };
   const listeners = new Set<(s: SaveStatus) => void>();
-  let restoreFail: { kind: 'missing'; name: string } | undefined;
+  let restoreFail: RestoreProblem | undefined;
+  // 啟動時先把控制代碼讀進記憶體；使用者按鈕時直接拿來要授權，不再等 IndexedDB（#464）
+  let stored: PermHandle | undefined;
   const emit = (s: SaveStatus) => { status = s; listeners.forEach((f) => f(s)); };
 
   const permission = deps.permission ?? ensurePermission;
   const makeFs = deps.makeFs ?? createHandleFS;
+  const recall = deps.recall ?? (() => idb<PermHandle | undefined>('readonly', (s) => s.get(KEY)));
+  const granted = deps.granted ?? (async (h: PermHandle) => (await h.queryPermission?.({ mode: 'readwrite' })) === 'granted');
   const remember = deps.remember ?? ((h: PermHandle) => idb('readwrite', (s) => s.put(h, KEY)).then(() => undefined));
 
   // 授權成功才換資料夾；換之前先等舊資料夾的存檔佇列清空（#58、#69），失敗就不切換
@@ -172,17 +192,26 @@ export function createFsRepository(deps: FsRepositoryDeps = {}): FsRepository {
       return false;
     },
     restoreProblem: () => restoreFail,
-    async restore() {
-      let name = '';
+    async restore(opts) {
+      const gesture = !!opts?.gesture;
+      let name = stored?.name ?? '';
       try {
-        const h = await idb<PermHandle | undefined>('readonly', (s) => s.get(KEY));
-        if (!h) return false;
+        // 按鈕那次：有現成的控制代碼就先要授權（點擊有效期內的第一個動作）；沒有才去讀 IndexedDB
+        if (gesture && stored && !(await permission(stored))) { restoreFail = { kind: 'denied', name }; return false; }
+        const h = stored ?? await recall();
+        if (!h) { restoreFail = { kind: 'noHandle', name: '' }; return false; }
+        stored = h;
         name = h.name;
         // 上次的資料夾已經不在了（被刪除、改名或移動）：留下原因，初始化頁用白話說明
         if (!(await makeFs(h).exists())) { restoreFail = { kind: 'missing', name }; return false; }
-        return await adopt(h);
+        // 啟動：沒有手勢，只查授權；還沒授權就留下「要按鈕」的原因，不呼叫會被瀏覽器直接拒絕的 requestPermission
+        if (!gesture && !(await granted(h))) { restoreFail = { kind: 'needPermission', name }; return false; }
+        if (await adopt(h)) return true;
+        restoreFail = { kind: gesture ? 'denied' : 'needPermission', name };
+        return false;
       } catch (e) {
         if (isNotFound(e) && name) restoreFail = { kind: 'missing', name };
+        else restoreFail = { kind: 'error', name, detail: e instanceof Error ? (e.name && e.name !== 'Error' ? e.name + '：' : '') + e.message : String(e) };
         return false;
       }
     },
