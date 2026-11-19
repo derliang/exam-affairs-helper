@@ -213,16 +213,16 @@ describe('全科缺考者與驗證（fix-v2；D137 起預設排座）', () => {
   };
   const base = { markRules: setMarkChoice(exam(), 'science', 'soc', 'mark-absent') };
 
-  it('學測選「不排座」（seatFullyAbsent: false）：全科缺考者不排座，⑤驗證與座位數檢查全過', () => {
-    const e2 = exam({ ...base, seatFullyAbsent: false });
+  it('D142：舊存檔帶「不排座」（seatFullyAbsent: false）也照樣排座，⑤驗證全過、人數含他', () => {
+    const e2 = exam({ ...base, ...({ seatFullyAbsent: false } as Partial<ExamConfig>) });
     const r = reseat(withAbsent(e2), e2, NOW);
     if (!r.ok) throw new Error(r.error);
     const res = r.doc.examFiles!.e1!.result!;
-    expect(res.assignments).toHaveLength(7);
+    expect(res.assignments).toHaveLength(8);
     const checks = validationChecks(r.doc, e2, res);
     expect(checks.filter((c) => !c.ok)).toEqual([]);
-    expect(checks[0]!.detail).toBe('考生 7 人，座位 9 個');
-    expect(seatableEntries(r.doc, e2)).toHaveLength(7);
+    expect(checks[0]!.detail).toBe('考生 8 人，座位 9 個');
+    expect(seatableEntries(r.doc, e2)).toHaveLength(8);
   });
 
   it('預設（D137）：全科缺考者也排座，驗證全過、人數含他（舊存檔的 true 同義）', () => {
@@ -236,10 +236,8 @@ describe('全科缺考者與驗證（fix-v2；D137 起預設排座）', () => {
     expect(checks[0]!.detail).toBe('考生 8 人，座位 9 個');
   });
 
-  it('座位剛好夠排「要排的人」時，不因全科缺考者多算而被擋（選了不排座）', () => {
-    const e2 = exam({ ...base, seatFullyAbsent: false });
-    const d = withAbsent(e2);
-    d.settings.classrooms[0]!.seatCount = 4; d.settings.classrooms[1]!.seatCount = 3;
-    expect(flowOf(d, e2, 5).summary.students).toBe(7);
+  it('流程摘要的考生數含全科缺考者（舊存檔的「不排座」也一樣）', () => {
+    const e2 = exam({ ...base, ...({ seatFullyAbsent: false } as Partial<ExamConfig>) });
+    expect(flowOf(withAbsent(e2), e2, 5).summary.students).toBe(8);
   });
 });

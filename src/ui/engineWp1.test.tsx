@@ -87,7 +87,6 @@ describe('WP-1 學測：未參加者、全科缺考者直接進排座引擎（D1
 
   it('全科缺考者預設排座（第 2、5 班各 2 人）：有座位、每節自習、與考生不同室；座位表列出、不印標籤', () => {
     const { doc, exam } = gsat270Doc({ fullyAbsent: 2, reserve2: true });
-    expect(exam.seatFullyAbsent).toBeUndefined();
     expectEveryoneSeated(doc, exam, 270);
     noFail(doc, exam);
     const p = prepareExport(doc, exam);
@@ -99,18 +98,18 @@ describe('WP-1 學測：未參加者、全科缺考者直接進排座引擎（D1
     expect(labelCodes.has('0203')).toBe(true);
   });
 
-  it('學測在 ② 明確選「不排座」：那幾人沒有座位，對帳「每人每時段一個去處」不通過、擋下載', () => {
+  it('D142：拿掉「不排座」選項；舊存檔帶 seatFullyAbsent: false 也照樣排座，對帳無紅燈', () => {
     const f = gsat270Doc({ fullyAbsent: 2, reserve2: true, noSeat: true });
-    const u = updateExam(f.doc, f.exam.id, { seatFullyAbsent: false });
+    const u = updateExam(f.doc, f.exam.id, ({ seatFullyAbsent: false } as Partial<ExamConfig>));
     if (!u.ok) throw new Error(u.error);
     const exam = u.doc.exams[0]!;
     const s = reseat(u.doc, exam, '2026-11-18T03:00:00Z');
     if (!s.ok) throw new Error(s.error);
-    expect(seatableEntries(s.doc, exam)).toHaveLength(266);
+    expect(seatableEntries(s.doc, exam)).toHaveLength(270);
     const r = reconcileStandard(s.doc, exam);
     if (r.state !== 'ready') throw new Error(r.state);
-    expect(r.checks.find((c) => c.id === 'M-3')!.light).toBe('fail');
-    expect(gateOf(r, '').fails).toBeGreaterThan(0);
+    expect(r.checks.find((c) => c.id === 'M-3')!.light).not.toBe('fail');
+    expect(gateOf(r, '').fails).toBe(0);
   });
 });
 
@@ -132,9 +131,9 @@ describe('WP-5 會考：名冊每個人都排座位（會考不可不參加）',
     expect(labels).not.toContain('0201');
   });
 
-  it('會考不看「不排座」設定：選了也照排', () => {
+  it('會考：舊存檔帶「不排座」也照排', () => {
     const f = bcctDoc({ fullyAbsent: 2 });
-    const u = updateExam(f.doc, f.exam.id, { seatFullyAbsent: false });
+    const u = updateExam(f.doc, f.exam.id, ({ seatFullyAbsent: false } as Partial<ExamConfig>));
     if (!u.ok) throw new Error(u.error);
     expect(seatableEntries(u.doc, u.doc.exams[0]!)).toHaveLength(20);
   });

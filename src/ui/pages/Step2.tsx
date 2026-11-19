@@ -225,13 +225,9 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
           <div class="card stack" style="gap:12px">
             <div class="row" style="justify-content:space-between">
               <Badge tone="warn">{`${fullyAbsent} 人全科缺考`}</Badge>
-              <Badge tone="ok">{`目前：${exam.kind === 'gsat' && exam.seatFullyAbsent === false ? '列入缺考清單，不排座' : '仍排座'}`}</Badge>
             </div>
             <div class="fact"><b>考試名單</b>{(entries ?? []).filter((e) => e.subjectIds.length === 0).map((e) => who(e)).join('、')}（備註：全科缺考）</div>
-            <Seg<'list' | 'seat'> label="全科缺考處理方式" value={exam.seatFullyAbsent === false ? 'list' : 'seat'}
-              onChange={(v) => { const r = updateExam(doc, exam.id, { seatFullyAbsent: v === 'seat' }); if (r.ok) p.onChange(r.doc); }}
-              options={[{ value: 'list', label: '列入缺考清單，不排座' }, { value: 'seat', label: '仍排座' }]} />
-            <span class="hint">預設照樣排座：他們每節都是自習生，跟考生一樣有座位（不印標籤、不計領卷份數）。學測可改成列入缺考清單、不排座，但考前對帳會因為他們沒有座位而不通過；會考、分科一律排座。這一項已有預設，不必選也能繼續。</span>
+            <span class="hint">一律排座：他們每節都是自習生，跟考生一樣有座位（不印標籤、不計領卷份數）。</span>
           </div>
         )}
         {applyErr && <Alert tone="danger"><b>沒有套用，兩份名單都維持原樣。</b>{applyErr}</Alert>}
@@ -365,10 +361,8 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
         )}
         {fullyAbsent > 0 && (
           <Alert tone="info">
-            其中 {fullyAbsent} 位全科缺考：{exam.kind === 'gsat' && exam.seatFullyAbsent === false ? '已選不排座，⑤ 的人數會比這裡少；考前對帳會因為他們沒有座位而不通過。' : '照樣排座，每節都是自習生（不印標籤、不計領卷份數）。'}
+            其中 {fullyAbsent} 位全科缺考：照樣排座，每節都是自習生（不印標籤、不計領卷份數）。
             <details><summary class="small">列出是誰</summary><ul>{(entries ?? []).filter((e) => e.subjectIds.length === 0).map((e) => <li key={`${e.classNo}-${e.seatNo}`}>{who(e).replace(/　.*$/, '')}</li>)}</ul></details>
-            <label style="margin-left:12px"><input type="checkbox" checked={exam.seatFullyAbsent !== false}
-              onChange={(e) => { const r = updateExam(doc, exam.id, { seatFullyAbsent: (e.target as HTMLInputElement).checked }); if (r.ok) p.onChange(r.doc); }} /> 全科缺考者仍排座</label>
           </Alert>
         )}
         {sheets && (

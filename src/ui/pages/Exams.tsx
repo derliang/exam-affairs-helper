@@ -3,7 +3,7 @@ import { useState } from 'preact/hooks';
 import type { ExamConfig } from '../../data';
 import { Alert, Badge, Button, EmptyState, Modal, More, PageHead } from '../components';
 import { rosterChanged } from '../rosterIO';
-import { examFullyAbsent, examHeadcount, examLevel, examProgress, formatModified, sortExams } from '../examList';
+import { examHeadcount, examLevel, examProgress, formatModified, sortExams } from '../examList';
 import { examLabel, lastModified, examYear, type Doc } from '../store';
 import { envBanner } from '../env';
 
@@ -51,7 +51,7 @@ export function Exams(p: {
           <h3>{e.name}</h3>
           <div class="meta">
             <Badge>{examLabel(e)}</Badge>
-            <span>{examYear(e)} 學年・{examLevel(e)}・{examHeadcount(p.doc, e) > 0 ? `${examHeadcount(p.doc, e)} 人${examFullyAbsent(p.doc, e) > 0 ? `（含全科缺考 ${examFullyAbsent(p.doc, e)} 人，不排座）` : ''}` : '尚未匯入名單'}</span>
+            <span>{examYear(e)} 學年・{examLevel(e)}・{examHeadcount(p.doc, e) > 0 ? `${examHeadcount(p.doc, e)} 人` : '尚未匯入名單'}</span>
             {arch && <Badge tone="info">已封存</Badge>}
             {rosterChanged(p.doc, e) && <Badge tone="warn">名單已更動</Badge>}
           </div>

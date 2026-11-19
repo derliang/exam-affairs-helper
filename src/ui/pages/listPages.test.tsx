@@ -84,7 +84,10 @@ describe('#250 列表人數口徑', () => {
     const doc = { ...d, examFiles: { [e.id]: { entries, diffs: [] } } };
     const html = renderToString(<Exams doc={doc} onOpen={noop} onNew={noop} onSettings={noop} onChangeFolder={noop} />);
     expect(html).not.toContain('含全科缺考');
+    // D142：舊存檔帶「不排座」（seatFullyAbsent: false）也一律排座，列表不再寫「不排座」
     const off = { ...doc, exams: doc.exams.map((x) => (x.id === e.id ? { ...x, seatFullyAbsent: false } : x)) };
-    expect(renderToString(<Exams doc={off} onOpen={noop} onNew={noop} onSettings={noop} onChangeFolder={noop} />)).toContain('2 人（含全科缺考 1 人，不排座）');
+    const html2 = renderToString(<Exams doc={off} onOpen={noop} onNew={noop} onSettings={noop} onChangeFolder={noop} />);
+    expect(html2).toContain('2 人');
+    expect(html2).not.toContain('不排座');
   });
 });
