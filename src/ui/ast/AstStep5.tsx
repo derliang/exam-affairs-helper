@@ -2,7 +2,7 @@ import { useState } from 'preact/hooks';
 import type { Classroom, ExamConfig } from '../../data';
 import { classroomSeats, effectiveRooms, rowDepthOf } from '../../data';
 import type { PlanRoom } from '../../core/astD99/contract';
-import { Alert, Badge, Button, StepHead } from '../components';
+import { Alert, Badge, Button, EmptyState, StepHead } from '../components';
 import { AST_STEP_BLURBS } from '../nav';
 import { normColor } from '../colors';
 import { updateExam, type Doc } from '../store';
@@ -76,20 +76,20 @@ export function AstStep5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
   if (examEntries(doc, exam).length === 0) {
     return (
       <section class="stack"><StepHead title="⑤ 時段教室與座位" blurb={AST_STEP_BLURBS[4]} />
-        <Alert tone="info" action={<Button onClick={() => p.onStep(2)}>前往 ② 考試名單</Button>}><b>還沒有考試名單。</b>教室用途與座位要依考試名單排，請先到 ② 匯入考生名單。</Alert></section>
+        <Alert tone="info" action={<Button onClick={() => p.onStep(2)}>到 ② 考試名單 ›</Button>}><b>還沒有考試名單。</b>教室用途與座位要依考試名單排，請先到 ② 匯入考生名單。</Alert></section>
     );
   }
   if (!plan) {
     return (
       <section class="stack"><StepHead title="⑤ 時段教室與座位" blurb={AST_STEP_BLURBS[4]} />
-        <Alert tone="info" action={<Button onClick={() => p.onStep(3)}>前往 ③ 教室與自習空間</Button>}><b>還沒有勾選可用的教室。</b>請先到 ③ 勾選班級教室與綜合教室。</Alert></section>
+        <Alert tone="info" action={<Button onClick={() => p.onStep(3)}>到 ③ 教室與自習空間 ›</Button>}><b>還沒有勾選可用的教室。</b>請先到 ③ 勾選班級教室與綜合教室。</Alert></section>
     );
   }
 
   if (plan.infeasible) {
     return (
       <section class="stack"><StepHead title="⑤ 時段教室與座位" blurb={AST_STEP_BLURBS[4]} />
-        <Alert tone="danger" action={<Button onClick={() => p.onStep(3)}>前往 ③ 教室與自習空間</Button>}><b>座位不夠，排不出方案。</b>有時段的考生比本次勾選的考場座位多。請到 ③ 勾選更多教室或增加座位，補足後這裡才會出現教室用途與座位圖。</Alert></section>
+        <Alert tone="danger" action={<Button onClick={() => p.onStep(3)}>到 ③ 教室與自習空間 ›</Button>}><b>座位不夠，排不出方案。</b>有時段的考生比本次勾選的考場座位多。請到 ③ 勾選更多教室或增加座位，補足後這裡才會出現教室用途與座位圖。</Alert></section>
     );
   }
   const roomData = new Map(effectiveRooms(exam, doc.settings.classrooms).map((c) => [c.id, c]));
@@ -200,7 +200,7 @@ export function AstStep5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
           );
         })}
         {unplaced > 0 && plan.pending.length === 0 && (
-          <Alert tone="danger" action={<Button small onClick={() => p.onStep(3)}>前往 ③ 調整</Button>}>
+          <Alert tone="danger" action={<Button small onClick={() => p.onStep(3)}>到 ③ 調整 ›</Button>}>
             <b>有 {unplaced} 人排不進自習空間，也沒有可用的替代教室。</b>請到 ③ 調高自習容量、勾選更多綜合教室，或開啟「允許自習去他班原班教室」。
           </Alert>
         )}
@@ -244,7 +244,7 @@ export function AstStep5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
               onSeat={(code, row, depth) => { const r = updateExam(doc, exam.id, { astLocks: toggleSeatLock(exam, { slotId: slot.id, code, roomId, row, depth }) }); if (r.ok) p.onChange(r.doc); }} />
           </>
         )}
-        {!roomId && <p class="small muted">這個時段沒有考場。</p>}
+        {!roomId && <EmptyState title="這個時段沒有考場" />}
         <div class="small muted"><b>教室內怎麼排（第二階段，順序固定、不權衡）：</b>①同班依座號由小到大，同一排只放同一班、各班各自連續；②不同科盡量分排，同排混科只准「連續分區」、不准逐位交錯；③跨科盡量同座位，但輸給①（發卷核對與座號依序優先）。</div>
         {plan.out.mixedRows.length > 0 && <Alert tone="warn"><b>有 {plan.out.mixedRows.length} 排同排混科。</b>同排混科只准連續分區，發卷時請一科一區。</Alert>}
       </div>

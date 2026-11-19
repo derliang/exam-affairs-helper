@@ -1067,3 +1067,9 @@ ul.plain{margin:4px 0 0;padding-left:1.2em}
 .seatthumb i.none{background:transparent}
 .prev .pgrid .pc{width:100%;min-width:0}
 .pc.none{border:0;height:44px;border-radius:6px;background:repeating-linear-gradient(135deg,transparent 0 4px,var(--line) 4px 8px);opacity:.6}
+
+/* #413 第 5 項：全站展開／收合同一種符號——標題後面 ▾（收著）／▴（展開），原生 <details> 一律如此；「⋯」選單除外 */
+details:not(.moremenu)>summary{list-style:none}
+details:not(.moremenu)>summary::-webkit-details-marker{display:none}
+details:not(.moremenu)>summary::after{content:" ▾"}
+details[open]:not(.moremenu)>summary::after{content:" ▴"}

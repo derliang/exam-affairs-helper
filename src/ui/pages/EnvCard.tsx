@@ -47,7 +47,7 @@ export function EnvCard(p: {
           <div class="envone">
             <Badge tone="ok">✓ 環境已確認</Badge>
             <span class="envsum">{rep.lines.map((l) => l.text).join('・')}</span>
-            <button type="button" class="linkbtn" aria-expanded={open} onClick={() => setOpen(!open)}>展開明細 {open ? '▴' : '▾'}</button>
+            <button type="button" class="linkbtn" aria-expanded={open} onClick={() => setOpen(!open)}>明細 {open ? '▴' : '▾'}</button>
           </div>
           {rep.confirmedAt && <span class="hint">確認時間 {formatModified(rep.confirmedAt)}，與目前設定相同。</span>}
           {open && detail}
