@@ -4,18 +4,27 @@ import type { ExamConfig } from '../../data';
 import { Alert, Badge, Button, ConfirmModal, EmptyState, More, PageHead } from '../components';
 import { rosterChanged } from '../rosterIO';
 import { examHeadcount, examLevel, examProgress, formatModified, sortExams } from '../examList';
+import { dateRangeText, groupExams, todayTaipei } from '../examDates';
 import { examLabel, lastModified, examYear, type Doc } from '../store';
 import { envBanner } from '../env';
 
 /** 模擬考列表（DESIGN 10.x）：頁首 h1＋資料夾 chip，每列有六格進度條、學年與人數、最後修改；依最後修改由新到舊 */
-/** 刪除考試前的確認（G1；#413 第 2 項：改用標準 ConfirmModal，不再要輸入考試名稱）：寫明會刪什麼、不會動什麼 */
-export function DeleteExamModal(p: { exam: ExamConfig; onConfirm: () => void; onClose: () => void }) {
+/** 刪除考試前的確認（G1；#413 第 2 項、D163：標準 ConfirmModal，不輸入名稱）：單場與多場同一個視窗，寫明會刪什麼、不會動什麼 */
+export function DeleteExamModal(p: { exam?: ExamConfig; exams?: ExamConfig[]; onConfirm: () => void; onClose: () => void }) {
+  const list = p.exams ?? (p.exam ? [p.exam] : []);
+  const one = list.length === 1;
   return (
     <ConfirmModal
-      copy={{ title: `刪除「${p.exam.name}」？`, body: '會刪掉：這次模擬考在 App 裡的資料——考試設定、本次考試名單、名單比對結果、標示與抽離設定、座位與排座結果（分科含時程與版本紀錄）。', confirm: '刪除這次模擬考' }}
+      copy={{
+        title: one ? `刪除「${list[0]!.name}」？` : `刪除 ${list.length} 場考試？`,
+        body: one
+          ? '會刪掉：這次模擬考在 App 裡的資料——考試設定、本次考試名單、名單比對結果、標示與抽離設定、座位與排座結果（分科含時程與版本紀錄）。'
+          : '會刪掉：下列考試在 App 裡的資料——考試設定、本次名單、標示與抽離設定、座位與排座結果（分科含時程與版本紀錄）。',
+        confirm: one ? '刪除這次模擬考' : `刪除這 ${list.length} 場`,
+      }}
       onConfirm={p.onConfirm} onClose={p.onClose}>
-      <p style="margin-top:8px"><b>不會動：</b>你已經下載到電腦的 Word、PDF 等檔案，以及「共用設定」裡的學校、班級、教室與學生名單。</p>
-      <p style="margin-top:8px">如果只是暫時不用，建議改用「封存」，之後還能查看與還原。</p>
+      {!one && <ul style="margin:6px 0 0;padding-left:18px">{list.map((e) => <li key={e.id}>{e.name}</li>)}</ul>}
+      <p style="margin-top:8px"><b>不會動：</b>你已經下載到電腦的 Word、PDF 等檔案，以及「共用設定」裡的學校、班級、教室與學生名單{one ? '' : '、其他考試'}。</p>
     </ConfirmModal>
   );
 }
@@ -25,28 +34,43 @@ export function Exams(p: {
   /** G37：開首次使用精靈（橫幅按鈕）；沒給就不顯示橫幅 */
   onEnv?: () => void;
   onOpen: (examId: string) => void; onNew: () => void; onSettings: () => void; onChangeFolder: () => void;
-  /** 封存、還原、刪除（G1）；沒給就不顯示該按鈕 */
   /** G16：資料夾找不到時取代列表的錯誤狀態（不顯示「還沒有模擬考」） */
   listError?: ComponentChildren;
-  onArchive?: (examId: string) => void; onRestore?: (examId: string) => void; onDelete?: (examId: string) => void;
+  /** 刪除（G1）：單場或批次；沒給就不顯示刪除鈕與選取方塊 */
+  onDelete?: (examId: string) => void; onDeleteMany?: (examIds: string[]) => void;
+  /** 測試用：固定「今天」（'YYYY-MM-DD'） */
+  today?: string;
 }) {
-  const [del, setDel] = useState<ExamConfig | null>(null);
+  const [del, setDel] = useState<ExamConfig[] | null>(null);
+  const [sel, setSel] = useState<string[]>([]);
+  const [showEnded, setShowEnded] = useState(false);
   const [envHide, setEnvHide] = useState(false);
   const banner = p.onEnv && !p.listError ? envBanner(p.doc) : 'none';
   const all = sortExams(p.doc.exams);
-  const exams = all.filter((e) => !e.archived);
-  const archived = all.filter((e) => e.archived);
+  // #352、D163、D164：依考試日期分「還沒開始」「已經結束」（取代「進行中」「已封存」；封存功能拿掉）
+  const { upcoming, ended } = groupExams(all, p.today ?? todayTaipei(), lastModified);
+  const canDelete = !!(p.onDelete || p.onDeleteMany);
+  const toggle = (id: string) => setSel((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+  const toggleGroup = (g: ExamConfig[]) => setSel((s) => (g.every((e) => s.includes(e.id)) ? s.filter((x) => !g.some((e) => e.id === x)) : [...new Set([...s, ...g.map((e) => e.id)])]));
+  const doDelete = (list: ExamConfig[]) => {
+    const ids = list.map((e) => e.id);
+    if (p.onDeleteMany) p.onDeleteMany(ids); else ids.forEach((id) => p.onDelete?.(id));
+    setSel((s) => s.filter((x) => !ids.includes(x)));
+  };
   const card = (e: ExamConfig) => {
     const pr = examProgress(p.doc, e);
-    const arch = !!e.archived;
+    const dates = dateRangeText(e);
     return (
-      <article class={`exam${arch ? ' exam-arch' : ''}`} key={e.id}>
+      <article class="exam" key={e.id}>
         <div>
-          <h3>{e.name}</h3>
+          <h3>
+            {canDelete && <input type="checkbox" aria-label={`選取 ${e.name}`} checked={sel.includes(e.id)} onChange={() => toggle(e.id)} style="margin-right:8px" />}
+            {e.name}
+          </h3>
           <div class="meta">
             <Badge>{examLabel(e)}</Badge>
             <span>{examYear(e)} 學年・{examLevel(e)}・{examHeadcount(p.doc, e) > 0 ? `${examHeadcount(p.doc, e)} 人` : '尚未匯入名單'}</span>
-            {arch && <Badge tone="info">已封存</Badge>}
+            {dates ? <span>{dates}</span> : <Badge tone="info">未填日期</Badge>}
             {rosterChanged(p.doc, e) && <Badge tone="warn">名單已更動</Badge>}
           </div>
         </div>
@@ -56,13 +80,19 @@ export function Exams(p: {
           <div class="small muted" style="margin-top:4px">最後修改 {formatModified(lastModified(e))}</div>
         </div>
         <div class="row" style="flex-wrap:wrap">
-          <Button kind="primary" onClick={() => p.onOpen(e.id)}>{arch ? '查看／下載' : '查看／安排'}</Button>
-          {arch ? p.onRestore && <Button onClick={() => p.onRestore!(e.id)}>還原</Button> : p.onArchive && <Button onClick={() => p.onArchive!(e.id)}>封存</Button>}
-          {p.onDelete && <Button kind="danger" onClick={() => setDel(e)}>刪除</Button>}
+          <Button kind="primary" onClick={() => p.onOpen(e.id)}>查看／安排</Button>
+          {canDelete && <Button kind="danger" onClick={() => setDel([e])}>刪除</Button>}
         </div>
       </article>
     );
   };
+  const groupHead = (title: string, g: ExamConfig[], extra?: ComponentChildren) => (
+    <div class="row" style="align-items:center;gap:12px;margin-top:20px">
+      <h2 class="exam-sec" style="margin:0">{title}<span class="muted small">（{g.length}）</span></h2>
+      {canDelete && g.length > 0 && <label class="small" style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" checked={g.every((e) => sel.includes(e.id))} onChange={() => toggleGroup(g)} />全選</label>}
+      {extra}
+    </div>
+  );
   return (
     <section>
       <PageHead title="模擬考" badge={p.folder && <span class="folder-chip" title="目前使用的資料夾">{p.folder}</span>}>
@@ -85,21 +115,23 @@ export function Exams(p: {
         <EmptyState title="還沒有模擬考" action={<Button kind="primary" onClick={p.onNew}>新增模擬考</Button>}>按「新增模擬考」開始。</EmptyState>
       ) : (
         <>
-        <h2 class="exam-sec">進行中<span class="muted small">（{exams.length}）</span></h2>
-        {exams.length === 0 && <p class="muted small">目前沒有進行中的模擬考；可以新增，或到下方「已封存」還原。</p>}
-        <div class="exam-list">
-          {exams.map(card)}
-        </div>
-        {archived.length > 0 && (
+        {canDelete && sel.length > 0 && (
+          <div class="row" role="status" style="gap:12px;align-items:center;margin-bottom:8px"><b>已選 {sel.length} 場</b>
+            <Button small onClick={() => setSel([])}>取消選取</Button>
+            <Button small kind="danger" onClick={() => setDel(all.filter((e) => sel.includes(e.id)))}>刪除所選</Button></div>
+        )}
+        {groupHead('還沒開始', upcoming)}
+        {upcoming.length === 0 && <EmptyState title="目前沒有還沒開始的模擬考">可以新增，或到下方「已經結束」查看。</EmptyState>}
+        <div class="exam-list">{upcoming.map(card)}</div>
+        {ended.length > 0 && (
           <>
-            <h2 class="exam-sec" style="margin-top:20px">已封存<span class="muted small">（{archived.length}）</span></h2>
-            <p class="muted small">封存的考試只能查看與下載，不能編輯；要編輯請先按「還原」。</p>
-            <div class="exam-list">{archived.map(card)}</div>
+            {groupHead('已經結束', ended, <button type="button" class="rc-more" aria-label="已經結束的考試（點了展開或收合）" aria-expanded={showEnded} onClick={() => setShowEnded(!showEnded)}>{showEnded ? '▴' : '▾'}</button>)}
+            {showEnded && <div class="exam-list">{ended.map(card)}</div>}
           </>
         )}
         </>
       )}
-      {del && <DeleteExamModal exam={del} onClose={() => setDel(null)} onConfirm={() => p.onDelete?.(del.id)} />}
+      {del && <DeleteExamModal exams={del} onClose={() => setDel(null)} onConfirm={() => doDelete(del)} />}
       <div style="margin-top:14px">
         <More title="說明：進度條怎麼看">
           <div class="plegend" aria-label="進度條圖例">

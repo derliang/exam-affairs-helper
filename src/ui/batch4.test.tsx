@@ -72,21 +72,20 @@ describe('G1 列表：封存、還原、刪除（學測、分科、會考）', (
     expect((await loadDoc(fs)).data.exams.map((e) => e.id)).not.toContain(id);
   });
 
-  it('列表分「進行中／已封存」；封存的考試只有「查看／下載」「還原」「刪除」，進行中有「查看／安排」「封存」「刪除」', () => {
+  it('列表依考試日期分「還沒開始／已經結束」；沒有封存鈕與「已封存」區；每列只有「查看／安排」「刪除」（D163）', () => {
     const d = docWith();
-    const gsat = d.exams.find((e) => e.kind === 'gsat')!;
-    const a = setExamArchived(d, gsat.id, true);
-    if (!a.ok) throw new Error();
-    const html = renderToString(<Exams doc={a.doc} onOpen={noop} onNew={noop} onSettings={noop} onChangeFolder={noop} onArchive={noop} onRestore={noop} onDelete={noop} />);
-    expect(html).toContain('進行中');
-    expect(html).toContain('已封存');
-    expect(html.indexOf('進行中')).toBeLessThan(html.indexOf('已封存'));
-    expect(html).toContain('查看／下載');
+    const [e1, e2] = d.exams as ExamConfig[];
+    const dated: Doc = { ...d, exams: d.exams.map((e) => (e.id === e1!.id ? { ...e, examDates: ['2026-09-01'] } : e.id === e2!.id ? { ...e, examDates: ['2026-12-31'] } : e)) };
+    const html = renderToString(<Exams doc={dated} today="2026-11-19" onOpen={noop} onNew={noop} onSettings={noop} onChangeFolder={noop} onDelete={noop} />);
+    expect(html).toContain('還沒開始');
+    expect(html).toContain('已經結束');
+    expect(html.indexOf('還沒開始')).toBeLessThan(html.indexOf('已經結束'));
     expect(html).toContain('查看／安排');
-    for (const t of ['>封存<', '>還原<', '>刪除<']) expect(html).toContain(t);
-    // 沒有封存的考試時不出現「已封存」區
-    expect(renderToString(<Exams doc={d} onOpen={noop} onNew={noop} onSettings={noop} onChangeFolder={noop} onArchive={noop} onRestore={noop} onDelete={noop} />)).not.toContain('封存的考試只能查看');
-    // 複製、改名不在這次範圍
+    expect(html).toContain('>刪除<');
+    for (const t of ['>封存<', '>還原<', '已封存', '查看／下載']) expect(html).not.toContain(t);
+    // 已經結束預設收合：看不到那場的名稱旁的卡片
+    expect(html).not.toContain(e1!.name);
+    expect(html).toContain('未填日期');
     expect(html).not.toContain('>複製<');
     expect(html).not.toContain('>改名<');
   });
@@ -103,17 +102,6 @@ describe('G1 列表：封存、還原、刪除（學測、分科、會考）', (
     expect(html).toContain('刪除這次模擬考');
   });
 
-  it('封存的分科考試：⑥ 不出現「確認定案」與版本紀錄卡（不能編輯）', () => {
-    const d = docWith();
-    const ast = d.exams.find((e) => e.kind === 'ast')!;
-    const a = setExamArchived(d, ast.id, true);
-    if (!a.ok) throw new Error();
-    const noopChange = (_: Doc) => undefined;
-    const live = renderToString(<AstStep6 doc={d} exam={ast} onGoStep={noop} onChange={noopChange} />);
-    const frozen = renderToString(<AstStep6 doc={a.doc} exam={a.doc.exams.find((e) => e.id === ast.id)!} onGoStep={noop} onChange={noopChange} />);
-    expect(live.length).toBeGreaterThan(frozen.length);
-    void updateExam;
-  });
 });
 
 // ───── G14：標籤 7×7 ─────

@@ -715,8 +715,8 @@ function examDays(input: ExportInput): number[] {
   return [...out];
 }
 /** 標題後面的日期範圍屬性（沒有就不帶，D147④） */
-const dateProp = (days: Iterable<number>): { dateText?: string } => {
-  const t = dayRangeText(days);
+const dateProp = (days: Iterable<number>, dates?: readonly string[]): { dateText?: string } => {
+  const t = dayRangeText(days, dates);
   return t ? { dateText: t } : {};
 };
 
@@ -739,7 +739,7 @@ export function buildSeatPages(input: ExportInput, scope: Scope = 'all'): SeatPa
       title: `${input.exam.name}　${room.name}　座位表`,
       examName: input.exam.name,
       ...(input.seatHeading?.trim() ? { heading: input.seatHeading.trim() } : {}),
-      ...dateProp(examDays(input)),
+      ...dateProp(examDays(input), input.exam.examDates),
       roomName: room.name,
       ...(room.kind === 'reserve' ? { tag: PREP_TAG } : {}),
       chips: [],
@@ -797,7 +797,7 @@ export function buildSeatPages(input: ExportInput, scope: Scope = 'all'): SeatPa
         title: `${input.exam.name}　${room.name}　座位表（時段版）`,
         examName: input.exam.name,
         ...(input.seatHeading?.trim() ? { heading: input.seatHeading.trim() } : {}),
-        ...dateProp([...seats.values()].flatMap((m) => m.lines.flatMap((l) => (l.day === undefined ? [] : [l.day])))),
+        ...dateProp([...seats.values()].flatMap((m) => m.lines.flatMap((l) => (l.day === undefined ? [] : [l.day]))), input.exam.examDates),
         roomName: room.name,
         tag: PREP_TAG,
         chips: [`共 ${people.size} 人`, ...slotSubjectChips(seats), '抽離考試'],
@@ -846,7 +846,7 @@ function studyReferencePages(input: ExportInput, ctx: Ctx, rooms: Map<string, Cl
       title: `${input.exam.name}　${room.name}　自習座位（非考試座位）`,
       examName: input.exam.name,
       ...(input.seatHeading?.trim() ? { heading: input.seatHeading.trim() } : {}),
-      ...dateProp(g.subjectIds.flatMap((id) => (periods.get(id) ?? []).filter((sp) => sp.slot).map((sp) => sp.day ?? 0))),
+      ...dateProp(g.subjectIds.flatMap((id) => (periods.get(id) ?? []).filter((sp) => sp.slot).map((sp) => sp.day ?? 0)), input.exam.examDates),
       roomName: `${room.name}　自習座位`,
       tag: PREP_TAG,
       chips: ['自習座位，非考試座位', `自習 ${ref.seats.size} 人`, ...(when ? [when] : []), subj],

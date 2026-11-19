@@ -113,6 +113,8 @@ export interface NewExamOptions {
   year?: number;
   /** 沿用上一次同類型模擬考的設定（教室、標示規則、標籤格式、自訂考科） */
   prev?: ExamConfig;
+  /** 考試日期（#389）：第 1 天、第 2 天… 'YYYY-MM-DD'，沒填就不給 */
+  examDates?: string[];
 }
 
 /** 依類型的學期預設（D91）：學測模擬考一定是上學期，分科一定是下學期，會考不變（上學期）；仍可手動改 */
@@ -136,6 +138,7 @@ export function newExam(doc: Doc, kind: ExamKind, name: string, now: Date, opts:
     // 標籤格數待使用者定案（D72），這裡只是預設值，一律由參數帶
     labelLayout: prev ? structuredClone(prev.labelLayout) : defaultLabelLayout(doc.settings.defaultLabelPaper),
     createdAt: now.toISOString(), updatedAt: now.toISOString(),
+    ...(opts.examDates?.length ? { examDates: [...opts.examDates] } : {}),
   };
   return { ok: true, doc: { ...doc, exams: [...doc.exams, exam] } };
 }

@@ -66,8 +66,8 @@ describe('#413 第 8 項：開／關控制', () => {
     expect(code(f.src)).not.toMatch(/aria-pressed/);
     expect(code(f.src)).toMatch(/<Switch\b/);
   });
-  it('原生 checkbox 只准「勾選項目」，數量不得增加（現況 12 處，含 Switch 自己內部那一個）', () => {
-    expect(hits(/type="checkbox"/).length).toBeLessThanOrEqual(12);
+  it('原生 checkbox 只准「勾選項目」，數量不得增加（現況 14 處：含 Switch 自己內部那一個，及列表「選取」「全選」兩處——模擬考列表包 v2.74 指定的選取方塊）', () => {
+    expect(hits(/type="checkbox"/).length).toBeLessThanOrEqual(14);
   });
 });
 

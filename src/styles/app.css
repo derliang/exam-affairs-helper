@@ -1073,3 +1073,6 @@ details:not(.moremenu)>summary{list-style:none}
 details:not(.moremenu)>summary::-webkit-details-marker{display:none}
 details:not(.moremenu)>summary::after{content:" ▾"}
 details[open]:not(.moremenu)>summary::after{content:" ▴"}
+
+/* #363：固定在頁面頂端的「回到原頁」列（稿 v2.74 第 3 節）；數值待設計員確認 */
+.retbar{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:8px 0;margin-bottom:12px;background:var(--bg)}
