@@ -9,7 +9,7 @@ import { Alert, Badge, Button, FormatButton, Seg, StepHead } from '../components
 import { AST_STEP_BLURBS } from '../nav';
 import { examEntries } from '../seating';
 import type { Doc } from '../store';
-import { download, downloadMany, kb, noticeOf, openPrintPage } from '../pages/Step6';
+import { download, downloadMany, markDownloaded, kb, noticeOf, openPrintPage } from '../pages/Step6';
 import { phaseOf } from '../../core/astD99/release';
 import { PhaseCard, VersionCard } from './AstRelease';
 import { astPlan, astSnapshotMismatch } from './model';
@@ -85,6 +85,7 @@ export function AstStep6(p: { doc: Doc; exam: ExamConfig; onGoStep: (n: 2 | 3 | 
       for (const f of res.filter((x) => x.mime === 'text/html')) { if (!openPrintPage(f)) throw new Error('瀏覽器擋住了新視窗，請允許本網站開啟彈出視窗後再按一次。'); }
       await downloadMany(res.filter((x) => x.mime !== 'text/html'));
       setResults(res);
+      p.onChange?.(markDownloaded(doc, exam.id));
     } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } finally { setBusy(false); setProg(''); }
   };
 

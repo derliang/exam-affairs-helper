@@ -113,7 +113,7 @@ export function flowOf(doc: Doc, exam: ExamConfig, current: StepNo): Flow {
     }
   }
 
-  const done: Record<StepNo, StepState> = { 1: s1 ? 'done' : 'todo', 2: s2 ? 'done' : 'todo', 3: s3 ? 'done' : 'todo', 4: s4 ? 'done' : 'todo', 5: s5, 6: 'todo' };
+  const done: Record<StepNo, StepState> = { 1: s1 ? 'done' : 'todo', 2: s2 ? 'done' : 'todo', 3: s3 ? 'done' : 'todo', 4: s4 ? 'done' : 'todo', 5: s5, 6: s5 === 'done' && !!exam.downloadedAt ? 'done' : 'todo' }; // #397：下載過任意檔案＝⑥ 完成（使用者 2026-11-18 裁示）；排座沒完成或過期時不算
   const steps: FlowStep[] = STEPS.map((no) => ({
     no,
     name: names[no - 1]!,
