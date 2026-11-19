@@ -1,0 +1,674 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>表格改卡片稿 稿 v2.75</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700&display=swap">
+<style>
+
+/* 模擬考小幫手 design tokens（M1 定案）。沿用座位小幫手 v3.4.0，只加班級六色與標示色。只用十六進位色碼（匯出函式庫不吃 oklch）。 */
+:root{
+  --bg:#F5F2EA; --surface:#FFFDF8; --sunken:#F1EDE3;
+  --line:#E4DECF; --line-2:#CFC7B2;
+  --text:#22201B; --text-2:#4F493D; --text-3:#6F6858;
+  --accent:#274690; --accent-on:#FFFFFF; --accent-soft:#E8EDF8; --accent-ink:#1F3877; --accent-line:#B9C6E6;
+  --danger:#C81E45; --danger-soft:#FDECEF; --danger-ink:#9B1237; --danger-line:#F3B4C1;
+  --warn-soft:#FBF0D5; --warn-ink:#6B4300; --warn-line:#E3C07A; --warn-bar:#C98A12;
+  --ok-soft:#E3F2E0; --ok-ink:#1F5A1A; --ok-line:#A5D39D; --ok-bar:#3C8B34;
+  --att-fill:#22201B; --att-on:#FFFDF8;
+  --cut:#8E8670;
+  --c1-bg:#E7DCF5; --c1-line:#B39DD9; --c1-ink:#4A2E80;
+  --c2-bg:#F6D6EC; --c2-line:#D98ABF; --c2-ink:#7A1C5E;
+  --c3-bg:#CDEDE9; --c3-line:#6FC0B6; --c3-ink:#0F5A52;
+  --c4-bg:#EBDCCB; --c4-line:#C09A72; --c4-ink:#5C3A17;
+  --c5-bg:#DFE3E8; --c5-line:#9AA5B1; --c5-ink:#2F3B48;
+  --c6-bg:#EBD9E3; --c6-line:#C79BB5; --c6-ink:#5E2D49;
+  --c7-bg:#CDB6EA; --c7-line:#8F6FC4; --c7-ink:#35205F;
+  --c8-bg:#EFB6DC; --c8-line:#C4569F; --c8-ink:#5F0F46;
+  --c9-bg:#A9DDD6; --c9-line:#3E9E92; --c9-ink:#093F39;
+  --c10-bg:#D9BE9F; --c10-line:#A4743F; --c10-ink:#432810;
+  --c11-bg:#BCC5CF; --c11-line:#6C7B8B; --c11-ink:#1E2833;
+  --c12-bg:#D9B6CB; --c12-line:#A5668A; --c12-ink:#46172F;
+  --fmt-word:#2A6AC8; --fmt-pdf:#B8423A; --fmt-xls:#1F7A47;
+  --fmt-word-soft:#E6EEFB; --fmt-pdf-soft:#FBEAE8; --fmt-xls-soft:#E3F2E8;
+  --shadow-1:0 1px 2px rgba(34,32,27,.07),0 2px 6px -2px rgba(34,32,27,.06);
+  --shadow-2:0 2px 4px rgba(34,32,27,.06),0 10px 24px -8px rgba(34,32,27,.16);
+  --shadow-3:0 4px 8px rgba(34,32,27,.08),0 24px 48px -12px rgba(34,32,27,.30);
+  --shadow-accent:0 1px 2px rgba(39,70,144,.35),0 5px 12px -5px rgba(39,70,144,.50);
+  --shadow-inset:inset 0 1px 2px rgba(34,32,27,.08);
+  --shadow-bar:0 8px 14px -12px rgba(34,32,27,.40);
+  --ease:cubic-bezier(.2,.7,.2,1); --dur:.16s;
+  --r-sm:8px; --r-md:12px; --r-lg:16px; --r-xl:24px;
+  --f-ui:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+  --f-head:"Noto Serif TC","Noto Sans TC","PMingLiU",serif;
+  --f-no:"Noto Sans TC","Microsoft JhengHei",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#13120E; --surface:#1C1A15; --sunken:#17150F;
+  --line:#302D24; --line-2:#433F33;
+  --text:#F1EDE2; --text-2:#CFC8B6; --text-3:#A0987F;
+  --accent:#3F63C4; --accent-on:#FFFFFF; --accent-soft:#1B2540; --accent-ink:#AFC2F5; --accent-line:#33467E;
+  --danger:#F0617F; --danger-soft:#3A1A22; --danger-ink:#F7B2C0; --danger-line:#6B2B3B;
+  --warn-soft:#3A2E12; --warn-ink:#F3D690; --warn-line:#6F5620; --warn-bar:#E0A832;
+  --ok-soft:#1C3220; --ok-ink:#B9E3B2; --ok-line:#3B6B3C; --ok-bar:#5DB257;
+  --att-fill:#F1EDE2; --att-on:#13120E;
+  --cut:#7C755F;
+  --c1-bg:#2E2347; --c1-line:#6B568F; --c1-ink:#E0D2F5;
+  --c2-bg:#43203A; --c2-line:#8C4478; --c2-ink:#F5C3E4;
+  --c3-bg:#12332F; --c3-line:#3F8078; --c3-ink:#BEEAE4;
+  --c4-bg:#3A2D1F; --c4-line:#7C5E3C; --c4-ink:#EBD6BC;
+  --c5-bg:#26292E; --c5-line:#566170; --c5-ink:#D3D9E0;
+  --c6-bg:#3A2230; --c6-line:#8A5A75; --c6-ink:#EBD0DE;
+  --c7-bg:#3C2E5C; --c7-line:#8468B8; --c7-ink:#E8DBFA;
+  --c8-bg:#52294A; --c8-line:#A8558F; --c8-ink:#FAD0EB;
+  --c9-bg:#1A423D; --c9-line:#4F9B91; --c9-ink:#C9F0EA;
+  --c10-bg:#4A3826; --c10-line:#92704A; --c10-ink:#F0DEC8;
+  --c11-bg:#343A42; --c11-line:#6C7886; --c11-ink:#E2E7EC;
+  --c12-bg:#4A2D3E; --c12-line:#9C6B88; --c12-ink:#F2DCE8;
+  --fmt-word:#5B93E6; --fmt-pdf:#E0766E; --fmt-xls:#4DB57A;
+  --fmt-word-soft:#1B2740; --fmt-pdf-soft:#3A1F1D; --fmt-xls-soft:#1A3326;
+  --shadow-1:0 1px 2px rgba(0,0,0,.55),0 2px 8px -2px rgba(0,0,0,.40),inset 0 1px 0 rgba(255,255,255,.03); --shadow-2:0 2px 4px rgba(0,0,0,.5),0 10px 24px -8px rgba(0,0,0,.6); --shadow-3:0 4px 8px rgba(0,0,0,.5),0 24px 48px -12px rgba(0,0,0,.75);
+  --shadow-accent:0 1px 2px rgba(0,0,0,.5),0 5px 12px -5px rgba(63,99,196,.55); --shadow-inset:inset 0 1px 2px rgba(0,0,0,.35); --shadow-bar:0 8px 14px -12px rgba(0,0,0,.8);
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#13120E; --surface:#1C1A15; --sunken:#17150F;
+  --line:#302D24; --line-2:#433F33;
+  --text:#F1EDE2; --text-2:#CFC8B6; --text-3:#A0987F;
+  --accent:#3F63C4; --accent-on:#FFFFFF; --accent-soft:#1B2540; --accent-ink:#AFC2F5; --accent-line:#33467E;
+  --danger:#F0617F; --danger-soft:#3A1A22; --danger-ink:#F7B2C0; --danger-line:#6B2B3B;
+  --warn-soft:#3A2E12; --warn-ink:#F3D690; --warn-line:#6F5620; --warn-bar:#E0A832;
+  --ok-soft:#1C3220; --ok-ink:#B9E3B2; --ok-line:#3B6B3C; --ok-bar:#5DB257;
+  --att-fill:#F1EDE2; --att-on:#13120E;
+  --cut:#7C755F;
+  --c1-bg:#2E2347; --c1-line:#6B568F; --c1-ink:#E0D2F5;
+  --c2-bg:#43203A; --c2-line:#8C4478; --c2-ink:#F5C3E4;
+  --c3-bg:#12332F; --c3-line:#3F8078; --c3-ink:#BEEAE4;
+  --c4-bg:#3A2D1F; --c4-line:#7C5E3C; --c4-ink:#EBD6BC;
+  --c5-bg:#26292E; --c5-line:#566170; --c5-ink:#D3D9E0;
+  --c6-bg:#3A2230; --c6-line:#8A5A75; --c6-ink:#EBD0DE;
+  --c7-bg:#3C2E5C; --c7-line:#8468B8; --c7-ink:#E8DBFA;
+  --c8-bg:#52294A; --c8-line:#A8558F; --c8-ink:#FAD0EB;
+  --c9-bg:#1A423D; --c9-line:#4F9B91; --c9-ink:#C9F0EA;
+  --c10-bg:#4A3826; --c10-line:#92704A; --c10-ink:#F0DEC8;
+  --c11-bg:#343A42; --c11-line:#6C7886; --c11-ink:#E2E7EC;
+  --c12-bg:#4A2D3E; --c12-line:#9C6B88; --c12-ink:#F2DCE8;
+  --fmt-word:#5B93E6; --fmt-pdf:#E0766E; --fmt-xls:#4DB57A;
+  --fmt-word-soft:#1B2740; --fmt-pdf-soft:#3A1F1D; --fmt-xls-soft:#1A3326;
+  --shadow-1:0 1px 2px rgba(0,0,0,.55),0 2px 8px -2px rgba(0,0,0,.40),inset 0 1px 0 rgba(255,255,255,.03); --shadow-2:0 2px 4px rgba(0,0,0,.5),0 10px 24px -8px rgba(0,0,0,.6); --shadow-3:0 4px 8px rgba(0,0,0,.5),0 24px 48px -12px rgba(0,0,0,.75);
+  --shadow-accent:0 1px 2px rgba(0,0,0,.5),0 5px 12px -5px rgba(63,99,196,.55); --shadow-inset:inset 0 1px 2px rgba(0,0,0,.35); --shadow-bar:0 8px 14px -12px rgba(0,0,0,.8);
+  color-scheme:dark}
+
+
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--f-ui);font-size:14px;line-height:1.65;margin:0;
+  padding-block:0 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3,h4{font-family:var(--f-head);font-weight:700;margin:0;text-wrap:balance;letter-spacing:.01em}
+h1{font-size:26px}h2{font-size:24px}h3{font-size:18px}h4{font-size:15px}
+p{margin:0}.muted{color:var(--text-3)}.small{font-size:13px}.num{font-variant-numeric:tabular-nums}
+code{font-family:ui-monospace,Consolas,monospace;font-size:12px;background:var(--sunken);border:1px solid var(--line);border-radius:6px;padding:1px 5px}
+.hd{position:sticky;top:env(safe-area-inset-top,0px);z-index:40;background:var(--bg);border-bottom:1px solid var(--line);margin-inline:calc(-1 * max(16px,env(safe-area-inset-left,0px)));padding:10px max(16px,env(safe-area-inset-left,0px));display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:50;background:var(--bg)}
+.hd b{font-family:var(--f-head);margin-right:auto}
+.toc{display:flex;gap:2px;flex-wrap:wrap}
+.toc a{color:var(--text-2);text-decoration:none;padding:4px 8px;border-radius:var(--r-sm);font-weight:500;font-size:13px}
+.toc a:hover{background:var(--sunken)}
+.main{max-width:1180px;margin:0 auto}
+.hero{padding-block:24px 4px;display:grid;gap:10px}
+.hero p{max-width:70ch;color:var(--text-2)}
+section.sec{padding-top:44px;scroll-margin-top:60px;display:grid;gap:16px}
+.sec>header{display:grid;gap:6px}.sec>header p{max-width:74ch;color:var(--text-2)}
+.gtag{display:inline-flex;gap:6px;flex-wrap:wrap}
+.say{background:var(--sunken);border:1px solid var(--line);border-radius:var(--r-md);padding:10px 14px;color:var(--text-2);max-width:78ch}
+.say b{color:var(--text)}
+.cap{font-size:13px;font-weight:700;color:var(--text-3);margin-bottom:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.cols{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));align-items:start}
+.tabs{display:inline-flex;border:1px solid var(--line-2);border-radius:var(--r-sm);overflow:hidden;background:var(--sunken);flex-wrap:wrap}
+.tabs button{font:inherit;font-weight:700;min-height:36px;padding:0 14px;border:0;background:transparent;color:var(--text-2);cursor:pointer}
+.tabs button[aria-pressed="true"]{background:var(--accent);color:var(--accent-on)}
+.pn[hidden]{display:none!important}
+.fit{width:100%;position:relative;overflow:hidden}
+.dev{transform-origin:top left;position:absolute;left:0;top:0}
+.dev.mob{border-radius:28px}
+.shot{border:1px solid var(--line-2);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--shadow-2);background:var(--bg);position:relative}
+.dw{font-size:13px;color:var(--text-3);font-weight:700}
+/* ===== 模擬 App（與實作同一套 token） ===== */
+.app{background:var(--bg);color:var(--text);font-family:var(--f-ui);font-size:14px;line-height:1.6}
+.app *{box-sizing:border-box}
+.brand{display:flex;gap:14px;align-items:center;padding:10px 20px;border-bottom:1px solid var(--line);background:var(--surface)}
+.brand b{font-family:var(--f-head);font-size:15px;margin-right:auto}
+.brand nav{display:flex;gap:4px}
+.brand nav a{padding:5px 12px;border-radius:var(--r-sm);color:var(--text-2);font-weight:500;font-size:13px}
+.brand nav a.on{background:var(--accent-soft);color:var(--accent-ink);font-weight:700}
+.pad{padding:18px 20px;display:grid;gap:14px}
+.pghd{display:grid;gap:0;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--shadow-1)}
+.crumbs{display:flex;flex-wrap:wrap;gap:2px 8px;align-items:center;padding:7px 14px;border-bottom:1px solid var(--line);background:var(--sunken);border-radius:var(--r-lg) var(--r-lg) 0 0;font-size:13px;color:var(--text-3)}
+.crumbs a{color:var(--accent-ink);font-weight:700}.crumbs .sep{color:var(--text-3)}
+.crumbs .cur{color:var(--text-2);font-weight:700}
+.crumbs.dup .cur{background:var(--warn-soft);outline:1.5px dashed var(--warn-bar);border-radius:6px;padding:0 6px}
+.ttl{display:flex;gap:10px 12px;flex-wrap:wrap;align-items:center;padding:12px 16px}
+.ttl h1{font-size:22px;margin-right:auto}
+.ttl.dup h1{outline:1.5px dashed var(--warn-bar);border-radius:6px;padding:0 6px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:16px;box-shadow:var(--shadow-1);min-width:0;display:grid;gap:12px}
+.psec{display:grid;gap:10px;padding-top:12px;border-top:1px solid var(--line)}
+.psec:first-child{border-top:0;padding-top:0}
+.lab{font-size:13px;font-weight:700;color:var(--text-3);letter-spacing:.04em}
+.row{display:flex;gap:8px 10px;flex-wrap:wrap;align-items:center}
+.row.sb{justify-content:space-between}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr))}
+.btn{font:inherit;font-weight:700;min-height:40px;padding:0 16px;border-radius:var(--r-sm);border:1px solid var(--line-2);background:var(--surface);color:var(--text);display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;cursor:pointer}
+.btn-primary{background:var(--accent);color:var(--accent-on);border-color:var(--accent);box-shadow:var(--shadow-accent)}
+.btn-danger{background:var(--danger-soft);color:var(--danger-ink);border-color:var(--danger-line)}
+.btn-dsolid{background:var(--danger);color:#fff;border-color:var(--danger)}
+.btn-ghost{background:transparent;border-color:transparent;color:var(--accent-ink)}
+.btn-gdanger{background:transparent;border-color:transparent;color:var(--danger-ink)}
+.btn-sm{min-height:34px;padding:0 11px;font-size:13px}
+.btn-lg{min-height:46px;padding:0 20px;font-size:15px}
+.btn[disabled],.btn.off{background:var(--sunken);color:var(--text-3);border-color:var(--line);box-shadow:none;cursor:not-allowed}
+.btn .fi{width:22px;height:22px;border-radius:5px;display:grid;place-items:center;font-size:11px;font-weight:700;color:#fff;flex:none}
+.fi.w{background:var(--fmt-word)}.fi.p{background:var(--fmt-pdf)}.fi.x{background:var(--fmt-xls)}
+.field{display:grid;gap:5px;min-width:0}
+.field label,.label{font-size:13px;font-weight:700;color:var(--text-2)}
+.input{font:inherit;height:40px;padding:0 12px;border-radius:var(--r-sm);border:1px solid var(--line-2);background:var(--sunken);color:var(--text);width:100%;display:flex;align-items:center}
+.input.ro{background:var(--surface)}
+.input.err{border-color:var(--danger);background:var(--danger-soft)}
+.hint{font-size:13px;color:var(--text-3)}.fmsg{font-size:13px;color:var(--danger-ink);font-weight:700}
+.seg{display:inline-flex;border:1px solid var(--line-2);border-radius:var(--r-sm);overflow:hidden;background:var(--sunken);flex-wrap:wrap}
+.seg span{font-weight:700;min-height:36px;padding:0 14px;color:var(--text-2);display:inline-flex;align-items:center;white-space:nowrap}
+.seg span.on{background:var(--accent);color:var(--accent-on)}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:700;padding:1px 9px;border-radius:99px;border:1px solid var(--line-2);background:var(--sunken);color:var(--text-2);white-space:nowrap}
+.b-acc{background:var(--accent-soft);color:var(--accent-ink);border-color:var(--accent-line)}
+.b-ok{background:var(--ok-soft);color:var(--ok-ink);border-color:var(--ok-line)}
+.b-warn{background:var(--warn-soft);color:var(--warn-ink);border-color:var(--warn-line)}
+.b-err{background:var(--danger-soft);color:var(--danger-ink);border-color:var(--danger-line)}
+.alert{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:start;padding:11px 14px;border-radius:var(--r-md);border:1px solid;font-weight:500}
+.alert b{font-weight:700}
+.a-info{background:var(--accent-soft);color:var(--accent-ink);border-color:var(--accent-line)}
+.a-warn{background:var(--warn-soft);color:var(--warn-ink);border-color:var(--warn-line)}
+.a-err{background:var(--danger-soft);color:var(--danger-ink);border-color:var(--danger-line)}
+.a-ok{background:var(--ok-soft);color:var(--ok-ink);border-color:var(--ok-line)}
+.ico{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;background:currentColor;margin-top:2px}
+.ico::before{content:attr(data-i);color:var(--surface)}
+.t{width:100%;border-collapse:collapse;font-size:14px}
+.t th{text-align:left;font-size:13px;color:var(--text-3);font-weight:700;padding:8px 10px;border-bottom:1px solid var(--line-2);background:var(--sunken);white-space:nowrap}
+.t td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+.t.cmp td,.t.cmp th{vertical-align:top;white-space:normal}
+.scroll{overflow-x:auto}
+.more{border:1px solid var(--line);border-radius:var(--r-sm);padding:6px 12px;font-size:13px;color:var(--text-2);background:var(--sunken)}
+.more::before{content:"▸ ";color:var(--text-3)}
+/* 步驟頁骨架 */
+.shell{display:grid;grid-template-columns:230px minmax(0,1fr) 290px;gap:16px;align-items:start}
+.shell.two{grid-template-columns:230px minmax(0,1fr)}
+.shell.one{grid-template-columns:minmax(0,1fr)}
+.steps{display:grid;gap:4px;list-style:none;margin:0;padding:10px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-1)}
+.step{display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:center;padding:7px 8px;border-radius:var(--r-md);border:1px solid transparent}
+.step .no{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:13px;border:1.5px solid var(--line-2);background:var(--surface);color:var(--text-2)}
+.step small{display:block;color:var(--text-3);font-size:12px;line-height:1.3}
+.step.cur{background:var(--sunken);border-color:var(--line-2)}
+.step.cur .no{background:var(--text);border-color:var(--text);color:var(--surface)}
+.step.done .no{background:var(--ok-soft);border-color:var(--ok-bar);color:var(--ok-ink)}
+.step.stale .no{background:var(--warn-soft);border-color:var(--warn-bar);color:var(--warn-ink)}
+.sumbar{display:grid;gap:8px;padding:10px 14px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);box-shadow:var(--shadow-1)}
+.sstats{display:flex;flex-wrap:wrap;gap:6px 10px}
+.sc{display:flex;align-items:baseline;gap:8px;padding:3px 12px;border-radius:var(--r-sm);background:var(--sunken)}
+.sc .sl{font-size:13px;color:var(--text-3)}.sc b{font-size:18px;font-variant-numeric:tabular-nums}
+.sc.warn{background:var(--warn-soft);box-shadow:inset 0 0 0 1.5px var(--warn-bar)}.sc.warn b,.sc.warn .sl{color:var(--warn-ink)}
+.sc.bad{background:var(--danger-soft)}.sc.bad b{color:var(--danger-ink)}
+.sc.okc{background:var(--ok-soft)}.sc.okc b{color:var(--ok-ink);font-size:14px}
+.issue{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px;padding:6px 0;border-top:1px dashed var(--line-2)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden}
+.stats>div{background:var(--surface);padding:8px 12px;display:grid;gap:2px}
+.stats small{font-size:13px;font-weight:700;color:var(--text-3)}.stats strong{font-size:28px;line-height:1.2;font-variant-numeric:tabular-nums}
+.stats .sub{font-size:13px;color:var(--text-3)}
+.stats .bad strong{color:var(--danger-ink)}
+.done-card{position:sticky;top:12px;display:grid;gap:10px;background:var(--surface);border:1px solid var(--accent-line);border-radius:var(--r-lg);padding:14px;box-shadow:var(--shadow-2)}
+.done-card .why{font-size:13px;color:var(--warn-ink);background:var(--warn-soft);border:1px solid var(--warn-line);border-radius:var(--r-sm);padding:6px 10px}
+.mbar{position:absolute;left:0;right:0;bottom:0;display:flex;gap:10px;padding:10px 14px;background:var(--surface);border-top:1px solid var(--line-2);box-shadow:0 -8px 18px -12px rgba(34,32,27,.35)}
+.mbar .btn{flex:1}
+.mbar .btn.back{flex:0 0 auto}
+.mscroll{height:100%;overflow:hidden;padding-bottom:70px}
+/* 教室卡與座位小圖 */
+.rooms{display:grid;gap:10px}
+.room{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface)}
+.room .nm{font-weight:700;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.room .meta{font-size:13px;color:var(--text-3)}
+.room .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center}
+.room .acts .sepv{width:1px;height:22px;background:var(--line-2);margin:0 4px}
+.smap{display:grid;gap:2px;padding:5px;background:var(--sunken);border:1px solid var(--line);border-radius:6px}
+.smap i{width:10px;height:10px;border-radius:2px;background:var(--cb);border:1px solid var(--cl)}
+.smap i.e{background:repeating-linear-gradient(135deg,transparent 0 2px,var(--line-2) 2px 4px);border-color:var(--line-2)}
+.cdot{display:inline-block;width:12px;height:12px;border-radius:4px;background:var(--cb);border:1.5px solid var(--cl);vertical-align:-1px}
+.room.gone{opacity:.85;border-style:dashed;background:var(--sunken)}
+/* 彈窗 */
+.mframe{background:rgba(20,18,12,.5);padding:26px 14px;display:grid;place-items:center;border-radius:var(--r-lg)}
+.modal{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-xl);box-shadow:var(--shadow-3);width:min(100%,520px);padding:20px;display:grid;gap:12px;color:var(--text)}
+.modal.wide{width:min(100%,760px)}
+.modal h3{font-size:18px}
+.acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.toast{display:inline-flex;gap:10px;align-items:center;background:var(--att-fill);color:var(--att-on);padding:9px 14px;border-radius:var(--r-md);box-shadow:var(--shadow-3);font-weight:700}
+.toast a{text-decoration:underline}
+/* 匯入區 */
+.drop{border:2px dashed var(--accent-line);border-radius:var(--r-lg);background:var(--accent-soft);padding:26px 18px;display:grid;gap:8px;justify-items:center;text-align:center;color:var(--accent-ink)}
+.drop strong{font-size:17px}
+.empty{border:1.5px dashed var(--line-2);border-radius:var(--r-lg);padding:24px 16px;text-align:center;display:grid;gap:8px;justify-items:center;background:var(--sunken)}
+/* 列表 */
+.exam{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto;gap:14px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:14px 16px;box-shadow:var(--shadow-1)}
+.exam h3{font-size:17px}.exam .meta{display:flex;gap:6px 10px;flex-wrap:wrap;align-items:center;margin-top:6px;color:var(--text-3);font-size:13px}
+.exam.arch{background:var(--sunken);box-shadow:none}
+.dots{display:flex;gap:4px}.dots i{width:26px;height:8px;border-radius:4px;background:var(--line-2)}
+.dots i.d{background:var(--ok-bar)}.dots i.c{background:var(--text)}.dots i.s{background:var(--warn-bar)}.dots i.n{background:repeating-linear-gradient(135deg,transparent 0 3px,var(--line-2) 3px 6px)}
+.menu{position:absolute;right:16px;top:44px;background:var(--surface);border:1px solid var(--line-2);border-radius:var(--r-md);box-shadow:var(--shadow-3);padding:6px;display:grid;gap:2px;min-width:170px;z-index:3}
+.menu a{padding:8px 10px;border-radius:var(--r-sm);font-weight:500;display:block}.menu a.dg{color:var(--danger-ink)}
+.menu hr{border:0;border-top:1px solid var(--line);margin:3px 0;width:100%}
+/* 標籤紙 */
+.sheet{background:#fff;color:#22201B;border:1px solid var(--line-2);box-shadow:var(--shadow-2);position:relative;flex:none}
+.sheet .lc{position:absolute;border:1px solid #CFC7B2;padding:2px 3px;display:grid;align-content:center;justify-items:center;text-align:center;line-height:1.25;overflow:hidden}
+.sheet .lc .a{font-size:8px;color:#6F6858}.sheet .lc .b{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}.sheet .lc .c{font-size:9px}
+.sheet .gh{position:absolute;border:1px dashed #E3C07A;background:repeating-linear-gradient(135deg,transparent 0 3px,#FBF0D5 3px 6px);opacity:.9}
+.sheet .gx{position:absolute;border:1px dashed #CFC7B2;background:#F7F4EC}
+.leg{display:flex;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--text-2)}
+.leg i{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:4px}
+.q{display:grid;gap:10px}
+.q .qi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:12px 14px;display:grid;gap:4px}
+.q .qi b{font-size:15px}
+.q .qi .rec{color:var(--ok-ink)}
+.map td,.map th{vertical-align:top;white-space:normal}
+.dk{font-weight:700}
+@media (max-width:560px){.cols{grid-template-columns:minmax(0,1fr)}}
+
+
+.dev{background:var(--bg)}
+.col{display:grid;gap:14px;min-width:0;align-content:start}
+.stm{display:flex;align-items:center;gap:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:8px 12px;box-shadow:var(--shadow-1)}
+.stm .no{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:12px;border:1.5px solid var(--line-2);background:var(--surface);color:var(--text-2);flex:none}
+.stm .no.cur{background:var(--text);border-color:var(--text);color:var(--surface)}.stm .no.done{background:var(--ok-soft);border-color:var(--ok-bar);color:var(--ok-ink)}
+.stm i{width:8px;height:2px;background:var(--line-2);flex:none}.stm b{margin-left:auto;padding-left:10px;font-size:13px}
+.w390 .stm b{display:none}.w390 .stm i{flex:1}
+.nv{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:10px;align-items:start}.nv.one{grid-template-columns:1fr}
+.nvc{display:grid;gap:4px;justify-items:stretch;text-align:center}.nvc small{font-size:12px;color:var(--text-3);line-height:1.3}
+.nvc .btn{width:100%}
+.mbar2{display:grid;gap:8px;padding:10px 14px;background:var(--surface);border-top:2px solid var(--line-2);box-shadow:0 -8px 18px -12px rgba(34,32,27,.35);margin:0 -20px -18px;position:sticky;bottom:0}
+.w390 .mbar2{margin:0 -20px -18px}
+.mbar2 .why{font-size:13px;color:var(--warn-ink);background:var(--warn-soft);border:1px solid var(--warn-line);border-radius:var(--r-sm);padding:5px 10px}
+.sw{width:38px;height:22px;border-radius:99px;background:var(--line-2);display:inline-block;position:relative;flex:none}.sw i{position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:#fff}.sw.on{background:var(--accent)}.sw.on i{left:19px}
+.stp{display:inline-flex;align-items:center;border:1px solid var(--line-2);border-radius:var(--r-sm);background:var(--surface);overflow:hidden}.stp .b{width:34px;height:34px;display:grid;place-items:center;font-weight:700;color:var(--accent-ink)}.stp .b.off{color:var(--text-3);background:var(--sunken)}.stp b{min-width:34px;text-align:center}
+.rt{display:grid;border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;background:var(--surface)}
+.rh,.rr{display:grid;gap:10px;align-items:center;padding:9px 12px;border-top:1px solid var(--line)}
+.rh{background:var(--sunken);font-size:13px;font-weight:700;color:var(--text-3);border-top:0}
+.w1280 .rh,.w1280 .rr{grid-template-columns:52px minmax(0,1.1fr) minmax(0,1.6fr) minmax(0,1fr) 92px auto}
+.w820 .rh,.w820 .rr{grid-template-columns:52px minmax(0,1.2fr) minmax(0,1.3fr) minmax(0,1fr) auto}
+.w820 .c-grp{display:none}
+.w390 .rh{display:none}
+.w390 .rr{grid-template-columns:auto minmax(0,1fr);grid-template-areas:"t n" "m m" "s g" "a a"}
+.w390 .c-on{grid-area:t}.w390 .c-nm{grid-area:n}.w390 .c-cfg{grid-area:m}.w390 .c-seat{grid-area:s}.w390 .c-grp{grid-area:g}.w390 .c-act{grid-area:a}
+.rr .c-nm{font-weight:700;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.rr .c-cfg{display:flex;gap:10px;align-items:center;font-size:13px;color:var(--text-2)}
+.rr .c-act{display:flex;gap:6px;justify-content:flex-end;align-items:center;flex-wrap:wrap}
+.rr.gone{background:var(--sunken);border-style:dashed}.rr.off .c-nm,.rr.off .c-cfg{opacity:.55}
+.rx{padding:12px 14px;background:var(--sunken);border-top:1px dashed var(--line-2);display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
+.rx .field{gap:6px}.rx .hint{font-size:12.5px}
+.rgrp{padding:8px 12px;background:var(--surface);border-top:1px solid var(--line);font-weight:700;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.opt{display:grid;grid-template-columns:150px minmax(0,1fr);gap:6px 14px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}.opt:first-of-type{border-top:0}
+.w390 .opt{grid-template-columns:1fr}
+.fcard{border:1px solid var(--line);border-radius:var(--r-lg);padding:14px;display:grid;gap:10px;background:var(--surface)}
+.fcard.lost{border-color:var(--danger-line);box-shadow:0 0 0 2px var(--danger-soft)}
+.fname{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:20px;font-weight:700;font-family:var(--f-head)}
+.fgl{width:28px;height:22px;border-radius:4px 4px 5px 5px;background:var(--warn-bar);position:relative;flex:none}.fgl::before{content:"";position:absolute;left:0;top:-5px;width:12px;height:6px;border-radius:3px 3px 0 0;background:var(--warn-bar)}.fcard.lost .fgl{background:var(--danger);opacity:.7}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px}
+.tile{min-height:44px;border:1px solid var(--line-2);border-radius:var(--r-sm);background:var(--surface);display:grid;place-items:center;font-weight:700;color:var(--text-2)}
+.tile.on{background:var(--accent);color:var(--accent-on);border-color:var(--accent);box-shadow:var(--shadow-accent)}
+.form2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.w390 .form2{grid-template-columns:1fr}.form2 .full{grid-column:1/-1}
+.pcl{display:flex;gap:8px;flex-wrap:wrap}
+.gseg{display:inline-flex;gap:0;border:1px solid var(--line-2);border-radius:var(--r-sm);overflow:hidden;background:var(--sunken);max-width:100%}
+.gseg span{padding:0 11px;min-height:34px;display:inline-flex;align-items:center;font-weight:700;font-size:13px;color:var(--text-2);border-left:1px solid var(--line-2);white-space:nowrap}.gseg span:first-child{border-left:0}
+.gseg span.on{background:var(--accent);color:var(--accent-on)}
+.mk{display:grid;gap:8px;padding:12px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface)}
+.mk.pick{border-color:var(--warn-bar);box-shadow:inset 3px 0 0 var(--warn-bar)}
+.w1280 .mk{grid-template-columns:minmax(0,1.1fr) 120px minmax(0,2fr) minmax(0,1.2fr);align-items:center}
+.w820 .mk{grid-template-columns:minmax(0,1fr) minmax(0,2fr);align-items:center}
+.pr{display:grid;gap:6px}.pr .bar{height:8px;border-radius:4px;background:var(--line);overflow:hidden}.pr .bar i{display:block;height:100%;background:var(--accent)}
+.pbtn{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}.w390 .pbtn{grid-template-columns:1fr}
+.act{min-height:44px;border-radius:var(--r-sm);border:1.5px solid var(--accent-line);background:var(--surface);color:var(--accent-ink);font-weight:700;display:flex;gap:6px;align-items:center;justify-content:center;padding:0 10px;text-align:center}
+.act.on{background:var(--accent);color:var(--accent-on);border-color:var(--accent);box-shadow:var(--shadow-accent)}
+.act.off{background:var(--sunken);color:var(--text-3);border-color:var(--line);border-style:dashed}
+.pcard{border:1px solid var(--line);border-left:5px solid var(--warn-bar);border-radius:var(--r-md);padding:12px 14px;display:grid;gap:10px;background:var(--surface)}
+.pcard.decided{border-left-color:var(--ok-bar);background:var(--sunken)}
+.rawrow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));font-size:13px;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden}
+.rawrow span{padding:4px 8px;border-left:1px solid var(--line);background:var(--surface)}.rawrow span:first-child{border-left:0}.rawrow .hd2{background:var(--sunken);font-weight:700;color:var(--text-3)}.rawrow .bad{background:var(--danger-soft);color:var(--danger-ink);font-weight:700}
+.oneline{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline;padding:10px 14px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface)}
+.oneline .it{display:flex;gap:6px;align-items:baseline}.oneline .it span{font-size:13px;color:var(--text-3);font-weight:700}.oneline .it b{font-size:22px;font-variant-numeric:tabular-nums}
+.oneline .vs{font-size:13px;color:var(--text-3);font-weight:700}
+.oneline .sepl{width:1px;align-self:stretch;background:var(--line-2)}
+.w390 .oneline .sepl{display:none}
+.paper{display:inline-block;position:relative;background:#fff;border:1px solid var(--line-2);box-shadow:var(--shadow-2);flex:none}
+.paper .pc{position:absolute;border:1px solid #CFC7B2;background:#fff}.paper .pc.hl{background:#FBF0D5}
+.dim{font-size:12px;color:var(--text-3);font-variant-numeric:tabular-nums}
+.chart{display:grid;gap:3px;padding:8px;background:#fff;border:1px solid var(--line-2);border-radius:6px;color:#22201B;min-width:0}
+.chart i{border:1px solid #CFC7B2;border-radius:3px;min-height:30px;padding:1px 2px;display:grid;justify-items:center;align-content:center;font-style:normal;background:#fff;line-height:1.15}
+.chart i small{font-size:9px;color:#6F6858}.chart i b{font-size:11px}
+.chart i.x{background:repeating-linear-gradient(135deg,#fff 0 3px,#E4DECF 3px 6px);border-style:dashed}
+.chart i.hl{background:#FBF0D5;border-color:#C98A12}
+.chart i.ref{border-style:dashed;background:#F7F4EC}
+.lbl{width:150px;min-height:150px;background:#fff;color:#22201B;border:1px solid #CFC7B2;box-shadow:var(--shadow-2);padding:6px 7px;display:grid;gap:4px;align-content:start;font-size:10px}
+.lbl .lh{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid #CFC7B2;padding-bottom:2px}.lbl .lh b{font-size:11px}.lbl .lh em{font-style:normal;font-weight:700;font-size:13px}
+.lbl .lp{display:grid;gap:1px;padding:2px 0;border-bottom:1px dotted #CFC7B2}.lbl .lp:last-child{border:0}.lbl .lp b{font-size:11px}.lbl .lp span{font-size:10px;color:#4F493D}
+.lblrow{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start}
+.ptab{display:flex;gap:0;border-bottom:2px solid var(--line)}.ptab span{padding:8px 14px;font-weight:700;color:var(--text-2);border-bottom:3px solid transparent;margin-bottom:-2px}.ptab span.on{color:var(--accent-ink);border-bottom-color:var(--accent)}
+.refban{border:1.5px dashed var(--warn-bar);background:var(--warn-soft);color:var(--warn-ink);border-radius:var(--r-sm);padding:6px 10px;font-weight:700;font-size:13px}
+.pgstrip{display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end}
+.pg{width:46px;height:62px;border:1px solid var(--line-2);background:#fff;border-radius:3px;display:grid;place-items:center;font-size:11px;color:#22201B;position:relative;text-align:center;line-height:1.2}
+.pg.rs{background:#FBF0D5;border-color:var(--warn-bar)}.pg.rf{background:#F7F4EC;border-style:dashed;border-color:var(--warn-bar)}
+.fileopt{display:grid;grid-template-columns:auto 1fr;gap:8px 12px;align-items:start;padding:12px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface)}
+.chk{width:22px;height:22px;border-radius:5px;border:1.5px solid var(--line-2);display:grid;place-items:center;font-size:14px;font-weight:700;margin-top:1px;background:var(--surface)}.chk.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.tabx{display:grid;gap:0}.tabx .tr{display:grid;gap:8px;align-items:center;padding:8px 10px;border-top:1px solid var(--line)}
+.dtbl{width:100%;border-collapse:collapse;font-size:13.5px}.dtbl th{text-align:left;font-size:12.5px;color:var(--text-3);padding:6px 8px;background:var(--sunken);border-bottom:1px solid var(--line-2);white-space:nowrap}.dtbl td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.dtbl tr.bad td{background:var(--danger-soft)}.dtbl tr.ok td{background:transparent}
+.w390 .dtbl.rs thead{display:none}.w390 .dtbl.rs tr{display:grid;gap:2px;padding:8px 4px;border-bottom:1px solid var(--line)}.w390 .dtbl.rs td{border:0;padding:1px 4px}
+.q .qi .opt2{display:grid;gap:1px;padding-left:2px}
+.badge.nb{font-weight:500}
+.sheetcap{font-size:12px;color:var(--text-3);text-align:center}
+.mframe{border-radius:var(--r-lg)}
+.alert.big{padding:14px 16px}.alert.big h4{font-family:var(--f-ui);font-size:16px}
+.stk{display:grid;gap:8px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:13.5px}.kv dt{color:var(--text-3);font-weight:700}.kv dd{margin:0}
+.nvb{border:1.5px dashed var(--danger-line);border-radius:var(--r-md);padding:10px;display:grid;gap:8px;background:var(--danger-soft)}
+.anno{font-size:12.5px;color:var(--text-3)}
+.pn{margin-bottom:6px}
+.blk{margin-top:14px}
+.field .stp,.field .gseg,.field .seg{justify-self:start}.rr .c-cfg span{white-space:nowrap}.tag{font-size:12px;font-weight:700;color:var(--text-3);border:1px solid var(--line-2);border-radius:99px;padding:0 8px;background:var(--surface)}
+
+
+/* ===== G35 考前對帳：只用既有 tokens，新增的只是列的排法 ===== */
+.lamp{margin-top:0;flex:none;min-width:20px}.lamp.g{color:var(--ok-bar)}.lamp.y{color:var(--warn-bar)}.lamp.r{color:var(--danger)}.lamp.n{color:var(--text-3)}
+.crt{display:grid;border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;background:var(--surface)}
+.cr{display:grid;gap:6px 12px;align-items:center;padding:10px 12px;border-top:1px solid var(--line);grid-template-columns:28px minmax(0,1.1fr) minmax(0,1.5fr) auto}
+.cr:first-child{border-top:0}
+.cr .cn b{display:block}.cr .cv{font-size:14px}.cr .ca{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.cr.y{background:var(--warn-soft);box-shadow:inset 4px 0 0 var(--warn-bar)}
+.cr.r{background:var(--danger-soft);box-shadow:inset 4px 0 0 var(--danger)}
+.cr.n .cn,.cr.n .cv{opacity:.75}
+.w820 .cr{grid-template-columns:28px minmax(0,1fr) auto}.w820 .cr .cv{grid-column:2/-1}
+.w390 .cr{grid-template-columns:28px minmax(0,1fr)}.w390 .cr .cv,.w390 .cr .ca{grid-column:2}.w390 .cr .ca{justify-content:flex-start}
+.cx{grid-column:2/-1;display:grid;gap:0;margin-top:2px}
+.cx .issue{border-top:1px dashed var(--line-2)}
+.cx .issue .grow{flex:1;min-width:0}
+.lgd{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--text-2);align-items:center}
+.lgd span{display:inline-flex;gap:6px;align-items:center}
+.ldg td.k,.ldg th.k{text-align:center}
+.eq{font-variant-numeric:tabular-nums;white-space:nowrap}
+.ldg .x{color:var(--danger-ink);font-weight:700}
+.ldg tr.bad td{background:var(--danger-soft)}
+.ldg td b{font-variant-numeric:tabular-nums}
+.sumline{display:flex;gap:6px 16px;flex-wrap:wrap;align-items:baseline;padding:8px 12px;background:var(--sunken);border:1px solid var(--line);border-radius:var(--r-md);font-size:14px}
+.sumline b{font-size:18px;font-variant-numeric:tabular-nums}
+.w390 .sumline b{font-size:16px}
+.fchk{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface)}
+.fchk.on{border-color:var(--danger-line);background:var(--danger-soft)}
+.tbl-mini td{padding:6px 8px}
+.figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:10px}
+.fig{border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);padding:10px 12px;display:grid;gap:4px}
+.fig .big{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums}
+.adj{font-size:12px}
+
+.tri{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.tri>div{display:grid;gap:0;padding:3px 8px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm)}
+.tri small{font-size:12px;color:var(--text-3);line-height:1.3}
+.tri b{font-size:17px;font-variant-numeric:tabular-nums}
+.tri .bad{background:var(--danger-soft);border-color:var(--danger-line)}.tri .bad b{color:var(--danger-ink)}
+.tri .amb{background:var(--warn-soft);border-color:var(--warn-line)}.tri .amb b{color:var(--warn-ink)}
+.cr .cv{display:grid;gap:4px}
+.cr .cn .badge{margin-top:3px;justify-self:start}
+.cr{grid-template-columns:28px minmax(0,1.15fr) minmax(0,1.7fr) auto}
+.w820 .cr{grid-template-columns:28px minmax(0,1fr) auto}
+.w390 .tri{grid-template-columns:repeat(3,minmax(0,1fr))}.w390 .tri b{font-size:15px}
+.cx[hidden]{display:none}
+.comp{display:inline-flex;font-size:12px;font-weight:700;border:1px solid var(--accent-line);background:var(--accent-soft);color:var(--accent-ink);border-radius:99px;padding:0 8px}
+
+
+/* ===== H0 品牌與補考佔位 ===== */
+.typegrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:14px}
+.tcard{position:relative;text-align:left;font:inherit;color:var(--text);background:var(--surface);border:1.5px solid var(--line-2);border-radius:var(--r-lg);padding:16px;display:grid;gap:8px;cursor:pointer;min-width:0;align-content:start}
+.tcard[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);box-shadow:0 0 0 1px var(--accent)}
+.tcard:disabled{cursor:not-allowed;background:repeating-linear-gradient(135deg,var(--sunken) 0 6px,var(--line) 6px 12px);color:var(--text-3);border-style:dashed}
+.tcard .lv{font-size:13px;font-weight:700;color:var(--text-3)}
+.tcard strong{font-family:var(--f-head);font-size:18px}
+.tcard .subj{font-size:13px;color:var(--text-2)}
+.tcard:disabled .subj{color:var(--text-3)}
+.tcard .tick{position:absolute;right:12px;top:12px}
+.b-soon{background:repeating-linear-gradient(135deg,transparent 0 5px,var(--line) 5px 10px);color:var(--text-2)}
+.abar{display:flex;gap:12px;align-items:center;padding:6px 20px;border-bottom:1px solid var(--line);background:var(--surface);min-height:56px}
+.abrand{display:inline-flex;align-items:center;gap:10px;font:700 17px/1 var(--f-head);white-space:nowrap}
+.abrand .logo{width:28px;height:28px;border-radius:var(--r-md);background:var(--accent);color:var(--accent-on);display:grid;place-items:center;flex:none}
+.abrand .logo svg{width:18px;height:18px;display:block}
+.abrand .ver{font:400 12px var(--f-ui);color:var(--text-3)}
+.abar nav{display:flex;gap:4px;margin-left:auto}.abar nav a{padding:5px 12px;border-radius:var(--r-sm);color:var(--text-2);font-weight:500;font-size:13px}.abar nav a.on{background:var(--accent-soft);color:var(--accent-ink);font-weight:700}
+.w390 .abar nav{display:none}
+.tabstrip{display:flex;gap:8px;flex-wrap:wrap}
+.btab{display:flex;gap:8px;align-items:center;padding:8px 14px;border-radius:10px 10px 0 0;border:1px solid var(--line-2);border-bottom:0;background:var(--surface);font-size:13px;min-width:190px}
+.btab.dk{background:#2b2a26;color:#e8e4d8;border-color:#433F33}
+.btab svg{width:16px;height:16px;flex:none;display:block}
+.ladder{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-end}
+.ladder figure{margin:0;display:grid;gap:6px;justify-items:center}.ladder figcaption{font-size:12.5px;color:var(--text-3)}
+.mask{display:flex;gap:18px;flex-wrap:wrap}
+.mask figure{margin:0;display:grid;gap:6px;justify-items:center}.mask figcaption{font-size:12.5px;color:var(--text-3)}
+.mk1,.mk2,.mk3{width:96px;height:96px;overflow:hidden;display:block}
+.mk1{border-radius:50%}.mk2{border-radius:22%}.mk3{border-radius:0}
+.mk1 svg,.mk2 svg,.mk3 svg{width:96px;height:96px;display:block}
+.home{display:grid;gap:8px;justify-items:center;padding:18px 10px;background:linear-gradient(160deg,#6e8ac4,#2f4a8a);border-radius:var(--r-lg);width:160px}
+.home .ic{width:62px;height:62px;border-radius:14px;overflow:hidden}.home .ic svg{width:62px;height:62px;display:block}.home span{color:#fff;font-size:12px}
+pre.code{margin:0;padding:12px 14px;background:var(--sunken);border:1px solid var(--line);border-radius:var(--r-md);overflow:auto;font-size:12px;line-height:1.5}
+
+</style>
+<style id="cbx-v275">
+/* 稿 v2.75 選取方塊（使用者 2026-11-20：不可用黑色）：淺色底框＋藍色打勾；已選＝淡藍底＋藍框＋藍勾。Switch（.sw／.swx／.swrow）不受影響 */
+:root{--cbx-bg:#FFFDF8;--cbx-line:#7B91CC;--cbx-on-bg:#E8EDF8;--cbx-on-line:#2A5FD6;--cbx-tick:#2A5FD6}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--cbx-bg:#1C1A15;--cbx-line:#5470B8;--cbx-on-bg:#1B2540;--cbx-on-line:#8FAAF0;--cbx-tick:#8FAAF0}}
+:root[data-theme="dark"]{--cbx-bg:#1C1A15;--cbx-line:#5470B8;--cbx-on-bg:#1B2540;--cbx-on-line:#8FAAF0;--cbx-tick:#8FAAF0}
+input[type=checkbox]:not(.sw input):not(.swx input):not(.swrow input){appearance:none;-webkit-appearance:none;width:22px;height:22px;flex:none;margin:0;border:1.5px solid var(--cbx-line);border-radius:6px;background:var(--cbx-bg);display:inline-grid;place-content:center;cursor:pointer;vertical-align:middle}
+input[type=checkbox]:not(.sw input):not(.swx input):not(.swrow input)::after{content:"";width:5px;height:10px;border:solid var(--cbx-tick);border-width:0 2.5px 2.5px 0;transform:translateY(-1px) rotate(45deg);opacity:0}
+input[type=checkbox]:not(.sw input):not(.swx input):not(.swrow input):checked{background:var(--cbx-on-bg);border-color:var(--cbx-on-line)}
+input[type=checkbox]:not(.sw input):not(.swx input):not(.swrow input):checked::after{opacity:1}
+input[type=checkbox]:not(.sw input):not(.swx input):not(.swrow input):indeterminate{background:var(--cbx-on-bg);border-color:var(--cbx-on-line)}
+input[type=checkbox]:not(.sw input):not(.swx input):not(.swrow input):indeterminate::after{opacity:1;width:10px;height:0;border-width:0 0 2.5px 0;transform:none}
+input[type=checkbox]:not(.sw input):not(.swx input):not(.swrow input):focus-visible{outline:3px solid var(--accent-line);outline-offset:2px}
+span.chk{background:var(--cbx-bg);border:1.5px solid var(--cbx-line);color:var(--cbx-tick)}
+span.chk.on{background:var(--cbx-on-bg);border-color:var(--cbx-on-line);color:var(--cbx-tick)}
+</style>
+<style id="v275">
+/* 稿 v2.75 表格改卡片（R1～R6）：包一層 .rtw 當容器，容器 ≤640px 時 .rt-t 變堆疊卡片；窄表 .rt-a 不變卡片只拿掉 min-width */
+.rtw{container-type:inline-size}
+.rt-t{width:100%;min-width:0;border-collapse:collapse}
+.rt-t td,.rt-t th{white-space:normal}
+.rt-t.rt-a td,.rt-t.rt-a th{white-space:normal}
+.t td.num,.t td.n{font-variant-numeric:tabular-nums;text-align:right}
+@container (max-width:640px){
+ .rt-t:not(.rt-a) thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+ .rt-t:not(.rt-a),.rt-t:not(.rt-a) tbody,.rt-t:not(.rt-a) tr,.rt-t:not(.rt-a) td{display:block;width:auto}
+ .rt-t:not(.rt-a) tr{display:grid;gap:5px;border:1px solid var(--line);border-radius:var(--r-md);padding:10px 12px;margin-bottom:8px;background:var(--surface)}
+ .rt-t:not(.rt-a) tr.bad{background:var(--danger-soft);border-color:var(--danger-line)}
+ .rt-t:not(.rt-a) tr.gap{border-style:dashed;background:var(--sunken)}
+ .rt-t:not(.rt-a) td{display:flex;gap:12px;justify-content:space-between;align-items:baseline;padding:0;border:0;text-align:right}
+ .rt-t:not(.rt-a) td::before{content:attr(data-label);color:var(--text-3);font-size:13px;font-weight:700;text-align:left;flex:none}
+ .rt-t:not(.rt-a) td.ti{justify-content:flex-start;text-align:left;font-size:16px}
+ .rt-t:not(.rt-a) td.ti::before,.rt-t:not(.rt-a) td.noL::before{content:none}
+ .rt-t:not(.rt-a) td.hid,.rt-t:not(.rt-a) td.st{display:none}
+ .rt-t:not(.rt-a) td.act{justify-content:flex-end;padding-top:4px}
+}
+.frs{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start}
+.fr{width:303px;max-width:100%;border:1px dashed var(--line-2);border-radius:var(--r-md);padding:10px;background:var(--bg)}
+.fr.w2{width:696px}
+.fr .cap{font-size:12px;color:var(--text-3);font-weight:700;margin-bottom:8px}
+.gap2 td{background:var(--sunken);border-bottom:1px dashed var(--line-2)}
+.rc-pc{border:1px solid var(--line);border-radius:var(--r-md);padding:10px 12px;display:grid;gap:6px;background:var(--surface);margin-bottom:8px}
+.rc-pc .ti{display:flex;gap:8px;align-items:center;font-size:16px}
+.dayrow{display:flex;gap:10px;align-items:flex-start;justify-content:space-between}
+.dayrow .dl{font-size:13px;font-weight:700;color:var(--text-3);flex:none;min-width:3.6em;padding-top:6px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
+.chip{font:inherit;font-size:13px;line-height:1.25;min-height:44px;min-width:56px;padding:4px 8px;border:1px solid var(--line-2);border-radius:var(--r-sm);background:var(--surface);color:var(--text);cursor:pointer}
+.chip.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+.cells{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.cells span{border:1px solid var(--line);border-radius:var(--r-sm);padding:4px 6px;text-align:center;background:var(--sunken);font-variant-numeric:tabular-nums}
+.cells small{display:block;font-size:12px;color:var(--text-3)}
+.cmp1{align-items:center;padding:6px 8px;border-radius:var(--r-sm)}.cmp1 .dl{padding-top:0}.cmp1.on{background:var(--accent-soft)}
+.selc{background:var(--accent-soft)}
+td.on{background:var(--accent-soft)}
+.seatm{display:grid;grid-template-columns:repeat(var(--n),1fr);gap:3px;padding:8px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface)}
+.seatm i{font-style:normal;font-size:10px;line-height:1;text-align:center;padding:9px 0;border:1px solid var(--line-2);border-radius:5px;background:var(--sunken);color:var(--text-2);min-width:0;overflow:hidden}
+.seatm i.x{border-style:dashed;background:transparent}
+.sample{border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);padding:10px;overflow:hidden}
+.sm-in{display:grid;gap:8px;font-size:13px}.lbls{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}.lbls i{font-style:normal;font-size:11px;line-height:1.3;text-align:center;border:1px solid var(--line-2);padding:6px 2px;border-radius:4px;background:var(--bg)}
+.linkbtn{font:inherit;background:none;border:0;color:var(--accent-ink);font-weight:700;min-height:44px;cursor:pointer;padding:0 4px}
+.b-ok{background:var(--ok-soft);color:var(--ok-ink);border-color:var(--ok-line)}.b-warn{background:var(--warn-soft);color:var(--warn-ink);border-color:var(--warn-line)}
+</style>
+</head>
+<body>
+<div class="hd"><b>表格改卡片稿　稿 v2.75</b><nav class="toc"><a href="#sum">重點</a><a href="#rule">通則</a><a href="#inv">23 處定稿</a><a href="#t2">卡片</a><a href="#t3">矩陣與比較</a><a href="#seat">座位表與範例</a><a href="#list">長清單</a><a href="#misc">其他捲軸</a><a href="#cmp">元件</a><a href="#rules">規則對照</a><a href="#q">待裁示</a></nav><button class="btn btn-sm" data-theme-btn type="button">深色／淺色</button></div>
+<div class="main"><div class="hero"><h1>表格改卡片稿　稿 v2.75</h1><p>解 #413 第 10 項（D165 未做的那一項）：<code>class="scroll"</code> 23 處逐頁定稿，並含 #378（分科 ④ 捲動軸、768 寬 AstLeave／AstRelease 溢出 40px）。<b>稿 v2.75、2026-11-20，只有稿與文件，不碰程式；成品頁只供瀏覽，要使用者選的題在最後一節，由調度員用問題卡問。</b>畫面全為假資料，只用既有 tokens 與共用元件。</p></div>
+
+<section class="sec" id="sum"><header><h2>先看重點</h2><div class="gtag"><span class="badge b-acc">v2.75</span></div></header>
+<div class="say"><b>一句話</b>：全站所有表格<b>不再有 <code>min-width:560px</code> 也不再有橫向捲軸</b>；依內容分三種畫法——<b>窄表</b>（≤4 欄且每格短）原表縮進去、<b>卡片</b>（5 欄以上或有長文字／按鈕）容器 ≤640px 變堆疊卡片、<b>矩陣</b>（教室×時段、班級×項目）變「一列一張卡、裡面小標籤」。座位表依 D154（橫排≤8）一律縮放進寬度；範例標示等紙面縮圖等比縮放；長清單拿掉 <code>max-height</code> 內捲。<br><b>根因（讀 <code>src/styles/app.css</code> 推得，未實測）</b>：<code>table.t{min-width:560px}</code> 撐出容器 → 才需要 <code>.scroll</code>；#378 的 768 溢出 40px 推論是 560px 表格＋卡片內距＋側欄後容器不到 600px；#378 ④ 的「標示方式」按鈕下橫向軸是 <code>.seg{overflow-x:auto}</code>，不是表格。<b>施工後請在 375／768／1024 三個寬度量 <code>scrollWidth ≤ clientWidth</code>。</b></div></section>
+
+<section class="sec" id="rule"><header><h2>1　通則（取代 §10.41 第 10 列的籠統寫法）</h2></header>
+<div class="rtw"><table class="rt-t t cmp"><thead><tr><th>#</th><th>規則</th></tr></thead><tbody>
+<tr><td data-label="#" class="noL">R1</td><td data-label="規則"><b>畫面內不出現橫向捲軸</b>（使用者 #378 原話：「頁面中不要有捲動軸，這樣無法閱讀」）。不得再用 <code>.scroll</code>、<code>overflow-x:auto</code> 解寬度問題；<code>table.t</code> 拿掉 <code>min-width:560px</code>。</td></tr>
+<tr><td data-label="#" class="noL">R2</td><td data-label="規則"><b>三種畫法依內容選</b>：窄表（≤4 欄、每格一行內放得下）＝保持表格；卡片（≥5 欄，或有長文字、按鈕、控制項）＝容器 ≤640px 變卡片；矩陣＝變「一列一張卡」。</td></tr>
+<tr><td data-label="#" class="noL">R3</td><td data-label="規則"><b>用容器寬度判斷，不用視窗寬度</b>：包一層 <code>.rtw{container-type:inline-size}</code>，用 <code>@container (max-width:640px)</code>。原因：同一張表放在有側欄的版面、卡片內或視窗裡，視窗寬不等於可用寬；768 視窗的卡片內寬約 696，仍是表格，手機卡片內寬約 303。不支援容器查詢的瀏覽器退回 <code>@media (max-width:640px)</code>。</td></tr>
+<tr><td data-label="#" class="noL">R4</td><td data-label="規則"><b>卡片長相沿用 <code>rc-pcard</code></b>（<code>ReconcilePanel</code> 窄寬度卡片）：1px 線框、<code>--r-md</code> 圓角、內距 10×12；第一欄當卡片標題（粗體、16px）；其餘欄「欄名（灰 13px）左、值右」；操作鈕放卡片底部靠右；<code>bad</code> 列＝<code>--danger-soft</code> 底；缺號列＝虛線框。實作用同一份 <code>&lt;table&gt;</code> 加 <code>td[data-label]</code> 以 CSS 改版，<b>不另做一份重複的卡片 DOM</b>（<code>rc-table／rc-cards</code> 兩份 DOM 的作法不再擴大，既有的維持）。</td></tr>
+<tr><td data-label="#" class="noL">R5</td><td data-label="規則"><b>卡片順序與表格列相同、欄名不省略</b>；螢幕閱讀器仍讀得到表頭（<code>thead</code> 用視覺隱藏，不用 <code>display:none</code>）。</td></tr>
+<tr><td data-label="#" class="noL">R6</td><td data-label="規則"><b>視窗（Modal）、紙面預覽內也適用</b>；Modal 本身高度不夠時的「直向」捲動保留（螢幕太矮的必要退路），但視窗內不得再有橫向軸。</td></tr>
+</tbody></table></div></section>
+
+<section class="sec" id="inv"><header><h2>2　23 處逐頁定稿</h2><p>位置為程式現況（<code>origin/main</code> 6f4f3e1）。「窄表」＝畫法 A；「卡片」＝畫法 B；「矩陣」＝畫法 C；其餘見各節。欄名照程式原文。</p></header>
+<div class="rtw"><table class="rt-t t cmp"><thead><tr><th>#</th><th>位置</th><th>畫面（欄）</th><th>定稿畫法</th><th>卡片標題／備註</th></tr></thead><tbody>
+<tr><td class="noL" data-label="#">1</td><td data-label="位置"><code>ast/AstLeave.tsx:45</code></td><td data-label="畫面">分科請假：班級｜報名人數｜請假人數（3）</td><td data-label="畫法">A 窄表</td><td data-label="備註">768 溢出 40px 的來源之一；拿掉 min-width 即解</td></tr>
+<tr><td class="noL" data-label="#">2</td><td data-label="位置"><code>ast/AstLocks.tsx:51</code></td><td data-label="畫面">鎖定衝突：時段｜教室｜座位｜學生｜違反的規則｜原因（6）</td><td data-label="畫法">B 卡片</td><td data-label="備註">標題＝時段＋教室；整張 <code>--danger-soft</code> 底（衝突）</td></tr>
+<tr><td class="noL" data-label="#">3</td><td data-label="位置"><code>ast/AstLocks.tsx:70</code></td><td data-label="畫面">目前鎖定：範圍｜時段｜教室／座位｜內容｜（解除鈕）（5）</td><td data-label="畫法">B 卡片</td><td data-label="備註">標題＝範圍徽章；「解除」放卡片底部靠右</td></tr>
+<tr><td class="noL" data-label="#">4</td><td data-label="位置"><code>ast/AstRelease.tsx:111</code></td><td data-label="畫面">公告版本：版本｜狀態｜公告時間｜修改項目｜受影響｜理由（6）</td><td data-label="畫法">B 卡片</td><td data-label="備註">標題＝「第 N 版」＋狀態徽章；768 溢出 40px 的主因（6 欄長文字）</td></tr>
+<tr><td class="noL" data-label="#">5</td><td data-label="位置"><code>ast/AstStep4.tsx:124</code></td><td data-label="畫面">方案比較：指標｜少教室優先｜少移動優先（3）</td><td data-label="畫法">D 比較卡</td><td data-label="備註">每個指標一張卡，兩個方案各一行；「使用中」那行淡藍底（見 §4）</td></tr>
+<tr><td class="noL" data-label="#">6</td><td data-label="位置"><code>ast/AstStep5.tsx:142</code></td><td data-label="畫面">用教室矩陣：教室 × 各天各時段（欄數不定）</td><td data-label="畫法">C 矩陣</td><td data-label="備註">窄時一間教室一張卡，內分「第 N 天」小標籤列；點時段標籤＝現有的 <code>setSel</code>（見 §4）</td></tr>
+<tr><td class="noL" data-label="#">7</td><td data-label="位置"><code>ast/AstStep5.tsx:216</code></td><td data-label="畫面">時段名單：用途｜教室｜人數｜來自（4）</td><td data-label="畫法">B 卡片</td><td data-label="備註">標題＝教室名＋用途徽章（一張卡只有一種用途，不混排）；「來自」文字長，故不走窄表</td></tr>
+<tr><td class="noL" data-label="#">8</td><td data-label="位置"><code>components/SeatChart.tsx:54</code></td><td data-label="畫面">座位表（非表格）</td><td data-label="畫法">E 縮放</td><td data-label="備註">見 §5：欄寬隨容器縮、不捲動</td></tr>
+<tr><td class="noL" data-label="#">9</td><td data-label="位置"><code>pages/EnvWizard.tsx:125</code></td><td data-label="畫面">精靈步驟 4：班級｜班級教室｜人數（3）</td><td data-label="畫法">A 窄表</td><td data-label="備註">拿掉內嵌 <code>style="overflow-x:auto"</code></td></tr>
+<tr><td class="noL" data-label="#">10</td><td data-label="位置"><code>pages/Lookup.tsx:75</code></td><td data-label="畫面">考生查詢：科目｜教室／地點｜座位（排－深位）｜說明（4）</td><td data-label="畫法">B 卡片</td><td data-label="備註">標題＝科目；座位值加粗（手機最常看這個）</td></tr>
+<tr><td class="noL" data-label="#">11</td><td data-label="位置"><code>pages/ReservePage.tsx:102</code></td><td data-label="畫面">預備教室自習名單：序｜考生編號｜班級｜姓名（4）</td><td data-label="畫法">A 窄表＋長清單</td><td data-label="備註">拿掉 <code>max-height:220px</code> 內捲，改「前 10 筆＋顯示全部 N 筆 ▾」（見 §6）</td></tr>
+<tr><td class="noL" data-label="#">12</td><td data-label="位置"><code>pages/RosterIO.tsx:93</code></td><td data-label="畫面">下載名單範本視窗內的範例：班級｜座號｜姓名｜學號（4）</td><td data-label="畫法">A 窄表</td><td data-label="備註">Modal 內；只有 2 列範例</td></tr>
+<tr><td class="noL" data-label="#">13</td><td data-label="位置"><code>pages/Settings.tsx:177</code></td><td data-label="畫面">學生名單：班級｜座號｜考生編號｜姓名｜學號｜組別｜特殊生需求｜（編輯）（7～8）</td><td data-label="畫法">B 卡片＋長清單</td><td data-label="備註">標題＝「座號 姓名」；缺號列＝虛線卡；拿掉 <code>max-height:520px</code>（見 §6）</td></tr>
+<tr><td class="noL" data-label="#">14</td><td data-label="位置"><code>pages/Settings.tsx:276</code></td><td data-label="畫面">班級資料：班級｜名稱｜文理組｜班級色（12 色）｜操作（4～5）</td><td data-label="畫法">B 卡片</td><td data-label="備註">標題＝班級名稱；班級色色票列在卡片內可換行</td></tr>
+<tr><td class="noL" data-label="#">15</td><td data-label="位置"><code>pages/Step1.tsx:59</code></td><td data-label="畫面">考科表：科目｜誰要考｜（操作）（3）</td><td data-label="畫法">A 窄表</td><td data-label="備註">科目欄的標記徽章可換行；操作鈕欄靠右不換行</td></tr>
+<tr><td class="noL" data-label="#">16</td><td data-label="位置"><code>pages/Step1.tsx:92</code></td><td data-label="畫面">沿用內容（在 <code>More</code> 內）：步驟｜狀態｜內容（3）</td><td data-label="畫法">B 卡片</td><td data-label="備註">「內容」是長句，3 欄也走卡片</td></tr>
+<tr><td class="noL" data-label="#">17</td><td data-label="位置"><code>pages/Step2.tsx:167</code></td><td data-label="畫面">對帳明細（在 <code>details</code> 內）：班級座號｜考試名單｜學生名單（3）</td><td data-label="畫法">A 窄表</td><td data-label="備註">每格都是短字</td></tr>
+<tr><td class="noL" data-label="#">18</td><td data-label="位置"><code>pages/Step4.tsx:84</code></td><td data-label="畫面">學測 ④ 組別對照：組別代碼｜考科｜理組人數｜文組人數（4）</td><td data-label="畫法">B 卡片</td><td data-label="備註">標題＝組別代碼；「考科」是多行清單</td></tr>
+<tr><td class="noL" data-label="#">19</td><td data-label="位置"><code>pages/Step4.tsx:104</code></td><td data-label="畫面">學測 ④ 各科標示：組｜科目｜考｜不考｜標示方式｜座位表標示與狀態（6）</td><td data-label="畫法">B 卡片（#378）</td><td data-label="備註">標題＝組＋科目；「標示方式」分段鈕在卡片內<b>換行</b>、不橫向捲；見 §5</td></tr>
+<tr><td class="noL" data-label="#">20</td><td data-label="位置"><code>pages/Step4.tsx:144</code></td><td data-label="畫面">學測 ④ 抽離人數：科目｜抽離考試｜抽離自習｜（單人特例）（3～4）</td><td data-label="畫法">A 窄表</td><td data-label="備註">數字欄；單人特例欄出現時仍 ≤4 欄</td></tr>
+<tr><td class="noL" data-label="#">21</td><td data-label="位置"><code>pages/Step5.tsx:191</code></td><td data-label="畫面">本教室各科應考人數：項目｜（各班）…｜合計（欄數隨班級數，最多約 12）</td><td data-label="畫法">C 矩陣</td><td data-label="備註">窄時一個項目一張卡，各班人數排成小標籤格（見 §4）</td></tr>
+<tr><td class="noL" data-label="#">22</td><td data-label="位置"><code>pages/StudyCapacityView.tsx:43</code></td><td data-label="畫面">每時段明細（<code>More</code> 內）：時段｜科目｜抽離考試｜抽離自習｜需要教室｜至少座位｜結果（7）</td><td data-label="畫法">B 卡片</td><td data-label="備註">標題＝時段＋科目；「結果」用徽章，不夠的卡片 <code>bad</code> 底</td></tr>
+<tr><td class="noL" data-label="#">23</td><td data-label="位置"><code>pages/StudyCapacityView.tsx:70</code></td><td data-label="畫面">自習容量：時段｜科目｜自習人數｜自習地點｜可用座位｜夠不夠（6）</td><td data-label="畫法">B 卡片</td><td data-label="備註">同 22</td></tr>
+</tbody></table></div>
+<div class="say">統計：窄表 A＝7 處（1、9、11、12、15、17、20）；卡片 B＝12 處（2、3、4、7、10、13、14、16、18、19、22、23）；比較卡 D＝1（5）；矩陣 C＝2（6、21）；縮放 E＝1（8）。合計 23。<b>程式的 ratchet 上限 23 改成 0</b>（<code>uiUnifyRatchet.test.ts</code>），分批施工期間逐批降。</div></section>
+
+<section class="sec" id="t2"><header><h2>3　畫法 A 窄表、畫法 B 卡片</h2><p>同一份資料放在三個容器寬：桌機卡片內寬 880、768 視窗卡片內寬 696、手機卡片內寬 303。<b>768 時仍是表格，但沒有 560px 下限，6 欄長文字會在格內換行，不再溢出。</b></p></header>
+<div class="k-card"><h3>畫法 A 窄表：分科請假（#1，3 欄）</h3>
+<div class="frs"><div class="fr"><div class="cap">容器 303（手機）</div><div class="rtw"><table class="rt-t rt-a t"><thead><tr><th>班級</th><th>報名人數</th><th>請假人數</th></tr></thead><tbody><tr><td><b>甲班</b></td><td class="num">34</td><td class="num">2</td></tr><tr><td><b>乙班</b></td><td class="num">35</td><td class="num">0</td></tr><tr><td><b>丙班</b></td><td class="num">33</td><td class="num">1</td></tr></tbody></table></div></div>
+<div class="fr w2"><div class="cap">容器 696（768 視窗）；桌機相同</div><div class="rtw"><table class="rt-t rt-a t"><thead><tr><th>班級</th><th>報名人數</th><th>請假人數</th></tr></thead><tbody><tr><td><b>甲班</b></td><td class="num">34</td><td class="num">2</td></tr><tr><td><b>乙班</b></td><td class="num">35</td><td class="num">0</td></tr><tr><td><b>丙班</b></td><td class="num">33</td><td class="num">1</td></tr></tbody></table></div></div></div></div>
+
+<div class="k-card"><h3>畫法 B 卡片：公告版本（#4，6 欄長文字）</h3>
+<div class="frs"><div class="fr"><div class="cap">容器 303（手機）→ 卡片</div><div class="rtw"><table class="rt-t t"><thead><tr><th>版本</th><th>狀態</th><th>公告時間</th><th>修改項目</th><th>受影響（考生／教室）</th><th>理由</th></tr></thead><tbody>
+<tr><td class="ti" data-label="版本"><span><b>第 2 版</b> <span class="badge b-ok">目前公告</span></span></td><td class="noL st" data-label="狀態"></td><td data-label="公告時間">11/20 09:40</td><td data-label="修改項目">調換第 2 節自習教室</td><td data-label="受影響">12 位考生／2 間教室</td><td data-label="理由">原教室臨時借用</td></tr>
+<tr><td class="ti" data-label="版本"><span><b>第 1 版</b> <span class="badge">已被取代</span></span></td><td class="noL st" data-label="狀態"></td><td data-label="公告時間">11/19 16:05</td><td data-label="修改項目">首次公告</td><td data-label="受影響">全部</td><td data-label="理由">—</td></tr></tbody></table></div></div>
+<div class="fr w2"><div class="cap">容器 696（768 視窗）→ 表格，6 欄在格內換行</div><div class="rtw"><table class="rt-t t cmp"><thead><tr><th>版本</th><th>狀態</th><th>公告時間</th><th>修改項目</th><th>受影響（考生／教室）</th><th>理由</th></tr></thead><tbody>
+<tr><td><b>第 2 版</b></td><td><span class="badge b-ok">目前公告</span></td><td>11/20 09:40</td><td>調換第 2 節自習教室</td><td>12 位考生／2 間教室</td><td>原教室臨時借用</td></tr>
+<tr><td><b>第 1 版</b></td><td><span class="badge">已被取代</span></td><td>11/19 16:05</td><td>首次公告</td><td>全部</td><td>—</td></tr></tbody></table></div></div></div></div>
+
+<div class="k-card"><h3>畫法 B 卡片：學生名單（#13，含缺號虛線卡、編輯鈕）</h3>
+<div class="frs"><div class="fr"><div class="cap">容器 303（手機）</div><div class="rtw"><table class="rt-t t"><thead><tr><th>班級</th><th>座號</th><th>考生編號</th><th>姓名</th><th>學號</th><th>組別</th><th>特殊生需求</th><th></th></tr></thead><tbody>
+<tr><td class="ti" data-label="姓名"><span><b>01</b>　範例學生 A</span></td><td class="noL hid"></td><td data-label="考生編號">0101</td><td class="noL hid"></td><td data-label="學號">1150101</td><td data-label="組別">理組</td><td data-label="特殊生需求">—</td><td class="act"><button class="btn btn-sm" type="button">編輯</button></td></tr>
+<tr class="gap"><td class="ti" data-label="座號"><span>02　<span class="muted">缺號（沒有這位同學）</span></span></td><td class="noL hid"></td><td class="noL hid"></td><td class="noL hid"></td><td class="noL hid"></td><td class="noL hid"></td><td class="noL hid"></td><td class="act"><button class="btn btn-sm" type="button">補上</button></td></tr>
+<tr><td class="ti" data-label="姓名"><span><b>03</b>　範例學生 B</span></td><td class="noL hid"></td><td data-label="考生編號">0103</td><td class="noL hid"></td><td data-label="學號">1150103</td><td data-label="組別">文組</td><td data-label="特殊生需求"><span class="badge b-warn">需放大字體</span></td><td class="act"><button class="btn btn-sm" type="button">編輯</button></td></tr></tbody></table></div></div>
+<div class="fr w2"><div class="cap">容器 696（768 視窗）→ 表格</div><div class="rtw"><table class="rt-t t"><thead><tr><th>座號</th><th>考生編號</th><th>姓名</th><th>學號</th><th>組別</th><th>特殊生需求</th><th></th></tr></thead><tbody>
+<tr><td>01</td><td>0101</td><td>範例學生 A</td><td>1150101</td><td>理組</td><td>—</td><td><button class="btn btn-sm" type="button">編輯</button></td></tr>
+<tr class="gap2"><td>02</td><td colspan="5" class="muted">缺號（沒有這位同學）</td><td><button class="btn btn-sm" type="button">補上</button></td></tr>
+<tr><td>03</td><td>0103</td><td>範例學生 B</td><td>1150103</td><td>文組</td><td><span class="badge b-warn">需放大字體</span></td><td><button class="btn btn-sm" type="button">編輯</button></td></tr></tbody></table></div></div></div>
+<div class="small muted">表格模式下「班級」欄在有班級分頁時是同一值，可省（程式現況已依 <code>activeCf</code> 分班顯示）；本稿只畫要點，欄位取捨照程式現況。</div></div>
+
+<div class="k-card"><h3>畫法 B 卡片：鎖定衝突（#2，整張危險色）</h3>
+<div class="frs"><div class="fr"><div class="cap">容器 303（手機）</div><div class="rtw"><table class="rt-t t"><thead><tr><th>時段</th><th>教室</th><th>座位</th><th>學生</th><th>違反的規則</th><th>原因</th></tr></thead><tbody>
+<tr class="bad"><td class="ti" data-label="時段"><span><b>第 1 天 第 2 節</b>　乙教室</span></td><td class="noL hid"></td><td data-label="座位">3－5</td><td data-label="學生">0412 範例學生 C</td><td data-label="違反的規則">同班不可相鄰</td><td data-label="原因">鎖定的座位與相鄰考生同班</td></tr></tbody></table></div></div></div></div>
+</section>
+
+<section class="sec" id="t3"><header><h2>4　矩陣（C）與比較卡（D）</h2></header>
+<div class="k-card"><h3>C 矩陣：用教室矩陣（#6，教室 × 時段）</h3>
+<div class="say">桌機照現況表格（教室列、時段欄、表頭可點選時段，沿用 <code>.ut</code>）。<b>窄時一間教室一張卡</b>：標題＝教室名＋用途徽章（考試或自習，<b>不並列</b>）；卡內依「第 N 天」分列，每個時段一個可點的小標籤（標籤顯示節次與科目、被選的淡藍底，等同現況 <code>aria-pressed</code> 的表頭）；點小標籤＝現有的選時段（<code>setSel({slot})</code>），下方明細照舊。</div>
+<div class="frs"><div class="fr"><div class="cap">容器 303（手機）</div><div class="mxc">
+<div class="rc-pc"><div class="ti"><b>甲班教室</b> <span class="badge b-acc">考試</span></div><div class="dayrow"><span class="dl">第 1 天</span><span class="chips"><button class="chip on" type="button">1 節<br>國文</button><button class="chip" type="button">2 節<br>英文</button><button class="chip" type="button">3 節<br>數學</button></span></div><div class="dayrow"><span class="dl">第 2 天</span><span class="chips"><button class="chip" type="button">1 節<br>社會</button><button class="chip" type="button">2 節<br>自然</button></span></div></div>
+<div class="rc-pc"><div class="ti"><b>綜合教室</b> <span class="badge">自習</span></div><div class="dayrow"><span class="dl">第 1 天</span><span class="chips"><button class="chip" type="button">1 節<br>國文</button><button class="chip" type="button">2 節<br>英文</button></span></div><div class="dayrow"><span class="dl">第 2 天</span><span class="chips"><button class="chip" type="button">2 節<br>自然</button></span></div></div></div></div>
+<div class="fr w2"><div class="cap">容器 696 → 現況表格（只縮 <code>min-width</code>，不改）</div><div class="rtw"><table class="rt-t t cmp"><thead><tr><th rowspan="2">教室</th><th colspan="3">第 1 天</th><th colspan="2">第 2 天</th></tr><tr><th>1 節 國文</th><th>2 節 英文</th><th>3 節 數學</th><th>1 節 社會</th><th>2 節 自然</th></tr></thead><tbody><tr><td><b>甲班教室</b></td><td class="on">考試 34</td><td>考試 34</td><td>考試 34</td><td>考試 34</td><td>考試 34</td></tr><tr><td><b>綜合教室</b></td><td>自習 6</td><td>自習 6</td><td>—</td><td>—</td><td>自習 3</td></tr></tbody></table></div></div></div></div>
+
+<div class="k-card"><h3>C 矩陣：本教室各科應考人數（#21，項目 × 班級）</h3>
+<div class="frs"><div class="fr"><div class="cap">容器 303（手機）：一項目一張卡，班級人數排小格，合計放卡底</div><div class="mxc">
+<div class="rc-pc"><div class="ti"><b>國文</b></div><div class="cells"><span><small>甲</small>34</span><span><small>乙</small>35</span><span><small>丙</small>33</span><span><small>丁</small>30</span></div><div class="dayrow"><span class="dl">合計</span><b>132</b></div></div>
+<div class="rc-pc"><div class="ti"><b>數學 A</b></div><div class="cells"><span><small>甲</small>20</span><span><small>乙</small>18</span><span><small>丙</small>—</span><span><small>丁</small>22</span></div><div class="dayrow"><span class="dl">合計</span><b>60</b></div></div></div></div></div></div>
+
+<div class="k-card"><h3>D 比較卡：方案比較（#5）</h3>
+<div class="frs"><div class="fr"><div class="cap">容器 303（手機）：每指標一張卡，兩個方案各一行；使用中的那一行淡藍底＋「使用中」徽章</div><div class="mxc">
+<div class="rc-pc"><div class="ti"><b>用到的教室數</b></div><div class="dayrow cmp1 on"><span class="dl">少教室優先 <span class="badge b-acc">使用中</span></span><b>3 間</b></div><div class="dayrow cmp1"><span class="dl">少移動優先</span><b>5 間</b></div></div>
+<div class="rc-pc"><div class="ti"><b>離開原班人次</b></div><div class="dayrow cmp1 on"><span class="dl">少教室優先 <span class="badge b-acc">使用中</span></span><b>48</b></div><div class="dayrow cmp1"><span class="dl">少移動優先</span><b>21</b></div></div></div></div>
+<div class="fr w2"><div class="cap">容器 696 → 現況表格</div><div class="rtw"><table class="rt-t t cmp"><thead><tr><th>指標</th><th class="selc">少教室優先（使用中）</th><th>少移動優先</th></tr></thead><tbody><tr><td>用到的教室數</td><td class="selc">3 間</td><td>5 間</td></tr><tr><td>離開原班人次</td><td class="selc">48</td><td>21</td></tr></tbody></table></div></div></div></div>
+</section>
+
+<section class="sec" id="seat"><header><h2>5　座位表（E）、#378 ④ 標示方式與範例標示</h2></header>
+<div class="k-card"><h3>E 座位表縮放（SeatChart，#8）</h3>
+<div class="say"><b>理由</b>：D154 已把橫排上限定在 8，最寬的座位表是 8 排。手機容器內寬約 303，扣掉左側深位軸約 22，每格 ≥ 35px，放得下姓名縮寫與座號，所以<b>不需要捲動</b>。<b>畫法</b>：格寬 <code>--cw = min(52px, (容器寬 − 軸寬) ÷ 排數)</code>，格高同比例；整張表在容器內置中；舊的「縮到最小 0.4 倍、再窄才捲動」那一段拿掉。超過 8 排的舊資料（D160②不遷移）仍照比例縮，不出軸，只是格子更小，並沿用既有「請縮小座位」提示。</div>
+<div class="frs"><div class="fr"><div class="cap">容器 303，8 排 × 6 深位（格寬約 35px）</div><div class="seatm" style="--n:8"><i>1-6</i><i>2-6</i><i>3-6</i><i class="x"></i><i>5-6</i><i>6-6</i><i>7-6</i><i>8-6</i><i>1-5</i><i>2-5</i><i>3-5</i><i>4-5</i><i>5-5</i><i>6-5</i><i class="x"></i><i>8-5</i><i>1-4</i><i>2-4</i><i>3-4</i><i>4-4</i><i>5-4</i><i>6-4</i><i>7-4</i><i>8-4</i><i>1-3</i><i class="x"></i><i>3-3</i><i>4-3</i><i>5-3</i><i>6-3</i><i>7-3</i><i>8-3</i><i>1-2</i><i>2-2</i><i>3-2</i><i>4-2</i><i class="x"></i><i>6-2</i><i>7-2</i><i>8-2</i><i>1-1</i><i>2-1</i><i>3-1</i><i>4-1</i><i>5-1</i><i>6-1</i><i>7-1</i><i class="x"></i></div></div></div></div>
+
+<div class="k-card"><h3>#378 ④ 標示與抽離（兩處）</h3>
+<div class="say"><b>① 「✕ 標不考的／＋ 標考的」按鈕下方橫向軸</b>：成因是 <code>.seg{overflow-x:auto}</code>。改為 <code>flex-wrap:wrap</code>，每顆鈕 <code>flex:1 1 auto; min-width:0</code>、文字可換行；<b>全站的分段鈕（<code>.seg</code>）都這樣</b>。<br><b>② 範例標示（B4 標籤 35.7×50.4 mm 範例＋整頁縮圖）被裁切</b>：範例區改「等比縮放進容器」——外框寬度 100%，內容用 <code>transform:scale(容器寬 ÷ 範例寬)</code>（或 <code>aspect-ratio</code> 的 SVG／img），<b>外框高度由縮放後內容量出來</b>，不寫死 <code>height</code>、不 <code>overflow:auto</code>；範例標籤與整頁縮圖上下排，不並排。與稿 v2.36 紙面預覽縮放（<code>.fit</code>）是同一種作法。</div>
+<div class="frs"><div class="fr"><div class="cap">容器 303（手機）</div>
+<div class="stack" style="gap:10px"><div class="field"><span class="lab">標示方式</span><div class="seg"><span class="on">✕ 標不考的</span><span>＋ 標考的</span><span>系統建議</span></div></div>
+<div class="sample"><div class="sm-in"><b>標籤範例</b>　B4・每格 35.7×50.4 mm<div class="lbls"><i>0105<br>✕數A</i><i>0106<br>✕數A</i><i>0107<br>—</i><i>0108<br>✕英聽</i></div></div></div></div></div></div></div>
+</section>
+
+<section class="sec" id="list"><header><h2>6　長清單：拿掉內捲（#11、#13）</h2></header>
+<div class="say"><b>規則</b>：清單不再用 <code>max-height＋overflow-y:auto</code> 做「框裡再捲」。<b>預備教室自習名單（#11）</b>：預設顯示前 10 筆，下方「顯示全部 38 筆 ▾」（展開符號依 §10.41 第 5 列；展開後變「只顯示前 10 筆 ▴」）。<b>學生名單（#13）</b>：已經依班級分頁，一班最多約 45 人，<b>整頁往下排、不內捲、不分頁</b>；上方「新增學生／匯入」列用 <code>.retbar</code> 同款的 sticky 列不需要（本稿不新增）。</div>
+<div class="k-card"><h3>預備教室自習名單（容器 303）</h3><div class="frs"><div class="fr"><div class="rtw"><div class="lab">預備教室甲　38 人</div><table class="rt-t rt-a t"><thead><tr><th>序</th><th>考生編號</th><th>班級</th><th>姓名</th></tr></thead><tbody><tr><td class="num">1</td><td class="num">0101</td><td>甲</td><td>範例學生 A</td></tr><tr><td class="num">2</td><td class="num">0102</td><td>甲</td><td>範例學生 B</td></tr><tr><td class="num">3</td><td class="num">0204</td><td>乙</td><td>範例學生 C</td></tr></tbody></table><button class="linkbtn" type="button">顯示全部 38 筆 ▾</button></div></div></div></div></section>
+
+<section class="sec" id="misc"><header><h2>7　其他橫向捲動（不是 <code>class="scroll"</code>，順便盤點）</h2></header>
+<div class="rtw"><table class="rt-t t cmp"><thead><tr><th>位置</th><th>現況</th><th>本稿建議</th></tr></thead><tbody>
+<tr><td data-label="位置" class="ti"><code>.seg</code>（<code>app.css</code> 366 行）</td><td data-label="現況">分段鈕 <code>overflow-x:auto</code></td><td data-label="建議">改換行（§5 ①）；<b>已列入通則</b></td></tr>
+<tr><td data-label="位置" class="ti"><code>.pbar .nav</code>（293 行）</td><td data-label="現況">頂端步驟導覽 <code>overflow-x:auto</code></td><td data-label="建議">手機改兩行換行；<b>待使用者裁示（Q1）</b>，本稿不動</td></tr>
+<tr><td data-label="位置" class="ti"><code>.utabs</code>（302 行）</td><td data-label="現況">分頁籤 <code>overflow-x:auto</code></td><td data-label="建議">同上，待 Q1</td></tr>
+<tr><td data-label="位置" class="ti"><code>.modal</code>（206 行）</td><td data-label="現況">視窗 <code>overflow:auto</code></td><td data-label="建議">保留直向（螢幕太矮的退路）；橫向由 R6 保證沒有</td></tr>
+<tr><td data-label="位置" class="ti"><code>.lic-ofl pre</code>（457 行）</td><td data-label="現況">授權全文 <code>max-height:320px</code> 內捲</td><td data-label="建議">保留：這是一整份條文，不是表格；使用者的 #378 針對的是版面內容。若要拿掉再另議</td></tr>
+</tbody></table></div></section>
+
+<section class="sec" id="cmp"><header><h2>8　施工對話自行加的樣式：納入設計系統</h2><div class="gtag"><span class="badge b-acc">設計系統.html #v275</span></div></header>
+<div class="say">以下五項是 1.26.23～1.26.25 施工時照小稿或 D162～D166 自行寫進 <code>app.css</code> 的樣式，<b>現在由設計員定案並寫進 DESIGN.md §10.42、<code>設計系統.html</code> #v275</b>；數值是否沿用施工版、改了什麼，逐項寫在 DESIGN §10.42。這一節不重畫，請到設計系統頁看實物。</div>
+<div class="rtw"><table class="rt-t t cmp"><thead><tr><th>項目</th><th>程式現況</th><th>定案</th></tr></thead><tbody>
+<tr><td class="ti" data-label="項目">Button <code>kind="accent-outline"</code></td><td data-label="程式現況"><code>.btn-accent-outline</code>：主色外框、粗體</td><td data-label="定案">沿用；文字色 <code>--accent-ink</code>；用途＝「還原預設／重置類」的可逆動作；與實心藍主要鈕、紅色危險鈕並列時的層級見 DESIGN</td></tr>
+<tr><td class="ti" data-label="項目">展開收合符號 ▾／▴</td><td data-label="程式現況"><code>details&gt;summary::after</code> 全域加符號</td><td data-label="定案">沿用；補：符號前空一格、符號色同文字、按鈕與 <code>summary</code> 最小點擊高度 44px；<code>moremenu</code> 的「⋯」除外</td></tr>
+<tr><td class="ti" data-label="項目"><code>.retbar</code></td><td data-label="程式現況">sticky 頂端、<code>bg</code> 底、內距 8px 0</td><td data-label="定案">加底線 <code>--line</code>、不透明底避免內容穿透；手機高度 ≤ 52px；只有一顆「← 回到 ○○」鈕</td></tr>
+<tr><td class="ti" data-label="項目">危險操作區</td><td data-label="程式現況"><code>.card.stack</code>＋<code>h3</code>＋兩顆 <code>danger</code> 鈕</td><td data-label="定案">加虛線危險色外框（沿用 <code>.nvb</code> 的線色）、固定放共用設定最下方；鈕一律走 <code>ConfirmButton</code></td></tr>
+<tr><td class="ti" data-label="項目">列表選取方塊與展開鈕</td><td data-label="程式現況">原生 checkbox（瀏覽器預設，深藍看起來近黑）；「已經結束」群用 <code>.rc-more</code> 小鈕</td><td data-label="定案">選取方塊統一新樣式（淺底框＋藍勾，見設計系統）；群組標題整列可點、右側 ▾／▴</td></tr>
+</tbody></table></div></section>
+
+<section class="sec" id="rules"><header><h2>規則對照（CLAUDE.md〈設計稿與 PR 的規則對照關卡〉）</h2></header>
+<div class="rtw"><table class="rt-t t cmp"><thead><tr><th>決定</th><th>符合／不涉及</th><th>說明</th></tr></thead><tbody>
+<tr><td class="ti" data-label="決定">D165（#413 十項、第 10 項待設計員）</td><td data-label="結果">符合</td><td data-label="說明">用 §10.41 第 10 列指定的堆疊卡片（<code>rc-pcard</code> 長相）；23 處逐頁定稿；ratchet 上限由 23 降為 0（施工時）</td></tr>
+<tr><td class="ti" data-label="決定">D166、D167（列表與設定包施工）</td><td data-label="結果">符合</td><td data-label="說明">只把 <code>.retbar</code>、危險操作區、列表選取方塊與展開鈕的樣式定案；不改功能、不改版面結構</td></tr>
+<tr><td class="ti" data-label="決定">D162、D156（還原預設）</td><td data-label="結果">符合</td><td data-label="說明"><code>accent-outline</code> 納入設計系統，行為不變（常駐可按、ConfirmButton）</td></tr>
+<tr><td class="ti" data-label="決定">D160、D149②、D154（座位上限橫排≤8）</td><td data-label="結果">符合</td><td data-label="說明">座位表縮放的依據；超過 8 的舊資料照 D160② 不遷移</td></tr>
+<tr><td class="ti" data-label="決定"><b>D135⑥</b>（考生與自習生不在同一間教室）</td><td data-label="結果"><b>符合</b></td><td data-label="說明">凡牽涉教室用途的卡片（#6 矩陣、#7 時段名單、#22／#23 自習容量）<b>一張教室卡只有一種用途徽章（考試或自習），絕不並列、不畫「同室混排」</b>；D135③⑤ 自習生也進排座引擎排位置、不印標籤，不涉及（本稿只改版面，不改資料）</td></tr>
+<tr><td class="ti" data-label="決定">D137、D141（自習盡量同地點、座位每節各自排）</td><td data-label="結果">不涉及</td><td data-label="說明">只換呈現；時段卡片內每個時段各自一個標籤，沿用 D141 的「每節各自」</td></tr>
+<tr><td class="ti" data-label="決定">D146（不參加）</td><td data-label="結果">符合</td><td data-label="說明">假資料不出現「缺考」指沒報考；本稿未用到該詞</td></tr>
+<tr><td class="ti" data-label="決定">D150（匯出檔樣式由設計員定案）</td><td data-label="結果">不涉及</td><td data-label="說明">只改畫面；紙面預覽的縮放只改縮放方式，不改紙面內容</td></tr>
+<tr><td class="ti" data-label="決定">D163、D164、D160～D161</td><td data-label="結果">不涉及</td><td data-label="說明">列表分群、重置、教室上限、不排座的內容不動</td></tr>
+</tbody></table></div></section>
+
+<section class="sec" id="q"><header><h2>待使用者裁示（只列，由調度員用問題卡問）</h2></header>
+<div class="say"><b>Q1</b> 頂端步驟導覽（<code>.pbar .nav</code>）與分頁籤（<code>.utabs</code>）手機版也要改成換行、不橫向捲嗎？設計員建議：<b>要</b>（符合 #378 原話「頁面中不要有捲動軸」），但它們是現行已審過的導覽，改動較大，所以不擅自動。<br><b>Q2</b> 學生名單（#13）一班約 45 人，整頁往下、不分頁（設計員建議），還是每頁 20 筆分頁？<br><b>Q3</b> 窄寬度卡片的斷點：容器 ≤640px 變卡片（設計員建議，與 <code>ReconcilePanel</code> 一致），還是改 ≤760px（較早變卡片，768 視窗的 696 寬也變卡片）？<br><b>Q4</b> 授權全文的內捲（<code>.lic-ofl pre</code>）要不要也拿掉？設計員建議<b>保留</b>（整份條文，不是版面）。</div>
+<div class="say"><b>沒驗到</b>：未啟動程式實測 768／375 寬的實際溢出量；根因由讀 CSS 推得。#9、#12、#15、#17、#20 的「窄表不需換卡片」是依欄數與內容長度推論，施工後請量 303px 容器寬是否放得下（放不下的改 B）。</div></section>
+</div>
+<script>document.addEventListener('click',function(e){var t=e.target.closest&&e.target.closest('[data-theme-btn]');if(t){var r=document.documentElement;var cur=r.getAttribute('data-theme');var dark=cur?cur==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;r.setAttribute('data-theme',dark?'light':'dark');}});</script>
+</body>
+</html>

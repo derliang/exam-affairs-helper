@@ -483,6 +483,21 @@ section.sec{padding-top:44px;scroll-margin-top:60px;display:grid;gap:16px}
 .lg{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
 
 </style>
+<style id="cbx-v275">
+/* 稿 v2.75 選取方塊（使用者 2026-11-20：不可用黑色）：淺色底框＋藍色打勾；已選＝淡藍底＋藍框＋藍勾。Switch（.sw／.swx／.swrow）不受影響 */
+:root{--cbx-bg:#FFFDF8;--cbx-line:#7B91CC;--cbx-on-bg:#E8EDF8;--cbx-on-line:#2A5FD6;--cbx-tick:#2A5FD6}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--cbx-bg:#1C1A15;--cbx-line:#5470B8;--cbx-on-bg:#1B2540;--cbx-on-line:#8FAAF0;--cbx-tick:#8FAAF0}}
+:root[data-theme="dark"]{--cbx-bg:#1C1A15;--cbx-line:#5470B8;--cbx-on-bg:#1B2540;--cbx-on-line:#8FAAF0;--cbx-tick:#8FAAF0}
+input[type=checkbox]:not(.sw input):not(.swx input):not(.swrow input){appearance:none;-webkit-appearance:none;width:22px;height:22px;flex:none;margin:0;border:1.5px solid var(--cbx-line);border-radius:6px;background:var(--cbx-bg);display:inline-grid;place-content:center;cursor:pointer;vertical-align:middle}
+input[type=checkbox]:not(.sw input):not(.swx input):not(.swrow input)::after{content:"";width:5px;height:10px;border:solid var(--cbx-tick);border-width:0 2.5px 2.5px 0;transform:translateY(-1px) rotate(45deg);opacity:0}
+input[type=checkbox]:not(.sw input):not(.swx input):not(.swrow input):checked{background:var(--cbx-on-bg);border-color:var(--cbx-on-line)}
+input[type=checkbox]:not(.sw input):not(.swx input):not(.swrow input):checked::after{opacity:1}
+input[type=checkbox]:not(.sw input):not(.swx input):not(.swrow input):indeterminate{background:var(--cbx-on-bg);border-color:var(--cbx-on-line)}
+input[type=checkbox]:not(.sw input):not(.swx input):not(.swrow input):indeterminate::after{opacity:1;width:10px;height:0;border-width:0 0 2.5px 0;transform:none}
+input[type=checkbox]:not(.sw input):not(.swx input):not(.swrow input):focus-visible{outline:3px solid var(--accent-line);outline-offset:2px}
+span.chk{background:var(--cbx-bg);border:1.5px solid var(--cbx-line);color:var(--cbx-tick)}
+span.chk.on{background:var(--cbx-on-bg);border-color:var(--cbx-on-line);color:var(--cbx-tick)}
+</style>
 </head>
 <body>
 <div class="hd"><b>匯出檔樣式規格　稿 v2.69</b><button class="btn btn-sm" data-theme-btn type="button">深色／淺色</button></div>
