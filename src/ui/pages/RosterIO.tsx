@@ -90,7 +90,7 @@ export function RosterIO(p: { doc: Doc; division: Division; onChange: (d: Doc) =
         <Modal title="下載名單範本" onClose={() => setTpl(false)}
           actions={<><Button onClick={() => setTpl(false)}>取消</Button><Button kind="primary" onClick={async () => { downloadBytes('學生名單範本.xlsx', await writeXlsx(templateRows(), '學生名單'), XLSX_MIME); setTpl(false); }}>下載範本</Button></>}>
           <p class="small muted">先下載範本、照格式整理學生資料，再按「匯入學生名單」放進來。檔名：學生名單範本.xlsx。</p>
-          <div class="scroll"><table class="t compact nw">
+          <div class="rtw"><table class="t compact nw rt-t rt-a">
             <thead><tr><th>班級</th><th>座號</th><th>姓名</th><th>學號（選填）</th></tr></thead>
             <tbody><tr><td>溫</td><td>1</td><td>王小明</td><td>1150101</td></tr><tr><td>溫</td><td>2</td><td>李小華</td><td class="muted">（沒有就留空）</td></tr></tbody>
           </table></div>

@@ -122,7 +122,7 @@ function Step2(p: SubProps & { divs: Division[]; onChange: (d: Doc) => void }) {
             {classes.length > 0 ? (
               <>
                 <div class="row"><b>{DIV_LABEL[div]}　共 {classes.length} 班、{total} 人</b><Badge tone="ok">✓ 已匯入</Badge></div>
-                <div class="scroll" style="overflow-x:auto"><table class="t compact"><thead><tr><th>班級</th><th>班級教室</th><th>人數</th></tr></thead>
+                <div class="rtw"><table class="t compact rt-t rt-a"><thead><tr><th>班級</th><th>班級教室</th><th>人數</th></tr></thead>
                   <tbody>{classes.map((x) => <tr key={x.c.no}><td>{x.c.name}</td><td>{x.c.name}教室</td><td>{x.n}</td></tr>)}</tbody></table></div>
                 <div class="btnrow">
                   <Button onClick={() => p.onGoSettings('roster', div)}>修改學生名單 ›</Button>

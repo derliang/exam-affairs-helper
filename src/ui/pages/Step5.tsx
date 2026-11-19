@@ -188,10 +188,10 @@ export function Step5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
           {stat && (
             <div>
               <div class="lab">本教室各科應考人數</div>
-              <div class="scroll">
-                <table class="t compact">
+              <div class="rtw">
+                <table class="t compact rt-t rt-mx">
                   <thead><tr><th>項目</th>{stat.classes.map((c) => <th key={c.no}>{c.name}</th>)}<th>合計</th></tr></thead>
-                  <tbody>{stat.rows.map((r) => <tr key={r.label}><td>{r.label}</td>{r.per.map((n, i) => <td class="n" key={i}>{n}</td>)}<td class="n"><b>{r.total}</b></td></tr>)}</tbody>
+                  <tbody>{stat.rows.map((r) => <tr key={r.label}><td class="ti" data-label="項目">{r.label}</td>{r.per.map((n, i) => <td class="n" key={i} data-label={stat.classes[i]?.name ?? ''}>{n}</td>)}<td class="n tot" data-label="合計"><b>{r.total}</b></td></tr>)}</tbody>
                 </table>
               </div>
             </div>

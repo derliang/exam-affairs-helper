@@ -56,7 +56,7 @@ export function Step1(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
         {fixed && <Alert tone="info"><b>會考科目固定為七科</b>：國文、英語閱讀、英語聽力、數學、社會、自然、寫作測驗，不能新增、刪除或修改。</Alert>}
         {gsat && <More title="說明：這個類型的考科規則">第 1、2 次：數學、英聽；第 3、4 次：數 A、數 B（無英聽）。{mathSplit(round) ? `目前第${CN[round] ?? round}次，數學分為數學A、數學B。` : ''}</More>}
         {custom && <Alert tone="warn">考科表已自訂：切換次別不會重設考科；④ 的組別對照表要重新確認。</Alert>}
-        <div class="scroll"><table class="t compact subj-t">
+        <div class="rtw"><table class="t compact subj-t rt-t rt-a">
           <thead><tr><th>科目</th><th>誰要考</th><th /></tr></thead>
           <tbody>
             {exam.subjects.map((s) => (
@@ -89,11 +89,11 @@ export function Step1(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
             <Alert tone="info" action={<Button small onClick={() => p.onChange(stopCarry(doc, exam))}>不沿用，從空白開始</Button>}>
               已自動帶入「<b>{prev.name}</b>」的設定，每一步都能再改，改了不影響「{prev.name}」。
             </Alert>
-            <More title={`查看沿用內容（${exam.division === 'junior' ? '② 到 ⑤' : '② 到 ④'} 各步的狀態）`}><div class="scroll"><table class="t compact">
+            <More title={`查看沿用內容（${exam.division === 'junior' ? '② 到 ⑤' : '② 到 ④'} 各步的狀態）`}><div class="rtw"><table class="t compact rt-t">
               <thead><tr><th>步驟</th><th>狀態</th><th>內容</th></tr></thead>
               <tbody>
                 {carryRows(doc, exam, prev).map((r) => (
-                  <tr key={r.step}><td>{r.step}</td><td><Badge {...(r.tone === 'ok' || r.tone === 'warn' ? { tone: r.tone } : {})}>{r.badge}</Badge></td><td>{r.text}</td></tr>
+                  <tr key={r.step}><td class="ti" data-label="步驟">{r.step}</td><td data-label="狀態"><Badge {...(r.tone === 'ok' || r.tone === 'warn' ? { tone: r.tone } : {})}>{r.badge}</Badge></td><td data-label="內容" class="wide">{r.text}</td></tr>
                 ))}
               </tbody>
             </table></div></More>

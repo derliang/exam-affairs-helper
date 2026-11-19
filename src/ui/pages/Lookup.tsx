@@ -72,14 +72,14 @@ export function Lookup(p: { doc: Doc; examId?: string; onGoStep: (examId: string
         <div class="card stack">
           <h3>{hit.className}班 {hit.seatNo} 號　{hit.name}　<Badge>{hit.code}</Badge></h3>
           {(
-              <div class="scroll"><table class="t compact">
+              <div class="rtw"><table class="t compact rt-t">
                 <thead><tr><th>科目</th><th>教室／地點</th><th>座位（排－深位）</th><th>說明</th></tr></thead>
                 <tbody>{hit.rows.map((r) => (
                   <tr key={r.subjectId}>
-                    <td><b>{r.subject}</b></td>
-                    <td>{r.place || '—'}</td>
-                    <td class="num">{r.seat ?? '—'}</td>
-                    <td>{r.kind === 'class' ? <span class="muted">{r.note}</span> : r.kind === 'not-taking' ? <span class="muted">{r.note}</span> : <Badge tone={r.kind.startsWith('override') ? 'info' : 'warn'}>{r.note}</Badge>}</td>
+                    <td class="ti" data-label="科目"><b>{r.subject}</b></td>
+                    <td data-label="教室／地點">{r.place || '—'}</td>
+                    <td class="num" data-label="座位（排－深位）"><b>{r.seat ?? '—'}</b></td>
+                    <td data-label="說明">{r.kind === 'class' ? <span class="muted">{r.note}</span> : r.kind === 'not-taking' ? <span class="muted">{r.note}</span> : <Badge tone={r.kind.startsWith('override') ? 'info' : 'warn'}>{r.note}</Badge>}</td>
                   </tr>
                 ))}</tbody>
               </table></div>
