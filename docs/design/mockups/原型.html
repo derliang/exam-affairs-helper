@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>模擬考原型 稿 v2.39</title>
+<title>模擬考原型 稿 v2.69</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -888,7 +888,7 @@ details.more{font-size:14px;color:var(--text-2)}details.more summary{cursor:poin
 </style>
 
 <div class="pbar">
-  <span class="brand">原型工具列</span><span class="badge b-warn">原型專用，實作沒有</span><span class="badge b-acc vbadge">稿 v2.39・2026-11-15</span>
+  <span class="brand">原型工具列</span><span class="badge b-warn">原型專用，實作沒有</span><span class="badge b-acc vbadge">稿 v2.69・2026-11-19</span>
   <nav class="nav" id="pnav" aria-label="原型導覽"></nav>
   <div class="seg" role="group" aria-label="深淺色">
     <button type="button" id="thSys" aria-pressed="true">跟隨系統</button>
@@ -1038,7 +1038,7 @@ details.more{font-size:14px;color:var(--text-2)}details.more summary{cursor:poin
     var strip='<div class="seg" role="group" aria-label="匯入進度" style="max-width:100%;overflow-x:auto">'+lst.map(function(l,i){return '<button type="button" data-act="impseg" data-s="'+(i+1)+'" aria-pressed="'+(sg===i+1)+'">'+'①②③④'.charAt(i)+' '+IMP_SEGS[l-1]+'</button>'}).join('')+'</div>';
     var body='';
     if(L===1){
-      var cols=[['班級','班級'],['座號','座號'],['姓名','姓名'],['學號','學號（選填）'],['組別','組別／考科'],['備註','備註（全科缺考等）'],['應試編號','應試編號（選填）'],['特殊需求','特殊生需求註記（選填）']];
+      var cols=[['班級','班級'],['座號','座號'],['姓名','姓名'],['學號','學號（選填）'],['組別','組別／考科'],['備註','備註（例如不參加）'],['應試編號','應試編號（選填）'],['特殊需求','特殊生需求註記（選填）']];
       body='<div class="card stack"><div><h3>① 欄位對應</h3><p class="small muted">程式讀到檔案第一列的表頭，先自動對應；對錯了就從下拉改。這一步只決定「哪一欄是什麼」。</p></div>'+
         '<div class="scroll"><table class="t compact"><thead><tr><th>檔案裡的欄位</th><th>對應成</th><th>前三列內容（假資料）</th></tr></thead><tbody>'+
         cols.map(function(c,i){var ex=['溫班｜良班','1｜2｜3','王小明｜李小華｜張大文','112001｜112002｜（空白）',(ast?'物理、化學、數學甲｜歷史、地理｜（空白）':'2｜X數B｜＋自然'),'（空白）｜全科缺考｜（空白）','15010101｜15010102｜（空白）','（空白）｜大字卷｜延長時間'][i];
@@ -1545,7 +1545,7 @@ details.more{font-size:14px;color:var(--text-2)}details.more summary{cursor:poin
       return '<div class="card stack" style="gap:12px"><div class="row" style="justify-content:space-between"><span class="badge b-warn">'+(i+1)+'／'+all+'　'+it.title+'</span>'+(p?'<span class="badge b-ok">已選：'+cmpOpts(it).filter(function(o){return o[0]===p})[0][1]+'</span>':'<span class="badge">未處理</span>')+'</div>'+
         '<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr))"><div class="fact"><b>考試名單</b>'+esc(it.exam)+'</div><div class="fact"><b>學生名單</b>'+esc(it.stu)+'</div></div>'+
         '<div class="seg cmpseg" role="group" aria-label="第'+(i+1)+'筆處理方式" style="justify-self:start">'+cmpOpts(it).map(function(o){return '<button type="button" data-act="cmppick" data-i="'+i+'" data-v="'+o[0]+'" aria-pressed="'+(p===o[0])+'">'+o[1]+'</button>'}).join('')+'</div>'+(it.hint?'<span class="hint">'+it.hint+'</span>':'')+(it.k==='code'&&p==='stu'?'<div class="alert a-warn"><span class="ico" data-i="!"></span><span><b>這位考生原本的 X／＋ 標示會清掉。</b>套用後請到 ④ 標示與抽離規則或「個別覆寫」確認他實際要考的科目。</span><span></span></div>':'')+(p==='edit'?cmpEditHTML(it,i):'')+'</div>'}).join('');
-    var ab=c.absent||[];if(ab.length)cards+='<div class="card stack" style="gap:12px"><div class="row" style="justify-content:space-between"><span class="badge b-warn">'+ab.length+' 人全科缺考</span><span class="badge b-ok">目前：'+(c.abs==='stu'?'仍排座':'列入缺考清單，不排座')+'</span></div><div class="fact"><b>考試名單</b>'+esc(ab.map(function(x){return CNAME[x.c]+'班 '+x.no+' 號　'+x.name}).join('、'))+'（備註：全科缺考）</div><div class="seg cmpseg" role="group" aria-label="全科缺考處理方式" style="justify-self:start"><button type="button" data-act="cmpabs" data-v="exam" aria-pressed="'+(c.abs!=='stu')+'">列入缺考清單，不排座</button><button type="button" data-act="cmpabs" data-v="stu" aria-pressed="'+(c.abs==='stu')+'">仍排座</button></div><span class="hint">全科缺考的人不佔座位，座位表與領卷份數都不含；也可以改成仍排座。這一項已有預設，不算差異、不必選也能繼續。</span></div>';
+    /* D146（稿 v2.68）：不參加不是差異，名單比對不再另有一張卡（原「全科缺考」卡與「列入缺考清單，不排座」選項已拿掉，D137／D142 一律排座） */
     return PH({crumbs:crs(crList(),crExam(),crRet()),title:'名單比對',badge:'<span class="badge">'+esc(S.cur.name)+'</span>',tools:undoBtn()})+
       '<div class="stack" style="max-width:860px"><div class="card stack"><p>匯入「'+S.cur.name+'」考試名單（模擬檔：考試名單.xlsx）後，和'+SN(S.cur)+'比對，找到 <b>'+all+'</b> 筆差異；全部處理完才能繼續排座。</p><details class="more"><summary>說明：每一筆怎麼處理</summary><div>每一筆選一種處理方式（多數是：以考試名單為準、以學生名單為準，或兩邊都不對就手動編輯）。</div></details>'+
       '<div class="stats"><div><small>差異</small><strong>'+all+'</strong></div><div><small>已處理</small><strong>'+done+'</strong></div><div class="'+(all-done?'bad':'')+'"><small>未處理</small><strong>'+(all-done)+'</strong></div></div></div>'+cards+
@@ -1839,7 +1839,7 @@ details.more{font-size:14px;color:var(--text-2)}details.more summary{cursor:poin
       '<div class="pp-chips"><span class="pp-chip s">應到 '+list.length+' 人</span><span class="pp-chip">實到 ＿＿＿ 人</span><span class="pp-chip">缺考 ＿＿＿ 人</span></div>'+
       '<table class="pp-at"><thead>'+head+'</thead><tbody>'+body+'</tbody></table>'+
       '<div class="pp-foot">'+(list.length>maxRows?'預覽只畫前 '+maxRows+' 人；人多時自動接下一頁並重複表頭。　':'')+'每科格子留白＝到考時打勾；「—」＝這科不考。　產生時間：2026-11-08 07:30（台北）　資料版本碼：DMJ0-A3J0</div></div>';
-    return '<div class="pp-stage"><div class="pp-fit" data-w="210" data-h="297">'+page+'</div></div><p class="small muted">每間教室一頁（含預備教室），照座位順序（排小到大、同排深位小到大）。全科缺考的人不在座位表，所以不列；到他處考試的人本教室不列。<span class="pending">待使用者確認：欄位（座位、編號、班級、姓名、每科打勾格、不考的科目、應到／實到／缺考）</span></p>'}
+    return '<div class="pp-stage"><div class="pp-fit" data-w="210" data-h="297">'+page+'</div></div><p class="small muted">每間教室一頁（含預備教室），照座位順序（排小到大、同排深位小到大）。不參加的人各科印「—」（他們有座位、每節到自習教室）；到他處考試的人本教室不列。<span class="pending">待使用者確認：欄位（座位、編號、班級、姓名、每科打勾格、不考的科目、應到／實到／缺考）</span></p>'}
   /* ---------- 會考快速模式面板---------- */
   function quickPanel(e){
     if(!(FEAT.quick&&e.type==='會考'))return '';
