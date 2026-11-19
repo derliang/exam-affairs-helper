@@ -1,5 +1,5 @@
 /**
- * D137（#400 WP-1）：拿掉 G36「學測原班整場不考者虛線參考座位」（addHomeStudyRef）。
+ * D137（#400 WP-1）：拿掉 G36「學測原班整場不考者虛線自習座位」（addHomeStudyRef）。
  * 未參加、全科缺考者改成直接進排座引擎（有正式座位、走多數留班／少數抽離），輸出不再另貼虛線格。
  */
 import { createHash } from 'node:crypto';
@@ -20,11 +20,11 @@ function withStay(): ExportInput {
   return { ...f, settings: { ...f.settings, classrooms: rooms }, entries, result: { ...f.result, assignments }, includeStudyRef: true };
 }
 
-describe('D137 原班不再另貼虛線參考座位（座位一律由排座引擎給）', () => {
-  it('班級教室座位表只印排座結果裡的人：沒有虛線格、沒有「自習（參考座位）」小標', () => {
+describe('D137 原班不再另貼虛線自習座位（座位一律由排座引擎給）', () => {
+  it('班級教室座位表只印排座結果裡的人：沒有虛線格、沒有「自習（自習座位）」小標', () => {
     const page = buildSeatPages(withStay(), 'class').find((p) => p.roomName === '溫')!;
     expect([...page.cells.values()].filter((c) => c.ref)).toEqual([]);
-    expect(page.chips.some((t) => t.includes('參考座位') || t.includes('座位不足'))).toBe(false);
+    expect(page.chips.some((t) => t.includes('自習座位') || t.includes('座位不足'))).toBe(false);
   });
   it('includeStudyRef＝true 與沒給相同；false 只少了預備教室的抽離自習參考頁', () => {
     const input = withStay();

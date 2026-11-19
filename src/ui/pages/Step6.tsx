@@ -114,7 +114,7 @@ function PreviewCard(p: { prepared: Extract<ReturnType<typeof prepareExport>, { 
         ? <Alert tone="danger"><b>這間教室的預覽排不出來</b>：{html.error}。請回 ③ 調整教室的座位。</Alert>
         : html
         ? <iframe class="pvframe" title="下載預覽" sandbox="" srcdoc={html} style={`width:100%;height:${kind === 'label' ? 660 : 620}px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--sunken)`} />
-        : <Alert tone="info">{room?.kind === 'reserve' ? '這間預備教室沒有加考的人：抽離自習的人只排參考座位頁、不印標籤，名單另出。' : '這間教室沒有可預覽的內容。'}</Alert>}
+        : <Alert tone="info">{room?.kind === 'reserve' ? '這間預備教室沒有加考的人：抽離自習的人只排自習座位頁、不印標籤，名單另出。' : '這間教室沒有可預覽的內容。'}</Alert>}
       <p class="small muted">{cap}</p>
     </div>
   );
@@ -284,7 +284,7 @@ export function Step6(p: {
           </div>
           {!junior && ck('study', '抽離自習名單（A4）', '合併成一個檔案，每科一頁；只有名單與人數，不出座位表與標籤')}
           {!junior && ck('reserve', '包含預備教室頁', `抽離考試的預備教室座位表（時段版）與標籤，併在上面座位表、標籤檔案的最後，每頁頁首標「預備教室」；預備教室最多 7 排×8 深位，標籤同一頁 7×8（格高隨列數調整）`)}
-          {!junior && ck('studyRef', '含自習參考座位頁', '抽離自習的預備教室也出參考座位頁：只供檢核座位夠不夠、可照坐，不印標籤。留在原班自習的人就在原班座位表上。取消則不出參考頁')}
+          {!junior && ck('studyRef', '含自習座位頁', '抽離自習的預備教室也出自習座位頁：只供檢核座位夠不夠、可照坐，不印標籤。留在原班自習的人就在原班座位表上。取消則不出參考頁')}
         </div>
         <div class="dlbtns row" style="align-items:flex-start;gap:24px;flex-wrap:wrap">
           <div class="stack" style="gap:6px">

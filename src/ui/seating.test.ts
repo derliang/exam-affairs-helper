@@ -168,7 +168,7 @@ describe('⑤ 座位表與統計', () => {
       ['0103', 'off'], ['0102', 'free'], ['0101', '0104'],
     ]);
     const c = m.lines[1]![0]!;
-    expect(c.kind === 'student' && [c.co, c.className, c.marks, c.markKind]).toEqual(['1-2', '溫', ['X社會'], 'x']);
+    expect(c.kind === 'student' && [c.co, c.className, c.marks, c.markKind]).toEqual(['1-2', '溫', ['X 社會'], 'x']);
   });
 
   it('抽離考試座位表與總覽；統計扣掉抽離與到他處考試的人', () => {

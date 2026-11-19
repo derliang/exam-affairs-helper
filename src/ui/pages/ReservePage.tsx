@@ -92,7 +92,7 @@ export function ReservePage(p: { doc: Doc; examId: string; crumbs: { label: stri
       <div class="card stack">
         <div class="row" style="justify-content:space-between">
           <div><h3>抽離自習（X）：{active.studyN} 人</h3><p class="small muted">自習名單依預備教室順序，每間再依班級、座號排；與考試抽離用不同教室。</p></div>
-          {active.studyN > 0 && <Badge>不印標籤（排參考座位）</Badge>}
+          {active.studyN > 0 && <Badge>不印標籤（排自習座位）</Badge>}
         </div>
         {active.studyN === 0
           ? <p class="small muted">這一節沒有人要抽離自習。</p>

@@ -32,6 +32,9 @@ import {
   footerText,
   labelBoxMm,
   roomShown,
+  titleOf,
+  cornerLayout,
+  labelTitleOf,
   labelGrid,
   labelGridSize,
   labelNotePt,
@@ -247,10 +250,10 @@ function headBlock(
 }
 
 /** 角標（#223）：右下角單字；不考＝黑底白字，加考／有考＝白底黑框 */
-function cornerRuns(c: CellModel, pt: number, mode: BoldMode): TextRun[] {
+function cornerRuns(tags: readonly { kind: string; text: string }[], pt: number, mode: BoldMode): TextRun[] {
   const out: TextRun[] = [];
   const name = mode === 'separate-family' ? FONT_BOLD : FONT;
-  (c.corners ?? []).forEach((t, i) => {
+  tags.forEach((t, i) => {
     if (i > 0) out.push(run2(' ', { size: pt * 0.5 }, mode));
     out.push(
       new TextRun({
@@ -275,8 +278,12 @@ function cellParas(
   mode: BoldMode,
 ): Paragraph[] {
   // #223：座位表格高很小時（深位多、統計表長），編號、姓名、角標區整體等比縮小，才不會把右下角的角標擠出格子下緣被切掉
-  const fit = g0.codeAtBottom ? { k: 1 } : fitSeatCell(g0, namePtFit(c.classLabel, c.name, g0.innerW, g0.nameMax ?? g0.namePt));
-  const g = fit.k < 1 ? { ...g0, codePt: g0.codePt * fit.k, markPt: Math.max(5.5, g0.markPt * fit.k), markArea: g0.markArea * fit.k } : g0;
+  // D147②：角標字多（抽離 科目 考試）時分成多行，角標區高度跟著加高再一起等比縮放
+  const cLines = cornerLayout(c.corners ?? [], g0.innerW - 1.2, g0.markPt);
+  const nCl = Math.max(1, cLines.length);
+  const gOne = nCl > 1 ? { ...g0, markArea: g0.markArea * nCl } : g0;
+  const fit = g0.codeAtBottom ? { k: 1 } : fitSeatCell(gOne, namePtFit(c.classLabel, c.name, g0.innerW, g0.nameMax ?? g0.namePt));
+  const g = fit.k < 1 ? { ...g0, codePt: g0.codePt * fit.k, markPt: Math.max(5.5, g0.markPt * fit.k), markArea: gOne.markArea * fit.k } : gOne;
   const codeH = g.codePt * 0.3528;
   const npt = namePtFit(c.classLabel, c.name, g.innerW, g.nameMax ?? g.namePt) * (fit.k < 1 ? fit.k : 1);
   const nameH = npt * 0.3528 * 1.15;
@@ -293,7 +300,8 @@ function cellParas(
   const top = line([run2(c.coord, { size: g.coordPt, bold: true, color: '4A463A' }, mode)], { h: g.topPad, align: AlignmentType.RIGHT, right: 0.6 });
   const hasCorner = (c.corners?.length ?? 0) > 0;
   const cornerH = g.markPt * 0.3528 * 1.15 + 0.8;
-  const corner = (before: number, h: number) => line(cornerRuns(c, g.markPt, mode), { h, align: AlignmentType.RIGHT, before, right: 0.6 });
+  const corner = (before: number, h: number) =>
+    cLines.map((tags, i) => line(cornerRuns(tags, g.markPt, mode), { h: i === 0 ? h / nCl : h / nCl, align: AlignmentType.RIGHT, before: i === 0 ? before : 0, right: 0.6 }));
   if (g.codeAtBottom) {
     // 標籤：編號與「班級｜姓名」整塊在格內垂直置中，不留空行（#218）；角標貼右下角
     const block = codeH + g.codeGap + nameH;
@@ -303,7 +311,7 @@ function cellParas(
       top,
       line([run2(c.code, { size: g.codePt, bold: true, color: INK, spacing: g.codePt * 0.02 }, mode)], { h: codeH, before, after: g.codeGap }),
       nameLine,
-      ...(hasCorner ? [corner(Math.max(0, g.h - used - cornerH - 0.6), cornerH)] : []),
+      ...(hasCorner ? corner(Math.max(0, g.h - used - cornerH * nCl - 0.6), cornerH * nCl) : []),
     ];
   }
   const region = g.h - g.topPad - nameH - g.markArea - g.bottomPad;
@@ -312,7 +320,7 @@ function cellParas(
     top,
     line([run2(c.code, { size: g.codePt, bold: true, color: INK, spacing: g.codePt * 0.02 }, mode)], { h: codeH, before: pad, after: pad }),
     nameLine,
-    hasCorner ? corner(0, g.markArea) : spacer(g.markArea),
+    ...(hasCorner ? corner(0, g.markArea) : [spacer(g.markArea)]),
   ];
 }
 
@@ -527,18 +535,31 @@ function seatSection(page: SeatPageModel, opts: DocxOptions): ISectionOptions {
   const sl = statLayout(page);
   const stCols = sl.cols;
   const stBd = { top: bd(CUT, 7), bottom: bd(CUT, 7), left: bd(CUT, 7), right: bd(CUT, 7) };
-  const stCell = (text: string, i: number, o: { head?: boolean; bold?: boolean }) =>
+  const stCell = (text: string, i: number, o: { head?: boolean; bold?: boolean; span?: number; left?: boolean }) =>
     new TableCell({
-      width: { size: tw(stCols[i]!), type: WidthType.DXA },
+      width: { size: tw(stCols.slice(i, i + (o.span ?? 1)).reduce((a, b) => a + b, 0)), type: WidthType.DXA },
+      ...(o.span && o.span > 1 ? { columnSpan: o.span } : {}),
       verticalAlign: VerticalAlign.CENTER,
       shading: o.head ? { type: ShadingType.CLEAR, fill: 'F3EEDD', color: 'auto' } : undefined,
       borders: stBd,
       margins: { top: 0, bottom: 0, left: tw(2), right: tw(2) },
-      children: [line([run2(text, { size: sl.pt, bold: o.head || o.bold }, mode)], { h: sl.pt * 0.3528 * 1.3, align: i === 0 && !o.head ? AlignmentType.LEFT : AlignmentType.CENTER })],
+      children: [line([run2(text, { size: sl.pt, bold: o.head || o.bold }, mode)], { h: sl.pt * 0.3528 * 1.3, align: o.left || (i === 0 && !o.head) ? AlignmentType.LEFT : AlignmentType.CENTER })],
     });
+  // 前導欄（D147⑤）：日期／第幾天／時段／科目逐欄；lead 比欄數少的列，最後一格橫跨其餘前導欄
+  const leadHeads = page.stats.table.leadHeads;
+  const leadN = leadHeads?.length ?? 1;
+  const rowCells = (r: (typeof st)[number]) => {
+    if (!leadHeads) return [r.label, ...r.per.map(String), String(r.total)].map((t, i, a) => stCell(t, i, { bold: i === a.length - 1 }));
+    const lead = r.lead ?? [r.label];
+    return [
+      ...lead.map((t, i) => stCell(t, i, { left: true, span: i === lead.length - 1 ? leadN - i : 1 })),
+      ...r.per.map((n, i) => stCell(String(n), leadN + i, {})),
+      stCell(String(r.total), leadN + r.per.length, { bold: true }),
+    ];
+  };
   const stRowsT = [
-    new TableRow({ height: { value: tw(sl.rowH[0]!), rule: HeightRule.EXACT }, children: [page.stats.table.headLabel ?? '項目', ...page.stats.table.classes, '合計'].map((t, i) => stCell(t, i, { head: true })) }),
-    ...st.map((r, ri) => new TableRow({ height: { value: tw(sl.rowH[ri + 1]!), rule: HeightRule.EXACT }, children: [r.label, ...r.per.map(String), String(r.total)].map((t, i, a) => stCell(t, i, { bold: i === a.length - 1 })) })),
+    new TableRow({ height: { value: tw(sl.rowH[0]!), rule: HeightRule.EXACT }, children: [...(leadHeads ?? [page.stats.table.headLabel ?? '項目']), ...page.stats.table.classes, leadHeads ? '總計' : '合計'].map((t, i) => stCell(t, i, { head: true })) }),
+    ...st.map((r, ri) => new TableRow({ height: { value: tw(sl.rowH[ri + 1]!), rule: HeightRule.EXACT }, children: rowCells(r) })),
   ];
   const stTable = new Table({ width: { size: tw(innerW), type: WidthType.DXA }, columnWidths: stCols.map(tw), layout: TableLayoutType.FIXED, borders: noInside, rows: stRowsT });
 
@@ -551,7 +572,7 @@ function seatSection(page: SeatPageModel, opts: DocxOptions): ISectionOptions {
     },
     footers: { default: pageFooter(opts) },
     children: [
-      headBlock({ widthMm: innerW, h1: page.heading ?? page.examName, ...(page.heading ? {} : { h2: '座位表' }), room: roomShown(page), h1Pt: 15, roomPt: 16, padX: 6, padY: 1.6 }, mode),
+      headBlock({ widthMm: innerW, h1: titleOf(page), ...(page.heading ? {} : { h2: '座位表' }), room: roomShown(page), h1Pt: 15, roomPt: 16, padX: 6, padY: 1.6 }, mode),
       spacer(3.5),
       ...chipTables,
       spacer(4),
@@ -561,7 +582,7 @@ function seatSection(page: SeatPageModel, opts: DocxOptions): ISectionOptions {
       spacer(5),
       ...(page.slotMode ? [line([run2(SLOT_TIP, { size: 10, color: GRAY }, mode)], { h: 5.5, align: AlignmentType.LEFT }), spacer(2)] : []),
       // 時段多、座位格會被壓得太矮時，統計表改放下一頁（#212）
-      ...(statsNext ? [new Paragraph({ pageBreakBefore: true, spacing: { before: 0, after: 0 }, children: [run2(`${page.heading ?? page.examName}　${page.roomName}　各班人數統計`, { size: 14, bold: true }, mode)] }), spacer(3)] : []),
+      ...(statsNext ? [new Paragraph({ pageBreakBefore: true, spacing: { before: 0, after: 0 }, children: [run2(`${titleOf(page)}　${page.roomName}　各班人數統計`, { size: 14, bold: true }, mode)] }), spacer(3)] : []),
       stTable,
       line([], { h: 0.35 }),
     ],
@@ -655,7 +676,7 @@ function labelSection(page: LabelPageModel, opts: DocxOptions): ISectionOptions 
     },
     footers: { default: pageFooter(opts) },
     children: [
-      headBlock({ widthMm: gridW, h1: (page.heading ?? `${page.examName}　標籤`) + (page.flipNotes?.length ? `　（${page.flipNotes.join('；')}）` : ''), room: roomShown(page), h1Pt: 15, roomPt: 12, padX: 4, padY: 1, slackMm: 4 }, mode),
+      headBlock({ widthMm: gridW, h1: labelTitleOf(page) + (page.flipNotes?.length ? `　（${page.flipNotes.join('；')}）` : ''), room: roomShown(page), h1Pt: 15, roomPt: 12, padX: 4, padY: 1, slackMm: 4 }, mode),
       spacer(3),
       gridTable,
       ...(lines.length ? [spacer(3), note] : []),

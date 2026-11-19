@@ -125,7 +125,7 @@ describe('三種考試類型', () => {
   });
 });
 
-describe('G32 自習參考座位', () => {
+describe('G32 自習座位', () => {
   const d = doc([4, 4]);
   const e = d.exams[0]!;
   const prev = detachPreview(d, e);
@@ -134,7 +134,7 @@ describe('G32 自習參考座位', () => {
     if (!prev.ok) return;
     expect(prev.detaches.filter((x) => x.purpose === 'study').every((x) => !x.seat)).toBe(true);
   });
-  it('參考座位排進分到的預備教室、每人一格不重複、座位都是可用座位', () => {
+  it('自習座位排進分到的預備教室、每人一格不重複、座位都是可用座位', () => {
     if (!prev.ok) throw new Error('prev');
     const rooms = d.settings.classrooms.filter((r) => r.kind === 'reserve');
     const refs = studyReference(periodGroups(e.subjects), prev.detaches, rooms);
@@ -156,7 +156,7 @@ describe('G32 自習參考座位', () => {
     expect(refs[0]!.seats.get('0101')).toBeDefined();
     expect(refs[0]!.seats.get('0101')).not.toEqual({ row: 1, depth: 4 });
   });
-  it('座位表檔案多出「參考座位」頁（標題寫非考試座位、在預備教室頁之後），標籤沒有', () => {
+  it('座位表檔案多出「自習座位」頁（標題寫非考試座位、在預備教室頁之後），標籤沒有', () => {
     const input = makeFixture();
     input.result.detaches = input.result.detaches.filter((d) => d.purpose !== "study");
     input.result.detaches.push(
@@ -165,13 +165,13 @@ describe('G32 自習參考座位', () => {
       { code: '0201', subjectId: 'ma', purpose: 'study', roomId: 'rv' },
     );
     const pages = buildSeatPages(input);
-    const ref = pages.filter((p) => p.title.includes('參考座位'));
+    const ref = pages.filter((p) => p.title.includes('自習座位'));
     expect(ref).toHaveLength(1);
     expect(ref[0]!.title).toContain('非考試座位');
     expect(ref[0]!.tag).toBe('預備教室');
     expect(ref[0]!.cells.size).toBe(3);
     expect(pages.indexOf(ref[0]!)).toBe(pages.length - 1);
-    expect(buildSeatPages(input, 'class').some((p) => p.title.includes('參考座位'))).toBe(false);
-    expect(buildLabelPages(input).some((p) => p.title.includes('參考座位') || p.roomName.includes('參考座位'))).toBe(false);
+    expect(buildSeatPages(input, 'class').some((p) => p.title.includes('自習座位'))).toBe(false);
+    expect(buildLabelPages(input).some((p) => p.title.includes('自習座位') || p.roomName.includes('自習座位'))).toBe(false);
   });
 });

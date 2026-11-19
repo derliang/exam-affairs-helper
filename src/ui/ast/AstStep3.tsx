@@ -149,8 +149,8 @@ export function AstStep3(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
 
       <div class="card stack">
         <div>
-          <h3>固定自習教室（自習參考座位）</h3>
-          <p class="small muted">不考的人就是自習，也會排參考座位（只用來檢核座位夠不夠、可照坐，<b>不印標籤</b>）。被指定為固定自習教室的教室<b>全程不當考場</b>，每個人整天只去同一間。沒指定＝程式自動讓同一個人各節盡量在同一間自習、同班盡量在一起。參考座位每節各自排，不必每節同一個位子。座位以每間教室的編制人數為準，不足不硬排、會列出未排入的人。</p>
+          <h3>固定自習教室（自習座位）</h3>
+          <p class="small muted">不考的人就是自習，也會排自習座位（只用來檢核座位夠不夠、可照坐，<b>不印標籤</b>）。被指定為固定自習教室的教室<b>全程不當考場</b>，每個人整天只去同一間。沒指定＝程式自動讓同一個人各節盡量在同一間自習、同班盡量在一起。自習座位每節各自排，不必每節同一個位子。座位以每間教室的編制人數為準，不足不硬排、會列出未排入的人。</p>
         </div>
         <div class="row" style="gap:6px;flex-wrap:wrap" role="group" aria-label="固定自習教室">
           {[...reserves, ...classRooms].filter((r) => selected.has(r.id)).map((r) => {
