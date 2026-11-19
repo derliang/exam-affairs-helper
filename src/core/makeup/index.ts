@@ -9,7 +9,7 @@
  *   const schedule = buildSchedule(entries, settings, plan);       // ⑤ 排程
  *   const outputs = buildOutputs(schedule, entries, settings);     // ⑦ 產出模型
  *   const checks = runMakeupChecks({ roster, settings, plan, outputs, currentVersion: makeupVersion(roster, settings, plan) });
- *   const gate = downloadGate(checks, confirmedIds);               // ⑥⑦ 閘門
+ *   const gate = downloadGate(checks);               // ⑥⑦ 閘門
  */
 import { dataVersion } from '../version';
 import type { MakeupPlan, MakeupRoster, MakeupSettings } from './types';

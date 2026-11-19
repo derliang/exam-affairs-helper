@@ -5,7 +5,7 @@
  * 「應有」取自名單（MakeupRoster）與設定；「實有」取自最終產出模型（MakeupOutputs：點名單、公告、備卷、座位表、考程表註記），
  * 從輸出重新點人。任何一項算不出來（例外）一律視同不通過（紅）。
  *
- * 燈號（與 G35 一致）：green 通過、amber 警示（逐項確認後可放行）、red 不通過（必須修正、不可放行）、pending 待執行（只有 C-14：還沒有檔可讀）。
+ * 燈號（與 G35 一致）：green 通過、amber 警示（只提示，不擋下載，D153）、red 不通過（必須修正、不可放行）、pending 待執行（只有 C-14：還沒有檔可讀）。
  */
 import { leaveNote, type MakeupOutputs, type RollCallSheet } from './outputs';
 import { roomSeats, subjectMinutes } from './schedule';
@@ -62,7 +62,7 @@ const TITLES: Record<CheckResult['id'], string> = {
 
 /** 下載閘門：這些項目紅燈（或算不出來）就禁止下載 */
 export const BLOCKING_IDS: readonly CheckResult['id'][] = ['C-1', 'C-2', 'C-3', 'C-4', 'C-5', 'C-6', 'C-7', 'C-8', 'C-9', 'C-10', 'C-14'];
-/** 這些項目琥珀時須使用者逐項確認才可往下 */
+/** 這些項目是「警示」類：琥珀時只提示、不擋下載、不用確認（D153，與 D149① 一致） */
 export const CONFIRM_IDS: readonly CheckResult['id'][] = ['C-11', 'C-12', 'C-13', 'C-15'];
 
 type Id = CheckResult['id'];
@@ -512,20 +512,21 @@ export interface DownloadGate {
   /** 紅燈（或算不出來）擋下的項目：必須修正，不可放行 */
   blockers: CheckResult[];
   /** 琥珀但還沒確認的項目 */
-  needConfirm: CheckResult[];
+  /** 琥珀警示：只提示，不擋下載（D153） */
+  warnings: CheckResult[];
   /** 中文說明，可直接顯示 */
   reasons: string[];
 }
 
 /**
- * 下載閘門（規格 6.2）：C-1～C-10、C-14 紅燈禁止下載；C-11～C-13、C-15 琥珀須逐項確認。
+ * 下載閘門（規格 6.2，D153 修訂）：C-1～C-10、C-14 紅燈禁止下載；C-11～C-13、C-15 琥珀只提示（warnings），不擋、不用確認。
  * 任何一項紅燈都不可放行（與 G35 一致）；C-14 待執行不擋（回讀在產出後才跑，K4 回讀不符要另外擋交付）；
  * 其他項目若是待執行（算不出來）視同不通過。缺項也視同不通過。
  */
-export function downloadGate(checks: readonly CheckResult[], confirmed: ReadonlySet<string> = new Set()): DownloadGate {
+export function downloadGate(checks: readonly CheckResult[]): DownloadGate {
   const byId = new Map(checks.map((c) => [c.id, c]));
   const blockers: CheckResult[] = [];
-  const needConfirm: CheckResult[] = [];
+  const warnings: CheckResult[] = [];
   const reasons: string[] = [];
   for (const id of Object.keys(TITLES) as Id[]) {
     const c = byId.get(id);
@@ -538,11 +539,10 @@ export function downloadGate(checks: readonly CheckResult[], confirmed: Readonly
     if (c.status === 'red' || (c.status === 'pending' && id !== 'C-14')) {
       blockers.push(c);
       reasons.push(`${id} ${c.title}：${c.summary}`);
-    } else if (c.status === 'amber' && !confirmed.has(id)) {
-      needConfirm.push(c);
-      reasons.push(`${id} ${c.title}：待確認`);
+    } else if (c.status === 'amber') {
+      warnings.push(c);
     }
   }
-  return { allowed: blockers.length === 0 && needConfirm.length === 0, blockers, needConfirm, reasons };
+  return { allowed: blockers.length === 0, blockers, warnings, reasons };
 }
 
