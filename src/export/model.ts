@@ -214,8 +214,11 @@ export function wideLabelLayout(paper: LabelPaper): LabelLayout {
   return { paper, cols: 6, rows: LABEL_GRID_MAX, wide: true };
 }
 
-/** 預備教室標籤最多 7 排×8 深位（G30）：8 列時格高＝（紙高－標題頁尾）÷8，同一頁放下 */
-export const RESERVE_DEPTH_MAX = 8;
+/**
+ * 教室座位上限（D149②、D154、D158①）：橫排、深位各最多 8（總座位另限 56，在編輯端擋）。標籤格子寬＝（紙寬－邊距）÷max(7, 排數)、
+ * 高＝紙高÷7，深位 8 時整頁放不下就縮矮（labelFit）；排數、深位 ≤ 7 時與以前完全相同。每間教室仍一頁。
+ */
+export const LABEL_ROOM_MAX = 8;
 export const PREP_TAG = '預備教室';
 
 /**
@@ -246,9 +249,9 @@ export function labelNoteBlockMm(paper: LabelPaper, pt: number, lines: number): 
  * 標籤格尺寸與注意事項字級（D113，D136 修訂）：寬＝（紙寬－左右邊距）÷7；高＝紙高÷7，但整頁（標題、格子、注意事項、頁尾）
  * 放不下時把格子平均縮矮，一定在同一頁、注意事項一定印。noteLines＝注意事項行數（0＝不印框）。
  */
-export function labelFit(layout: LabelLayout, gridRows = LABEL_GRID_MAX, noteLines = 0): { w: number; h: number; notePt: number } {
+export function labelFit(layout: LabelLayout, gridRows = LABEL_GRID_MAX, noteLines = 0, gridCols = LABEL_GRID_MAX): { w: number; h: number; notePt: number } {
   const p = PAPER_MM[layout.paper];
-  const w = (p.w - 2 * LABEL_EDGE_X_MM) / LABEL_GRID_MAX;
+  const w = (p.w - 2 * LABEL_EDGE_X_MM) / Math.max(LABEL_GRID_MAX, gridCols); // D158①：排數超過 7 就依實際排數切，整排不超出可印範圍
   const avail = p.h - LABEL_PAGE_FIXED_MM;
   const rows = Math.max(1, gridRows);
   const h0 = Math.min(p.h / LABEL_GRID_MAX, avail / rows);
@@ -262,11 +265,11 @@ export function labelFit(layout: LabelLayout, gridRows = LABEL_GRID_MAX, noteLin
 /** 畫面說明用：「四周留 10mm 列印邊距，每格寬約 32.7 mm、高最多約 50.4 mm」（D136；數字與實際輸出同一來源） */
 export function labelSizeNote(paper: LabelPaper): string {
   const p = PAPER_MM[paper];
-  return `四周留 ${LABEL_EDGE_MM}mm 列印邊距，每格寬約 ${((p.w - 2 * LABEL_EDGE_X_MM) / LABEL_GRID_MAX).toFixed(1)} mm、高最多約 ${(p.h / LABEL_GRID_MAX).toFixed(1)} mm（深位多時格子稍矮，整間教室與注意事項一定印在同一頁）`;
+  return `四周留 ${LABEL_EDGE_MM}mm 列印邊距，每格寬約 ${((p.w - 2 * LABEL_EDGE_X_MM) / LABEL_GRID_MAX).toFixed(1)} mm、高最多約 ${(p.h / LABEL_GRID_MAX).toFixed(1)} mm（排數超過 7 時依排數切、深位多時格子稍矮，整間教室與注意事項一定印在同一頁）`;
 }
 
-export function labelCellMm(layout: LabelLayout, gridRows = LABEL_GRID_MAX, noteLines = 0): { w: number; h: number } {
-  const f = labelFit(layout, gridRows, noteLines);
+export function labelCellMm(layout: LabelLayout, gridRows = LABEL_GRID_MAX, noteLines = 0, gridCols = LABEL_GRID_MAX): { w: number; h: number } {
+  const f = labelFit(layout, gridRows, noteLines, gridCols);
   return { w: f.w, h: f.h };
 }
 
@@ -901,8 +904,8 @@ export function labelGrid(p: LabelPageModel): (CellModel | undefined)[] {
   return g;
 }
 
-/** 教室座位超過 7×7，標籤無法對應（D113）：不輸出該教室的標籤，請使用者縮小 */
-export const roomTooBigForLabel = (r: { rows: number; depth: number; kind?: 'class' | 'reserve' }): boolean => r.rows > LABEL_GRID_MAX || r.depth > (r.kind === 'reserve' ? RESERVE_DEPTH_MAX : LABEL_GRID_MAX);
+/** 教室橫排或深位超過 8，標籤無法對應（D113 修訂為 8，D154）：不輸出該教室的標籤，請使用者縮小；班級、預備教室同一套 */
+export const roomTooBigForLabel = (r: { rows: number; depth: number; kind?: 'class' | 'reserve' }): boolean => r.rows > LABEL_ROOM_MAX || r.depth > LABEL_ROOM_MAX;
 
 /** 標籤：每間教室一張紙，位置同座位表（見 labelGrid）。超出格數丟錯 */
 export function buildLabelPages(input: ExportInput, scope: Scope = 'all'): LabelPageModel[] {
@@ -1169,8 +1172,8 @@ export function seatGeometry(p: SeatPageModel): { cw: number; ch: number; st: Re
 }
 
 /** 標籤格尺寸（D113、D136）：見 labelFit；padX＝左右列印邊距 */
-export function labelBoxMm(layout: LabelLayout, gridRows = LABEL_GRID_MAX, noteLines = 0): { w: number; h: number; padX: number } {
-  const c = labelCellMm(layout, gridRows, noteLines);
+export function labelBoxMm(layout: LabelLayout, gridRows = LABEL_GRID_MAX, noteLines = 0, gridCols = LABEL_GRID_MAX): { w: number; h: number; padX: number } {
+  const c = labelCellMm(layout, gridRows, noteLines, gridCols);
   return { w: c.w, h: c.h, padX: LABEL_EDGE_X_MM };
 }
 

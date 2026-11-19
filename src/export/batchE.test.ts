@@ -7,13 +7,37 @@ import { buildLabelPages, buildSeatPages } from './model';
 import { buildParts, defaultOptions } from './plan';
 import { makeFixture } from './fixtures';
 
-describe('G30 預備教室 7 排×8 深位', () => {
-  it('標籤上限：班級教室 7×7、預備教室 7 排×8 深位', () => {
-    expect(roomTooBigForLabel({ rows: 7, depth: 7, kind: 'class' })).toBe(false);
-    expect(roomTooBigForLabel({ rows: 7, depth: 8, kind: 'class' })).toBe(true);
-    expect(roomTooBigForLabel({ rows: 7, depth: 8, kind: 'reserve' })).toBe(false);
-    expect(roomTooBigForLabel({ rows: 8, depth: 7, kind: 'reserve' })).toBe(true);
-    expect(roomTooBigForLabel({ rows: 7, depth: 9, kind: 'reserve' })).toBe(true);
+describe('G30／D154 標籤格數：橫排、深位各 ≤ 8，格子隨排數切', () => {
+  it('標籤上限：班級、預備教室同一套，橫排或深位超過 8 才停用', () => {
+    for (const kind of ['class', 'reserve'] as const) {
+      expect(roomTooBigForLabel({ rows: 7, depth: 7, kind })).toBe(false);
+      expect(roomTooBigForLabel({ rows: 7, depth: 8, kind })).toBe(false);
+      expect(roomTooBigForLabel({ rows: 8, depth: 7, kind })).toBe(false);
+      expect(roomTooBigForLabel({ rows: 9, depth: 6, kind })).toBe(true);
+      expect(roomTooBigForLabel({ rows: 7, depth: 9, kind })).toBe(true);
+    }
+  });
+  it('D158①：格寬＝（紙寬－左右邊距）÷max(7, 排數)；排數 ≤ 7 與以前相同；整排不超出可印寬度', () => {
+    for (const paper of ['B4', 'A3'] as const) {
+      const l = defaultLabelLayout(paper);
+      const usable = PAPER_MM[paper].w - 2 * LABEL_EDGE_X_MM;
+      for (const cols of [1, 5, 7]) expect(labelCellMm(l, 7, 0, cols).w).toBeCloseTo(usable / 7, 5);
+      expect(labelCellMm(l, 7, 0, 8).w).toBeCloseTo(usable / 8, 5);
+      expect(8 * labelCellMm(l, 7, 0, 8).w).toBeLessThanOrEqual(usable + 1e-9);
+      expect(labelBoxMm(l, 7, 0, 8).w).toBeCloseTo(usable / 8, 5);
+      // 高度仍是紙高÷深位數（深位 8 時整頁放不下就縮矮，與排數無關）
+      expect(labelCellMm(l, 8, 0, 8).h).toBeCloseTo((PAPER_MM[paper].h - LABEL_PAGE_FIXED_MM) / 8, 5);
+    }
+  });
+  it('8 排×7 深位、7 排×8 深位（各 56 座）：標籤各 1 張、格數與座位表一致（每間教室一頁）', () => {
+    for (const [rows, depth] of [[8, 7], [7, 8]] as const) {
+      const input = makeFixture();
+      const rv = input.settings.classrooms.find((c) => c.kind === 'reserve')!;
+      rv.rows = rows; rv.depth = depth; rv.seatCount = 56;
+      const lab = buildLabelPages(input, 'reserve');
+      expect(lab.length).toBeGreaterThan(0);
+      expect(lab.every((p) => p.grid!.cols === rows && p.grid!.rows === depth)).toBe(true);
+    }
   });
   it('8 列時格高＝（紙高－標題頁尾）÷8，同一頁放得下；寬＝（紙寬－左右邊距）÷7（D136）', () => {
     for (const paper of ['B4', 'A3'] as const) {
