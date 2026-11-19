@@ -58,9 +58,9 @@ export function AstStep4(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
     const cb = r.low && va !== undefined && vb !== undefined && vb < va ? ' best' : '';
     return (
       <tr key={r.label}>
-        <td>{r.label}{r.note && <><br /><span class="small muted">{r.note}</span></>}</td>
-        <td class={`n${ca}`}>{a ? (r.show ? r.show(a) : va) : '—'}</td>
-        <td class={`n${cb}`}>{b ? (r.show ? r.show(b) : vb) : '—'}</td>
+        <td class="ti" data-label="指標"><div>{r.label}{r.note && <><br /><span class="small muted">{r.note}</span></>}</div></td>
+        <td data-label="少教室優先" class={`n${ca}${mode === 'fewest-rooms' ? ' on' : ''}`}>{a ? (r.show ? r.show(a) : va) : '—'}</td>
+        <td data-label="少移動優先" class={`n${cb}${mode === 'least-movement' ? ' on' : ''}`}>{b ? (r.show ? r.show(b) : vb) : '—'}</td>
       </tr>
     );
   };
@@ -121,17 +121,17 @@ export function AstStep4(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
 
       <div class="card stack">
         <div><h3>方案比較</h3><p class="small muted">用這份名單，兩種模式各算一次。選哪個由你決定，程式只負責把代價算清楚。</p></div>
-        <div class="scroll">
-          <table class="t compact cmpt">
+        <div class="rtw">
+          <table class="t compact cmpt rt-t">
             <thead><tr>
               <th>指標</th>
               <th class={mode === 'fewest-rooms' ? 'selc' : ''}>少教室優先{mode === 'fewest-rooms' ? '（使用中）' : ''}</th>
               <th class={mode === 'least-movement' ? 'selc' : ''}>少移動優先{mode === 'least-movement' ? '（使用中）' : ''}</th>
             </tr></thead>
             <tbody>
-              <tr class="grp"><td colSpan={3}>取捨指標（越小越好，粗體＝較少）</td></tr>
+              <tr class="grp"><td colSpan={3} class="noL">取捨指標（越小越好，粗體＝較少）</td></tr>
               {GROUP1.map(row)}
-              <tr class="grp"><td colSpan={3}>試務複雜度（供比較；數字越小越單純）</td></tr>
+              <tr class="grp"><td colSpan={3} class="noL">試務複雜度（供比較；數字越小越單純）</td></tr>
               {GROUP2.map(row)}
             </tbody>
           </table>

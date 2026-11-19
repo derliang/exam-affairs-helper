@@ -160,7 +160,7 @@ export function AstStep6(p: { doc: Doc; exam: ExamConfig; onGoStep: (n: 2 | 3 | 
         {results && (
           <div class="psec">
             <Alert tone="ok"><b>{format === 'word' ? '下載已送出' : '已開啟列印用頁面'}</b>{format === 'word' ? noticeOf(results) : '，請在新視窗選「列印」→ 目的地選「另存為 PDF」。'}</Alert>
-            <div style="overflow-x:auto"><table class="t compact"><thead><tr><th>檔案</th><th>內容</th><th>大小</th>{format === 'word' && <th></th>}</tr></thead>
+            <div class="rtw"><table class="t compact rt-t rt-a"><thead><tr><th>檔案</th><th>內容</th><th>大小</th>{format === 'word' && <th></th>}</tr></thead>
               <tbody>{results.map((f) => <tr key={f.name}><td><b>{f.name}</b></td><td class="muted">{f.desc}</td><td>{kb(typeof f.data === 'string' ? f.data.length : f.data.byteLength)}</td>{format === 'word' && <td><Button small onClick={() => download(f)}>再下載</Button></td>}</tr>)}</tbody></table></div>
             <p class="small muted">本次版本碼：<Badge>{outs?.version ?? ''}</Badge>（頁尾相同，產生時間 {footerText(new Date().toISOString(), outs?.version ?? '').split('　')[0]}）</p>
             {format === 'word' && <Alert tone="warn">修改 Word 文件後，請自行重新核對；系統不會驗證改後內容。</Alert>}

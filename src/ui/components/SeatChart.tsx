@@ -1,15 +1,16 @@
 /**
  * 座位表（DESIGN 五、六、10.1）：講臺在下方、0101 在左下角；左側只標深位數字，下方標「第N排」；
- * 每格右上角印座標「排-深位」。比容器寬時等比縮小（最小 0.4 倍），頁面不橫向捲動（UI-22）。
+ * 每格右上角印座標「排-深位」。比容器寬時等比縮小進容器（稿 v2.75，不捲動），頁面不橫向捲動（UI-22）。
  * pull＝抽離考試的預備教室：整張柔和單色、不依班級上色（UI-23）。
  */
 import { useLayoutEffect, useRef } from 'preact/hooks';
 import { normColor } from '../colors';
 import type { ChartCell, ChartModel } from '../seating';
 
-export const MIN_CHART_SCALE = 0.4;
+/** 稿 v2.75（E）：座位表一律等比縮進容器、不捲動（D154 橫排 ≤8，手機每格約 35px 以上）；下限只防容器量到 0 的退化情況 */
+export const MIN_CHART_SCALE = 0.1;
 
-/** 容器寬 avail、圖寬 w：需要時縮小，最小 MIN_CHART_SCALE（再窄就在卡片內捲動） */
+/** 容器寬 avail、圖寬 w：需要時縮小進容器（最小 MIN_CHART_SCALE 只防退化） */
 export const chartScale = (avail: number, w: number): number => (avail > 0 && w > avail ? Math.max(MIN_CHART_SCALE, (avail - 2) / w) : 1);
 
 function Cell(p: { c: ChartCell; dim: boolean; onPick?: (code: string, co: string) => void }) {
@@ -26,6 +27,26 @@ function Cell(p: { c: ChartCell; dim: boolean; onPick?: (code: string, co: strin
       {c.marks.length > 0 && <span class="mks">{c.marks.map((m) => <span class="mk" key={m}>{m}</span>)}</span>}
     </div>
   );
+}
+
+/** 座位表等比縮進容器（稿 v2.75 E）：host＝外框，chart＝圖本身（外框的第一個子元素在 chart 內是 .chart-wrap） */
+export function useChartFit(host: { current: HTMLDivElement | null }, chart: { current: HTMLDivElement | null }): void {
+  useLayoutEffect(() => {
+    const h = host.current;
+    const ch = chart.current;
+    if (!h || !ch) return;
+    const fit = () => {
+      ch.style.zoom = '';
+      const wrap = ch.firstElementChild as HTMLElement | null;
+      if (!wrap) return;
+      const z = chartScale(h.clientWidth, wrap.offsetWidth);
+      if (z < 1) ch.style.zoom = String(z);
+    };
+    fit();
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(fit);
+    ro?.observe(h);
+    return () => ro?.disconnect();
+  });
 }
 
 export function SeatChart(p: { model: ChartModel; title: string; sub: string; pull?: boolean; onlyClass?: number; onPick?: (code: string, co: string) => void }) {
@@ -51,7 +72,7 @@ export function SeatChart(p: { model: ChartModel; title: string; sub: string; pu
   const rowsTpl = `repeat(${m.depth},var(--ch))`;
   const colsTpl = `repeat(${m.rows},var(--cw))`;
   return (
-    <div class="scroll" ref={host}>
+    <div class="chartfit" ref={host}>
       <div class={`chart${p.pull ? ' pull' : ''}`} ref={chart}>
         <div class="chart-wrap">
           <div class="chart-title">{p.title}<small>{p.sub}</small></div>

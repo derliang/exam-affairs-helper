@@ -48,9 +48,9 @@ export function LockCard(p: {
       {plan.conflicts.length > 0 && (
         <>
           <Alert tone="danger"><b>鎖定與規則衝突（{plan.conflicts.length} 項），衝突的鎖定沒有套用。</b><br />程式不會自己解除鎖定，也不會輸出看似成功的錯誤方案。請解除其中一項鎖定，或改鎖定；沒處理完不能確認定案。</Alert>
-          <div class="scroll"><table class="t compact"><thead><tr><th>時段</th><th>教室</th><th>座位</th><th>學生</th><th>違反的規則</th><th>原因</th></tr></thead><tbody>
+          <div class="rtw"><table class="t compact rt-t"><thead><tr><th>時段</th><th>教室</th><th>座位</th><th>學生</th><th>違反的規則</th><th>原因</th></tr></thead><tbody>
             {plan.conflicts.map((c, i) => (
-              <tr key={i}><td>{slotText(c.slotId)}</td><td>{p.roomName(c.roomId)}</td><td>{c.seat ?? '—'}</td><td>{c.students.length ? c.students.slice(0, 6).map((x) => `${x} ${students.get(x) ?? ''}`).join('、') + (c.students.length > 6 ? `…共 ${c.students.length} 人` : '') : '—'}</td><td>{c.rule}</td><td>{c.reason}</td></tr>
+              <tr key={i} class="bad"><td class="ti" data-label="時段">{slotText(c.slotId)}</td><td class="ti" data-label="教室">{p.roomName(c.roomId)}</td><td data-label="座位">{c.seat ?? '—'}</td><td data-label="學生">{c.students.length ? c.students.slice(0, 6).map((x) => `${x} ${students.get(x) ?? ''}`).join('、') + (c.students.length > 6 ? `…共 ${c.students.length} 人` : '') : '—'}</td><td data-label="違反的規則">{c.rule}</td><td data-label="原因">{c.reason}</td></tr>
             ))}
           </tbody></table></div>
         </>
@@ -67,8 +67,8 @@ export function LockCard(p: {
       </div>
       {p.lockMode && <Alert tone="info">鎖定座位模式：到上面的「考場座位圖」點有人的座位，就把那位學生固定在這個座位（再點一次解除）。</Alert>}
       {rows.length > 0
-        ? <div class="scroll"><table class="t compact"><thead><tr><th>範圍</th><th>時段</th><th>教室／座位</th><th>內容</th><th></th></tr></thead><tbody>
-            {rows.map((r, i) => <tr key={i}><td><Badge>{r.kind}</Badge></td><td>{r.slot}</td><td>{r.where}</td><td>{r.what}</td><td><Button small kind="ghost" disabled={dis} onClick={r.remove}>解除</Button></td></tr>)}
+        ? <div class="rtw"><table class="t compact rt-t"><thead><tr><th>範圍</th><th>時段</th><th>教室／座位</th><th>內容</th><th></th></tr></thead><tbody>
+            {rows.map((r, i) => <tr key={i}><td class="ti" data-label="範圍"><Badge>{r.kind}</Badge></td><td data-label="時段">{r.slot}</td><td data-label="教室／座位">{r.where}</td><td data-label="內容">{r.what}</td><td class="act"><Button small kind="ghost" disabled={dis} onClick={r.remove}>解除</Button></td></tr>)}
           </tbody></table></div>
         : <EmptyState title="目前沒有鎖定" />}
       {total(L) > 0 && <p class="small muted">鎖定算進方案的輸入：相同的名單、設定與鎖定，一定得到相同的結果。</p>}
