@@ -289,11 +289,13 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
         </>
       ) : (
         <>
-          <div class="row" style="gap:10px 22px">
+          <div class="stack" style="gap:6px" id="x-perclass">
             <span class="label" style="margin:0">各班人數</span>
-            {perClass.map(({ c, n }) => <span class="row" style="gap:6px" key={c.no}><ClassChip colorIndex={c.colorIndex}>{c.name}</ClassChip><b class="num" style="font-size:17px">{n}</b></span>)}
+          <div class="row" style="gap:6px 10px">
+            {perClass.map(({ c, n }) => <span class="row" style="gap:5px;flex-wrap:nowrap;white-space:nowrap" key={c.no}><ClassChip colorIndex={c.colorIndex}>{c.name}</ClassChip><b class="num" style="font-size:17px">{n}</b></span>)}
             {perClass.length === 0 && <span class="small muted">共用設定還沒有這個部別的班級。</span>}
-            <span class="muted">合計 <b class="num">{roster.length}</b></span>
+            <span class="muted" style="white-space:nowrap">合計 <b class="num">{roster.length}</b></span>
+          </div>
           </div>
           <p class="small muted">要新增、修改或匯入新的{sn}，請按「修改{sn}」到共用設定處理；改完按頁首路徑列的「{exam.name}」「② 考試名單」就會回到這一步。</p>
         </>
