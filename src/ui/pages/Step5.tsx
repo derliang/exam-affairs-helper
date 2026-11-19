@@ -7,7 +7,7 @@ import { confirmCopy } from '../flow';
 import { ChartLegend, SeatChart } from '../components/SeatChart';
 import {
   afterOverrideChange, autoSeat, chartModel, detachChartModel, seatableEntries, detachSummary, nameMapOf, examClasses, examEntries, examOverrides, examResult, examRooms,
-  isStale, overrideNotes, removeOverride, reseat, roomStatTable, unseatedFullyAbsent, seatingBlockers, setOverride, validationChecks, type StepNo,
+  isStale, overrideNotes, removeOverride, reseat, roomStatTable, seatingBlockers, setOverride, validationChecks, type StepNo,
 } from '../seating';
 import { roomCapacity } from '../rooms';
 import { studyCapacity } from '../capacity';
@@ -115,7 +115,6 @@ export function Step5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
   const model = room ? chartModel(doc, exam, result, room) : null;
   const present = model ? [...new Set(model.lines.flat().flatMap((c) => (c.kind === 'student' ? [c.classNo] : [])))].sort((a, b) => a - b) : [];
   const stat = room ? roomStatTable(doc, exam, result, room.id) : null;
-  const noSeat = unseatedFullyAbsent(doc, exam);
   const classLabel = (no: number) => classes.find((c) => c.no === no)?.name ?? `第${no}班`;
   const vcode = <div class="vcode">產生 {taipei(result.generatedAt)}　資料版本 {result.dataVersion}（名單或設定改了，版本碼就會變）</div>;
 
@@ -143,11 +142,6 @@ export function Step5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
         </div>
       )}
       {err && <SeatError errors={err} onStep={p.onStep} />}
-      {noSeat.length > 0 && (
-        <Alert tone="info"><b>其中 {noSeat.length} 位全科缺考不排座</b>（② 選了不排座；②的考生人數含他們，這裡的「考生」不含；考前對帳會因為他們沒有座位而不通過）。
-          <details><summary class="small">列出是誰</summary><ul>{noSeat.map((e) => <li key={`${e.classNo}-${e.seatNo}`}>{classLabel(e.classNo)} {e.seatNo} 號</li>)}</ul></details>
-        </Alert>
-      )}
 
       {resSel && (
         <div class="card stack">

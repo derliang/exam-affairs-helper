@@ -5,7 +5,7 @@ import './featureRegister/lookup';
 import { enabledNav } from './features';
 import { Lookup } from './pages/Lookup';
 import { lookupExaminee, searchExaminees } from './lookup';
-import { reseat, setMarkChoice, setOverride, unseatedFullyAbsent } from './seating';
+import { reseat, setMarkChoice, setOverride } from './seating';
 import type { Doc } from './store';
 
 const NOW = '2026-11-08T10:00:00.000Z';
@@ -84,7 +84,6 @@ describe('H4 查詢結果', () => {
   it('一般考生：每科教室與座位（排－深位）', () => {
     const { d, e, res } = seated();
     const hit = lookupExaminee(d, e, res, entries[0]!);
-    expect(hit.allAbsent).toBe(false);
     expect(hit.rows.map((r) => `${r.subject}:${r.kind}:${r.place}:${r.seat}`)).toEqual(['社會:class:溫:1-1', '自然:class:溫:1-1', '英聽:class:溫:1-1']);
   });
   it('抽離自習：不考社會的人到預備教室自習，無座位；其他科仍在班級教室', () => {
@@ -118,25 +117,17 @@ describe('H4 查詢結果', () => {
     const { d, e, res } = seated([...entries, absent]);
     expect(res.assignments.some((a) => a.code === '0204')).toBe(true);
     const hit = lookupExaminee(d, e, res, absent);
-    expect(hit.allAbsent).toBe(false);
     expect(hit.rows).toHaveLength(e.subjects.length);
     expect(hit.rows.every((r) => r.kind !== 'class')).toBe(true);
   });
-  it('#233：unseatedFullyAbsent 預設為空；學測在 ② 選「不排座」才列出', () => {
+  it('D142：舊存檔帶「不排座」也照樣排座，查詢逐科列去處', () => {
     const absent: ExamEntry = { classNo: 2, seatNo: 4, name: '缺考者', subjectIds: [] };
-    const e = exam(decided());
-    expect(unseatedFullyAbsent(doc(e, [...entries, absent]), e)).toEqual([]);
-    const e2 = exam({ ...decided(), seatFullyAbsent: false });
-    expect(unseatedFullyAbsent(doc(e2, [...entries, absent]), e2).map((x) => `${x.classNo}-${x.seatNo}`)).toEqual(['2-4']);
-  });
-  it('選了「不排座」：排座沒有他，查詢說未排座', () => {
-    const absent: ExamEntry = { classNo: 2, seatNo: 4, name: '缺考者', subjectIds: [] };
-    const e = exam({ ...decided(), seatFullyAbsent: false });
+    const e = exam({ ...decided(), ...({ seatFullyAbsent: false } as Partial<ExamConfig>) });
     const r = reseat(doc(e, [...entries, absent]), e, NOW);
     if (!r.ok) throw new Error(r.error);
     const res = r.doc.examFiles!.e1!.result!;
-    expect(res.assignments.some((a) => a.code === '0204')).toBe(false);
-    expect(lookupExaminee(r.doc, e, res, absent)).toMatchObject({ allAbsent: true, rows: [] });
+    expect(res.assignments.some((a) => a.code === '0204')).toBe(true);
+    expect(lookupExaminee(r.doc, e, res, absent).rows).toHaveLength(e.subjects.length);
   });
   it('不考的科目標示「這科不考」', () => {
     const { d, e, res } = seated();

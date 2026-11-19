@@ -17,7 +17,7 @@ import { specialOf } from '../core/stats';
 import { dataVersion } from '../core/version';
 import { buildLabelPages, buildSeatPages, PREP_TAG, type ExportInput } from '../export/model';
 import { studyCapacity } from './capacity';
-import { currentSeatingVersion, effectiveMarkRules, examClasses, examEntries, examResult, examRooms, isStale, seatableEntries, seatingEntries } from './seating';
+import { currentSeatingVersion, effectiveMarkRules, examClasses, examEntries, examResult, examRooms, isStale, seatableEntries } from './seating';
 import { rosterFor } from './rosterYears';
 import type { Doc } from './store';
 import { astCapacity, astPlan, astSlots, astSnapshotMismatch, astFingerprint } from './ast/model';
@@ -122,7 +122,7 @@ export function reconcileStandard(doc: Doc, exam: ExamConfig): Reconcile {
   const roomById = new Map(rooms.map((r) => [r.id, r]));
   const bcct = exam.kind === 'bcct';
   const R = new Set(roster.map((s) => studentCode(s.classNo, s.seatNo)));
-  // 排座名單（D137）：考試名單＋名冊有、名單沒有的人，都進排座引擎；學測選「不排座」的人不在這裡＝沒有去處
+  // 排座名單（D137、D142）：考試名單＋名冊有、名單沒有的人，全部進排座引擎；不在這裡的名冊學生＝沒有去處（防呆，正常不會有）
   const enrolledList = seatableEntries(doc, exam);
   const enrolled = new Map(enrolledList.map((e) => [studentCode(e.classNo, e.seatNo), e]));
   const unseated = [...R].filter((c) => !enrolled.has(c));
@@ -135,7 +135,7 @@ export function reconcileStandard(doc: Doc, exam: ExamConfig): Reconcile {
   const ab = '未參加';
 
   // 輸出：座位表頁面與標籤頁面（與下載同一份頁面模型、同一份排座名單）
-  const input: ExportInput = { settings, exam, students: roster, entries: seatingEntries(doc, exam), result };
+  const input: ExportInput = { settings, exam, students: roster, entries: seatableEntries(doc, exam), result };
   let buildErr = '';
   let sp: ReturnType<typeof buildSeatPages> = [];
   let lp: ReturnType<typeof buildLabelPages> = [];
@@ -237,10 +237,10 @@ export function reconcileStandard(doc: Doc, exam: ExamConfig): Reconcile {
         if (s.where === 'reserve') { dSt++; if (s.room) bump(s.room, 'study'); }
       } else if (s.kind === 'absent') absent1++;
     }
-    // 名冊上沒排座的人（學測選了「不排座」）：沒有去處＝遺漏，紅燈（D135④：每個學生每個時段都要有座位）
+    // 名冊上沒排座的人（防呆，D142 起正常不會有）：沒有去處＝遺漏，紅燈（D135④：每個學生每個時段都要有座位）
     for (const code of unseated) {
       sumExpPlaces++; missN++;
-      if (!missOnce.has(code)) { missOnce.add(code); issues3.push({ text: `${code.slice(0, 2)} 班 ${code.slice(2)} 號：沒有座位（② 選了沒有考科的人「不排座」；每個學生每個時段都要有座位）`, step: 2 }); }
+      if (!missOnce.has(code)) { missOnce.add(code); issues3.push({ text: `${code.slice(0, 2)} 班 ${code.slice(2)} 號：沒有座位（每個學生每個時段都要有座位）`, step: 2 }); }
     }
     for (const [rid, x] of perRoom) {
       const r = roomById.get(rid);
