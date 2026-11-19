@@ -11,7 +11,7 @@ const exam = (id: string, at: string): ExamConfig => ({
   kind: 'gsat',
   division: 'senior',
   semester: 'first',
-  participation: 'all',
+ 
   subjects: [{ id: 'chi', name: '國文' }],
   markRules: [],
   classroomIds: [],
