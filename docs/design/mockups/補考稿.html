@@ -585,6 +585,21 @@ section.sec{padding-top:44px;scroll-margin-top:60px;display:grid;gap:16px}
 
 .rr .c-nm{min-width:0}.rr .c-nm .badge{white-space:normal}.mapt .mr>*{min-width:0}
 </style>
+<style id="cbx-v275">
+/* 稿 v2.75 選取方塊（使用者 2026-11-20：不可用黑色）：淺色底框＋藍色打勾；已選＝淡藍底＋藍框＋藍勾。Switch（.sw／.swx／.swrow）不受影響 */
+:root{--cbx-bg:#FFFDF8;--cbx-line:#7B91CC;--cbx-on-bg:#E8EDF8;--cbx-on-line:#2A5FD6;--cbx-tick:#2A5FD6}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--cbx-bg:#1C1A15;--cbx-line:#5470B8;--cbx-on-bg:#1B2540;--cbx-on-line:#8FAAF0;--cbx-tick:#8FAAF0}}
+:root[data-theme="dark"]{--cbx-bg:#1C1A15;--cbx-line:#5470B8;--cbx-on-bg:#1B2540;--cbx-on-line:#8FAAF0;--cbx-tick:#8FAAF0}
+input[type=checkbox]:not(.sw input):not(.swx input):not(.swrow input){appearance:none;-webkit-appearance:none;width:22px;height:22px;flex:none;margin:0;border:1.5px solid var(--cbx-line);border-radius:6px;background:var(--cbx-bg);display:inline-grid;place-content:center;cursor:pointer;vertical-align:middle}
+input[type=checkbox]:not(.sw input):not(.swx input):not(.swrow input)::after{content:"";width:5px;height:10px;border:solid var(--cbx-tick);border-width:0 2.5px 2.5px 0;transform:translateY(-1px) rotate(45deg);opacity:0}
+input[type=checkbox]:not(.sw input):not(.swx input):not(.swrow input):checked{background:var(--cbx-on-bg);border-color:var(--cbx-on-line)}
+input[type=checkbox]:not(.sw input):not(.swx input):not(.swrow input):checked::after{opacity:1}
+input[type=checkbox]:not(.sw input):not(.swx input):not(.swrow input):indeterminate{background:var(--cbx-on-bg);border-color:var(--cbx-on-line)}
+input[type=checkbox]:not(.sw input):not(.swx input):not(.swrow input):indeterminate::after{opacity:1;width:10px;height:0;border-width:0 0 2.5px 0;transform:none}
+input[type=checkbox]:not(.sw input):not(.swx input):not(.swrow input):focus-visible{outline:3px solid var(--accent-line);outline-offset:2px}
+span.chk{background:var(--cbx-bg);border:1.5px solid var(--cbx-line);color:var(--cbx-tick)}
+span.chk.on{background:var(--cbx-on-bg);border-color:var(--cbx-on-line);color:var(--cbx-tick)}
+</style>
 </head>
 <body>
 <div class="hd"><b>補考總稿 稿 v2.52</b><nav class="toc"><a href="#intro">總覽</a><a href="#s1">S-1</a><a href="#s2">S-2</a><a href="#s3">S-3</a><a href="#s4">S-4</a><a href="#s5">S-5</a><a href="#s6">S-6</a><a href="#s7">S-7 儀表板</a><a href="#s8">S-8</a><a href="#s9">S-9 紙面</a><a href="#s10">S-10</a><a href="#ask">已裁示</a></nav><button class="btn btn-sm" data-bw-btn type="button" aria-pressed="false">黑白預覽</button><button class="btn btn-sm" data-theme-btn type="button">深色／淺色</button></div><div class="main"><div class="hero"><h1>補考模式　設計稿　稿 v2.52</h1><p>依 <code>docs/makeup-spec.md</code> 第九章 S-1～S-10。2026-11-17 台北，<b>使用者 2026-11-17 審通過（8 題全採建議），為補考實作基準。</b>全部假資料（學生一律「示範生」，學號為虛構）。</p></div><section class="sec" id="intro"><header><h2>設計原則與怎麼看</h2><div class="gtag"><span class="badge b-acc">新模式 D113</span><span class="badge b-err">第一原則：絕不遺漏</span></div></header>

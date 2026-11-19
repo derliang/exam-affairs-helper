@@ -9,6 +9,7 @@
   --ok-soft:#E3F2E0; --ok-ink:#1F5A1A; --ok-line:#A5D39D; --ok-bar:#3C8B34;
   --att-fill:#22201B; --att-on:#FFFDF8;
   --cut:#8E8670;
+  --cbx-bg:#FFFDF8; --cbx-line:#7B91CC; --cbx-on-bg:#E8EDF8; --cbx-on-line:#2A5FD6; --cbx-tick:#2A5FD6;
   --c1-bg:#E7DCF5; --c1-line:#B39DD9; --c1-ink:#4A2E80;
   --c2-bg:#F6D6EC; --c2-line:#D98ABF; --c2-ink:#7A1C5E;
   --c3-bg:#CDEDE9; --c3-line:#6FC0B6; --c3-ink:#0F5A52;
@@ -45,6 +46,7 @@
   --ok-soft:#1C3220; --ok-ink:#B9E3B2; --ok-line:#3B6B3C; --ok-bar:#5DB257;
   --att-fill:#F1EDE2; --att-on:#13120E;
   --cut:#7C755F;
+  --cbx-bg:#1C1A15; --cbx-line:#5470B8; --cbx-on-bg:#1B2540; --cbx-on-line:#8FAAF0; --cbx-tick:#8FAAF0;
   --c1-bg:#2E2347; --c1-line:#6B568F; --c1-ink:#E0D2F5;
   --c2-bg:#43203A; --c2-line:#8C4478; --c2-ink:#F5C3E4;
   --c3-bg:#12332F; --c3-line:#3F8078; --c3-ink:#BEEAE4;
@@ -72,6 +74,7 @@
   --ok-soft:#1C3220; --ok-ink:#B9E3B2; --ok-line:#3B6B3C; --ok-bar:#5DB257;
   --att-fill:#F1EDE2; --att-on:#13120E;
   --cut:#7C755F;
+  --cbx-bg:#1C1A15; --cbx-line:#5470B8; --cbx-on-bg:#1B2540; --cbx-on-line:#8FAAF0; --cbx-tick:#8FAAF0;
   --c1-bg:#2E2347; --c1-line:#6B568F; --c1-ink:#E0D2F5;
   --c2-bg:#43203A; --c2-line:#8C4478; --c2-ink:#F5C3E4;
   --c3-bg:#12332F; --c3-line:#3F8078; --c3-ink:#BEEAE4;
