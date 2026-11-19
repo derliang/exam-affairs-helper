@@ -81,8 +81,10 @@ export function ChartLegend(p: { override?: boolean; marks?: boolean }) {
     <div class="legend">
       <span><b>圖例</b></span>
       {p.marks !== false && <>
-        <span class="cell mk-x"><span class="mk">X 科目</span></span> 不考，該節改到自習地點
-        <span class="cell mk-add"><span class="mk">＋ 科目</span></span> 加考，該節改到預備教室
+        <span class="cell mk-x"><span class="mk">X 科目</span></span> 這位考生不考這一科（該節改到自習地點）
+        <span class="cell mk-add"><span class="mk">＋ 科目</span></span> 這位考生加考這一科，在原教室考
+        <span class="cell mk-add"><span class="mk">抽離 科目 考試</span></span> 這位考生這一科到別的教室考（預備教室）
+        <span class="cell mk-x"><span class="mk">X 不參加</span></span> 這位考生這次不參加，每一節都到自習教室（不印標籤）
       </>}
       {p.override && <><span class="cell mk-add"><span class="mk">→地點</span></span> 個別覆寫（不是換座位）：被標示的那幾節改去該地點</>}
       <span class="cell empty-seat" style="width:28px;height:16px" /> 空位（只在最後）

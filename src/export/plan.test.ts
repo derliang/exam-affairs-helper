@@ -17,7 +17,7 @@ describe('匯出規劃', () => {
     expect(defaultOptions().study).toBe(false);
     const files = planFiles(makeFixture(), { ...defaultOptions('B4'), study: true });
     expect(files.map((f) => f.key)).toEqual(['seat', 'label', 'study']);
-    expect(files.map((f) => f.pages)).toEqual([4, 3, 1]); // 座位表：2 間班級教室＋1 間預備教室＋1 頁自習參考座位（G32）；標籤沒有參考座位
+    expect(files.map((f) => f.pages)).toEqual([4, 3, 1]); // 座位表：2 間班級教室＋1 間預備教室＋1 頁自習座位（G32）；標籤沒有自習座位
     expect(files[0]!.name).toBe('測試模擬考-座位表.docx');
     expect(files[1]!.name).toBe('測試模擬考-標籤（B4）.docx');
   });
@@ -40,7 +40,7 @@ describe('匯出規劃', () => {
     }
     const pdf = await runExport(makeFixture(), { ...defaultOptions('B4'), format: 'pdf' }, { fonts });
     const html = pdf[0]!.data as string;
-    expect(html.match(/<span class="pp-room"[^>]*>預備教室/g)!.length).toBe(3); // 座位表 2 頁（預備教室考試、自習參考座位）、標籤 1 頁
+    expect(html.match(/<span class="pp-room"[^>]*>預備教室/g)!.length).toBe(3); // 座位表 2 頁（預備教室考試、自習座位）、標籤 1 頁
   });
 
   it('A3、B4 都是 7×7：標籤檔欄寬＝紙寬÷7，欄數＝教室排數', async () => {

@@ -415,7 +415,7 @@ export function cornerLayout(tags: readonly CornerTag[], widthMm: number, pt: nu
   if (tags.reduce((a, t) => a + w(t), 0) + (tags.length - 1) <= widthMm) return [[...tags]];
   const out: CornerTag[][] = [];
   for (const t of tags) {
-    const m = t.kind === 'detach' && w(t) > widthMm ? /^(.*?)s*(考試)$/.exec(t.text) : null;
+    const m = t.kind === 'detach' && w(t) > widthMm ? /^(.*?)\s*(考試)$/.exec(t.text) : null;
     if (m) out.push([{ ...t, text: m[1]! }], [{ ...t, text: m[2]! }]);
     else out.push([t]);
   }
@@ -815,8 +815,8 @@ export function buildSeatPages(input: ExportInput, scope: Scope = 'all'): SeatPa
 
 
 /**
- * 抽離自習「參考座位」座位表（G32，修訂 D7）：每個時段、每間排了自習的預備教室一頁，
- * 標題寫「參考座位，非考試座位」；只出座位表、不出標籤；含在座位表檔案裡（預備教室考試頁之後）。
+ * 抽離自習「自習座位」座位表（G32，修訂 D7、D147⑦ 改稱）：每個時段、每間排了自習的預備教室一頁，
+ * 標題寫「自習座位」、小標籤「自習座位，非考試座位」；只出座位表、不出標籤；含在座位表檔案裡（預備教室考試頁之後）。
  */
 function studyReferencePages(input: ExportInput, ctx: Ctx, rooms: Map<string, Classroom>): SeatPageModel[] {
   const periods = examSubjectPeriods(input.exam, input.settings);

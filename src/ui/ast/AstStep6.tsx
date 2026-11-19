@@ -55,7 +55,7 @@ export function AstStep6(p: { doc: Doc; exam: ExamConfig; onGoStep: (n: 2 | 3 | 
   const [format, setFormat] = useState<ExportFormat>('word');
   const [paper, setPaper] = useState<LabelPaper>('B4');
   const [on, setOn] = useState<Record<AstOutputKey, boolean>>({ label: true, seat: true, ann: true, use: true, reg: true, study: true });
-  const [withRef, setWithRef] = useState(true); // G36：含自習參考座位頁（預設勾）
+  const [withRef, setWithRef] = useState(true); // G36：含自習座位頁（預設勾）
   const [tab, setTab] = useState<Tab>('label');
   const [pi, setPi] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -131,7 +131,7 @@ export function AstStep6(p: { doc: Doc; exam: ExamConfig; onGoStep: (n: 2 | 3 | 
         <div><h3>下載內容</h3><p class="small muted">每一類合併成一個多頁檔案。座位一律寫「排－深位」；標籤與清冊不印鐘點，也不排監考人力。{hasExamNo ? '名單有匯入應試編號，標籤、公告與清冊都會印。' : '名單沒有匯入應試編號，所以不印這一欄。'}</p></div>
         <label class="check" style="align-items:flex-start">
           <input type="checkbox" checked={withRef} onChange={(e) => { setWithRef(e.currentTarget.checked); setResults(null); }} />
-          <span><b>含自習參考座位頁</b><br /><span class="small muted">不考的人（自習）也排參考座位，放在座位表檔案最後；只供檢核座位夠不夠、可照坐，不印標籤。取消則不出這些頁。</span></span>
+          <span><b>含自習座位頁</b><br /><span class="small muted">不考的人（自習）也排自習座位，放在座位表檔案最後；只供檢核座位夠不夠、可照坐，不印標籤。取消則不出這些頁。</span></span>
         </label>
         <div class="stack">
           {AST_OUTPUT_ITEMS.map((i) => (

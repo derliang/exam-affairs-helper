@@ -1,4 +1,4 @@
-/** G36 分科輸出：自習參考座位頁（每時段每間自習教室一頁、格內班級座號姓名；WP-2 起不保留去考試的人的座位）、取消勾選就不出、標籤不受影響。全部匿名假資料 */
+/** G36 分科輸出：自習座位頁（每時段每間自習教室一頁、格內班級座號姓名；WP-2 起不保留去考試的人的座位）、取消勾選就不出、標籤不受影響。全部匿名假資料 */
 import { describe, expect, it } from 'vitest';
 import type { Classroom, ExamEntry } from '../../data';
 import { demoDoc } from '../repository';
@@ -29,12 +29,12 @@ function fixture(fixed: boolean) {
   return { doc: u.doc, exam: u.doc.exams.find((e) => e.id === exam0.id)! };
 }
 
-describe('G36 分科自習參考座位頁', () => {
+describe('G36 分科自習座位頁', () => {
   const { doc, exam } = fixture(true);
   const plan = astPlan(doc, exam)!;
   it('固定自習教室 k1：每個有人自習的時段一頁，格內寫班級座號姓名，只列這節自習的人（WP-2：不再保留「考試中」座位）', () => {
     const o = astOutputs(doc, exam, plan, 'B4', true);
-    const refs = o.seat.filter((p) => p.title.includes('自習參考座位'));
+    const refs = o.seat.filter((p) => p.title.includes('自習座位'));
     expect(refs.length).toBeGreaterThan(0);
     for (const p of refs) {
       expect(p.roomName).toContain('綜合教室一');
@@ -51,7 +51,7 @@ describe('G36 分科自習參考座位頁', () => {
   it('取消勾選：參考頁不出；標籤、其他檔案與版本碼不變', () => {
     const on = astOutputs(doc, exam, plan, 'B4', true);
     const off = astOutputs(doc, exam, plan, 'B4', false);
-    expect(off.seat.some((p) => p.title.includes('自習參考座位'))).toBe(false);
+    expect(off.seat.some((p) => p.title.includes('自習座位'))).toBe(false);
     expect(on.label).toEqual(off.label);
     expect(on.version).toBe(off.version);
     expect(on.seat.length).toBeGreaterThan(off.seat.length);
