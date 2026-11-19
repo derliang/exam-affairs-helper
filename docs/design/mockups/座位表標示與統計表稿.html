@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>座位表標示與統計表 稿 v2.76</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700&display=swap">
+<style>
+/* 模擬考小幫手 design tokens（M1 定案）。沿用座位小幫手 v3.4.0，只加班級六色與標示色。只用十六進位色碼（匯出函式庫不吃 oklch）。 */
+:root{
+  --bg:#F5F2EA; --surface:#FFFDF8; --sunken:#F1EDE3;
+  --line:#E4DECF; --line-2:#CFC7B2;
+  --text:#22201B; --text-2:#4F493D; --text-3:#6F6858;
+  --accent:#274690; --accent-on:#FFFFFF; --accent-soft:#E8EDF8; --accent-ink:#1F3877; --accent-line:#B9C6E6;
+  --danger:#C81E45; --danger-soft:#FDECEF; --danger-ink:#9B1237; --danger-line:#F3B4C1;
+  --warn-soft:#FBF0D5; --warn-ink:#6B4300; --warn-line:#E3C07A; --warn-bar:#C98A12;
+  --ok-soft:#E3F2E0; --ok-ink:#1F5A1A; --ok-line:#A5D39D; --ok-bar:#3C8B34;
+  --att-fill:#22201B; --att-on:#FFFDF8;
+  --cut:#8E8670;
+  --cbx-bg:#FFFDF8; --cbx-line:#7B91CC; --cbx-on-bg:#E8EDF8; --cbx-on-line:#2A5FD6; --cbx-tick:#2A5FD6;
+  --c1-bg:#E7DCF5; --c1-line:#B39DD9; --c1-ink:#4A2E80;
+  --c2-bg:#F6D6EC; --c2-line:#D98ABF; --c2-ink:#7A1C5E;
+  --c3-bg:#CDEDE9; --c3-line:#6FC0B6; --c3-ink:#0F5A52;
+  --c4-bg:#EBDCCB; --c4-line:#C09A72; --c4-ink:#5C3A17;
+  --c5-bg:#DFE3E8; --c5-line:#9AA5B1; --c5-ink:#2F3B48;
+  --c6-bg:#EBD9E3; --c6-line:#C79BB5; --c6-ink:#5E2D49;
+  --c7-bg:#CDB6EA; --c7-line:#8F6FC4; --c7-ink:#35205F;
+  --c8-bg:#EFB6DC; --c8-line:#C4569F; --c8-ink:#5F0F46;
+  --c9-bg:#A9DDD6; --c9-line:#3E9E92; --c9-ink:#093F39;
+  --c10-bg:#D9BE9F; --c10-line:#A4743F; --c10-ink:#432810;
+  --c11-bg:#BCC5CF; --c11-line:#6C7B8B; --c11-ink:#1E2833;
+  --c12-bg:#D9B6CB; --c12-line:#A5668A; --c12-ink:#46172F;
+  --fmt-word:#2A6AC8; --fmt-pdf:#B8423A; --fmt-xls:#1F7A47;
+  --fmt-word-soft:#E6EEFB; --fmt-pdf-soft:#FBEAE8; --fmt-xls-soft:#E3F2E8;
+  --shadow-1:0 1px 2px rgba(34,32,27,.07),0 2px 6px -2px rgba(34,32,27,.06);
+  --shadow-2:0 2px 4px rgba(34,32,27,.06),0 10px 24px -8px rgba(34,32,27,.16);
+  --shadow-3:0 4px 8px rgba(34,32,27,.08),0 24px 48px -12px rgba(34,32,27,.30);
+  --shadow-accent:0 1px 2px rgba(39,70,144,.35),0 5px 12px -5px rgba(39,70,144,.50);
+  --shadow-inset:inset 0 1px 2px rgba(34,32,27,.08);
+  --shadow-bar:0 8px 14px -12px rgba(34,32,27,.40);
+  --ease:cubic-bezier(.2,.7,.2,1); --dur:.16s;
+  --r-sm:8px; --r-md:12px; --r-lg:16px; --r-xl:24px;
+  --f-ui:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+  --f-head:"Noto Serif TC","Noto Sans TC","PMingLiU",serif;
+  --f-no:"Noto Sans TC","Microsoft JhengHei",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#13120E; --surface:#1C1A15; --sunken:#17150F;
+  --line:#302D24; --line-2:#433F33;
+  --text:#F1EDE2; --text-2:#CFC8B6; --text-3:#A0987F;
+  --accent:#3F63C4; --accent-on:#FFFFFF; --accent-soft:#1B2540; --accent-ink:#AFC2F5; --accent-line:#33467E;
+  --danger:#F0617F; --danger-soft:#3A1A22; --danger-ink:#F7B2C0; --danger-line:#6B2B3B;
+  --warn-soft:#3A2E12; --warn-ink:#F3D690; --warn-line:#6F5620; --warn-bar:#E0A832;
+  --ok-soft:#1C3220; --ok-ink:#B9E3B2; --ok-line:#3B6B3C; --ok-bar:#5DB257;
+  --att-fill:#F1EDE2; --att-on:#13120E;
+  --cut:#7C755F;
+  --cbx-bg:#1C1A15; --cbx-line:#5470B8; --cbx-on-bg:#1B2540; --cbx-on-line:#8FAAF0; --cbx-tick:#8FAAF0;
+  --c1-bg:#2E2347; --c1-line:#6B568F; --c1-ink:#E0D2F5;
+  --c2-bg:#43203A; --c2-line:#8C4478; --c2-ink:#F5C3E4;
+  --c3-bg:#12332F; --c3-line:#3F8078; --c3-ink:#BEEAE4;
+  --c4-bg:#3A2D1F; --c4-line:#7C5E3C; --c4-ink:#EBD6BC;
+  --c5-bg:#26292E; --c5-line:#566170; --c5-ink:#D3D9E0;
+  --c6-bg:#3A2230; --c6-line:#8A5A75; --c6-ink:#EBD0DE;
+  --c7-bg:#3C2E5C; --c7-line:#8468B8; --c7-ink:#E8DBFA;
+  --c8-bg:#52294A; --c8-line:#A8558F; --c8-ink:#FAD0EB;
+  --c9-bg:#1A423D; --c9-line:#4F9B91; --c9-ink:#C9F0EA;
+  --c10-bg:#4A3826; --c10-line:#92704A; --c10-ink:#F0DEC8;
+  --c11-bg:#343A42; --c11-line:#6C7886; --c11-ink:#E2E7EC;
+  --c12-bg:#4A2D3E; --c12-line:#9C6B88; --c12-ink:#F2DCE8;
+  --fmt-word:#5B93E6; --fmt-pdf:#E0766E; --fmt-xls:#4DB57A;
+  --fmt-word-soft:#1B2740; --fmt-pdf-soft:#3A1F1D; --fmt-xls-soft:#1A3326;
+  --shadow-1:0 1px 2px rgba(0,0,0,.55),0 2px 8px -2px rgba(0,0,0,.40),inset 0 1px 0 rgba(255,255,255,.03); --shadow-2:0 2px 4px rgba(0,0,0,.5),0 10px 24px -8px rgba(0,0,0,.6); --shadow-3:0 4px 8px rgba(0,0,0,.5),0 24px 48px -12px rgba(0,0,0,.75);
+  --shadow-accent:0 1px 2px rgba(0,0,0,.5),0 5px 12px -5px rgba(63,99,196,.55); --shadow-inset:inset 0 1px 2px rgba(0,0,0,.35); --shadow-bar:0 8px 14px -12px rgba(0,0,0,.8);
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#13120E; --surface:#1C1A15; --sunken:#17150F;
+  --line:#302D24; --line-2:#433F33;
+  --text:#F1EDE2; --text-2:#CFC8B6; --text-3:#A0987F;
+  --accent:#3F63C4; --accent-on:#FFFFFF; --accent-soft:#1B2540; --accent-ink:#AFC2F5; --accent-line:#33467E;
+  --danger:#F0617F; --danger-soft:#3A1A22; --danger-ink:#F7B2C0; --danger-line:#6B2B3B;
+  --warn-soft:#3A2E12; --warn-ink:#F3D690; --warn-line:#6F5620; --warn-bar:#E0A832;
+  --ok-soft:#1C3220; --ok-ink:#B9E3B2; --ok-line:#3B6B3C; --ok-bar:#5DB257;
+  --att-fill:#F1EDE2; --att-on:#13120E;
+  --cut:#7C755F;
+  --cbx-bg:#1C1A15; --cbx-line:#5470B8; --cbx-on-bg:#1B2540; --cbx-on-line:#8FAAF0; --cbx-tick:#8FAAF0;
+  --c1-bg:#2E2347; --c1-line:#6B568F; --c1-ink:#E0D2F5;
+  --c2-bg:#43203A; --c2-line:#8C4478; --c2-ink:#F5C3E4;
+  --c3-bg:#12332F; --c3-line:#3F8078; --c3-ink:#BEEAE4;
+  --c4-bg:#3A2D1F; --c4-line:#7C5E3C; --c4-ink:#EBD6BC;
+  --c5-bg:#26292E; --c5-line:#566170; --c5-ink:#D3D9E0;
+  --c6-bg:#3A2230; --c6-line:#8A5A75; --c6-ink:#EBD0DE;
+  --c7-bg:#3C2E5C; --c7-line:#8468B8; --c7-ink:#E8DBFA;
+  --c8-bg:#52294A; --c8-line:#A8558F; --c8-ink:#FAD0EB;
+  --c9-bg:#1A423D; --c9-line:#4F9B91; --c9-ink:#C9F0EA;
+  --c10-bg:#4A3826; --c10-line:#92704A; --c10-ink:#F0DEC8;
+  --c11-bg:#343A42; --c11-line:#6C7886; --c11-ink:#E2E7EC;
+  --c12-bg:#4A2D3E; --c12-line:#9C6B88; --c12-ink:#F2DCE8;
+  --fmt-word:#5B93E6; --fmt-pdf:#E0766E; --fmt-xls:#4DB57A;
+  --fmt-word-soft:#1B2740; --fmt-pdf-soft:#3A1F1D; --fmt-xls-soft:#1A3326;
+  --shadow-1:0 1px 2px rgba(0,0,0,.55),0 2px 8px -2px rgba(0,0,0,.40),inset 0 1px 0 rgba(255,255,255,.03); --shadow-2:0 2px 4px rgba(0,0,0,.5),0 10px 24px -8px rgba(0,0,0,.6); --shadow-3:0 4px 8px rgba(0,0,0,.5),0 24px 48px -12px rgba(0,0,0,.75);
+  --shadow-accent:0 1px 2px rgba(0,0,0,.5),0 5px 12px -5px rgba(63,99,196,.55); --shadow-inset:inset 0 1px 2px rgba(0,0,0,.35); --shadow-bar:0 8px 14px -12px rgba(0,0,0,.8);
+  color-scheme:dark}
+
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--f-ui);font-size:15px;line-height:1.6}
+.hd{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;gap:12px;align-items:center}
+.hd b{font-family:var(--f-head);font-size:17px;margin-right:auto}
+.btn{font:inherit;border:1px solid var(--line-2);background:var(--surface);color:var(--text);border-radius:var(--r-sm);padding:6px 12px;cursor:pointer;min-height:36px}
+.main{max-width:1040px;margin:0 auto;padding:16px}
+h1{font-family:var(--f-head);font-size:24px;margin:14px 0 6px}
+h2{font-family:var(--f-head);font-size:19px;margin:0 0 10px}
+h3{font-size:15px;margin:14px 0 6px}
+.sec{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:16px;margin:16px 0;box-shadow:var(--shadow-1)}
+.say{background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-ink);border-radius:var(--r-md);padding:10px 12px;margin:8px 0}
+.bad{background:var(--danger-soft);border:1px solid var(--danger-line);color:var(--danger-ink);border-radius:var(--r-md);padding:10px 12px;margin:8px 0}
+.small{font-size:13px;color:var(--text-2)}
+.rowf{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start}
+figure{margin:0;display:grid;gap:4px;justify-items:center}
+figcaption{font-size:12px;color:var(--text-2);text-align:center;max-width:150px}
+table.sp{border-collapse:collapse;font-size:13px;width:100%}
+table.sp th,table.sp td{border:1px solid var(--line-2);padding:5px 8px;text-align:left;vertical-align:top}
+table.sp th{background:var(--sunken)}
+.scrollx{overflow-x:auto}
+.paper{background:#fff;color:#111;border:1px solid var(--line-2);box-shadow:var(--shadow-2);margin:6px 0;max-width:100%;overflow-x:auto}
+.cell{position:relative;width:25mm;flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;border:.25mm solid #555;background:#E7DCF5;color:#000;padding:0 .5mm .6mm;overflow:hidden}
+.cell .co{position:absolute;top:.6mm;right:.9mm;font-size:6.5pt;font-weight:700;line-height:1}
+.cell .no{font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums}
+.cell .nm{font-size:8.5pt;font-weight:700;line-height:1.1;white-space:nowrap}
+.cell .band{display:flex;flex-direction:column;align-items:center;gap:.4mm;margin-top:.5mm;width:100%}
+.cell .ln{display:flex;gap:.6mm;justify-content:center}
+.tg{display:block;font-weight:700;line-height:1.15;padding:0 .9mm;border-radius:.6mm;white-space:nowrap}
+.tg.x{background:#22201B;color:#fff}
+.tg.add,.tg.out{background:#fff;color:#000;border:.45mm solid #000;padding:0 .6mm}
+.cell.old{display:block}
+.cell.old .tgs{position:absolute;right:1mm;bottom:.8mm;display:flex;flex-direction:column;align-items:flex-end;gap:.4mm}
+.cell.old .tg{font-size:7.5pt}
+.cell.old .no{position:absolute;top:4.5mm;left:0;right:0;text-align:center;font-size:19pt}
+.cell.old .nm{position:absolute;top:12mm;left:0;right:0;text-align:center}
+.cell.fail{outline:2px solid var(--danger);outline-offset:1px}
+.inf{font-size:11px;color:var(--danger-ink);font-weight:700}
+.st{border-collapse:collapse;width:100%;font-size:10.5pt;color:#111}
+.st th,.st td{padding:1mm 2mm;text-align:center;vertical-align:middle;border-bottom:.2mm solid #BDB8A8}
+.st thead th{background:#E8EDF8;color:#1F3877;font-weight:700;border-top:.5mm solid #274690;border-bottom:.5mm solid #274690}
+.st td.num{font-variant-numeric:tabular-nums}
+.st td.tot,.st th.tot{border-left:.5mm double #274690;font-weight:700}
+.st tr.dayend td{border-bottom:.5mm solid #6F6858}
+.st tr.foot td{border-top:.5mm double #274690;border-bottom:.5mm solid #274690;background:#F6F4EC;font-weight:700}
+.st td.l{text-align:left}
+.crop{position:relative;overflow:hidden;border:2px solid var(--danger);background:#fff}
+.crop.ok{border-color:var(--ok-bar)}
+.crop .pg{position:absolute;background:#fff}
+.crop .mg{position:absolute;top:0;bottom:0;left:0;background:repeating-linear-gradient(135deg,#eee 0 4px,#ddd 4px 8px)}
+.crop .lcell{position:absolute;border:1px solid #555;background:#FFE08A;color:#000;display:grid;place-items:center;text-align:center;font-weight:700}
+.lcell b{display:block;font-size:20px;line-height:1.1}
+</style>
+</head>
+<body>
+<div class="hd"><b>座位表標示與統計表　稿 v2.76</b><button class="btn" id="th" type="button">深色／淺色</button></div>
+<div class="main">
+<h1>座位表標示與統計表　稿 v2.76</h1>
+<div class="say"><b>解 #470、#471（座位表標示蓋住姓名）、#391／#472（統計表）、#467（範例標示被裁掉）。2026-11-20 設計員。</b>只有稿與規格，<b>程式沒碰</b>；Q1～Q4、Q6 使用者已裁示（見最下面），可施工。#387（學測標籤 PDF）使用者只說「標籤頁格式錯」，與本稿的座位表標示是不同頁面，<b>不併入</b>（見最下面待問）。紙面用實尺寸（mm）畫，假資料。規則對照：標示不改 D147 的三種寫法與 D150 圖例；教室用途不涉及——考生與自習生不在同一間教室（D135⑥），本稿座位表只畫考生格，自習生另在自習座位頁（D135③⑤）。</div>
+
+<section class="sec"><h2>1　座位格標示不得蓋住號碼與姓名（#470、#471）</h2>
+<div class="bad"><b>現況（讀程式推得，未實測）</b>：座位格（約 25mm 寬、15～23mm 高）的標示<b>浮在格子右下角</b>（<code>.pp-cn{position:absolute;bottom:.8mm}</code>），格子只預留 5.2mm 空行。單行標示放得下；一旦分成兩行、三行（「抽離 數A、自然」＋「考試」＋「X 社」），高度超過 5.2mm，就往上壓到「班級｜姓名」那一行，就是使用者看到的樣子。標示是浮動的，字再多也不會把姓名推開。</div>
+<div class="say"><b>定案：標示改成格子底部的「標示帶」，不浮動、佔實際高度</b>。格內由上到下：<b>號碼 → 班級｜姓名 → 標示帶</b>，標示帶有幾行就佔幾行，不夠高時<b>先縮號碼字級（下限 11pt），不縮姓名、不壓姓名</b>。座標（如 2-5）移到<b>號碼那一行的右上角</b>（6.5pt，與號碼同列不重疊），不再獨佔最上面一條空行，省出約 3.5mm 給標示。Word 與列印 PDF 共用同一套算法（<code>model.ts</code> 算一次，兩邊照畫）。</div>
+
+<h3>左：現況（會壓到姓名）　右：定案（同一批考生、同一格高 19mm；下方是程式算出來的，非手畫）</h3>
+<div class="rowf" id="cmp"></div>
+
+<h3>規格</h3>
+<div class="scrollx"><table class="sp"><thead><tr><th>項目</th><th>規格</th></tr></thead><tbody>
+<tr><td>格內順序</td><td>號碼（粗、置中）→ 班級｜姓名（8.5pt 粗，一行）→ 標示帶（置中、貼底）。座標在號碼列右上角 6.5pt。</td></tr>
+<tr><td>標示字級</td><td>7.5pt 起，所有標示放得進一行就一行；放不進就逐步縮到 <b>6.5pt（下限）</b>；縮到 6.5pt 還放不進，每個標示各佔一行；單一抽離標示仍太寬才拆成「抽離 科目」＋「考試」兩行（沿用 <code>cornerLayout</code> 的拆法，只多一段「先縮字」）。</td></tr>
+<tr><td>標示帶高度</td><td>每行＝字級×0.3528×1.15＋0.6mm（框線），行距 0.4mm，帶上方留 0.5mm。</td></tr>
+<tr><td>號碼字級</td><td>＝ (格高 − 1.2 − 3.8 − 標示帶高 − 0.6) ÷ (0.3528×1.1)，上限 19pt，<b>取整數 pt，下限 11pt</b>。沒有標示的格子照舊 19pt。</td></tr>
+<tr><td>同格最多幾行</td><td>不考（一個標示，多科同行「X 數B　X 社」）＋加考／抽離（各一個標示）。最壞＝不考一行＋抽離兩行＝3 行。</td></tr>
+<tr><td>仍放不下（號碼已 11pt）</td><td>下表的紅框情形（格高 15mm 且標示 2 行以上，或格高 19mm 且 3 行）。處理：沿用 #212 的 <code>statsNext</code>，統計表移到下一頁換格高；<b>任何情況都不准壓到姓名</b>；換頁仍不夠就在輸出前擋下並回報，沒有第三種退讓。</td></tr>
+<tr><td>標籤頁</td><td>本稿不動。標籤格寬（約 33～40mm）、字級與標示方式不同，使用者這兩張回報的是座位表；標籤頁格式另案（#387、#385、#372）。</td></tr>
+</tbody></table></div>
+
+<h3>各格高、各種標示組合的結果（紅框＝號碼縮不到 11pt，不足）</h3>
+<div id="grid"></div>
+</section>
+
+<section class="sec"><h2>2　座位表下方統計表（#391，含原 #472）</h2>
+<div class="say"><b>使用者原話</b>（#391、#472）：「每個座位表的下方統計區都要條列清楚，日期，星期，時段，科目，各班人數與總計」；第幾天要加日期；移除「本教室考生人數」列；樣式要精美。D147⑤ 已定欄位，本稿定<b>樣式、合併方式與列高</b>。日期來源是 #389（D164H，考試設定的各天日期）；沒填日期時日期欄整欄不出現，不留空欄。</div>
+<h3>學測一般教室（2 天，假資料；欄＝日期｜第幾天｜時段｜科目｜各班｜總計）</h3>
+<div class="paper" style="width:180mm;padding:3mm 4mm" id="st1"></div>
+<h3>預備教室（抽離考試，每時段一列；最後一列「使用人數」＝不重複，使用者已裁示保留）</h3>
+<div class="paper" style="width:180mm;padding:3mm 4mm" id="st2"></div>
+<div class="scrollx"><table class="sp"><thead><tr><th>項目</th><th>規格</th></tr></thead><tbody>
+<tr><td>欄位與順序</td><td>日期（含星期，如 11/17（二））｜第幾天｜時段｜科目｜各班人數｜總計。沒有日期資料時拿掉日期欄，其餘不變。</td></tr>
+<tr><td>列</td><td>每個「日期＋時段＋科目」一列，科目不合併（D147⑤）；<b>移除「本教室考生人數」列</b>。同一天、同一時段有多科時，日期、第幾天、時段三格<b>垂直合併</b>（置中），讀者一眼看出「這一天這一節共幾科」。</td></tr>
+<tr><td>表頭</td><td>淡藍底（#E8EDF8）、深藍字（#1F3877）粗體，上下各 0.5mm 深藍線（#274690）；黑白列印仍可辨（有線有底）。</td></tr>
+<tr><td>表身</td><td>只畫橫線（0.2mm、#BDB8A8），<b>不畫直線</b>；每天最後一列下方 0.5mm 深灰線（#6F6858）分天；人數置中、等寬數字；不用斑馬紋（黑白列印會糊）。</td></tr>
+<tr><td>總計欄</td><td>粗體；左側 0.5mm 雙線（#274690）與各班欄分開。</td></tr>
+<tr><td>字級與列高</td><td>列數 ≤ 5：12pt、列高 8mm（現況）；列數 &gt; 5：<b>10.5pt、列高 6.4mm</b>（學測兩天會有 6～10 列，8mm 會把座位格壓太矮）。整張表仍須與座位表同一頁（#212 <code>statsNext</code> 例外照舊）。</td></tr>
+<tr><td>欄寬</td><td>日期 24、第幾天 18、時段 18、科目 26、總計 18（mm），各班欄平分其餘、12～20mm（現況不變）。</td></tr>
+<tr><td>「使用人數」列</td><td><b>使用者已裁示保留</b>。只在預備／綜合教室（同一人跨時段會重複計）：列名「使用人數（不重複）」，上雙線＋淡底；一般教室不出現。</td></tr>
+<tr><td>Word／PDF</td><td>兩條輸出路徑（<code>docxRender.ts</code>、<code>htmlRender.ts</code>）共用同一份欄寬列高（<code>statLayout</code>）；垂直合併 Word 用 <code>vMerge</code>、PDF 用 <code>rowspan</code>。</td></tr>
+</tbody></table></div>
+</section>
+
+<section class="sec"><h2>3　範例標示的 B4／A3 標籤範例被裁掉右側（#467）</h2>
+<div class="bad"><b>現況（讀程式推得，未實測）</b>：<code>LabelSample.tsx</code> 的「放大一格」用一個剛好一格大小、<code>overflow:hidden</code> 的視窗，裡面放整頁。頁面左側有 10.5mm 的列印邊距（<code>LABEL_EDGE_X_MM</code>），視窗卻從頁面最左邊（x=0）量起，只有垂直方向有補償（<code>margin-top:-3mm</code>）——視窗左邊 10.5mm 是留白，格子右邊被切掉同樣的 10.5mm。與使用者看到的「只剩學號前三碼和班級｜甲生一部分」一致。「整頁縮圖」不裁切，所以是完整的。</div>
+<div class="say"><b>定案</b>：①放大一格的視窗<b>從格子左上角量起</b>（左邊補償＝列印邊距，與上邊一樣），寬高＝格子尺寸＋框線餘裕，<b>整張格子（含四邊框線）完整出現</b>；②範例卡一律不裁切：容器寬度不夠時，整格與整頁縮圖<b>等比例縮小</b>（沿用 #408 的 zoom），不得用 <code>overflow:hidden</code> 切掉內容；③卡內順序：B4 一組、A3 一組，每組「放大一格（含標示）」在左、「整頁縮圖」在右，容器窄於 300px 改上下排；④格尺寸說明保留在每張圖下（「B4　每格 W×H mm」）。</div>
+<div class="rowf">
+<div><b>現況</b><div class="small">左邊多出 10.5mm 邊距，格子右邊被切</div><div id="c467bad"></div></div>
+<div><b>定案</b><div class="small">視窗從格子左上角起，完整</div><div id="c467ok"></div></div>
+</div>
+<p class="small">示意比例，B4 格約 33×36mm、A3 約 39×43mm 為估計；實際尺寸讀 <code>labelCellMm</code>，不寫死。</p>
+</section>
+
+<section class="sec"><h2>使用者已裁示（2026-11-20，調度員轉達）</h2>
+<table class="sp"><tbody>
+<tr><td><b>Q1</b></td><td>標示最小 6.5pt、號碼最小 11pt：<b>可</b>。</td></tr>
+<tr><td><b>Q2</b></td><td>Word 與 PDF 一起定：<b>是</b>。Word 版：座標段 2.8mm、號碼、姓名、標示段（置中、每行一段、精確列高）都是正常段落，算法與 PDF 共用（<code>model.ts</code>），不再用 <code>fitSeatCell</code> 整體縮放；統計表用 <code>vMerge</code> 與雙線框線。詳見 DESIGN §10.43.7。</td></tr>
+<tr><td><b>Q3</b></td><td>預備／綜合教室統計表底下「使用人數（不重複）」列：<b>保留</b>，一般教室不出現。</td></tr>
+<tr><td><b>Q4</b></td><td>同天同時段多科：日期／第幾天／時段<b>垂直合併</b>。</td></tr>
+<tr><td><b>Q5</b></td><td><b>仍待問</b>（調度員另問）：#387 學測標籤 PDF 哪裡錯。本稿不處理標籤頁。</td></tr>
+<tr><td><b>Q6</b></td><td>範例標示放大一格與整頁縮圖：<b>都留</b>。</td></tr>
+</table></section>
+</div>
+<script>
+(function(){
+document.getElementById('th').onclick=function(){var r=document.documentElement,c=r.getAttribute('data-theme'),d=c?c==='dark':matchMedia('(prefers-color-scheme: dark)').matches;r.setAttribute('data-theme',d?'light':'dark')};
+var PT=0.3528;
+function tw(t,pt,b){var e=0;for(var i=0;i<t.length;i++){var ch=t[i];e+=/[⺀-鿿＀-￯　-〿]/.test(ch)?1:(ch===' '?0.28:0.58)}return e*pt*PT*(b?1.04:1)}
+function wd(t,pt){return tw(' '+t+' ',pt,1)+1.2}
+function lay(tags,avail){
+  var pts=[7.5,7,6.5],i,sum;
+  for(i=0;i<3;i++){sum=0;tags.forEach(function(t){sum+=wd(t.t,pts[i])});sum+=(tags.length-1)*0.6;if(sum<=avail)return{pt:pts[i],lines:[tags]}}
+  var out=[];tags.forEach(function(t){if(t.k==='out'&&wd(t.t,6.5)>avail){var m=/^(.*?)\s*(考試)$/.exec(t.t);out.push([{k:'out',t:m[1]}],[{k:'out',t:m[2]}])}else out.push([t])});
+  return{pt:6.5,lines:out}
+}
+function cls(k){return k==='x'?'x':k==='add'?'add':'out'}
+function mk(H,tags){
+  var avail=25-1-1.4,L=tags.length?lay(tags,avail):{pt:7.5,lines:[]},pt=L.pt,n=L.lines.length;
+  var band=n?n*(pt*PT*1.15+0.6)+(n-1)*0.4+0.5:0;
+  var cp=Math.floor((H-1.2-3.8-band-0.6)/(PT*1.1));
+  var ok=cp>=11;cp=Math.max(11,Math.min(19,cp));
+  var tg=L.lines.map(function(l){return '<span class="ln">'+l.map(function(t){return '<span class="tg '+cls(t.k)+'" style="font-size:'+pt+'pt">'+t.t+'</span>'}).join('')+'</span>'}).join('');
+  return {html:'<div class="cell'+(ok?'':' fail')+'" style="height:'+H+'mm"><span class="co">2-5</span><b class="no" style="font-size:'+cp+'pt">0212</b><span class="nm">勇｜乙生12</span>'+(n?'<span class="band">'+tg+'</span>':'')+'</div>',cp:cp,pt:pt,n:n,ok:ok}
+}
+function oldCell(H,tags){
+  var L=lay(tags,25-2.4);
+  var tg=L.lines.map(function(l){return '<span class="ln" style="display:flex;gap:.6mm">'+l.map(function(t){return '<span class="tg '+cls(t.k)+'">'+t.t+'</span>'}).join('')+'</span>'}).join('');
+  return '<div class="cell old" style="height:'+H+'mm;background:#F6D6EC"><span class="co">2-5</span><b class="no">0212</b><span class="nm">勇｜乙生12</span><span class="tgs">'+tg+'</span></div>'
+}
+var X={k:'x',t:'X 數B　X 社'},XS={k:'x',t:'X 社'},A={k:'add',t:'＋ 數A'},D1={k:'out',t:'抽離 數A 考試'},D2={k:'out',t:'抽離 數A、自然 考試'};
+var cmp=[['X 數B　X 社',[X]],['抽離 數A 考試',[D1]],['抽離 數A、自然 考試',[D2]],['X 社＋抽離 數A、自然 考試',[XS,D2]]];
+var c=document.getElementById('cmp');
+cmp.forEach(function(a){
+  c.insertAdjacentHTML('beforeend','<figure>'+oldCell(19,a[1])+'<figcaption>現況：'+a[0]+'</figcaption></figure><figure>'+mk(19,a[1]).html+'<figcaption>定案</figcaption></figure>');
+});
+var cases=[['沒有標示',[]],['X 社',[XS]],['X 數B　X 社',[X]],['＋ 數A',[A]],['抽離 數A 考試',[D1]],['抽離 數A、自然 考試',[D2]],['X 社＋抽離 數A、自然 考試（最壞）',[XS,D2]]];
+var g='<div class="scrollx"><table class="sp"><thead><tr><th>標示組合</th>';[23,19,15].forEach(function(h){g+='<th>格高 '+h+'mm</th>'});g+='</tr></thead><tbody>';
+cases.forEach(function(a){g+='<tr><td>'+a[0]+'</td>';[23,19,15].forEach(function(h){var r=mk(h,a[1]);g+='<td><div class="rowf" style="gap:8px;flex-wrap:nowrap">'+r.html+'<div class="small">號碼 '+r.cp+'pt<br>標示 '+(r.n?r.pt+'pt×'+r.n+'行':'—')+(r.ok?'':'<br><span class="inf">不足→統計表換頁</span>')+'</div></div></td>'});g+='</tr>'});
+document.getElementById('grid').innerHTML=g+'</tbody></table></div>';
+var cl=['溫','良','恭'];
+function head(){return '<thead><tr><th style="width:24mm">日期</th><th style="width:18mm">第幾天</th><th style="width:18mm">時段</th><th style="width:26mm">科目</th>'+cl.map(function(x){return '<th>'+x+'</th>'}).join('')+'<th class="tot" style="width:18mm">總計</th></tr></thead>'}
+function row(cells,nums,end){return '<tr'+(end?' class="dayend"':'')+'>'+cells+nums.map(function(n){return '<td class="num">'+n+'</td>'}).join('')+'<td class="num tot">'+nums.reduce(function(a,b){return a+b},0)+'</td></tr>'}
+document.getElementById('st1').innerHTML='<table class="st">'+head()+'<tbody>'+
+row('<td rowspan="3">11/17（二）</td><td rowspan="3">第 1 天</td><td>時段一</td><td>國文</td>',[13,19,14])+
+row('<td>時段二</td><td>數學 A</td>',[13,19,14])+
+row('<td>時段三</td><td>英文</td>',[13,19,14],1)+
+row('<td rowspan="3">11/18（三）</td><td rowspan="3">第 2 天</td><td rowspan="2">時段一</td><td>自然</td>',[13,19,14])+
+row('<td>數學 B</td>',[13,17,14])+
+row('<td>時段二</td><td>社會</td>',[6,14,12],1)+'</tbody></table>';
+document.getElementById('st2').innerHTML='<table class="st">'+head()+'<tbody>'+
+row('<td rowspan="2">11/17（二）</td><td rowspan="2">第 1 天</td><td>時段二</td><td>數學 B</td>',[4,19,16])+
+row('<td>時段三</td><td>自然</td>',[0,0,2],1)+
+'<tr class="foot"><td class="l" colspan="4">使用人數（不重複）</td><td class="num">4</td><td class="num">19</td><td class="num">16</td><td class="num tot">39</td></tr></tbody></table>';
+var S=2.2;
+function crop(ok,pw,cw,ch,m){var w=cw*S,h=ch*S,px=m*S,off=ok?px:0;
+ return '<div class="crop'+(ok?' ok':'')+'" style="width:'+(w+(ok?4:0))+'px;height:'+(h+4)+'px"><div class="pg" style="left:'+(-off)+'px;top:0;width:'+(pw*S)+'px;height:'+(h+40)+'px"><div class="mg" style="width:'+px+'px"></div><div class="lcell" style="left:'+px+'px;top:0;width:'+w+'px;height:'+h+'px"><div style="line-height:1.15"><span style="font-size:10px">2-5</span><b style="font-size:24px">0107</b><span style="font-size:12px;white-space:nowrap">勤｜甲生07</span></div></div></div></div>'}
+function pair(ok){var h='';[['B4',250,33,36],['A3',297,39,43]].forEach(function(p){h+='<div style="margin:6px 0"><b>'+p[0]+'</b><span class="small">　每格約 '+p[2]+'×'+p[3]+' mm</span>'+crop(ok,p[1],p[2],p[3],10.5)+'</div>'});return h}
+document.getElementById('c467bad').innerHTML=pair(0);document.getElementById('c467ok').innerHTML=pair(1);
+})();
+</script>
+</body>
+</html>
