@@ -6,7 +6,7 @@ import type { MakeupSession } from '../session';
 
 const DIV_TEXT = { senior: '高中部', junior: '初中部' } as const;
 
-function Matrix(p: { m: ClassSubjectMatrix }) {
+export function Matrix(p: { m: ClassSubjectMatrix }) {
   const { m } = p;
   const sum = m.classes.reduce((n, c) => n + (m.classTotals[c] ?? 0), 0);
   return (
