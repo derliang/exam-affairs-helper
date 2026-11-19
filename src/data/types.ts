@@ -82,6 +82,12 @@ export interface Classroom {
    * 舊存檔沒有這個欄位（不需遷移），讀取一律經 `studyCapacityOf`。
    */
   studyCapacity?: number;
+  /**
+   * 「不排座」（#369、D155、D161）：班級教室的全域旗標，沒有這個欄位或 false＝照常排座（舊存檔不需遷移）。
+   * 只決定新考試預設不列入這間教室，並讓首次設定的座位合計不算它；引擎不看這個欄位（本次用哪些教室看 ExamConfig.classroomIds，
+   * 考試步驟 ③ 的勾選有衝突時永遠優先）。不排座教室的學生由引擎排進同組的其他班級教室。
+   */
+  noSeat?: boolean;
   /** 高中部班級教室所屬組別；國中部、預備教室不設（D4/D10） */
   track?: Track;
   /**

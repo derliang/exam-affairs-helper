@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { createIncrementalSaver, createMemoryFS, loadDoc, saveDoc, studentCode, type ExamConfig, type ExamKind } from '../data';
 import { buildLabelPages, defaultLabelLayout, labelFit, labelGrid, labelGridSize, labelNotePt, mmToTwip, renderDocx, renderPrintHtml, roomTooBigForLabel, PAPER_MM } from '../export';
 import { makeFixture } from '../export/fixtures';
-import type { ExportInput } from '../export/model';
+import { LABEL_PAGE_FIXED_MM, type ExportInput } from '../export/model';
 import { DeleteExamModal, deleteNameMatches, Exams } from './pages/Exams';
 import { downloadGate, Step6 } from './pages/Step6';
 import { AstStep6 } from './ast/AstStep6';
@@ -177,18 +177,18 @@ describe('G14 標籤：每格＝紙寬÷7、紙高÷7，排列同座位表（學
     }
   }
 
-  it('40 人班級放進 6 排×7 深位（42 座）：格子 6×7，最後兩個座位沒人坐不印格子；舊的 5×8 超過 7，標籤停用', () => {
+  it('40 人班級放進 6 排×7 深位（42 座）：格子 6×7，最後兩個座位沒人坐不印格子；舊的 9×5 超過 8，標籤停用', () => {
     const input = oneRoom('gsat', 'B4', 6, 7, 40);
     const p = buildLabelPages(input, 'class')[0]!;
     expect(labelGridSize(p)).toEqual({ cols: 6, rows: 7 });
     expect(labelGrid(p).filter(Boolean)).toHaveLength(40);
     expect(labelGrid(p).filter((c) => !c)).toHaveLength(42 - 40);
     expect(p.cells.map((c) => c.coord)).not.toContain('6-6'); // 空位（沒人）不印
-    const old = oneRoom('gsat', 'B4', 5, 8, 40);
+    const old = oneRoom('gsat', 'B4', 9, 5, 40);
     expect(roomTooBigForLabel(old.settings.classrooms[0]!)).toBe(true);
     expect(buildLabelPages(old, 'class')).toEqual([]);
     expect(roomsOverLabel(old.settings.classrooms)).toHaveLength(1);
-    expect(labelSplitNote(old.settings.classrooms[0]!)).toContain('超過 7×7，標籤無法對應，請縮小');
+    expect(labelSplitNote(old.settings.classrooms[0]!)).toContain('超過 8×8，標籤無法對應，請縮小');
   });
 
   it('沒有座位的位置不印格子：停用座位與沒人坐的位置都是無框空白（Word 無框無底、列印頁無斜線）', async () => {
@@ -214,6 +214,35 @@ describe('G14 標籤：每格＝紙寬÷7、紙高÷7，排列同座位表（學
       expect(heights[0]! * 7).toBeLessThan(mmToTwip(H));
     }
   });
+
+  // D154、D158①：座位上限放寬到橫排、深位各 ≤ 8（總 ≤ 56）；格寬＝可印寬÷max(7, 排數)、高＝紙高÷深位（放不下就縮矮），每間教室仍只有一頁
+  for (const [rows, depth] of [[8, 7], [7, 8]] as const) {
+    for (const paper of ['B4', 'A3'] as const) {
+      it(`${rows} 排×${depth} 深位（56 座）／${paper}：一張標籤頁、欄寬＝可印寬÷${Math.max(7, rows)}、整頁高度放得下、注意事項照印；Word 與列印頁一致`, async () => {
+        const input = oneRoom('gsat', paper, rows, depth, 56);
+        const pages = buildLabelPages(input, 'class');
+        expect(pages).toHaveLength(1); // 每間教室一頁
+        const p = pages[0]!;
+        expect(labelGridSize(p)).toEqual({ cols: rows, rows: depth });
+        expect(p.cells).toHaveLength(56);
+        const W = PAPER_MM[paper].w;
+        const H = PAPER_MM[paper].h;
+        const x = await docXml(input);
+        expect(x).toContain('注意事項：');
+        const g = grids(x).filter((w) => w.length === rows);
+        expect(g).toHaveLength(1);
+        const col = Math.floor((((W - 21) / Math.max(7, rows)) * 1440) / 25.4);
+        expect(new Set(g[0]!)).toEqual(new Set([col]));
+        expect(col * rows).toBeLessThanOrEqual(mmToTwip(W - 21)); // 整排不超出可印寬度
+        const heights = [...x.matchAll(/<w:trHeight w:val="(\d+)" w:hRule="exact"/g)].map((m) => Number(m[1]));
+        expect(heights).toHaveLength(depth);
+        expect(heights[0]! * depth).toBeLessThan(mmToTwip(H - LABEL_PAGE_FIXED_MM)); // 扣掉標題、頁尾與注意事項後整頁放得下
+        const html = renderPrintHtml({ label: pages }, meta);
+        expect(html).toContain(`repeat(${rows},${+((W - 21) / Math.max(7, rows)).toFixed(2)}mm)`);
+        expect((html.match(/<section class="sheet|<div class="sheet/g) ?? []).length).toBe(1);
+      });
+    }
+  }
 });
 
 // ───── G15：下載兩顆鈕 ─────

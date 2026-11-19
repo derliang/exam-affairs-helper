@@ -277,9 +277,9 @@ export function Step6(p: {
           {ck('label', '標籤', '合併成一個檔案，每間教室一張紙' + (junior ? '' : '（預備教室排在最後）') + '；四周留列印邊距，白底' + (junior ? '' : '；不考、加考、抽離的標籤用淡黃底'))}
           <div class="field" style="margin-left:30px">
             <span class="label">標籤紙張（只有標籤可選；座位表與名單固定 A4）</span>
-            <div class="row"><Seg<LabelPaper> label="標籤紙張" value={o.paper} onChange={(v) => set({ paper: v })} options={[{ value: 'B4', label: 'B4（一般，7×7）' }, { value: 'A3', label: 'A3（大尺寸，7×7）' }]} /></div>
+            <div class="row"><Seg<LabelPaper> label="標籤紙張" value={o.paper} onChange={(v) => set({ paper: v })} options={[{ value: 'B4', label: 'B4（一般，每間最多 56 座）' }, { value: 'A3', label: 'A3（大尺寸，每間最多 56 座）' }]} /></div>
             <span class="hint">{labelSizeNote(o.paper)}；格子排列與該教室座位表的排×深位一致，沒有座位或沒有考生的位置不印格子。</span>
-            {o.label && overRooms.length > 0 && <Alert tone="warn">{overRooms.map((r) => r.name).join('、')} 超過 7×7，標籤無法對應，這些教室不會輸出標籤；請回 ③ 縮小座位。</Alert>}
+            {o.label && overRooms.length > 0 && <Alert tone="warn">{overRooms.map((r) => r.name).join('、')} 橫排或深位超過 8，標籤無法對應，這些教室不會輸出標籤；請回 ③ 縮小座位。</Alert>}
           </div>
           {!junior && ck('study', '抽離自習名單（A4）', '合併成一個檔案，每科一頁；只有名單與人數，不出座位表與標籤')}
           {!junior && ck('reserve', '包含預備教室頁', `抽離考試的預備教室座位表（時段版）與標籤，併在上面座位表、標籤檔案的最後，每頁頁首標「預備教室」；預備教室最多 7 排×8 深位，標籤同一頁 7×8（格高隨列數調整）`)}

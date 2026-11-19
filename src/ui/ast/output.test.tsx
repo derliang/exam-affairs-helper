@@ -250,12 +250,12 @@ describe('分科輸出：整合標籤兩倍寬（#216／D107）', () => {
       expect(o.label.reduce((n, p) => n + p.cells.length, 0)).toBe(new Set(plan.out.exams.map((e) => e.roomId + ':' + e.row + '-' + e.depth)).size);
     }
   });
-  it('整合標籤：超過 7×7 的教室不輸出標籤（D113）', () => {
+  it('整合標籤：橫排超過 8 的教室不輸出標籤（D113、D154）', () => {
     const { doc, exam } = fixture();
     const big = doc.settings.classrooms.find((r) => r.kind === 'class')!;
     const o0 = astOutputs(doc, exam, astPlan(doc, exam)!);
     expect(o0.label.some((p) => p.roomName.startsWith(big.name))).toBe(true);
-    const d2 = { ...doc, settings: { ...doc.settings, classrooms: doc.settings.classrooms.map((r) => (r.id === big.id ? { ...r, rows: 8, seatCount: 8 * r.depth, disabled: undefined } : r)) } };
+    const d2 = { ...doc, settings: { ...doc.settings, classrooms: doc.settings.classrooms.map((r) => (r.id === big.id ? { ...r, rows: 9, seatCount: 9 * r.depth, disabled: undefined } : r)) } };
     const p2 = astPlan(d2, exam);
     expect(p2).toBeTruthy();
     expect(astOutputs(d2, exam, p2!).label.some((p) => p.roomName.startsWith(big.name + '　'))).toBe(false);

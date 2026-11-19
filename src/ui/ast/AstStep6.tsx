@@ -154,7 +154,7 @@ export function AstStep6(p: { doc: Doc; exam: ExamConfig; onGoStep: (n: 2 | 3 | 
             <span class="small muted">{noDl ? noDlWhy : `將開啟 1 個列印頁（共 ${total} 頁），在新視窗選「列印」→「另存為 PDF」`}</span>
           </div>
         </div>
-        {overRooms.length > 0 && keys.includes('label') && <Alert tone="warn">{overRooms.map((r) => r.name).join('、')} 超過 7×7，標籤無法對應，這些教室不會輸出整合標籤；請回 ③ 縮小座位。</Alert>}
+        {overRooms.length > 0 && keys.includes('label') && <Alert tone="warn">{overRooms.map((r) => r.name).join('、')} 橫排或深位超過 8，標籤無法對應，這些教室不會輸出整合標籤；請回 ③ 縮小座位。</Alert>}
         {busy && format === 'word' && <p class="small muted" role="status">每個 Word 檔都要嵌入字型，資料多時整批可能要一到兩分鐘，請不要關閉或重新整理此頁。</p>}
         {err && <Alert tone="danger">{err}</Alert>}
         {results && (
