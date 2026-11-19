@@ -28,7 +28,7 @@ const SECTIONS: Section[] = [
         <p>第三方套件、素材、程式碼、字型及其他著作依其各自授權使用。本文件不主張超出著作權人實際擁有或可授權之權利，亦不溯及撤銷此前已有效授出的授權。</p>
         <p>本站目前內嵌的字型：<b data-k="fonts">{EMBEDDED_FONTS.join('、')}</b>（Noto Sans TC），依 SIL Open Font License 1.1 授權，全文見下方，亦同於本儲存庫 <code>src/export/fonts/OFL.txt</code>。</p>
         <details class="lic-ofl">
-          <summary>展開 SIL Open Font License 1.1 全文</summary>
+          <summary>SIL Open Font License 1.1 全文</summary>
           <pre>{oflText}</pre>
         </details>
         <p>本站使用的執行期套件：<b data-k="pkgs">{RUNTIME_PACKAGES.join('、')}</b>，各依其自身授權使用，授權條款以各套件發布者所附者為準。</p>
@@ -46,7 +46,7 @@ export function Copyright(p: { backLabel?: string; onBack: () => void; onPrivacy
   return (
     <section class="lic">
       <div class="pagehead">
-        <Button kind="ghost" onClick={p.onBack}>← {p.backLabel ? `回到 ${p.backLabel}` : '返回'}</Button>
+        <Button kind="ghost" onClick={p.onBack}>← {p.backLabel ? `回到 ${p.backLabel}` : '回到上一頁'}</Button>
         <span class="small muted">使用授權｜{APP_NAME}</span>
       </div>
       <article class="stack lic-doc">

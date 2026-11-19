@@ -156,7 +156,7 @@ export function ImportWizard(p: {
 
       {(scan.skipped.length > 0 || scan.blankRows > 0) && (
         <div style="margin-top:12px">
-          <Button small onClick={() => setShowSkipped(!showSkipped)}>{showSkipped ? '收合' : '檢查'}已略過的說明列（{scan.skipped.length} 列，另有 {scan.blankRows} 列空白）</Button>
+          <Button small onClick={() => setShowSkipped(!showSkipped)}>已略過的說明列（{scan.skipped.length} 列，另有 {scan.blankRows} 列空白） {showSkipped ? '▴' : '▾'}</Button>
           {showSkipped && <table class="t"><thead><tr><th>列</th><th>內容</th><th>原因</th></tr></thead><tbody>
             {scan.skipped.map((s) => <tr key={s.row}><td>{s.row}</td><td>{s.cells.filter(Boolean).join('｜')}</td><td>{s.reason}</td></tr>)}
           </tbody></table>}

@@ -82,7 +82,7 @@ export function ReservePage(p: { doc: Doc; examId: string; crumbs: { label: stri
           {active.examN > 0 && <Badge tone="info">出座位表與標籤</Badge>}
         </div>
         {active.examN === 0
-          ? <p class="small muted">這一節沒有人要抽離考試。</p>
+          ? <EmptyState title="這一節沒有人要抽離考試" />
           : active.exam.map((g) => {
             const room = rooms.find((r) => r.id === g.roomId);
             const m = room ? detachChartModel(p.doc, exam, result, room, active.subjectId) : null;
@@ -95,7 +95,7 @@ export function ReservePage(p: { doc: Doc; examId: string; crumbs: { label: stri
           {active.studyN > 0 && <Badge>不印標籤（排自習座位）</Badge>}
         </div>
         {active.studyN === 0
-          ? <p class="small muted">這一節沒有人要抽離自習。</p>
+          ? <EmptyState title="這一節沒有人要抽離自習" />
           : active.study.map((g) => (
             <div key={g.roomId} class="stack" style="gap:6px">
               <div class="lab">{roomName(g.roomId)}　{g.codes.length} 人</div>

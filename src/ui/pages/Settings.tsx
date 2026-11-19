@@ -309,6 +309,7 @@ function LabelNotesField(p: { value: string | undefined; onChange: (v: string | 
   const tooMany = lines.length > LABEL_NOTE_MAX_LINES;
   const tooLong = lines.filter((l) => noteLineLength(l.trim()) > LABEL_NOTE_MAX_CHARS).length;
   const isDefault = p.value === undefined || p.value === DEFAULT_LABEL_NOTES;
+  const [note, setNote] = useState(false); // 與預設相同時按「還原預設」確認後顯示「已是預設值」
   return (
     <div class={`field${tooMany || tooLong ? ' err' : ''}`}>
       <label for="s-notes">標籤注意事項</label>
@@ -316,7 +317,10 @@ function LabelNotesField(p: { value: string | undefined; onChange: (v: string | 
       <span class="hint" role={tooMany || tooLong ? 'alert' : undefined}>
         {tooMany ? `最多 ${LABEL_NOTE_MAX_LINES} 行，多的行不會印。` : tooLong ? `有 ${tooLong} 行超過 ${LABEL_NOTE_MAX_CHARS} 字，超過的字不會印。` : `印在標籤下方的框內，每行一句（最多 ${LABEL_NOTE_MAX_LINES} 行、每行 ${LABEL_NOTE_MAX_CHARS} 字），用 **粗體** 標粗體；全部清空就不印這個框。`}
       </span>
-      <div><Button disabled={isDefault} onClick={() => p.onChange(undefined)}>還原預設</Button></div>
+      <div class="row" style="gap:8px;align-items:center">
+        <ConfirmButton kind="accent-outline" undoable={false} copy={confirmCopy.resetNotes(isDefault)} onConfirm={() => { if (isDefault) setNote(true); else p.onChange(undefined); }}>↺ 還原預設</ConfirmButton>
+        {note && isDefault && <span class="small muted" role="status">已是預設值</span>}
+      </div>
     </div>
   );
 }
