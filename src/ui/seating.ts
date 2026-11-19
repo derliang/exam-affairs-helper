@@ -331,7 +331,7 @@ export type ChartCell =
   | { kind: 'free'; co: string }
   | {
       kind: 'student'; co: string; code: string; name: string; classNo: number; className: string; colorIndex: number;
-      /** 標示文字，例「X社會」「＋自然」「→教務處」 */
+      /** 標示文字，例「X 社會」「＋ 數A」「抽離 自然 考試」「→教務處」 */
       marks: string[];
       markKind?: 'x' | 'add';
     };
@@ -351,9 +351,13 @@ function studentCtx(doc: Doc, exam: ExamConfig, result: SeatingResult) {
   const subjName = new Map(exam.subjects.map((s) => [s.id, s.name]));
   const marksBy = new Map<string, string[]>();
   const absent = new Set<string>();
+  // D147：不考＝「X 科目」；加考在原教室考＝「＋ 科目」；到別處考（有抽離考試）＝「抽離 科目 考試」，與匯出檔同一份文字
+  const awayExam = new Set(result.detaches.filter((d) => d.purpose === 'exam').map((d) => `${d.code}|${d.subjectId}`));
   for (const m of result.marks) {
     if (m.mode === 'absent') absent.add(m.code);
-    marksBy.set(m.code, [...(marksBy.get(m.code) ?? []), `${m.mode === 'absent' ? 'X' : '＋'}${subjectShort(subjName.get(m.subjectId) ?? m.subjectId)}`]);
+    const sub = subjectShort(subjName.get(m.subjectId) ?? m.subjectId);
+    const text = m.mode === 'absent' ? `X ${sub}` : awayExam.has(`${m.code}|${m.subjectId}`) ? `抽離 ${sub} 考試` : `＋ ${sub}`;
+    marksBy.set(m.code, [...(marksBy.get(m.code) ?? []), text]);
   }
   const over = new Map(result.overrides.map((o) => [o.code, o]));
   return (code: string, co: string): ChartCell => {

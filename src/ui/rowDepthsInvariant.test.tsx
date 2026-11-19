@@ -31,8 +31,9 @@ const out = (f: ExportInput) => ({ seat: sha(buildSeatPages(f, 'all')), label: s
 /** 在加每排步進器之前的程式（origin/main 5f9c0fe，core、export、data 本 PR 未改）算出的值 */
 const GOLDEN = {
   seating: 'f4be9b39512598f246f97ec8f554c2a78b6dd4683d62da2fb8a7ed63cd97a9e8',
-  seat: '9ce145f8228986159340c282c7565d16ffa06683923460b144deb29e2ecc0837',
-  label: 'c6b983df0389bae8f46762b3a14d7861d78ebac4208b6ffae18fea366d165407',
+  // 座位表、標籤的輸出模型因匯出樣式包（D147）改了文字與統計表欄位而重算；排座結果 seating 的值沒變（引擎沒動）
+  seat: 'efbd482b0f16ec1779463a52a424de220d1241f28d5ee23edd991bf02e2b97a9',
+  label: '26b25be27dbe8e739b28f68207d7635e296354393be022ac3788d8fffff0c6cb',
 };
 
 describe('D139 拿掉每排深位步進器：座位編輯回到整間步進器＋點座位，舊資料輸出不變', () => {

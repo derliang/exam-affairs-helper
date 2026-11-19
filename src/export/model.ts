@@ -22,6 +22,7 @@ import {
 } from '../data';
 import { roomStats, specialOf, type RoomStats } from '../core/stats';
 import { dayName, examSubjectPeriods, slotName } from '../core/periods';
+import { dayRangeText, dayTag } from './dayLabel';
 import { periodGroups } from '../core/detach';
 import { studyReference } from '../core/studyRef';
 import { classColor } from './colors';
@@ -72,7 +73,7 @@ export interface CellModel {
   ref?: boolean;
 }
 /** 角標：x＝不考（黑底白字）、add＝加考／抽離考試（白底黑框）、take＝「有考」（該科不考超過一半時反標，白底黑框） */
-export interface CornerTag { kind: 'x' | 'add' | 'take'; text: string }
+export interface CornerTag { kind: 'x' | 'add' | 'take' | 'detach'; text: string }
 /** 坐這格的一個人。sched 每個元素是一行時程，例「第一天 自然、數A」「第1天 時段二 物理」 */
 export interface PersonModel { code: string; classLabel: string; name: string; sched: string[]; /** 只列科目的精簡版（與 sched 逐行對應、時間順序）：格子放不下完整寫法時改用 */ schedShort?: string[] }
 export interface StatsModel {
@@ -80,7 +81,7 @@ export interface StatsModel {
   total: number;
   perSubject: { subjectName: string; count: number }[];
   /** 統計表（列印頁用，D40）：欄＝班級，列＝本教室考生人數與各科考試人數 */
-  table: { classes: string[]; rows: { label: string; per: number[]; total: number }[]; /** 第一欄表頭（預設「項目」；預備教室時段版用「時段」） */ headLabel?: string };
+  table: { classes: string[]; rows: { label: string; /** 統計表前導欄（D147⑤）：與 leadHeads 逐欄對應；少於欄數時最後一格橫跨其餘欄 */ lead?: string[]; per: number[]; total: number }[]; /** 前導欄表頭（D147⑤：日期、第幾天、時段、科目）；沒給＝單一欄（headLabel） */ leadHeads?: string[]; /** 第一欄表頭（預設「項目」；預備教室時段版用「時段」） */ headLabel?: string };
 }
 export interface SeatPageModel {
   kind: 'seat';
@@ -93,6 +94,8 @@ export interface SeatPageModel {
   examName: string;
   /** 表頭（校-54）：有值時列印頁頁首直接印它，不再拆「考試名稱＋座位表」 */
   heading?: string;
+  /** 標題後面的日期範圍（D147④）：「第 1 天 11/17（二）～第 2 天 11/18（三）」；沒有天別資訊就沒有 */
+  dateText?: string;
   roomName: string;
   /** 合併檔內的分區標示（G34）：預備教室頁頁首標「預備教室」；班級教室沒有 */
   tag?: string;
@@ -115,6 +118,8 @@ export interface LabelPageModel {
   title: string;
   examName: string;
   heading?: string;
+  /** 標題後面的日期範圍（D147④）：「第 1 天 11/17（二）～第 2 天 11/18（三）」；沒有天別資訊就沒有 */
+  dateText?: string;
   roomName: string;
   /** 合併檔內的分區標示（G34）：預備教室頁頁首標「預備教室」 */
   tag?: string;
@@ -270,6 +275,8 @@ interface Ctx {
   classes: Map<number, ClassInfo>;
   subjectName: Map<string, string>;
   entries: Map<string, ExamEntry>;
+  /** 「學生|科目」有抽離考試（到別的教室考）的集合：加考標示分「原教室加考」與「抽離」用（D147②③） */
+  detachExam: Set<string>;
   input: ExportInput;
 }
 const parseCode = (code: string) => ({ classNo: Number(code.slice(0, 2)), seatNo: Number(code.slice(2)) });
@@ -281,6 +288,7 @@ function ctxOf(input: ExportInput): Ctx {
     classes: new Map(input.settings.classes.filter((c) => c.division === input.exam.division).map((c) => [c.no, c])),
     subjectName: new Map(input.exam.subjects.map((s) => [s.id, s.name])),
     entries: new Map(input.entries.map((e) => [studentCode(e.classNo, e.seatNo), e])),
+    detachExam: new Set(input.result.detaches.filter((d) => d.purpose === 'exam').map((d) => `${d.code}|${d.subjectId}`)),
     input,
   };
 }
@@ -294,7 +302,7 @@ function makeCell(code: string, seat: { row: number; depth: number }, ctx: Ctx):
     .filter((m) => m.code === code)
     .map((m) => ({
       kind: m.mode,
-      text: `${m.mode === 'absent' ? 'X 不考' : '＋ 加考'}${ctx.subjectName.get(m.subjectId) ?? ''}`,
+      text: `${m.mode === 'absent' ? 'X 不考' : ctx.detachExam.has(`${m.code}|${m.subjectId}`) ? '抽離考試' : '＋ 加考'}${ctx.subjectName.get(m.subjectId) ?? ''}`,
     }));
   return {
     coord: seatLabel(seat),
@@ -309,7 +317,10 @@ function makeCell(code: string, seat: { row: number; depth: number }, ctx: Ctx):
     tags,
     marks: ctx.input.result.marks
       .filter((m) => m.code === code)
-      .map((m) => ({ kind: m.mode, head: m.mode === 'absent' ? 'X' : '＋', subject: subjectShort(ctx.subjectName.get(m.subjectId) ?? '') })),
+      .map((m) => {
+        const detach = m.mode === 'extra' && ctx.detachExam.has(`${m.code}|${m.subjectId}`);
+        return { kind: detach ? ('detach' as const) : m.mode, head: m.mode === 'absent' ? 'X' : detach ? '抽離' : '＋', subject: subjectShort(ctx.subjectName.get(m.subjectId) ?? '') };
+      }),
   };
 }
 
@@ -325,25 +336,36 @@ function fromRoomStats(rs: RoomStats, ctx: Ctx): StatsModel {
     table: (() => {
       const nos = rs.perClass.map((c) => c.classNo);
       const pick = (l: { classNo: number; count: number }[]) => nos.map((n) => l.find((x) => x.classNo === n)?.count ?? 0);
+      // D147⑤：每個「日期＋時段＋科目」一列，不合併；沒有節次表資訊的科目排在最後、天別與時段留空
+      const periods = examSubjectPeriods(ctx.input.exam, ctx.input.settings);
+      const order = ctx.input.exam.subjects.map((x) => x.id);
+      const slotRows = rs.perSubject.flatMap((s) => {
+        const sps = (periods.get(s.subjectId) ?? []).filter((p) => p.slot);
+        const name = ctx.subjectName.get(s.subjectId) ?? s.subjectId;
+        const base = { per: pick(s.inRoomPerClass), total: s.inRoom };
+        if (!sps.length) return [{ ...base, day: 99, slot: 99, ord: order.indexOf(s.subjectId), lead: ['', '', name] }];
+        return sps.map((p) => ({ ...base, day: p.day ?? 0, slot: p.slot!, ord: order.indexOf(s.subjectId), lead: [dayTag(p.day ?? 0), slotName(p.slot!), name] }));
+      }).sort((a, b) => a.day - b.day || a.slot - b.slot || a.ord - b.ord);
       return {
         classes: nos.map((n) => ctx.classes.get(n)?.name ?? String(n)),
+        leadHeads: ['第幾天', '時段', '科目'],
         rows: [
-          { label: '本教室考生人數', per: pick(rs.perClass), total: rs.total },
-          ...rs.perSubject.map((s) => ({ label: ctx.subjectName.get(s.subjectId) ?? s.subjectId, per: pick(s.inRoomPerClass), total: s.inRoom })),
+          { label: '本教室考生人數', lead: ['本教室考生人數'], per: pick(rs.perClass), total: rs.total },
+          ...slotRows.map((r) => ({ label: r.lead[2]!, lead: r.lead, per: r.per, total: r.total })),
         ],
       };
     })(),
   };
 }
 
-/** 頁首小標籤：共幾人、各科不考、各科加考的人數（依考試科目順序） */
+/** 頁首小標籤：共幾人、各科不考、各科加考（原教室考）、各科抽離（到別處考）的人數（依考試科目順序；D147③ 加考與抽離分開算） */
 function chipsOf(total: number, cells: Iterable<CellModel>, subjects: { name: string }[]): string[] {
-  const n = { absent: new Map<string, number>(), extra: new Map<string, number>() };
-  for (const c of cells) for (const m of c.marks) if (m.kind !== 'detach') n[m.kind].set(m.subject, (n[m.kind].get(m.subject) ?? 0) + 1);
+  const n = { absent: new Map<string, number>(), extra: new Map<string, number>(), detach: new Map<string, number>() };
+  for (const c of cells) for (const m of c.marks) n[m.kind].set(m.subject, (n[m.kind].get(m.subject) ?? 0) + 1);
   const order = subjects.map((s) => s.name);
-  const list = (k: 'absent' | 'extra', head: string) =>
+  const list = (k: 'absent' | 'extra' | 'detach', head: string) =>
     [...n[k].entries()].sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0])).map(([s, c]) => `${head}${s} ${c} 人`);
-  return [`共 ${total} 人`, ...list('absent', '不考'), ...list('extra', '加考')];
+  return [`共 ${total} 人`, ...list('absent', '不考'), ...list('extra', '加考'), ...list('detach', '抽離')];
 }
 
 
@@ -368,10 +390,13 @@ export function applyCorners(cells: CellModel[], subjectOrder: readonly string[]
   flipped.sort((a, b) => rank(a) - rank(b));
   for (const c of real) {
     const tags: CornerTag[] = [];
-    const xs = c.marks.filter((m) => m.kind === 'absent' && !flipped.includes(m.subject)).map((m) => abbrevSubject(m.subject));
-    if (xs.length) tags.push({ kind: 'x', text: xs.join('') });
-    const adds = c.marks.filter((m) => m.kind !== 'absent').map((m) => abbrevSubject(m.subject));
-    if (adds.length) tags.push({ kind: 'add', text: `＋${adds.join('')}` });
+    // D147①：不考每一科都帶 X（「X 數B　X 社」）；②加考在原教室考＝「＋ 數A」，到別處考＝「抽離 自然 考試」（完整科名、可兩行）
+    const xs = c.marks.filter((m) => m.kind === 'absent' && !flipped.includes(m.subject)).map((m) => `X ${abbrevSubject(m.subject)}`);
+    if (xs.length) tags.push({ kind: 'x', text: xs.join('　') });
+    const adds = c.marks.filter((m) => m.kind === 'extra').map((m) => abbrevSubject(m.subject));
+    if (adds.length) tags.push({ kind: 'add', text: `＋ ${adds.join('、')}` });
+    const away = c.marks.filter((m) => m.kind === 'detach').map((m) => m.subject);
+    if (away.length) tags.push({ kind: 'detach', text: `抽離 ${away.join('、')} 考試` });
     const takes = flipped.filter((s) => !c.marks.some((m) => m.kind === 'absent' && m.subject === s)).map(abbrevSubject);
     if (takes.length) tags.push({ kind: 'take', text: `考${takes.join('')}` });
     c.corners = tags;
@@ -379,6 +404,23 @@ export function applyCorners(cells: CellModel[], subjectOrder: readonly string[]
   return flipped.map((s) => `本頁多數不考${s}，只標有考者`);
 }
 const subjectShortEq = (full: string, short: string): boolean => subjectShort(full) === short || full === short;
+
+/**
+ * 角標分行（D147②：抽離小牌字多時允許兩行）：全部放得進一行就一行；放不下，每個小牌各佔一行，
+ * 單一小牌仍太寬的抽離小牌拆成「抽離 科目」與「考試」兩行。widthMm＝格內可用寬，pt＝角標字級。
+ */
+export function cornerLayout(tags: readonly CornerTag[], widthMm: number, pt: number): CornerTag[][] {
+  if (tags.length === 0) return [];
+  const w = (t: CornerTag) => textWidthMm(` ${t.text} `, pt, true) + 1.2;
+  if (tags.reduce((a, t) => a + w(t), 0) + (tags.length - 1) <= widthMm) return [[...tags]];
+  const out: CornerTag[][] = [];
+  for (const t of tags) {
+    const m = t.kind === 'detach' && w(t) > widthMm ? /^(.*?)\s*(考試)$/.exec(t.text) : null;
+    if (m) out.push([{ ...t, text: m[1]! }], [{ ...t, text: m[2]! }]);
+    else out.push([t]);
+  }
+  return out;
+}
 
 /** 格子有特殊標示（淡黃底用）：有角標的格子 */
 export const isSpecial = (c: CellModel): boolean => (c.corners?.length ?? 0) > 0;
@@ -615,6 +657,21 @@ function slotStats(seats: Map<string, MergedCell>, ctx: ReturnType<typeof ctxOf>
   };
 }
 
+/** 預備教室標題下的小標籤（D147⑥、#395）：每個「日期時段＋科目」一個，例「第 1 天 時段二　數學 B 12 人」；依天、時段排 */
+function slotSubjectChips(seats: Map<string, MergedCell>): string[] {
+  const by = new Map<string, { day: number; period: number; head: string; subject: string; codes: Set<string> }>();
+  for (const m of seats.values()) {
+    for (const l of m.lines) {
+      const key = `${l.head}|${l.subject}`;
+      const e = by.get(key) ?? { day: l.day ?? 99, period: l.period, head: l.head, subject: l.subject, codes: new Set<string>() };
+      e.codes.add(l.code);
+      e.period = Math.min(e.period, l.period);
+      by.set(key, e);
+    }
+  }
+  return [...by.values()].sort((a, b) => a.day - b.day || a.period - b.period).map((e) => `${e.head ? `${e.day === 99 ? e.head : `${dayTag(e.day)} ${e.head.split(' ')[1] ?? ''}`}　` : ''}${e.subject} ${e.codes.size} 人`);
+}
+
 /** 3 人以上輪流的座位，列在座位表下一頁（座位 × 天 × 科目 × 人） */
 function rotationRows(seats: Map<string, MergedCell>, ctx: ReturnType<typeof ctxOf>): { heads: string[]; rows: string[][] } | undefined {
   const rows: string[][] = [];
@@ -648,6 +705,18 @@ function reserveMerged(input: ExportInput, ctx: ReturnType<typeof ctxOf>): Map<s
   return byRoom;
 }
 
+/** 整場考試有考試的天別（0 起）：標題日期範圍用（D147④）；沒有節次表資訊就是空的 */
+function examDays(input: ExportInput): number[] {
+  const out = new Set<number>();
+  for (const list of examSubjectPeriods(input.exam, input.settings).values()) for (const p of list) if (p.slot) out.add(p.day ?? 0);
+  return [...out];
+}
+/** 標題後面的日期範圍屬性（沒有就不帶，D147④） */
+const dateProp = (days: Iterable<number>): { dateText?: string } => {
+  const t = dayRangeText(days);
+  return t ? { dateText: t } : {};
+};
+
 /** 座位表：每間班級教室一頁；每間預備教室一頁（時段版，稿 v2.28：格內每行一個時段） */
 export type Scope = 'all' | 'class' | 'reserve';
 
@@ -667,6 +736,7 @@ export function buildSeatPages(input: ExportInput, scope: Scope = 'all'): SeatPa
       title: `${input.exam.name}　${room.name}　座位表`,
       examName: input.exam.name,
       ...(input.seatHeading?.trim() ? { heading: input.seatHeading.trim() } : {}),
+      ...dateProp(examDays(input)),
       roomName: room.name,
       ...(room.kind === 'reserve' ? { tag: PREP_TAG } : {}),
       chips: [],
@@ -691,6 +761,7 @@ export function buildSeatPages(input: ExportInput, scope: Scope = 'all'): SeatPa
         const nos = pg.stats.table.classes;
         pg.stats.table.rows.push({
           label: '不參加（每節到預備教室自習，不印標籤）',
+          lead: ['不參加（每節到預備教室自習，不印標籤）'],
           per: nos.map((n) => mineNo.filter((c) => ctx.classes.get(Number(c.code.slice(0, 2)))?.name === n || String(Number(c.code.slice(0, 2))) === n).length),
           total: mineNo.length,
         });
@@ -723,9 +794,10 @@ export function buildSeatPages(input: ExportInput, scope: Scope = 'all'): SeatPa
         title: `${input.exam.name}　${room.name}　座位表（時段版）`,
         examName: input.exam.name,
         ...(input.seatHeading?.trim() ? { heading: input.seatHeading.trim() } : {}),
+        ...dateProp([...seats.values()].flatMap((m) => m.lines.flatMap((l) => (l.day === undefined ? [] : [l.day])))),
         roomName: room.name,
         tag: PREP_TAG,
-        chips: [`共 ${people.size} 人`, `${slots.size} 個時段`, '抽離考試'],
+        chips: [`共 ${people.size} 人`, ...slotSubjectChips(seats), '抽離考試'],
         detachStyle: false,
         slotMode: true,
         rows: room.rows,
@@ -743,8 +815,8 @@ export function buildSeatPages(input: ExportInput, scope: Scope = 'all'): SeatPa
 
 
 /**
- * 抽離自習「參考座位」座位表（G32，修訂 D7）：每個時段、每間排了自習的預備教室一頁，
- * 標題寫「參考座位，非考試座位」；只出座位表、不出標籤；含在座位表檔案裡（預備教室考試頁之後）。
+ * 抽離自習「自習座位」座位表（G32，修訂 D7、D147⑦ 改稱）：每個時段、每間排了自習的預備教室一頁，
+ * 標題寫「自習座位」、小標籤「自習座位，非考試座位」；只出座位表、不出標籤；含在座位表檔案裡（預備教室考試頁之後）。
  */
 function studyReferencePages(input: ExportInput, ctx: Ctx, rooms: Map<string, Classroom>): SeatPageModel[] {
   const periods = examSubjectPeriods(input.exam, input.settings);
@@ -755,7 +827,7 @@ function studyReferencePages(input: ExportInput, ctx: Ctx, rooms: Map<string, Cl
     const room = rooms.get(ref.roomId);
     if (!room) continue;
     const g = groups[ref.group]!;
-    const when = [...new Set(g.subjectIds.flatMap((id) => (periods.get(id) ?? []).map((sp) => (sp.slot ? `${dayName(sp.day ?? 0)} ${slotName(sp.slot)}` : `第 ${sp.period} 節`))))].join('、');
+    const when = [...new Set(g.subjectIds.flatMap((id) => (periods.get(id) ?? []).map((sp) => (sp.slot ? `${dayTag(sp.day ?? 0)} ${slotName(sp.slot)}` : `第 ${sp.period} 節`))))].join('、');
     const subj = ref.subjectIds.map((id) => ctx.subjectName.get(id) ?? id).join('、');
     const cells = new Map<string, CellModel>();
     const per = new Map<number, number>();
@@ -768,12 +840,13 @@ function studyReferencePages(input: ExportInput, ctx: Ctx, rooms: Map<string, Cl
     const nos = [...per.keys()].sort((a, b) => a - b);
     out.push({
       kind: 'seat',
-      title: `${input.exam.name}　${room.name}　自習參考座位（非考試座位）`,
+      title: `${input.exam.name}　${room.name}　自習座位（非考試座位）`,
       examName: input.exam.name,
       ...(input.seatHeading?.trim() ? { heading: input.seatHeading.trim() } : {}),
-      roomName: `${room.name}　參考座位`,
+      ...dateProp(g.subjectIds.flatMap((id) => (periods.get(id) ?? []).filter((sp) => sp.slot).map((sp) => sp.day ?? 0))),
+      roomName: `${room.name}　自習座位`,
       tag: PREP_TAG,
-      chips: ['參考座位，非考試座位', `自習 ${ref.seats.size} 人`, ...(when ? [when] : []), subj],
+      chips: ['自習座位，非考試座位', `自習 ${ref.seats.size} 人`, ...(when ? [when] : []), subj],
       detachStyle: true,
       rows: room.rows,
       depth: room.depth,
@@ -852,6 +925,7 @@ export function buildLabelPages(input: ExportInput, scope: Scope = 'all'): Label
         title: `${input.exam.name}　${room.name}${suffix}`,
         examName: input.exam.name,
         ...(input.labelHeading?.trim() ? { heading: input.labelHeading.trim() } : {}),
+        ...dateProp(examDays(input)),
         roomName: room.name + suffix,
         ...(room.kind === 'reserve' ? { tag: PREP_TAG } : {}),
         layout,
@@ -881,6 +955,7 @@ export function buildLabelPages(input: ExportInput, scope: Scope = 'all'): Label
         title: `${input.exam.name}　${room.name}　抽離考試${suffix}`,
         examName: input.exam.name,
         ...(input.labelHeading?.trim() ? { heading: input.labelHeading.trim() } : {}),
+        ...dateProp(list.flatMap((m) => m.lines.flatMap((l) => (l.day === undefined ? [] : [l.day])))),
         roomName: `${room.name}　抽離考試${suffix}`,
         tag: PREP_TAG,
         layout,
@@ -1001,18 +1076,9 @@ export function groupMarks(c: CellModel): { kind: 'x' | 'add'; text: string }[] 
   return [...g.entries()].map(([h, e]) => ({ kind: e.kind, text: `${h} ${e.subs.join('、')}` }));
 }
 
-/** 統計表的列：各科人數與每班完全相同的科目合併成一列（例：考國文、英文） */
-export function statRows(p: SeatPageModel): { label: string; per: number[]; total: number }[] {
-  if (p.slotMode) return p.stats.table.rows;
-  const out: { label: string; per: number[]; total: number; subs: string[] }[] = [];
-  const [first, ...rest] = p.stats.table.rows;
-  if (first) out.push({ ...first, subs: [] });
-  for (const r of rest) {
-    const same = out.find((x) => x.subs.length > 0 && x.total === r.total && x.per.join() === r.per.join());
-    if (same) same.subs.push(r.label);
-    else out.push({ ...r, subs: [r.label] });
-  }
-  return out.map((x) => ({ label: x.subs.length ? `考${x.subs.join('、')}` : x.label, per: x.per, total: x.total }));
+/** 統計表的列（D147⑤：不合併科目；前導欄由 buildSeatPages 依日期、時段、科目逐列產生） */
+export function statRows(p: SeatPageModel): StatsModel['table']['rows'] {
+  return p.stats.table.rows;
 }
 
 export const SEAT_PAGE = { w: 210, h: 297, padX: 15, padY: 12 };
@@ -1048,14 +1114,25 @@ export function statLayout(p: SeatPageModel): { cols: number[]; rowH: number[]; 
   const n = p.stats.table.classes.length;
   const pt = 12;
   const totalW = 18;
-  const classW = Math.max(12, Math.min(20, (innerW - totalW - 60) / Math.max(1, n)));
-  const firstW = innerW - classW * n - totalW;
-  const usable = firstW - 4;
-  const lines = (label: string) => Math.max(1, Math.ceil(textWidthMm(label, pt, false) / usable));
+  const leadN = p.stats.table.leadHeads?.length ?? 1;
+  // 前導欄（D147⑤）：第幾天、時段、科目（有日期時再加日期欄）；沒有前導欄時維持單一第一欄
+  const leadW = leadN === 1 ? [0] : p.stats.table.leadHeads!.map((h) => (h === '科目' ? 26 : h === '日期' ? 24 : 18));
+  const leadSum = leadN === 1 ? 60 : leadW.reduce((a, b) => a + b, 0);
+  const classW = Math.max(12, Math.min(20, (innerW - totalW - leadSum) / Math.max(1, n)));
+  const firstW = innerW - classW * n - totalW - (leadN === 1 ? 0 : leadSum - leadW[0]!);
+  if (leadN > 1) leadW[0] = firstW;
   const lineH = pt * 0.3528 * 1.3;
   const h = (k: number) => Math.max(8, +(k * lineH + 3.4).toFixed(1));
-  const rowH = [h(1), ...rows.map((r) => h(lines(r.label)))];
-  return { cols: [firstW, ...Array<number>(n).fill(classW), totalW], rowH, pt, total: rowH.reduce((a, b) => a + b, 0) };
+  // 每列文字最多折幾行：單一欄看整欄寬；前導欄逐格看各自欄寬，單格橫跨其餘欄時看合併寬
+  const lines = (r: (typeof rows)[number]) => {
+    const cells = leadN === 1 ? [r.label] : (r.lead ?? [r.label]);
+    return Math.max(1, ...cells.map((t, i) => {
+      const w = leadN === 1 ? firstW : i === cells.length - 1 ? leadW.slice(i).reduce((a, b) => a + b, 0) : leadW[i]!;
+      return Math.ceil(textWidthMm(t, pt, false) / Math.max(1, w - 4));
+    }));
+  };
+  const rowH = [h(1), ...rows.map((r) => h(lines(r)))];
+  return { cols: [...(leadN === 1 ? [firstW] : leadW), ...Array<number>(n).fill(classW), totalW], rowH, pt, total: rowH.reduce((a, b) => a + b, 0) };
 }
 
 /** 座位表的格子尺寸（mm）與統計列。統計表列數隨科目變：先扣掉標題、小標籤、講臺、統計表、頁尾，剩下的才給座位格 */
@@ -1159,6 +1236,14 @@ export function textEm(s: string, bold = false): number {
 }
 
 /** 頁首右上顯示的教室名：預備教室頁在前面加「預備教室」（G34：合併檔內分得出哪幾頁是預備教室；名稱已含該字就不重複） */
+/** 座位表頁首第一行：表頭（或考試名稱）加日期範圍（D147④） */
+export function titleOf(p: { heading?: string; examName: string; dateText?: string }): string {
+  return `${p.heading ?? p.examName}${p.dateText ? `　${p.dateText}` : ''}`;
+}
+/** 標籤頁首第一行：表頭（或「考試名稱　標籤」）加日期範圍 */
+export function labelTitleOf(p: { heading?: string; examName: string; dateText?: string }): string {
+  return `${p.heading ?? `${p.examName}　標籤`}${p.dateText ? `　${p.dateText}` : ''}`;
+}
 export function roomShown(p: { roomName: string; tag?: string }): string {
   return p.tag && !p.roomName.includes(p.tag) ? `${p.tag}　${p.roomName}` : p.roomName;
 }

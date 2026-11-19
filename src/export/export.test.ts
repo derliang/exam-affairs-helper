@@ -47,7 +47,7 @@ describe('版面模型', () => {
     const pages = buildSeatPages(makeFixture());
     // G32：預備教室考試頁（時段版）之後多一頁抽離自習「參考座位」
     expect(pages.map((p) => !!p.slotMode)).toEqual([false, false, true, false]);
-    expect(pages[3]!.title).toContain("參考座位");
+    expect(pages[3]!.title).toContain("自習座位");
     expect(pages[0]!.cells.get('1-1')!.code).toBe('0101');
     expect(pages[2]!.title).toContain('座位表（時段版）');
     expect(pages[2]!.cells.size).toBe(2);
@@ -267,17 +267,23 @@ describe('PDF 列印 HTML：照稿件版面（設計系統成品頁「座位表�
     expect(h).toContain('pp-e'); // 空位
     expect(h).not.toContain('pp-c mk'); // v2.36：拿掉整格粗框
     expect(h).toContain('class="pp-cn"');
-    expect(h).toContain('<span class="pp-mk x">英</span>');
-    expect(h).toContain('<span class="pp-mk add">＋數</span>');
+    expect(h).toContain('<span class="pp-mk x">X 英</span>');
+    expect(h).toContain('<span class="pp-mk add">＋ 數</span>');
     expect(h).not.toContain('X 英文'); // 也沒有整句小牌
   });
 
-  it('統計表：每班人數相同的科目合併成一列', () => {
+  it('統計表（D147⑤）：不合併科目，每個「第幾天＋時段＋科目」一列', () => {
     const f = makeFixture();
     const p = buildSeatPages(f, 'class')[0]!;
     const h = renderPrintHtml({ seat: [p] }, meta);
-    expect(h).toMatch(/<td>考[^<]*、[^<]*<\/td>/);
+    expect(p.stats.table.leadHeads).toEqual(['第幾天', '時段', '科目']);
     expect(p.stats.table.rows[0]!.label).toBe('本教室考生人數');
+    const subs = p.stats.table.rows.slice(1);
+    expect(subs.length).toBe(3); // 國文、英文、數學各一列，即使各班人數完全相同也不合併
+    for (const r of subs) expect(r.lead).toHaveLength(3);
+    expect(h).toContain('<th>第幾天</th><th>時段</th><th>科目</th>');
+    expect(h).toContain('<th>總計</th>');
+    expect(h).not.toMatch(/<td[^>]*>考[^<]*、[^<]*<\/td>/);
   });
 
   it('標籤：全白底、特殊情形一律淺黃、頁面紙張與格數對、注意事項固定', () => {
@@ -316,11 +322,11 @@ describe('v2.36 輸出紙面補強（B 類）', () => {
     const f = makeFixture();
     const p = buildSeatPages(f, 'class')[0]!;
     const c2 = p.cells.get('1-2')!;
-    expect(c2.corners).toEqual([{ kind: 'x', text: '英' }]);
-    expect(p.cells.get('1-3')!.corners).toEqual([{ kind: 'add', text: '＋數' }]);
+    expect(c2.corners).toEqual([{ kind: 'x', text: 'X 英' }]);
+    expect(p.cells.get('1-3')!.corners).toEqual([{ kind: 'add', text: '＋ 數' }]);
     const { text } = await unzip(await renderDocx({ seat: [p] }, { fonts, ...meta }));
     const xml = await text('word/document.xml');
-    expect(xml).toContain('>\u00a0英\u00a0<'.replace(/\u00a0/g, ' '));
+    expect(xml).toContain('> X 英 <');
     expect(xml).not.toContain('FFE08A'); // 座位表沒有淡黃底
   });
 
@@ -341,7 +347,7 @@ describe('v2.36 輸出紙面補強（B 類）', () => {
   it('#223 標籤同樣用單字角標，並把反標說明放在頁首', () => {
     const f = makeFixture();
     const lp = buildLabelPages(f, 'class')[0]!;
-    expect(lp.cells.find((c) => c.code === '0102')!.corners).toEqual([{ kind: 'x', text: '英' }]);
+    expect(lp.cells.find((c) => c.code === '0102')!.corners).toEqual([{ kind: 'x', text: 'X 英' }]);
     expect(renderPrintHtml({ label: [lp] }, meta)).not.toContain('pp-c mk');
   });
 

@@ -146,7 +146,7 @@ export function Step5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
       {resSel && (
         <div class="card stack">
           {statsBar}
-          <div><h3>座位表預覽</h3><p class="small muted">預備教室的考試座位只排「抽離考試」的人；抽離自習的人排在另外的參考座位頁（不印標籤），名單另出。</p></div>
+          <div><h3>座位表預覽</h3><p class="small muted">預備教室的考試座位只排「抽離考試」的人；抽離自習的人排在另外的自習座位頁（不印標籤），名單另出。</p></div>
           <Seg label="教室" value={resSel.id} onChange={(v) => { setRoomId(v); setOnly(''); }} options={roomOptions} />
           {(() => {
             const here = pulls.filter((x) => x.roomId === resSel.id);
@@ -157,7 +157,7 @@ export function Step5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
                 {here.length > 1 && <Seg label="抽離考試科目" value={cur.key} onChange={setPullKey} options={here.map((x) => ({ value: x.key, label: x.name }))} />}
                 <SeatChart model={m} title={`【${exam.name}】抽離考試（＋${cur.name}）座位表`} sub={`${resSel.name}　考生 ${m.count} 人`} pull />
               </>
-            ) : <Alert tone="info">這間預備教室目前沒有抽離考試的人：抽離自習的人只排參考座位頁、不印標籤，名單另出。</Alert>;
+            ) : <Alert tone="info">這間預備教室目前沒有抽離考試的人：抽離自習的人只排自習座位頁、不印標籤，名單另出。</Alert>;
           })()}
         </div>
       )}
@@ -201,7 +201,7 @@ export function Step5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
 
       {sc.applicable && (
         <div class="card stack">
-          <div><h3>各時段自習</h3><p class="small muted">不考的人也要有位子：被標 ✕ 的抽離自習去預備教室（有參考座位表，不出標籤），其他不考的人留在原班教室。</p></div>
+          <div><h3>各時段自習</h3><p class="small muted">不考的人也要有位子：被標 ✕ 的抽離自習去預備教室（有自習座位表，不出標籤），其他不考的人留在原班教室。</p></div>
           <StudySlotTable sc={sc} classNames={new Map(classes.map((c) => [c.no, c.name]))} />
           <StudyNeedDetail sc={sc} compact />
           {!sc.ok && <div class="row"><Button onClick={() => p.onStep(3)}>前往 ③ 教室設定，增加預備教室或座位</Button></div>}

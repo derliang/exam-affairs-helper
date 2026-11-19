@@ -212,7 +212,7 @@ function seatPages(c: Ctx): SeatPageModel[] {
 }
 
 /**
- * 自習參考座位頁（G36、DESIGN 10.26）：每個時段、每間有人自習的教室一頁；只出座位表、不印標籤。
+ * 自習座位頁（G36、DESIGN 10.26）：每個時段、每間有人自習的教室一頁；只出座位表、不印標籤。
  * WP-2（D141）：座位每個時段各自排（engine.studySeats 帶 slotId），不再全日固定、不保留去考試的人的座位。
  * 格內一律寫班級、座號、姓名；座位放不下的人不硬排，列在頁首小標籤「座位不足」。
  */
@@ -242,8 +242,8 @@ function studyRefPages(c: Ctx): SeatPageModel[] {
       const nos = [...per.keys()].sort((p, q) => p - q);
       const miss = unseated.get(key(s.id, room.id)) ?? [];
       pages.push({
-        kind: 'seat', title: `${c.exam.name}　${rn(c, room.id)}　自習參考座位（非考試座位）`, examName: c.exam.name, roomName: `${rn(c, room.id)}　參考座位`,
-        chips: ['參考座位（自習），非考試座位', `自習 ${here.size} 人`, slotHead(c, s),
+        kind: 'seat', title: `${c.exam.name}　${rn(c, room.id)}　自習座位（非考試座位）`, examName: c.exam.name, roomName: `${rn(c, room.id)}　自習座位`,
+        chips: ['自習座位，非考試座位', `自習 ${here.size} 人`, slotHead(c, s),
           ...(miss.length ? [`座位不足：缺 ${miss.length} 座，未排入 ${miss.map((m) => `${c.className(Number(m.slice(0, 2)))}${m.slice(2)}`).join('、')}`] : [])],
         detachStyle: false,
         rows: Math.max(...room.seats.map((p) => p.row)), depth: Math.max(...room.seats.map((p) => p.depth)),
