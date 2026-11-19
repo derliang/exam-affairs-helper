@@ -54,7 +54,7 @@ describe('學測：未參加＝自習，座位表上要有他的座位', () => {
     expect(m3.d).toBeLessThan(0);
     expect(m3.issues[0]!.text).toMatch(/01 班 10 號.*沒有去處/);
     expect(r.ledger.every((x) => !x.ok)).toBe(true);
-    const g = gateOf(r, 'anything');
+    const g = gateOf(r);
     expect(g.fails).toBeGreaterThan(0);
     expect(g.why).toMatch(/不通過.*須先修正/);
   });
