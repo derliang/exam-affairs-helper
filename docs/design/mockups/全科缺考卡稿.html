@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>名單比對全科缺考卡片 稿 v2.66</title>
+<title>名單比對全科缺考卡片 稿 v2.67</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700&display=swap">
 <style>
@@ -1190,9 +1190,9 @@ code{background:var(--sunken);padding:1px 5px;border-radius:6px}
 </head>
 <body>
 <header class="dhead">
-  <div><h1>名單比對「全科缺考」卡片 稿 v2.66</h1>
+  <div><h1>名單比對「全科缺考」卡片 稿 v2.67</h1>
   <p class="muted">考務小幫手・第 ② 步「名單比對」的全科缺考卡片，以及匯入後的提示條。只用假資料。</p></div>
-  <span class="badge">稿 v2.66・2026-11-19</span>
+  <span class="badge">稿 v2.67・2026-11-19</span>
 </header>
 
 <section class="sec" id="sum">
@@ -1200,7 +1200,7 @@ code{background:var(--sunken);padding:1px 5px;border-radius:6px}
   <ul>
     <li><b>使用者 2026-11-18 裁示（調度員轉達）</b>：拿掉學測「全科缺考不排座」選項，<b>每個人一律排座</b>（D142，程式 1.26.10 已實作）。</li>
     <li><b>定稿</b>：卡片只剩三樣東西——徽章「N 人全科缺考」、名單、一句「一律排座」說明。<b>不算差異、不計入「差異 N 筆」、不擋套用、沒有任何選項。</b></li>
-    <li><b>就是 1.26.10 現在的畫面</b>：這張稿是把它定為規範，程式不用再改。</li>
+    <li><b>版面就是 1.26.10 現在的畫面，只有徽章改色</b>：使用者 2026-11-19 裁示（調度員轉達）徽章由琥珀改<b>中性灰</b>（不帶色調的 <code>Badge</code>），程式只改這一個屬性。</li>
     <li>只用共用元件與既有樣式：卡片（<code>card stack</code>）、徽章（<code>Badge</code>）、資料格（<code>fact</code>）、說明小字（<code>hint</code>）、提示條（<code>Alert</code> 說明色）；不新增任何樣式。</li>
   </ul>
 </section>
@@ -1212,7 +1212,7 @@ code{background:var(--sunken);padding:1px 5px;border-radius:6px}
     <div class="frame w375"><div class="cap">手機 375</div><div class="app stack" style="gap:12px;padding-top:16px">
       <div class="ghost">（逐筆差異卡，不變）</div>
       <div class="card stack" style="gap:12px">
-        <div class="row" style="justify-content:space-between"><span class="badge b-warn">3 人全科缺考</span></div>
+        <div class="row" style="justify-content:space-between"><span class="badge">3 人全科缺考</span></div>
         <div class="fact"><b>考試名單</b>溫班 5 號　王小明、恭班 12 號　林大同、良班 30 號　陳美美（備註：全科缺考）</div>
         <span class="hint">一律排座：他們每節都是自習生，跟考生一樣有座位（不印標籤、不計領卷份數）。</span>
       </div>
@@ -1221,7 +1221,7 @@ code{background:var(--sunken);padding:1px 5px;border-radius:6px}
     <div class="frame wdesk"><div class="cap">電腦</div><div class="app stack" style="gap:12px;padding-top:16px">
       <div class="ghost">（逐筆差異卡，不變）</div>
       <div class="card stack" style="gap:12px">
-        <div class="row" style="justify-content:space-between"><span class="badge b-warn">3 人全科缺考</span></div>
+        <div class="row" style="justify-content:space-between"><span class="badge">3 人全科缺考</span></div>
         <div class="fact"><b>考試名單</b>溫班 5 號　王小明、恭班 12 號　林大同、良班 30 號　陳美美（備註：全科缺考）</div>
         <span class="hint">一律排座：他們每節都是自習生，跟考生一樣有座位（不印標籤、不計領卷份數）。</span>
       </div>
@@ -1258,7 +1258,7 @@ code{background:var(--sunken);padding:1px 5px;border-radius:6px}
     <tbody>
       <tr><td>什麼時候出現</td><td>考試名單裡有人「沒有任何考科」（全科缺考）時。學測、會考、分科都一樣。</td></tr>
       <tr><td>位置</td><td>名單比對：逐筆差異卡之後、按鈕列之前，另一張卡。第 ② 步名單下方：一條說明色提示條。</td></tr>
-      <tr><td>徽章</td><td>「N 人全科缺考」（<code>Badge</code>，沿用現行色調）。</td></tr>
+      <tr><td>徽章</td><td>「N 人全科缺考」，<b>中性灰</b>（<code>Badge</code> 不帶 <code>tone</code>；使用者 2026-11-19 裁示）。琥珀是「待處理」色，這張卡不需處理，所以不用琥珀。</td></tr>
       <tr><td>名單</td><td>資料格標題「考試名單」，內容「○班 N 號　姓名」以「、」串接，結尾「（備註：全科缺考）」。</td></tr>
       <tr><td>說明</td><td>「一律排座：他們每節都是自習生，跟考生一樣有座位（不印標籤、不計領卷份數）。」</td></tr>
       <tr><td>不算差異</td><td>不計入「差異 N 筆」，不擋「套用」，沒有任何選項或確認。</td></tr>
@@ -1271,7 +1271,7 @@ code{background:var(--sunken);padding:1px 5px;border-radius:6px}
   <h2>五、設計員的決定與待確認</h2>
   <ol>
     <li><b>定稿＝程式現況</b>：D142 施工時只刪控制項、沒有新增樣式，留下的三樣東西剛好就是派工要的內容，所以不另畫新版面（避免「又一套」）。</li>
-    <li><b>待確認（不影響這次定稿）</b>：徽章現在是琥珀色（<code>Badge tone="warn"</code>）。依設計規範，琥珀代表「待處理」；拿掉選項以後這張卡已經不需要處理。建議改成中性灰（不帶色調的 <code>Badge</code>），程式只改一個屬性。要不要改請使用者裁示；裁示前維持琥珀。</li>
+    <li><b>已裁示（v2.67）</b>：徽章原為琥珀（<code>Badge tone="warn"</code>），使用者 2026-11-19 裁示改中性灰（拿掉 <code>tone</code>）。程式要跟進：<code>src/ui/pages/Step2.tsx</code> 全科缺考卡的 <code>Badge</code> 拿掉 <code>tone="warn"</code>，其餘不動。</li>
   </ol>
 </section>
 
