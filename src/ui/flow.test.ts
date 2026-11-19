@@ -71,6 +71,16 @@ describe('步驟狀態（第N/6步、完成狀態）', () => {
     expect(f2.steps.map((s) => s.state)).toEqual(['done', 'cur', 'done', 'done', 'todo', 'todo']);
   });
 
+  it('#397：排座完成後下載過任意檔案，⑥ 才算完成；沒下載或排座過期都不算', () => {
+    const { d, e } = seated();
+    expect(flowOf(d, e, 1).steps[5]!.state).toBe('todo');
+    const dl = { ...e, downloadedAt: NOW };
+    const d2: Doc = { ...d, exams: d.exams.map((x) => (x.id === e.id ? dl : x)) };
+    expect(flowOf(d2, dl, 1).steps[5]!.state).toBe('done');
+    const stale: Doc = { ...d2, examFiles: { e1: { ...d2.examFiles!.e1!, entries: entries.slice(0, 6) } } };
+    expect(flowOf(stale, dl, 1).steps[5]!.state).toBe('todo');
+  });
+
   it('排座後 ⑤ 完成；改名單後 ⑤ 過期', () => {
     const { d, e } = seated();
     expect(flowOf(d, e, 5).steps[4]!.state).toBe('cur');
