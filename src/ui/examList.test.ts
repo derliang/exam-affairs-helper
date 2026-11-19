@@ -92,7 +92,7 @@ describe('新增：建議名稱、學年、沿用', () => {
   });
   it('學期寫入；沿用上一次的教室與標示規則，次別往後算', () => {
     const d = withExam('gsat', '學測第一次');
-    const prev = { ...d.exams[0]!, classroomIds: ['r1'], participation: 'partial' as const };
+    const prev = { ...d.exams[0]!, classroomIds: ['r1'] };
     const d1 = { ...d, exams: [prev] };
     expect(previousExam(d1, 'gsat')).toBe(prev);
     expect(previousExam(d1, 'bcct')).toBeUndefined();
@@ -101,7 +101,6 @@ describe('新增：建議名稱、學年、沿用', () => {
     const e = r.doc.exams[1]!;
     expect(e.semester).toBe('second');
     expect(e.classroomIds).toEqual(['r1']);
-    expect(e.participation).toBe('partial');
     expect(e.round).toBe(2);
     expect(e.classroomIds).not.toBe(prev.classroomIds);
   });

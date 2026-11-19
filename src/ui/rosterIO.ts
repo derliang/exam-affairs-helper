@@ -88,7 +88,7 @@ export function examsMadeStale(doc: Doc, division: Division, plan: ImportPlan, u
     .map((e) => e.name);
 }
 
-/** #206 模擬考卡片：考試名單（建立時的人數）與目前共用學生名單不一致就標「名單已更動」。部分參加只比對考生是否仍在名單內 */
+/** #206 模擬考卡片：考試名單（建立時的人數）與目前共用學生名單不一致就標「名單已更動」。只比對考生是否仍在名單內 */
 export function rosterChanged(doc: Doc, exam: ExamConfig): boolean {
   const entries = doc.examFiles?.[exam.id]?.entries;
   if (!entries?.length) return false;

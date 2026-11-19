@@ -11,7 +11,7 @@ import { previousExam as storePrevious, type Doc } from './store';
 const SUBJ = [{ id: 'chinese', name: '國文' }, { id: 'math', name: '數學' }];
 function exam(id: string, createdAt: string, patch: Partial<ExamConfig> = {}): ExamConfig {
   return {
-    id, name: `測試會考${id}`, kind: 'bcct', division: 'junior', semester: 'first', participation: 'all',
+    id, name: `測試會考${id}`, kind: 'bcct', division: 'junior', semester: 'first',
     subjects: SUBJ, markRules: [], classroomIds: ['A'], labelLayout: { paper: 'B4', cols: 6, rows: 8 }, createdAt, ...patch,
   };
 }

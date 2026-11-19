@@ -19,7 +19,7 @@ const noop = () => undefined;
 const SUBJ = [{ id: 'chinese', name: '國文' }, { id: 'math', name: '數學' }];
 const entries: ExamEntry[] = [1, 2, 3, 4].map((n) => ({ classNo: 1, seatNo: n, name: `測試${n}`, subjectIds: ['chinese', 'math'] }));
 const exam: ExamConfig = {
-  id: 'j1', name: '測試會考', kind: 'bcct', division: 'junior', semester: 'first', round: 1, participation: 'all',
+  id: 'j1', name: '測試會考', kind: 'bcct', division: 'junior', semester: 'first', round: 1,
   subjects: SUBJ, markRules: [], classroomIds: ['A'], labelLayout: { paper: 'B4', cols: 6, rows: 8 }, createdAt: NOW,
 };
 // 班級教室刻意不指定組別（國中部不該因此被擋）

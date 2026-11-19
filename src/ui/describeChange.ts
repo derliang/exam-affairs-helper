@@ -30,7 +30,6 @@ function examLabel(prev: Doc['exams'], next: Doc['exams']): string | undefined {
   if (!!a.archived !== !!b.archived) return b.archived ? '封存模擬考' : '還原模擬考';
   if (a.name !== b.name) return '修改考試名稱';
   if (!same(a.subjects, b.subjects)) return '修改考科表';
-  if (a.participation !== b.participation) return '修改參加方式';
   if (!same(a.classroomIds, b.classroomIds)) return '選用教室';
   if (!same(a.markRules, b.markRules)) return '修改個別覆寫';
   if (!same(a.labelLayout, b.labelLayout)) return '修改標籤版面';

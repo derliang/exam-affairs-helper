@@ -140,22 +140,21 @@ describe('名單比對', () => {
   const roster = [s(1, 1, '甲'), s(1, 2, '乙'), s(1, 3, '丙'), s(2, 1, '丁')];
   const entries = [e(1, 1, '甲'), e(1, 2, '乙改'), e(1, 9, '丙'), e(3, 1, '戊')];
 
-  it('全員參加：四種差異都列出', () => {
-    const { diffs } = compareRosters(roster, entries, 'all');
+  it('差異列出不一致與考試名單單邊；學生名單多出來的人不算差異（D125、D143）', () => {
+    const { diffs } = compareRosters(roster, entries);
     expect(diffs.map((d) => [d.kind, d.code])).toEqual([
       ['mismatch', '0102'],
       ['mismatch', '0109'], // 同名丙換了座號
-      ['only-in-roster', '0201'],
       ['only-in-exam', '0301'],
     ]);
   });
   it('部分參加：學生名單多出來的不算差異，只計未參加人數', () => {
-    const r = compareRosters(roster, entries, 'partial');
+    const r = compareRosters(roster, entries);
     expect(r.diffs.some((d) => d.kind === 'only-in-roster')).toBe(false);
     expect(r.notParticipating).toBe(1);
   });
   it('未處理完不能繼續；處理後的名單正確，輸入不被改動', () => {
-    const { diffs } = compareRosters(roster, entries, 'all');
+    const { diffs } = compareRosters(roster, entries);
     expect(allResolved(diffs)).toBe(false);
     expect(() => applyDiffs(roster, entries, diffs)).toThrow();
     const choose = (d: RosterDiff): RosterDiff => {
@@ -164,7 +163,8 @@ describe('名單比對', () => {
       if (d.code === '0201') return { ...d, choice: 'use-exam' };
       return { ...d, choice: 'manual', edited: s(3, 2, '戊') };
     };
-    const done = diffs.map(choose);
+    // 舊存檔可能留有「學生名單單邊」差異（D143 起不再產生），套用時仍照舊處理
+    const done = [...diffs.map(choose), choose({ kind: 'only-in-roster', code: '0201', roster: s(2, 1, '丁') })];
     expect(allResolved(done)).toBe(true);
     const r = applyDiffs(roster, entries, done);
     expect(r.students.map((x) => `${x.classNo}-${x.seatNo}-${x.name}`)).toEqual(['1-1-甲', '1-2-乙改', '1-3-丙', '3-2-戊']);

@@ -1,9 +1,9 @@
 /**
- * 名單比對（D42、D54、D64）：學生名單 vs 考試名單。
- * 全員參加：學生名單有、考試名單沒有 → 差異；部分參加：這類不算差異（只回報未參加人數）。
+ * 名單比對（D42、D54、D125）：學生名單 vs 考試名單。
+ * 學生名單有、考試名單沒有的人不算差異，只回報未參加人數（D125 取消「全員／部分參加」切換；D143 拿掉死欄位 participation）。
  * 每筆差異由使用者選：以考試名單為準／以學生名單為準／手動編輯；全部處理完才能繼續排座。
  */
-import type { ExamEntry, Participation, RosterDiff, Student } from '../data/types';
+import type { ExamEntry, RosterDiff, Student } from '../data/types';
 import { studentCode } from '../data/helpers';
 
 type Id = Pick<Student, 'classNo' | 'seatNo' | 'name'>;
@@ -12,7 +12,7 @@ const codeOf = (x: Id) => studentCode(x.classNo, x.seatNo);
 
 export interface CompareResult {
   diffs: RosterDiff[];
-  /** 部分參加時，學生名單有但沒報名的人數 */
+  /** 學生名單有但沒報名的人數（未參加） */
   notParticipating: number;
 }
 
@@ -29,7 +29,6 @@ const groupKeyOf = (g?: string): string => (g ?? '').trim().charAt(0).toUpperCas
 export function compareRosters(
   roster: readonly Student[],
   entries: readonly ExamEntry[],
-  participation: Participation,
   opts: CompareOptions = {},
 ): CompareResult {
   const byCode = new Map(roster.map((s) => [codeOf(s), s]));
@@ -78,10 +77,7 @@ export function compareRosters(
       diffs.push({ kind: 'only-in-exam', code: codeOf(e), exam: id(e) });
     }
   }
-  let notParticipating = 0;
-  if (participation === 'all') {
-    for (const s of leftover) diffs.push({ kind: 'only-in-roster', code: codeOf(s), roster: id(s) });
-  } else notParticipating = leftover.length;
+  const notParticipating = leftover.length;
 
   diffs.sort((a, b) => a.code.localeCompare(b.code));
   return { diffs, notParticipating };
@@ -236,18 +232,17 @@ const sig = (d: RosterDiff): string => {
 };
 
 /**
- * 依目前輸入（共用名單、考試名單、參加方式）重算差異（#60）。
+ * 依目前輸入（共用名單、考試名單）重算差異（#60）。
  * 只有「種類、編號、兩邊內容」完全相同的舊差異才沿用先前的選擇，不會把選擇套到不同考生。
  */
 export function refreshDiffs(
   roster: readonly Student[],
   entries: readonly ExamEntry[],
-  participation: Participation,
   stored: readonly RosterDiff[],
   opts: CompareOptions = {},
 ): RosterDiff[] {
   const old = new Map(stored.map((d) => [sig(d), d]));
-  return compareRosters(roster, entries, participation, opts).diffs.map((d) => {
+  return compareRosters(roster, entries, opts).diffs.map((d) => {
     const o = old.get(sig(d));
     return o?.choice !== undefined ? { ...d, choice: o.choice, ...(o.edited ? { edited: o.edited } : {}), ...(o.targetClassNo !== undefined ? { targetClassNo: o.targetClassNo } : {}) } : d;
   });

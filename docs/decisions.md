@@ -307,3 +307,9 @@
   ③**舊存檔相容**：存檔裡的 `seatFullyAbsent` 欄位留著也不讀（不改寫存檔）。舊存檔若在學測選過「不排座」，升級後那幾位全科缺考者會進排座名單，該考試顯示「排座過期」，重排一次即可（與 D137⑥ 同類）；版本碼舊鍵 `seatFullyAbsent: true`（`core/run.ts`，代表「輸入有沒考科的人」）不變，所以沒選過「不排座」的考試不會變過期。
   ④**對帳**：「名冊上沒排座＝遺漏」的檢查保留當防呆（正常不會再有），訊息拿掉「② 選了不排座」。
   ⑤**驗證**：sha256 逐位比對（PR #423 的 head vs 本 PR）見 `docs/dispatch/完工-引擎包.md`；改寫測試：原「選不排座」的測試改驗「舊存檔帶 `seatFullyAbsent: false` 也照排」（`engineWp1`、`seating`、`statsExportGuard`、`lookup`、`listPages`）。
+- **D143 拿掉死欄位 `participation`（「全員／部分參加」）（#400 WP-9；調度員 2026-11-19 派工；v1.26.11；完成 D125 的清理）**：
+  ①**現況**：D125 取消「誰會參加」切換後，所有呼叫端都傳 `'partial'` 給 `compareRosters`／`refreshDiffs`，`ExamConfig.participation` 沒有任何程式讀它決定行為（只在「沿用上次設定」「變更說明」被複製或比較），`compare.ts` 的 `'all'` 分支（學生名單單邊列為差異）永遠不會執行。
+  ②**改法**：刪 `Participation` 型別與 `ExamConfig.participation`；`compareRosters(roster, entries, opts)`、`refreshDiffs(roster, entries, stored, opts)` 拿掉參數，學生名單有、考試名單沒有的人一律只計未參加人數（`notParticipating`）；`carry.ts`、`describeChange.ts`（「修改參加方式」）、`store.ts`、`testData.ts`、`export/fixtures.ts` 同步刪除；相關註解改寫。
+  ③**舊存檔相容**：存檔裡的 `participation` 欄位留著也不讀（不改寫存檔）。差異種類 `'only-in-roster'` **保留**，只為讀舊存檔：舊存檔若留有這類差異，`refreshDiffs` 重算後就消失、判為過期（測試 `rosterCompare.test.ts`）；`applyDiffs` 對它的處理照舊（測試 `import.test.ts`）。
+  ④**畫面**：沒有變化（切換鈕早在 D125 拿掉）；考試列表與 ② 不受影響。
+  ⑤**驗證**：sha256 逐位比對（main 9c79ad4 vs 本 PR）見 `docs/dispatch/完工-引擎包.md`〈PR 3〉；改寫測試：原本以 `'all'` 驗「學生名單單邊列為差異」的 5 項改驗新行為與舊存檔相容。
