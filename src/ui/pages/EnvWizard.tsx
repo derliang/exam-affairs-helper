@@ -200,11 +200,15 @@ function Step4(p: SubProps & { divs: Division[]; onChange: (d: Doc) => void }) {
             <b>{DIV_LABEL[div]}教室</b>
             <RoomList rooms={p.doc.settings.classrooms} paper={p.doc.settings.defaultLabelPaper} division={div} track="none"
               classes={p.doc.settings.classes} exams={p.doc.exams} inUse={(id) => p.doc.exams.some((e) => e.classroomIds.includes(id))}
-              onChange={(classrooms) => p.onChange({ ...p.doc, settings: { ...p.doc.settings, classrooms } })}
+              onChange={(classrooms) => p.onChange({ ...p.doc, settings: { ...p.doc.settings, classrooms } })} noSeatToggle
               extra={(r) => {
-                const n = r.kind === 'class' ? count.get(r.name) : undefined;
+                const n = r.kind === 'class' && !r.noSeat ? count.get(r.name) : undefined;
                 return n === undefined ? null : <Badge tone={r.seatCount < n ? 'danger' : 'ok'}>學生 {n} 人{r.seatCount < n ? `・座位不足 ${n - r.seatCount}` : ''}</Badge>;
               }} />
+            {(() => {
+              const skip = p.doc.settings.classrooms.filter((r) => r.kind === 'class' && r.noSeat && count.has(r.name));
+              return skip.length ? <Alert tone="info">{skip.length} 間班級教室不排座：{skip.map((r) => r.name).join('、')}。這些教室不會用來放考生，原本在這個班的學生會排進其他班級教室；可隨時按「改回排座」。</Alert> : null;
+            })()}
           </div>
         );
       })}
