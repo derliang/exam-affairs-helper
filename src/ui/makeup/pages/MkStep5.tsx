@@ -23,7 +23,7 @@ export function MkStep5(p: { s: MakeupSession; onChange: (s: MakeupSession) => v
     return (
       <section class="stack">
         <div class="card stephead"><div><h2>⑤ 考程編排</h2><p class="small muted">系統建議節次與教室，你可以調整。</p></div></div>
-        <EmptyState title="還沒有可排的名單" action={<Button kind="primary" onClick={() => p.onStep(2)}>去 ② 匯入名單</Button>}>匯入並處理完問題列後，系統會依各科人數與教室容量建議節次與教室。</EmptyState>
+        <EmptyState title="還沒有可排的名單" action={<Button kind="primary" onClick={() => p.onStep(2)}>到 匯入名單 ›</Button>}>匯入並處理完問題列後，系統會依各科人數與教室容量建議節次與教室。</EmptyState>
       </section>
     );
   }
@@ -53,7 +53,7 @@ export function MkStep5(p: { s: MakeupSession; onChange: (s: MakeupSession) => v
 
       {lost > 0 && (
         <div class="card stack" style="border-color:var(--danger-line);background:var(--danger-soft)">
-          <Alert tone="danger" action={<Button small onClick={() => p.onStep(3)}>去 ③ 加教室</Button>}><b>有 {lost} 筆人次排不進去（遺漏）</b>：教室座位不夠或年級沒指定考日。下面是前 8 筆：</Alert>
+          <Alert tone="danger" action={<Button small onClick={() => p.onStep(3)}>到 教室 ›</Button>}><b>有 {lost} 筆人次排不進去（遺漏）</b>：教室座位不夠或年級沒指定考日。下面是前 8 筆：</Alert>
           <ul class="small">{schedule.unplaced.slice(0, 8).map((u) => <li key={`${u.studentId}${u.subject}`}>學號 {u.studentId}　{u.subject}　{u.reason}</li>)}</ul>
         </div>
       )}
