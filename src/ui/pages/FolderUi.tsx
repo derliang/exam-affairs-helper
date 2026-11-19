@@ -4,7 +4,7 @@
  * 「搬到新位置」＝把目前這份複製到空資料夾後改用；三者都不會刪除任何資料夾。
  */
 import { useRef, useState } from 'preact/hooks';
-import type { FolderPick, FsRepository } from '../../data';
+import type { FolderPick, FsRepository, RestoreProblem } from '../../data';
 import { Alert, Badge, Button, Modal, More } from '../components';
 import { formatModified } from '../examList';
 
@@ -60,6 +60,35 @@ export function RestoreMissing(p: { name: string; onRelink: () => void; onOther:
         <Button disabled={!!p.busy} onClick={p.onOther}>選另一個資料夾</Button>
       </div>
       <p class="small muted">選另一個資料夾＝改用另一份資料，不會帶舊資料過去。</p>
+    </div>
+  );
+}
+
+/**
+ * 「使用上次資料夾」沒成功時，用白話說明真正的原因並給下一步（#464）。找不到資料夾另有 RestoreMissing；
+ * 這裡處理：要再允許一次、剛剛按了不允許、這個瀏覽器沒記住資料夾、其他錯誤。
+ */
+export function RestoreNeedsAction(p: { problem: Exclude<RestoreProblem, { kind: 'missing' }>; onRetry: () => void; onOther: () => void; busy?: boolean }) {
+  const q = p.problem;
+  const has = q.kind !== 'noHandle';
+  const title = q.kind === 'needPermission' ? '請再允許一次，就能接回上次的資料夾'
+    : q.kind === 'denied' ? '沒有取得資料夾的讀寫許可'
+    : q.kind === 'noHandle' ? '這個瀏覽器沒有記住上次的資料夾'
+    : '上次的資料夾打不開';
+  const body = q.kind === 'needPermission' ? '為了保護你的電腦，Chrome 每次重開網頁都會再問一次能不能編輯這個資料夾。請按下方按鈕，再在 Chrome 跳出的視窗按「允許」。'
+    : q.kind === 'denied' ? '你剛剛按了「不允許」，或 Chrome 沒有跳出視窗。可以再按一次，並在 Chrome 跳出的視窗按「允許」；若一直沒有視窗，請改用「選擇資料夾」重新選。'
+    : q.kind === 'noHandle' ? '常見原因：第一次使用、清除過瀏覽資料、使用無痕視窗，或換了瀏覽器。你的資料沒有消失，請按「選擇資料夾」選回原本存資料的那個資料夾。'
+    : '瀏覽器回報了一個讀取問題，資料沒有消失。可以再試一次，或用「選擇資料夾」重新選。';
+  return (
+    <div class="card stack folder-lost-card" role="alert">
+      <h2 style="font-size:20px">{title}</h2>
+      {q.name && <div class="folder-chip" title="上次使用的資料夾">{q.name}</div>}
+      <p>{body}</p>
+      {q.kind === 'error' && <p class="small muted">技術訊息：{q.detail}</p>}
+      <div class="row">
+        {has && <Button kind="primary" disabled={!!p.busy} onClick={p.onRetry}>{q.kind === 'needPermission' ? '允許使用上次資料夾' : '再試一次'}</Button>}
+        <Button kind={has ? 'default' : 'primary'} disabled={!!p.busy} onClick={p.onOther}>選擇資料夾</Button>
+      </div>
     </div>
   );
 }
