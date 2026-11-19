@@ -294,7 +294,7 @@ export interface MakeupSchedule {
 
 // ───────────── 檢核 ─────────────
 
-/** 燈號：綠＝通過、琥珀＝警示（須逐項確認）、紅＝不通過（擋下載）、待執行（C-14 尚無檔可讀） */
+/** 燈號：綠＝通過、琥珀＝警示（只提示、不擋下載，D153）、紅＝不通過（擋下載）、待執行（C-14 尚無檔可讀） */
 export type CheckStatus = 'green' | 'amber' | 'red' | 'pending';
 
 export interface CheckDetail {

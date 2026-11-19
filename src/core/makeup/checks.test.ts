@@ -260,29 +260,28 @@ describe('各項紅燈案例', () => {
   });
 });
 
-describe('下載閘門（6.2：紅燈不可放行、琥珀逐項確認、C-14 待執行不擋）', () => {
+describe('下載閘門（6.2、D153：紅燈不可放行、琥珀只提示不擋、C-14 待執行不擋）', () => {
   const b = setup();
   const cs = runMakeupChecks(b.input);
 
-  it('有琥珀未確認 → 不可下載；確認後可下載', () => {
+  it('只有琥珀 → 可下載（不用確認），琥珀列在 warnings 只提示', () => {
     const g = downloadGate(cs);
-    expect(g.allowed).toBe(false);
+    expect(g.allowed).toBe(true);
     expect(g.blockers).toEqual([]);
-    expect(g.needConfirm.map((c) => c.id)).toEqual(['C-11']);
-    expect(downloadGate(cs, new Set(['C-11'])).allowed).toBe(true);
+    expect(g.warnings.map((c) => c.id)).toEqual(['C-11']);
   });
 
   it('紅燈即使「確認」也不可放行', () => {
     const red = cs.map((c) => (c.id === 'C-3' ? { ...c, status: 'red' as const } : c));
-    const g = downloadGate(red, new Set(['C-3', 'C-11']));
+    const g = downloadGate(red);
     expect(g.allowed).toBe(false);
     expect(g.blockers.map((c) => c.id)).toEqual(['C-3']);
   });
 
   it('C-14 以外的項目「待執行」或缺項 → 視同不通過', () => {
     const pending = cs.map((c) => (c.id === 'C-5' ? { ...c, status: 'pending' as const } : c));
-    expect(downloadGate(pending, new Set(['C-11'])).blockers.map((c) => c.id)).toEqual(['C-5']);
+    expect(downloadGate(pending).blockers.map((c) => c.id)).toEqual(['C-5']);
     const missing = cs.filter((c) => c.id !== 'C-9');
-    expect(downloadGate(missing, new Set(['C-11'])).blockers.map((c) => c.id)).toEqual(['C-9']);
+    expect(downloadGate(missing).blockers.map((c) => c.id)).toEqual(['C-9']);
   });
 });
