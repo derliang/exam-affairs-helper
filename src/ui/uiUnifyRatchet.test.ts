@@ -71,8 +71,11 @@ describe('#413 第 8 項：開／關控制', () => {
   });
 });
 
-describe('#413 第 10 項：窄寬度不用橫向捲軸', () => {
-  it('class="scroll" 只准減少，不准增加（現況 23 處；改成卡片堆疊後逐步降到 0）', () => {
-    expect(hits(/class="scroll[ "]/).length).toBeLessThanOrEqual(23);
+describe('#413 第 10 項：窄寬度不用橫向捲軸（稿 v2.75，D168）', () => {
+  it('class="scroll" 已全部改成卡片／窄表，不准再出現', () => {
+    expect(hits(/class="scroll[ "]/)).toEqual([]);
+  });
+  it('程式裡不准再寫 overflow-x:auto（寬度問題用 .rtw＋.rt-t 卡片解；授權全文 pre 內捲在 CSS 裡，不在這裡）', () => {
+    expect(hits(/overflow-x:\s*auto/)).toEqual([]);
   });
 });

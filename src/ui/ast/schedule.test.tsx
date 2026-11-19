@@ -471,7 +471,7 @@ describe('分科 AST-3 畫面', () => {
     const f = patch(doc, exam, { astLocks: { seats: [{ slotId: 'p1', code: '0101', roomId: a.roomId, row: 6, depth: 6 }, { slotId: 'p1', code: '0102', roomId: a.roomId, row: 6, depth: 6 }] } });
     const html = renderToString(<AstStep5 doc={f.doc} exam={f.exam} onChange={noop} onStep={noop} />);
     for (const t of ['鎖定與規則衝突', '違反的規則', '同一時段同一座位只能坐一個人', '程式不會自己解除鎖定']) expect(html).toContain(t);
-    expect(html).toContain('<td>6-6</td>');
+    expect(html).toContain('data-label="座位">6-6</td>');
   });
   it('⑥ 有版本清單；階段卡在規劃中可定案', () => {
     const html = renderToString(<AstStep6 doc={doc} exam={exam} onGoStep={noop} onChange={noop} />);

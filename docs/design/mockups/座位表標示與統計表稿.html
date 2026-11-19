@@ -273,9 +273,9 @@ document.getElementById('st2').innerHTML='<table class="st">'+head()+'<tbody>'+
 row('<td rowspan="2">11/17（二）</td><td rowspan="2">第 1 天</td><td>時段二</td><td>數學 B</td>',[4,19,16])+
 row('<td>時段三</td><td>自然</td>',[0,0,2],1)+
 '<tr class="foot"><td class="l" colspan="4">使用人數（不重複）</td><td class="num">4</td><td class="num">19</td><td class="num">16</td><td class="num tot">39</td></tr></tbody></table>';
-var S=1.6;
+var S=2.2;
 function crop(ok,pw,cw,ch,m){var w=cw*S,h=ch*S,px=m*S,off=ok?px:0;
- return '<div class="crop'+(ok?' ok':'')+'" style="width:'+(w+(ok?4:0))+'px;height:'+(h+4)+'px"><div class="pg" style="left:'+(-off)+'px;top:0;width:'+(pw*S)+'px;height:'+(h+40)+'px"><div class="mg" style="width:'+px+'px"></div><div class="lcell" style="left:'+px+'px;top:0;width:'+w+'px;height:'+h+'px"><div><span style="font-size:10px">2-5</span><b>0107</b><span style="font-size:12px">勤｜甲生07</span></div></div></div></div>'}
+ return '<div class="crop'+(ok?' ok':'')+'" style="width:'+(w+(ok?4:0))+'px;height:'+(h+4)+'px"><div class="pg" style="left:'+(-off)+'px;top:0;width:'+(pw*S)+'px;height:'+(h+40)+'px"><div class="mg" style="width:'+px+'px"></div><div class="lcell" style="left:'+px+'px;top:0;width:'+w+'px;height:'+h+'px"><div style="line-height:1.15"><span style="font-size:10px">2-5</span><b style="font-size:24px">0107</b><span style="font-size:12px;white-space:nowrap">勤｜甲生07</span></div></div></div></div>'}
 function pair(ok){var h='';[['B4',250,33,36],['A3',297,39,43]].forEach(function(p){h+='<div style="margin:6px 0"><b>'+p[0]+'</b><span class="small">　每格約 '+p[2]+'×'+p[3]+' mm</span>'+crop(ok,p[1],p[2],p[3],10.5)+'</div>'});return h}
 document.getElementById('c467bad').innerHTML=pair(0);document.getElementById('c467ok').innerHTML=pair(1);
 })();
