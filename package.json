@@ -1,7 +1,7 @@
 {
   "name": "exam-affairs-helper",
   "private": true,
-  "version": "1.26.22",
+  "version": "1.26.23",
   "type": "module",
   "scripts": {
     "dev": "vite",

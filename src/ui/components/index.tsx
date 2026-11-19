@@ -5,7 +5,8 @@ import { classColorVars } from '../colors';
 import { STEP_BLURBS, UNDO_HINT, type ConfirmCopy, type Flow, type NextAction } from '../flow';
 import type { StepNo } from '../seating';
 
-type BtnKind = 'primary' | 'danger' | 'ghost' | 'default';
+/** accent-outline＝主色外框鈕（稿 v2.70 〈③ 還原預設〉、DESIGN §10.38）：比預設淡灰底明顯、又不跟主鈕搶 */
+type BtnKind = 'primary' | 'danger' | 'ghost' | 'default' | 'accent-outline';
 
 export function Button(p: {
   kind?: BtnKind; small?: boolean; disabled?: boolean; onClick?: () => void; children: ComponentChildren; title?: string;

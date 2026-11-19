@@ -25,7 +25,8 @@ export function defaultSeatGrid(n: number): { rows: number; depth: number } {
   return best ?? { rows: DEFAULT_SIDE_MAX, depth: DEFAULT_SIDE_MAX };
 }
 
-export interface ClassRoomRow { cls: ClassInfo; students: number; room?: Classroom; inExam: boolean }
+/** skipped＝班級教室標了「不排座」（D161）且這次考試沒勾選：不算缺教室，也不自動補進本次考試；③ 勾選了就以勾選為準（inExam） */
+export interface ClassRoomRow { cls: ClassInfo; students: number; room?: Classroom; inExam: boolean; skipped: boolean }
 
 /** 這次考試部別每個「有學生的班級」對應的班級教室（沒有就沒有 room） */
 export function classRoomRows(doc: Doc, exam: ExamConfig): ClassRoomRow[] {
@@ -38,19 +39,20 @@ export function classRoomRows(doc: Doc, exam: ExamConfig): ClassRoomRow[] {
     .filter((r) => r.students > 0)
     .map((r) => {
       const room = rooms.find((x) => x.name === r.cls.name);
-      return { ...r, ...(room ? { room } : {}), inExam: !!room && exam.classroomIds.includes(room.id) };
+      const inExam = !!room && exam.classroomIds.includes(room.id);
+      return { ...r, ...(room ? { room } : {}), inExam, skipped: !!room?.noSeat && !inExam };
     });
 }
 
 /** 名單有學生、但還沒有班級教室（或沒列入本次考試）的班級數 */
-export const missingClassRooms = (doc: Doc, exam: ExamConfig): number => classRoomRows(doc, exam).filter((r) => !r.inExam).length;
+export const missingClassRooms = (doc: Doc, exam: ExamConfig): number => classRoomRows(doc, exam).filter((r) => !r.inExam && !r.skipped).length;
 
 /**
  * 補齊班級教室：沒有就新增進共用教室清單、都列入本次考試。已列入的不動；本次考試已選的其他教室（預備、特殊教室）保留。
  * 沒有任何要補的就回傳原 doc（不產生多餘的修改）。
  */
 export function syncClassRooms(doc: Doc, exam: ExamConfig): Doc {
-  const rows = classRoomRows(doc, exam).filter((r) => !r.inExam);
+  const rows = classRoomRows(doc, exam).filter((r) => !r.inExam && !r.skipped);
   if (!rows.length) return doc;
   let rooms = doc.settings.classrooms;
   const add: string[] = [];

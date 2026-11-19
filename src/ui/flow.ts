@@ -217,6 +217,10 @@ export const confirmCopy = {
   deleteSubject: (name: string): ConfirmCopy => ({
     title: '刪除這個考科？', body: `將從考科表刪除「${name}」，名單裡這一科的資料不會再用於排座與標示。`, confirm: '刪除',
   }),
+  /** #364、D156：共用設定「節次與時長」還原預設；改過／已與預設相同兩種文案（稿 v2.70〈③〉） */
+  resetSchedule: (label: string, isDefault: boolean): ConfirmCopy => (isDefault
+    ? { title: '已與預設相同', body: '目前已與預設相同，不會有任何變更。', confirm: '確定' }
+    : { title: '還原預設節次？', body: `要把「${label}」的節次與時長還原成預設嗎？你改過的科目與時長會被取代（上方「↶ 復原」可回上一步）。`, confirm: '還原預設' }),
   resetSubjects: (): ConfirmCopy => ({
     title: '還原本次的預設考科？', body: '你對本次考科表做的新增、修改、刪除都會被取代成預設值。', confirm: '還原本次考科',
   }),
