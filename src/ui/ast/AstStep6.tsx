@@ -104,12 +104,11 @@ export function AstStep6(p: { doc: Doc; exam: ExamConfig; onGoStep: (n: 2 | 3 | 
   }, [outs, tab, idx, paper]);
   const tabs: { value: Tab; label: string }[] = [{ value: 'label', label: '標籤' }, { value: 'ann', label: '班級公告' }, { value: 'reg', label: '試務清冊' }, { value: 'study', label: '自習名單' }];
   const nFiles = keys.filter((k) => outs && pagesOf(outs, k) > 0).length;
-  // G35 考前對帳：進入第 6 步與資料變動後自動重算，另有「重新對帳」；紅燈擋下載、琥珀須逐項確認
+  // G35 考前對帳：進入第 6 步與資料變動後自動重算，另有「重新對帳」；只有紅燈擋下載，琥珀警示只提示（D149①）
   const [recheck, setRecheck] = useState(0);
-  const [ack, setAck] = useState('');
   const rec = useMemo(() => reconcile(doc, exam, outs), [doc, exam, outs, recheck]);
   const at = useMemo(() => stampNow(), [rec]);
-  const gate = gateOf(rec, ack);
+  const gate = gateOf(rec);
   const noDl = !outs || planning || keys.length === 0 || gate.why !== '';
   const noDlWhy = gate.why && outs && !planning && keys.length > 0 ? gate.why : !outs ? '還不能下載，請先處理上方的問題。' : planning ? '規劃中只能預覽，請先確認定案。' : '尚未勾選任何下載內容，請先在上方勾選。';
   const overRooms = roomsOverLabel(exam.classroomIds.map((id) => doc.settings.classrooms.find((c) => c.id === id)).filter((c): c is NonNullable<typeof c> => !!c));
@@ -118,7 +117,7 @@ export function AstStep6(p: { doc: Doc; exam: ExamConfig; onGoStep: (n: 2 | 3 | 
   return (
     <section class="stack">
       <StepHead title="⑥ 下載" blurb={AST_STEP_BLURBS[5]} />
-      <ReconcilePanel r={rec} gate={gate} acked={gate.warns.length > 0 && ack === gate.fingerprint} at={at} busy={busy} onRecheck={() => setRecheck((n) => n + 1)} onGo={(n) => p.onGoStep(n)} onConfirmDownload={(fp, fmt) => { setAck(fp); void go(fmt); }} />
+      <ReconcilePanel r={rec} gate={gate} at={at} onRecheck={() => setRecheck((n) => n + 1)} onGo={(n) => p.onGoStep(n)} />
       {blockers.map((b) => (
         <Alert key={b.text} tone="danger" action={<Button small kind="primary" onClick={() => p.onGoStep(b.step)}>{b.step === 2 ? '去 ② 考試名單' : b.step === 3 ? '去 ③ 教室' : '去 ⑤ 看方案'}</Button>}><b>還不能下載：</b>{b.text}</Alert>
       ))}
