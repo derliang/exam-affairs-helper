@@ -318,7 +318,7 @@ describe('分科輸出：綜合教室座位表（#220）', () => {
     expect(p.slotMode).toBe(true);
     expect(p.stats.table.headLabel).toBe('時段');
     const rows = p.stats.table.rows;
-    expect(rows[rows.length - 1]!.label).toBe('不重複人數');
+    expect(rows[rows.length - 1]!.label).toBe('使用人數（不重複）');
     expect(rows[rows.length - 1]!.total).toBe(p.stats.total);
     for (const row of rows) expect(row.per.reduce((a, b) => a + b, 0)).toBe(row.total);
     // 每時段一列的人數加總＝方案中在這間綜合教室的考試筆數
@@ -332,6 +332,6 @@ describe('分科輸出：綜合教室座位表（#220）', () => {
     const res = await runAstExport(o, ['seat'], 'word', 'B4', '分科', async () => ({ fonts: { regular: new Uint8Array(readFileSync(new URL('../../export/fonts/NotoSansTC-Regular-big5.ttf', import.meta.url))), bold: new Uint8Array(readFileSync(new URL('../../export/fonts/NotoSansTC-Bold-core.ttf', import.meta.url))) }, has: () => true }));
     expect(res.map((f) => f.name)).toEqual(['分科-綜合教室座位表.docx']);
     const html = await runAstExport(o, ['seat'], 'pdf', 'B4', '分科', async () => { throw new Error('x'); });
-    expect(String(html[0]!.data)).toContain('不重複人數');
+    expect(String(html[0]!.data)).toContain('使用人數（不重複）');
   });
 });

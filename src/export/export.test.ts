@@ -160,7 +160,7 @@ describe('Word 輸出（D44/D45）', () => {
     );
     expect(doc).toContain('第4排');
     expect(doc).toContain('0101');
-    expect(doc).toContain('本教室考生人數');
+    expect(doc).not.toContain('本教室考生人數'); // D170：移除該列
     expect(doc).toContain('<w:b/>');
     const footers = await Promise.all(Object.keys(z.files).filter((n) => /word\/footer\d+\.xml/.test(n)).map((n) => text(n)));
     expect(footers.length).toBeGreaterThan(0);
@@ -258,7 +258,7 @@ describe('PDF 列印 HTML：照稿件版面（設計系統成品頁「座位表�
     expect(h).toContain('不考英文 1 人');
     expect(h).toContain('加考數學 1 人');
     expect(h).toContain('講臺');
-    expect(h).toContain('<table class="pp-st">');
+    expect(h).toContain('<table class="pp-st"');
     expect(h).toContain('資料版本碼：A1B2C3D4');
   });
 
@@ -267,9 +267,9 @@ describe('PDF 列印 HTML：照稿件版面（設計系統成品頁「座位表�
     expect(h.indexOf('>0105<')).toBeGreaterThan(-1);
     expect(h).toContain('pp-e'); // 空位
     expect(h).not.toContain('pp-c mk'); // v2.36：拿掉整格粗框
-    expect(h).toContain('class="pp-cn"');
-    expect(h).toContain('<span class="pp-mk x">X 英</span>');
-    expect(h).toContain('<span class="pp-mk add">＋ 數</span>');
+    expect(h).toContain('class="pp-band"'); // D170：標示帶，不再浮動
+    expect(h).toMatch(/<span class="pp-mk x" style="font-size:[\d.]+pt">X 英<\/span>/);
+    expect(h).toMatch(/<span class="pp-mk add" style="font-size:[\d.]+pt">＋ 數<\/span>/);
     expect(h).not.toContain('X 英文'); // 也沒有整句小牌
   });
 
@@ -278,12 +278,12 @@ describe('PDF 列印 HTML：照稿件版面（設計系統成品頁「座位表�
     const p = buildSeatPages(f, 'class')[0]!;
     const h = renderPrintHtml({ seat: [p] }, meta);
     expect(p.stats.table.leadHeads).toEqual(['第幾天', '時段', '科目']);
-    expect(p.stats.table.rows[0]!.label).toBe('本教室考生人數');
-    const subs = p.stats.table.rows.slice(1);
+    expect(p.stats.table.rows.some((r) => r.label === '本教室考生人數')).toBe(false); // D170
+    const subs = p.stats.table.rows;
     expect(subs.length).toBe(3); // 國文、英文、數學各一列，即使各班人數完全相同也不合併
     for (const r of subs) expect(r.lead).toHaveLength(3);
     expect(h).toContain('<th>第幾天</th><th>時段</th><th>科目</th>');
-    expect(h).toContain('<th>總計</th>');
+    expect(h).toContain('<th class="t">總計</th>');
     expect(h).not.toMatch(/<td[^>]*>考[^<]*、[^<]*<\/td>/);
   });
 
@@ -313,8 +313,8 @@ describe('PDF 列印 HTML：照稿件版面（設計系統成品頁「座位表�
     const h = renderPrintHtml({ seat: [p] }, meta);
     expect(h).toContain('pp-pe');
     expect(h).toContain('格內每個人一區');
-    expect(h).toContain('<table class="pp-st">');
-    expect(h).toContain('不重複人數');
+    expect(h).toContain('<table class="pp-st"');
+    expect(h).toContain('使用人數（不重複）');
   });
 });
 
@@ -365,8 +365,8 @@ describe('v2.36 輸出紙面補強（B 類）', () => {
     const f = makeFixture();
     const p = buildSeatPages(f).find((x) => x.slotMode)!;
     const t = p.stats.table;
-    expect(t.headLabel).toBe('時段');
-    expect(t.rows[t.rows.length - 1]!.label).toBe('不重複人數');
+    expect(t.leadHeads).toEqual(['第幾天', '時段', '科目']);
+    expect(t.rows[t.rows.length - 1]!.label).toBe('使用人數（不重複）');
     expect(t.rows[t.rows.length - 1]!.total).toBe(p.stats.total);
   });
 

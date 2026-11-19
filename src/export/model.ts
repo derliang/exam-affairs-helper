@@ -22,7 +22,7 @@ import {
 } from '../data';
 import { roomStats, specialOf, type RoomStats } from '../core/stats';
 import { dayName, examSubjectPeriods, slotName } from '../core/periods';
-import { dayRangeText, dayTag } from './dayLabel';
+import { dateTag, dayRangeText, dayTag } from './dayLabel';
 import { periodGroups } from '../core/detach';
 import { studyReference } from '../core/studyRef';
 import { classColor } from './colors';
@@ -81,7 +81,7 @@ export interface StatsModel {
   total: number;
   perSubject: { subjectName: string; count: number }[];
   /** 統計表（列印頁用，D40）：欄＝班級，列＝本教室考生人數與各科考試人數 */
-  table: { classes: string[]; rows: { label: string; /** 統計表前導欄（D147⑤）：與 leadHeads 逐欄對應；少於欄數時最後一格橫跨其餘欄 */ lead?: string[]; per: number[]; total: number }[]; /** 前導欄表頭（D147⑤：日期、第幾天、時段、科目）；沒給＝單一欄（headLabel） */ leadHeads?: string[]; /** 第一欄表頭（預設「項目」；預備教室時段版用「時段」） */ headLabel?: string };
+  table: { classes: string[]; rows: { label: string; /** 「使用人數（不重複）」列（D170，只預備／綜合教室）：上雙線、淡底、粗體 */ foot?: boolean; /** 統計表前導欄（D147⑤）：與 leadHeads 逐欄對應；少於欄數時最後一格橫跨其餘欄 */ lead?: string[]; per: number[]; total: number }[]; /** 前導欄表頭（D147⑤：日期、第幾天、時段、科目）；沒給＝單一欄（headLabel） */ leadHeads?: string[]; /** 第一欄表頭（預設「項目」；預備教室時段版用「時段」） */ headLabel?: string };
 }
 export interface SeatPageModel {
   kind: 'seat';
@@ -349,13 +349,13 @@ function fromRoomStats(rs: RoomStats, ctx: Ctx): StatsModel {
         if (!sps.length) return [{ ...base, day: 99, slot: 99, ord: order.indexOf(s.subjectId), lead: ['', '', name] }];
         return sps.map((p) => ({ ...base, day: p.day ?? 0, slot: p.slot!, ord: order.indexOf(s.subjectId), lead: [dayTag(p.day ?? 0), slotName(p.slot!), name] }));
       }).sort((a, b) => a.day - b.day || a.slot - b.slot || a.ord - b.ord);
+      // D170：有日期資料（#389）才加「日期」欄（含星期）；移除「本教室考生人數」列
+      const dates = ctx.input.exam.examDates;
+      const hasDate = slotRows.some((r) => !!dateTag(dates?.[r.day]));
       return {
         classes: nos.map((n) => ctx.classes.get(n)?.name ?? String(n)),
-        leadHeads: ['第幾天', '時段', '科目'],
-        rows: [
-          { label: '本教室考生人數', lead: ['本教室考生人數'], per: pick(rs.perClass), total: rs.total },
-          ...slotRows.map((r) => ({ label: r.lead[2]!, lead: r.lead, per: r.per, total: r.total })),
-        ],
+        leadHeads: hasDate ? ['日期', '第幾天', '時段', '科目'] : ['第幾天', '時段', '科目'],
+        rows: slotRows.map((r) => ({ label: r.lead[2]!, lead: hasDate ? [dateTag(dates?.[r.day]), ...r.lead] : r.lead, per: r.per, total: r.total })),
       };
     })(),
   };
@@ -638,24 +638,34 @@ function personsOf(cell: MergedCell, ctx: ReturnType<typeof ctxOf>): PersonModel
 /** 預備教室時段版的下方統計（#220）：每個時段一列（各班人數＋合計），最後一列「不重複人數」 */
 function slotStats(seats: Map<string, MergedCell>, ctx: ReturnType<typeof ctxOf>): StatsModel['table'] {
   const classNos = new Set<number>();
-  const byHead = new Map<string, { subjects: Set<string>; codes: Set<string> }>();
+  const bySlot = new Map<string, { day: number; period: number; slot: string; subject: string; codes: Set<string> }>();
   const all = new Set<string>();
   for (const m of seats.values()) {
     for (const l of m.lines) {
       classNos.add(parseCode(l.code).classNo);
       all.add(l.code);
-      const e = byHead.get(l.head) ?? { subjects: new Set<string>(), codes: new Set<string>() };
-      e.subjects.add(l.subject); e.codes.add(l.code); byHead.set(l.head, e);
+      const day = l.head ? (l.day ?? 0) : 99;
+      const key = `${day}|${l.head}|${l.subject}`;
+      const e = bySlot.get(key) ?? { day, period: l.period, slot: l.head ? (l.head.split(' ')[1] ?? '') : '', subject: l.subject, codes: new Set<string>() };
+      e.codes.add(l.code); e.period = Math.min(e.period, l.period); bySlot.set(key, e);
     }
   }
   const nos = [...classNos].sort((a, b) => a - b);
   const per = (codes: Iterable<string>) => { const arr = [...codes]; return nos.map((n) => arr.filter((c) => parseCode(c).classNo === n).length); };
+  // D170：欄＝日期（有資料才有）｜第幾天｜時段｜科目｜各班｜總計，逐「日期＋時段＋科目」一列；最後「使用人數（不重複）」
+  const dates = ctx.input.exam.examDates;
+  const list = [...bySlot.values()].sort((a, b) => a.day - b.day || a.period - b.period);
+  const hasDate = list.some((e) => !!dateTag(dates?.[e.day]));
+  const FOOT = '使用人數（不重複）';
   return {
-    headLabel: '時段',
+    leadHeads: hasDate ? ['日期', '第幾天', '時段', '科目'] : ['第幾天', '時段', '科目'],
     classes: nos.map((n) => ctx.classes.get(n)?.name ?? String(n)),
     rows: [
-      ...[...byHead].map(([h, e]) => ({ label: `${h ? `${h}　` : ''}${[...e.subjects].join('、')}`, per: per(e.codes), total: e.codes.size })),
-      { label: '不重複人數', per: per(all), total: all.size },
+      ...list.map((e) => {
+        const lead = [e.day === 99 ? '' : dayTag(e.day), e.slot, e.subject];
+        return { label: e.subject, lead: hasDate ? [dateTag(dates?.[e.day]), ...lead] : lead, per: per(e.codes), total: e.codes.size };
+      }),
+      { label: FOOT, lead: [FOOT], foot: true, per: per(all), total: all.size },
     ],
   };
 }
@@ -1115,7 +1125,9 @@ export function statLayout(p: SeatPageModel): { cols: number[]; rowH: number[]; 
   const innerW = SEAT_PAGE.w - 2 * SEAT_PAGE.padX;
   const rows = statRows(p);
   const n = p.stats.table.classes.length;
-  const pt = 12;
+  // D170：列數 ≤ 5 為 12pt／8mm；> 5 為 10.5pt／6.4mm（學測兩天會有 6～10 列，不然把座位格壓太矮）
+  const small = rows.length > 5;
+  const pt = small ? 10.5 : 12;
   const totalW = 18;
   const leadN = p.stats.table.leadHeads?.length ?? 1;
   // 前導欄（D147⑤）：第幾天、時段、科目（有日期時再加日期欄）；沒有前導欄時維持單一第一欄
@@ -1125,7 +1137,7 @@ export function statLayout(p: SeatPageModel): { cols: number[]; rowH: number[]; 
   const firstW = innerW - classW * n - totalW - (leadN === 1 ? 0 : leadSum - leadW[0]!);
   if (leadN > 1) leadW[0] = firstW;
   const lineH = pt * 0.3528 * 1.3;
-  const h = (k: number) => Math.max(8, +(k * lineH + 3.4).toFixed(1));
+  const h = (k: number) => Math.max(small ? 6.4 : 8, +(k * lineH + (small ? 1.6 : 3.4)).toFixed(1));
   // 每列文字最多折幾行：單一欄看整欄寬；前導欄逐格看各自欄寬，單格橫跨其餘欄時看合併寬
   const lines = (r: (typeof rows)[number]) => {
     const cells = leadN === 1 ? [r.label] : (r.lead ?? [r.label]);
@@ -1136,6 +1148,88 @@ export function statLayout(p: SeatPageModel): { cols: number[]; rowH: number[]; 
   };
   const rowH = [h(1), ...rows.map((r) => h(lines(r)))];
   return { cols: [...(leadN === 1 ? [firstW] : leadW), ...Array<number>(n).fill(classW), totalW], rowH, pt, total: rowH.reduce((a, b) => a + b, 0) };
+}
+
+/**
+ * 統計表垂直合併（D170 Q4）：同天同時段多科時，日期／第幾天／時段三欄合併。
+ * span[i]＝該列第 i 個前導欄的 rowspan（0＝被上一列合併掉）；只合併「前導欄不含科目」且值非空的欄；
+ * dayEnd＝這天的最後一列（下方畫 0.5mm 深灰線）。PDF 用 rowspan、Word 用 vMerge，兩邊照這份畫。
+ */
+export function statMerge(p: SeatPageModel): { span: number[]; dayEnd: boolean }[] {
+  const t = p.stats.table;
+  const rows = t.rows;
+  const leadN = t.leadHeads?.length ?? 1;
+  const full = (r: (typeof rows)[number]) => !!t.leadHeads && !r.foot && (r.lead?.length ?? 0) === leadN;
+  const same = (a: (typeof rows)[number], b: (typeof rows)[number], i: number) => {
+    if (!full(a) || !full(b)) return false;
+    for (let j = 0; j <= i; j++) if (!a.lead![j] || a.lead![j] !== b.lead![j]) return false;
+    return true;
+  };
+  return rows.map((r, ri) => {
+    const span = Array<number>(leadN).fill(1);
+    for (let i = 0; i < leadN - 1; i++) {
+      if (!full(r)) break;
+      if (ri > 0 && same(rows[ri - 1]!, r, i)) { span[i] = 0; continue; }
+      let n = 1;
+      while (ri + n < rows.length && same(r, rows[ri + n]!, i)) n++;
+      span[i] = n;
+    }
+    const next = rows[ri + 1];
+    const dayEnd = full(r) && !(next && same(r, next, 0));
+    return { span, dayEnd };
+  });
+}
+
+/* ---------- 座位格標示帶（D170，#470 #471；PDF 與 Word 共用） ---------- */
+
+const PT_MM = 0.3528;
+/** 標示字級：7.5pt 起，放不進一行逐步縮到下限 6.5pt（Q1 已裁示） */
+export const SEAT_MARK_PTS = [7.5, 7, 6.5] as const;
+export const SEAT_CODE_PT = { max: 19, min: 11 } as const;
+
+export interface SeatCellFit {
+  /** 標示帶每行的標示（已依字級與格寬排好；沒有標示為空） */
+  lines: CornerTag[][];
+  markPt: number;
+  /** 標示帶佔的實際高度（mm，含上方 0.5mm） */
+  bandMm: number;
+  codePt: number;
+  namePt: number;
+  /** 號碼字級放得進（≥ 下限 11pt）；false＝這個格高放不下，要換頁換格高 */
+  ok: boolean;
+}
+
+/**
+ * 座位格內由上到下「號碼 → 班級｜姓名 → 標示帶」：標示帶佔實際高度、不浮動，先縮標示字級、再縮號碼，姓名不動。
+ * topMm＝格頂保留（PDF 1.2：座標在號碼列右上角；Word 2.8：座標獨立一段）。
+ */
+export function seatCellFit(c: CellModel, cw: number, ch: number, topMm: number): SeatCellFit {
+  const tags = c.corners ?? [];
+  const avail = cw - 2.4;
+  const namePt = namePtFit(c.classLabel, c.name, cw - 1.4, 12);
+  const nameMm = namePt * PT_MM * 1.15 + 0.35;
+  const build = (lines: CornerTag[][], markPt: number): SeatCellFit => {
+    const n = lines.length;
+    const bandMm = n ? n * (markPt * PT_MM * 1.15 + 0.6) + (n - 1) * 0.4 + 0.5 : 0;
+    const raw = Math.floor((ch - topMm - nameMm - bandMm - 0.6) / (PT_MM * 1.1));
+    return { lines, markPt, bandMm, codePt: Math.max(SEAT_CODE_PT.min, Math.min(SEAT_CODE_PT.max, raw)), namePt, ok: raw >= SEAT_CODE_PT.min };
+  };
+  const minPt = SEAT_MARK_PTS[SEAT_MARK_PTS.length - 1]!;
+  if (!tags.length) return build([], minPt);
+  const one = SEAT_MARK_PTS.find((pt) => cornerLayout(tags, avail, pt).length === 1);
+  if (one !== undefined) return build([[...tags]], one);
+  const spec = build(cornerLayout(tags, avail, minPt), minPt);
+  if (spec.ok) return spec;
+  // 保底（稿沒畫到；極端情形：不考＋加考＋抽離兩行＋有考，每個標示一行會放不下）：相鄰標示併成一行，只在規格排法放不下時才用
+  const w = (t: CornerTag) => textWidthMm(` ${t.text} `, minPt, true) + 1.2;
+  const packed: CornerTag[][] = [];
+  for (const l of spec.lines) {
+    const last = packed[packed.length - 1];
+    if (last && last.reduce((x, t) => x + w(t) + 0.6, 0) + l.reduce((x, t) => x + w(t) + 0.6, 0) <= avail) last.push(...l);
+    else packed.push([...l]);
+  }
+  const alt = build(packed, minPt);
+  return alt.ok || alt.lines.length < spec.lines.length ? alt : spec;
 }
 
 /** 座位表的格子尺寸（mm）與統計列。統計表列數隨科目變：先扣掉標題、小標籤、講臺、統計表、頁尾，剩下的才給座位格 */
@@ -1156,18 +1250,25 @@ export function chipRowCount(chips: readonly string[]): number {
  * 座位格尺寸。時段版（預備／綜合教室）的統計表每時段一列，時段多（例如分科 12 列）就把座位格壓到約 15mm，
  * 兩人格姓名只剩 4～5pt（#212）。座位格會因此低於 22mm 時，統計表改放下一頁（statsNext），座位圖用整頁高度（最高 32mm）。
  */
-export function seatGeometry(p: SeatPageModel): { cw: number; ch: number; st: ReturnType<typeof statRows>; statsNext: boolean } {
+export function seatGeometry(p: SeatPageModel, o: { topMm?: number } = {}): { cw: number; ch: number; st: ReturnType<typeof statRows>; statsNext: boolean } {
   const innerW = SEAT_PAGE.w - 2 * SEAT_PAGE.padX;
   const cw = Math.min(p.slotMode ? 24.79 : 25, +((innerW - 6.5) / p.rows).toFixed(2));
   const st = statRows(p);
   const base = 22 + 12 + 4 + 5 + 11 + 16 + (chipRowCount(p.chips) - 1) * 8.7;
-  const chOf = (fixed: number) => Math.min(p.slotMode ? 32 : 23, +((SEAT_PAGE.h - 2 * SEAT_PAGE.padY - fixed) / p.depth).toFixed(2));
+  const chOf = (fixed: number, max = p.slotMode ? 32 : 23) => Math.min(max, +((SEAT_PAGE.h - 2 * SEAT_PAGE.padY - fixed) / p.depth).toFixed(2));
+  // D170：每格的標示帶都要放得進（號碼 ≥ 11pt）；放不進就統計表換頁、座位格換高，絕不壓到姓名
+  const top = o.topMm ?? 1.2;
+  const fits = (ch: number) => [...p.cells.values()].every((c) => c.persons || c.periodLines || !c.code || seatCellFit(c, cw, ch, top).ok);
   // 時段版：統計表（每時段一列）加一行格內說明（約 6mm）
   const withStats = chOf(base + (p.slotMode ? 6 + 5 + statLayout(p).total : 5 + statLayout(p).total));
-  if (p.slotMode && withStats < 22) {
-    const without = chOf(base + 6 + 5);
-    if (without > withStats) return { cw, ch: without, st, statsNext: true };
+  if ((p.slotMode && withStats < 22) || !fits(withStats)) {
+    const without = chOf(base + (p.slotMode ? 6 + 5 : 5), 32);
+    if (without > withStats) {
+      if (!fits(without)) throw new Error(`「${p.roomName}」座位格放不下特殊考生標示（格高 ${without}mm）：請減少同一格的標示，或調整教室的深位數`);
+      return { cw, ch: without, st, statsNext: true };
+    }
   }
+  if (!fits(withStats)) throw new Error(`「${p.roomName}」座位格放不下特殊考生標示（格高 ${withStats}mm）：請減少同一格的標示，或調整教室的深位數`);
   return { cw, ch: withStats, st, statsNext: false };
 }
 

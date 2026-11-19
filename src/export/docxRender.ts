@@ -24,6 +24,7 @@ import {
   TableRow,
   TextRun,
   VerticalAlign,
+  VerticalMergeType,
   WidthType,
   type ISectionOptions,
 } from 'docx';
@@ -45,8 +46,10 @@ import {
   mmToTwip,
   PAPER_MM,
   SEAT_PAGE,
+  seatCellFit,
   seatGeometry,
   statLayout,
+  statMerge,
   namePtFit,
   personLayout,
   wideLayout,
@@ -324,6 +327,34 @@ function cellParas(
   ];
 }
 
+/**
+ * 座位表一格（D170、稿 v2.76 §10.43.7）：座標段（右、精確 2.8mm）→ 號碼段（置中）→ 班級｜姓名段 → 標示段（置中、每行一段）。
+ * 標示是正常流程的段落、不浮動，不可能蓋住姓名；字級與格高由 model.seatCellFit 算（與 PDF 共用，姓名不縮）。
+ */
+function seatCellParas(c: CellModel, cw: number, ch: number, fg: string, mode: BoldMode): Paragraph[] {
+  const TOP = 2.8;
+  const f = seatCellFit(c, cw, ch, TOP);
+  const codeH = f.codePt * 0.3528 * 1.1;
+  const nameH = f.namePt * 0.3528 * 1.15;
+  const markH = f.markPt * 0.3528 * 1.15 + 0.6;
+  const slack = Math.max(0, ch - TOP - codeH - nameH - f.bandMm - 0.6);
+  return [
+    line([run2(c.coord, { size: 6.5, bold: true, color: '4A463A' }, mode)], { h: TOP, align: AlignmentType.RIGHT, right: 0.6 }),
+    line([run2(c.code, { size: f.codePt, bold: true, color: INK, spacing: f.codePt * 0.02 }, mode)], { h: codeH, before: slack * 0.5 }),
+    line(
+      [
+        run2(c.classLabel, { size: f.namePt, bold: true, color: fg }, mode),
+        run2(' ', { size: f.namePt * 0.8 }, mode),
+        run2('|', { size: f.namePt, color: fg }, mode),
+        run2(' ', { size: f.namePt * 0.8 }, mode),
+        run2(c.name, { size: f.namePt, color: INK }, mode),
+      ],
+      { h: nameH },
+    ),
+    ...f.lines.map((tags, i) => line(cornerRuns(tags, f.markPt, mode), { h: markH, align: AlignmentType.CENTER, before: i === 0 ? 0.5 : 0.4 })),
+  ];
+}
+
 /** 人員格（預備教室／綜合教室／整合標籤，v2.36）：版式同一般標籤，格內每人一區；排法見 model.personLayout */
 function personParas(c: CellModel, w: number, h: number, g: { topPad: number; coordPt: number; codePt: number; nameMax: number; schedMax: number; joinSched?: boolean }, mode: BoldMode): Paragraph[] {
   const { lines, total } = personLayout(c, w, h, g);
@@ -407,7 +438,7 @@ function pageFooter(opts: DocxOptions): Footer {
 
 function seatSection(page: SeatPageModel, opts: DocxOptions): ISectionOptions {
   const mode = opts.boldMode ?? 'embed-bold';
-  const { cw, ch, st, statsNext } = seatGeometry(page);
+  const { cw, ch, st, statsNext } = seatGeometry(page, { topMm: 2.8 });
   const innerW = SEAT_PAGE.w - 2 * SEAT_PAGE.padX;
   const axisW = 6.5;
   const tw = (mm: number) => mmToTwip(mm);
@@ -477,7 +508,7 @@ function seatSection(page: SeatPageModel, opts: DocxOptions): ISectionOptions {
           margins: { top: 0, bottom: 0, left: tw(0.5), right: tw(0.5) },
           shading: c ? { type: ShadingType.CLEAR, fill: pal!.bg, color: 'auto' } : HATCH_FILL,
           borders,
-          children: c ? (c.persons ? personParas(c, cw - 1.3, ch, { topPad: 4.5, coordPt: g.coordPt, codePt: 19, nameMax: 10.5, schedMax: 7, joinSched: true }, mode) : c.periodLines ? periodParas(c, cw - 1.3, ch, g.coordPt, mode) : cellParas(c, g, pal!.fg, mode)) : hatchParas(cw - 1.3, ch - 1.4),
+          children: c ? (c.persons ? personParas(c, cw - 1.3, ch, { topPad: 4.5, coordPt: g.coordPt, codePt: 19, nameMax: 10.5, schedMax: 7, joinSched: true }, mode) : c.periodLines ? periodParas(c, cw - 1.3, ch, g.coordPt, mode) : seatCellParas(c, cw, ch, pal!.fg, mode)) : hatchParas(cw - 1.3, ch - 1.4),
         }),
       );
     }
@@ -534,32 +565,51 @@ function seatSection(page: SeatPageModel, opts: DocxOptions): ISectionOptions {
   // 統計表
   const sl = statLayout(page);
   const stCols = sl.cols;
-  const stBd = { top: bd(CUT, 7), bottom: bd(CUT, 7), left: bd(CUT, 7), right: bd(CUT, 7) };
-  const stCell = (text: string, i: number, o: { head?: boolean; bold?: boolean; span?: number; left?: boolean }) =>
-    new TableCell({
+  // 統計表樣式（D170、§10.43.7）：表頭淡藍底深藍字、上下深藍線；表身只設下框線；每天最後一列深灰線；總計欄左雙線；使用人數列上雙線＋淡底
+  const merge = statMerge(page);
+  const BLUE = '274690';
+  type StO = { head?: boolean; bold?: boolean; span?: number; left?: boolean; total?: boolean; foot?: boolean; dayEnd?: boolean; vm?: 'restart' | 'continue' };
+  const stCell = (text: string, i: number, o: StO) => {
+    const left = o.total ? bd(BLUE, 4, BorderStyle.DOUBLE) : none;
+    const borders = o.head
+      ? { top: bd(BLUE, 4), bottom: bd(BLUE, 4), left, right: none }
+      : { top: o.foot ? bd(BLUE, 4, BorderStyle.DOUBLE) : none, bottom: o.foot ? bd(BLUE, 4) : o.dayEnd ? bd('6F6858', 4) : bd('BDB8A8', 2), left, right: none };
+    return new TableCell({
       width: { size: tw(stCols.slice(i, i + (o.span ?? 1)).reduce((a, b) => a + b, 0)), type: WidthType.DXA },
       ...(o.span && o.span > 1 ? { columnSpan: o.span } : {}),
+      ...(o.vm ? { verticalMerge: o.vm === 'restart' ? VerticalMergeType.RESTART : VerticalMergeType.CONTINUE } : {}),
       verticalAlign: VerticalAlign.CENTER,
-      shading: o.head ? { type: ShadingType.CLEAR, fill: 'F3EEDD', color: 'auto' } : undefined,
-      borders: stBd,
+      shading: o.head ? { type: ShadingType.CLEAR, fill: 'E8EDF8', color: 'auto' } : o.foot ? { type: ShadingType.CLEAR, fill: 'F6F4EC', color: 'auto' } : undefined,
+      borders,
       margins: { top: 0, bottom: 0, left: tw(2), right: tw(2) },
-      children: [line([run2(text, { size: sl.pt, bold: o.head || o.bold }, mode)], { h: sl.pt * 0.3528 * 1.3, align: o.left || (i === 0 && !o.head) ? AlignmentType.LEFT : AlignmentType.CENTER })],
+      children: [line([run2(text, { size: sl.pt, bold: o.head || o.bold || o.foot, color: o.head ? '1F3877' : undefined }, mode)], { h: sl.pt * 0.3528 * 1.3, align: o.left ? AlignmentType.LEFT : AlignmentType.CENTER })],
     });
-  // 前導欄（D147⑤）：日期／第幾天／時段／科目逐欄；lead 比欄數少的列，最後一格橫跨其餘前導欄
+  };
+  // 前導欄（D147⑤）：日期／第幾天／時段／科目逐欄；日期、第幾天、時段同天同時段垂直合併；lead 比欄數少的列，最後一格橫跨其餘前導欄
   const leadHeads = page.stats.table.leadHeads;
   const leadN = leadHeads?.length ?? 1;
-  const rowCells = (r: (typeof st)[number]) => {
-    if (!leadHeads) return [r.label, ...r.per.map(String), String(r.total)].map((t, i, a) => stCell(t, i, { bold: i === a.length - 1 }));
+  const rowCells = (r: (typeof st)[number], ri: number) => {
+    const m = merge[ri]!;
+    const base = { dayEnd: m.dayEnd, foot: !!r.foot };
+    if (!leadHeads) return [r.label, ...r.per.map(String), String(r.total)].map((t, i, a) => stCell(t, i, { ...base, left: i === 0, bold: i === a.length - 1, total: i === a.length - 1 }));
     const lead = r.lead ?? [r.label];
+    const out: TableCell[] = [];
+    lead.forEach((t, i) => {
+      const mergeable = i < leadN - 1 && lead.length === leadN;
+      const sp = mergeable ? m.span[i]! : 1;
+      if (mergeable && sp === 0) { out.push(stCell('', i, { ...base, vm: 'continue' })); return; }
+      out.push(stCell(t, i, { ...base, left: lead.length < leadN, span: i === lead.length - 1 ? leadN - i : 1, ...(mergeable && sp > 1 ? { vm: 'restart' as const } : {}) }));
+    });
     return [
-      ...lead.map((t, i) => stCell(t, i, { left: true, span: i === lead.length - 1 ? leadN - i : 1 })),
-      ...r.per.map((n, i) => stCell(String(n), leadN + i, {})),
-      stCell(String(r.total), leadN + r.per.length, { bold: true }),
+      ...out,
+      ...r.per.map((n, i) => stCell(String(n), leadN + i, base)),
+      stCell(String(r.total), leadN + r.per.length, { ...base, bold: true, total: true }),
     ];
   };
+  const stHeads = [...(leadHeads ?? [page.stats.table.headLabel ?? '項目']), ...page.stats.table.classes, leadHeads ? '總計' : '合計'];
   const stRowsT = [
-    new TableRow({ height: { value: tw(sl.rowH[0]!), rule: HeightRule.EXACT }, children: [...(leadHeads ?? [page.stats.table.headLabel ?? '項目']), ...page.stats.table.classes, leadHeads ? '總計' : '合計'].map((t, i) => stCell(t, i, { head: true })) }),
-    ...st.map((r, ri) => new TableRow({ height: { value: tw(sl.rowH[ri + 1]!), rule: HeightRule.EXACT }, children: rowCells(r) })),
+    new TableRow({ height: { value: tw(sl.rowH[0]!), rule: HeightRule.EXACT }, children: stHeads.map((t, i) => stCell(t, i, { head: true, total: i === stHeads.length - 1 })) }),
+    ...st.map((r, ri) => new TableRow({ height: { value: tw(sl.rowH[ri + 1]!), rule: HeightRule.EXACT }, children: rowCells(r, ri) })),
   ];
   const stTable = new Table({ width: { size: tw(innerW), type: WidthType.DXA }, columnWidths: stCols.map(tw), layout: TableLayoutType.FIXED, borders: noInside, rows: stRowsT });
 

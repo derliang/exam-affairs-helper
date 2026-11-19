@@ -4,7 +4,7 @@
  * 座位表與標籤的樣式照設計系統成品頁「座位表與標籤」稿件（docs/design/mockups/設計系統.html #paper）：
  * 改這裡的版面要同步改稿件，反之亦然。
  */
-import { roomShown, cornerLayout, titleOf, labelTitleOf, footerText, isSpecial, LABEL_EDGE_MM, LABEL_FOOTER_MM, labelBoxMm, labelGrid, labelGridSize, labelNotePt, landscapeFit, namePtFit, PAPER_MM, periodLineFontPt, personLayout, rotationPage, wideLayout, type PersonLine, SEAT_PAGE, seatGeometry, statLayout, SLOT_TIP, type CellModel, type LabelPageModel, type ListPageModel, type SeatPageModel, type TablePageModel } from './model';
+import { roomShown, cornerLayout, seatCellFit, statMerge, titleOf, labelTitleOf, footerText, isSpecial, LABEL_EDGE_MM, LABEL_FOOTER_MM, labelBoxMm, labelGrid, labelGridSize, labelNotePt, landscapeFit, namePtFit, PAPER_MM, periodLineFontPt, personLayout, rotationPage, wideLayout, type PersonLine, SEAT_PAGE, seatGeometry, statLayout, SLOT_TIP, type CellModel, type LabelPageModel, type ListPageModel, type SeatPageModel, type TablePageModel } from './model';
 
 export interface HtmlOptions {
   generatedAt: string;
@@ -59,6 +59,7 @@ function cellHtml(c: CellModel | undefined, w: number, h: number, mode: 'seat' |
     const ls = c.periodLines.map((l) => `<span class="pp-pll" style="font-size:${pt}pt"><small style="font-size:${+(pt * 0.7).toFixed(1)}pt">${esc(l.head)}</small>${esc(l.text)}</span>`).join('');
     return `<div class="pp-c pp-pl" style="${size};background:#fff"><i class="pp-co">${esc(c.coord)}</i><span class="pp-pls">${ls}</span></div>`;
   }
+  if (mode !== 'label') return seatCellHtml(c, w, h, mode);
   const marked = isSpecial(c);
   const bg = mode === 'label' ? (marked ? '#FFE08A' : '#fff') : mode === 'detach' ? DETACH.bg : `#${c.colorBg}`;
   const em = mode === 'label' ? '#22201B' : mode === 'detach' ? DETACH.fg : `#${c.colorFg}`;
@@ -66,6 +67,20 @@ function cellHtml(c: CellModel | undefined, w: number, h: number, mode: 'seat' |
   const free = mode === 'label';
   const npt = namePtFit(c.classLabel, c.name, w - (mode === 'label' ? 2.2 : 1.4), mode === 'label' ? 18 : 12);
   return `<div class="pp-c${free ? ' fr' : ''}${c.ref ? ' pp-ref' : ''}" style="${size};background:${bg}"><i class="pp-co">${esc(c.coord)}</i><b class="pp-no">${esc(c.code)}</b><span class="pp-nm" style="font-size:${npt}pt"><em style="color:${em}">${esc(c.classLabel)}</em><span>${esc(c.name)}</span></span>${cornersHtml(c, w, mode === 'label' ? 11 : 8)}</div>`;
+}
+
+/**
+ * 座位格（D170、稿 v2.76）：由上到下「號碼 → 班級｜姓名 → 標示帶」，標示帶在流程中佔實際高度、不浮動，絕不壓到姓名；
+ * 座標在右上角（與號碼同列）。標示字級、號碼字級由 model.seatCellFit 算（Word 共用）。
+ */
+function seatCellHtml(c: CellModel, w: number, h: number, mode: 'seat' | 'detach'): string {
+  const f = seatCellFit(c, w, h, 1.2);
+  const bg = mode === 'detach' ? DETACH.bg : `#${c.colorBg}`;
+  const em = mode === 'detach' ? DETACH.fg : `#${c.colorFg}`;
+  const band = f.lines.length
+    ? `<span class="pp-band">${f.lines.map((l) => `<span class="pp-bl">${l.map((k) => `<span class="pp-mk ${k.kind === 'x' ? 'x' : 'add'}" style="font-size:${f.markPt}pt">${esc(k.text)}</span>`).join('')}</span>`).join('')}</span>`
+    : '';
+  return `<div class="pp-c pp-sc${c.ref ? ' pp-ref' : ''}" style="width:${mm(w)};height:${mm(h)};background:${bg}"><i class="pp-co">${esc(c.coord)}</i><b class="pp-no" style="font-size:${f.codePt}pt">${esc(c.code)}</b><span class="pp-nm" style="font-size:${f.namePt}pt"><em style="color:${em}">${esc(c.classLabel)}</em><span>${esc(c.name)}</span></span>${band}</div>`;
 }
 
 function seatHtml(p: SeatPageModel, o: HtmlOptions): string {
@@ -80,14 +95,25 @@ function seatHtml(p: SeatPageModel, o: HtmlOptions): string {
   const colg = `<colgroup>${sl.cols.map((w) => `<col style="width:${mm(w)}">`).join('')}</colgroup>`;
   const leadHeads = p.stats.table.leadHeads;
   const leadN = leadHeads?.length ?? 1;
-  const leadTd = (r: (typeof st)[number]): string => {
-    if (!leadHeads) return `<td>${esc(r.label)}</td>`;
-    const lead = r.lead ?? [r.label];
-    return lead.map((t, i) => `<td class="ld"${i === lead.length - 1 && leadN - i > 1 ? ` colspan="${leadN - i}"` : ''}>${esc(t)}</td>`).join('');
+  const merge = statMerge(p);
+  const tr = (r: (typeof st)[number], ri: number): string => {
+    const m = merge[ri]!;
+    const cls = [r.foot ? 'foot' : '', m.dayEnd ? 'dayend' : ''].filter(Boolean).join(' ');
+    let tds: string;
+    if (!leadHeads) tds = `<td class="l">${esc(r.label)}</td>`;
+    else {
+      const lead = r.lead ?? [r.label];
+      tds = lead.map((t, i) => {
+        if (i < leadN - 1 && m.span[i] === 0) return '';
+        const sp = i < leadN - 1 && lead.length === leadN ? m.span[i]! : 1;
+        const de = sp > 1 && merge[ri + sp - 1]?.dayEnd;
+        const last = i === lead.length - 1 && leadN - i > 1;
+        return `<td class="${[lead.length < leadN ? 'l' : '', de ? 'de' : ''].filter(Boolean).join(' ')}"${sp > 1 ? ` rowspan="${sp}"` : ''}${last ? ` colspan="${leadN - i}"` : ''}>${esc(t)}</td>`;
+      }).join('');
+    }
+    return `<tr${cls ? ` class="${cls}"` : ''} style="height:${mm(sl.rowH[ri + 1]!)}">${tds}${r.per.map((n) => `<td>${n}</td>`).join('')}<td class="t">${r.total}</td></tr>`;
   };
-  const stHtml = `<table class="pp-st">${colg}<thead><tr>${(leadHeads ?? [p.stats.table.headLabel ?? '項目']).map((h) => `<th>${esc(h)}</th>`).join('')}${p.stats.table.classes.map((c) => `<th>${esc(c)}</th>`).join('')}<th>${leadHeads ? '總計' : '合計'}</th></tr></thead><tbody>${st
-    .map((r) => `<tr>${leadTd(r)}${r.per.map((n) => `<td>${n}</td>`).join('')}<td class="t">${r.total}</td></tr>`)
-    .join('')}</tbody></table>`;
+  const stHtml = `<table class="pp-st" style="font-size:${sl.pt}pt">${colg}<thead><tr style="height:${mm(sl.rowH[0]!)}">${(leadHeads ?? [p.stats.table.headLabel ?? '項目']).map((h) => `<th>${esc(h)}</th>`).join('')}${p.stats.table.classes.map((c) => `<th>${esc(c)}</th>`).join('')}<th class="t">${leadHeads ? '總計' : '合計'}</th></tr></thead><tbody>${st.map(tr).join('')}</tbody></table>`;
   return `<section class="sheet pp pp-seat" style="page:a4full;width:${SEAT_PAGE.w}mm;height:${SEAT_PAGE.h - 0.5}mm;padding:${SEAT_PAGE.padY}mm ${SEAT_PAGE.padX}mm">
 <div class="pp-hd"><div><div class="pp-h1">${esc(titleOf(p))}</div>${p.heading ? '' : '<div class="pp-h2">座位表</div>'}</div><span class="pp-room">${esc(roomShown(p))}</span></div>
 <div class="pp-chips">${chips}</div>
@@ -227,11 +253,21 @@ footer { font-size: 8pt; color: #555; text-align: right; margin-top: 3mm }
 .pp .pp-wrapg{display:grid;grid-template-columns:5mm auto;justify-content:center;gap:0 1.5mm}
 .pp .pp-ay{display:grid;font-size:7pt;font-weight:700;color:var(--gray);align-items:center;justify-items:end}
 .pp .pp-sltip{margin-top:5mm;font-size:11pt;color:#4A463A;line-height:1.5}
-.pp .pp-st{width:100%;table-layout:fixed;border-collapse:collapse;font-size:12pt;margin-top:5mm}
-.pp .pp-st th,.pp .pp-st td{border:.3mm solid var(--cut);padding:.8mm 2mm;text-align:center}
-.pp .pp-st th{background:#F3EEDD;font-weight:700}
-.pp .pp-st td:first-child,.pp .pp-st td.ld{text-align:left}
-.pp .pp-st td.t{font-weight:700}
+.pp .pp-st{width:100%;table-layout:fixed;border-collapse:collapse;margin-top:5mm;color:#111}
+.pp .pp-st th,.pp .pp-st td{padding:0 2mm;text-align:center;vertical-align:middle;border-bottom:.2mm solid #BDB8A8;font-variant-numeric:tabular-nums}
+.pp .pp-st thead th{background:#E8EDF8;color:#1F3877;font-weight:700;border-top:.5mm solid #274690;border-bottom:.5mm solid #274690}
+.pp .pp-st td.t,.pp .pp-st th.t{border-left:.5mm double #274690;font-weight:700}
+.pp .pp-st tr.dayend td,.pp .pp-st td.de{border-bottom:.5mm solid #6F6858}
+.pp .pp-st tr.foot td{border-top:.5mm double #274690;border-bottom:.5mm solid #274690;background:#F6F4EC;font-weight:700}
+.pp .pp-st td.l{text-align:left}
+/* seat cell band (D170) */
+.pp.pp-seat .pp-c.pp-sc{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;padding:1.2mm .5mm .6mm;overflow:hidden}
+.pp .pp-sc .pp-no{line-height:1.1}
+.pp .pp-sc .pp-nm{line-height:1.15}
+.pp .pp-band{display:flex;flex-direction:column;align-items:center;gap:.4mm;margin-top:.5mm;width:100%}
+.pp .pp-bl{display:flex;gap:.6mm;justify-content:center}
+.pp .pp-sc .pp-mk{line-height:1.15;padding:0 .9mm;border-width:.3mm}
+.pp .pp-sc .pp-mk.add{border:.45mm double var(--ink);padding:0 .6mm}
 `;
 
 export type HtmlPages = { seat?: SeatPageModel[]; label?: LabelPageModel[]; list?: ListPageModel | ListPageModel[]; table?: TablePageModel[] };
