@@ -89,11 +89,11 @@ export function Step1(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
             <Alert tone="info" action={<Button small onClick={() => p.onChange(stopCarry(doc, exam))}>不沿用，從空白開始</Button>}>
               已自動帶入「<b>{prev.name}</b>」的設定，每一步都能再改，改了不影響「{prev.name}」。
             </Alert>
-            <More title={`查看沿用內容（${exam.division === 'junior' ? '② 到 ⑤' : '② 到 ④'} 各步的狀態）`}><div class="scroll"><table class="t compact">
+            <More title={`查看沿用內容（${exam.division === 'junior' ? '② 到 ⑤' : '② 到 ④'} 各步的狀態）`}><div class="rtw"><table class="t compact rt-t">
               <thead><tr><th>步驟</th><th>狀態</th><th>內容</th></tr></thead>
               <tbody>
                 {carryRows(doc, exam, prev).map((r) => (
-                  <tr key={r.step}><td>{r.step}</td><td><Badge {...(r.tone === 'ok' || r.tone === 'warn' ? { tone: r.tone } : {})}>{r.badge}</Badge></td><td>{r.text}</td></tr>
+                  <tr key={r.step}><td class="ti" data-label="步驟">{r.step}</td><td data-label="狀態"><Badge {...(r.tone === 'ok' || r.tone === 'warn' ? { tone: r.tone } : {})}>{r.badge}</Badge></td><td data-label="內容" class="wide">{r.text}</td></tr>
                 ))}
               </tbody>
             </table></div></More>

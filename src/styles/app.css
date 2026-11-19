@@ -203,7 +203,7 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
 /* UI-01/02：資料夾視窗的標題列原本借用了進度條的 .bar（高 6px、overflow:hidden），文字被切掉 */
 .fakepick .fp-bar{padding:10px 14px;background:var(--surface);border-bottom:1px solid var(--line);font-size:13px;line-height:1.5;color:var(--text-2)}
 .fakepick button{min-height:44px}
-.modal{max-height:calc(100vh - 32px);overflow:auto}
+.modal{max-height:calc(100vh - 32px);overflow-x:hidden;overflow-y:auto}
 .modal .t{min-width:0}
 /* UI-03：拖拉資料夾 */
 .dropzone{display:grid;gap:8px;justify-items:center;align-content:center;text-align:center;min-height:clamp(200px,34vh,380px);padding:28px 20px;border:2px dashed var(--accent-line);border-radius:var(--r-lg);background:var(--accent-soft);color:var(--accent-ink);cursor:pointer}
@@ -290,7 +290,7 @@ section>header p{color:var(--text-2);max-width:72ch}
 .pbar-sub{border-top:1px dashed var(--line);padding:6px 0 8px;display:flex;gap:8px;align-items:center}
 .pbar-sub .cur-exam{font-size:13px;font-weight:700;color:var(--text-3);white-space:nowrap;max-width:14em;overflow:hidden;text-overflow:ellipsis}
 .pbar .brand{font-family:var(--f-head);font-weight:700;white-space:nowrap;margin-right:8px}
-.pbar .nav{display:flex;gap:4px;overflow-x:auto;min-width:0;scrollbar-width:thin}
+.pbar .nav{display:flex;flex-wrap:wrap;gap:4px;min-width:0}
 .pbar .nav button{font:inherit;font-weight:500;font-size:14px;white-space:nowrap;min-height:36px;padding:0 12px;border-radius:var(--r-sm);border:1px solid transparent;background:transparent;color:var(--text-2);cursor:pointer}
 .pbar .nav button:hover{background:var(--sunken)}
 .pbar .nav button:focus-visible{outline:3px solid var(--accent);outline-offset:1px}
@@ -299,7 +299,7 @@ section>header p{color:var(--text-2);max-width:72ch}
 .pbar .nav i{width:1px;background:var(--line-2);flex:none;margin:6px 4px}
 .pbar .spacer{flex:1}
 /* D69：設定頁分頁籤（底線式）與部別切換（柔和膠囊）長相不同，避免看起來重複 */
-.utabs{display:flex;gap:4px;border-bottom:2px solid var(--line-2);overflow-x:auto;overflow-y:hidden;max-width:100%}
+.utabs{display:flex;flex-wrap:wrap;gap:4px;border-bottom:2px solid var(--line-2);max-width:100%}
 .utabs button{font:inherit;font-weight:700;min-height:44px;padding:0 18px;border:0;border-bottom:4px solid transparent;margin-bottom:-2px;background:transparent;color:var(--text-2);cursor:pointer;white-space:nowrap}
 .utabs button:hover{color:var(--text)}
 .utabs button[aria-pressed="true"]{color:var(--accent);border-bottom-color:var(--accent)}
@@ -361,9 +361,9 @@ section>header p{color:var(--text-2);max-width:72ch}
 .toasts{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:60;display:grid;gap:8px;justify-items:center;max-width:calc(100vw - 32px)}
 .t .badge{white-space:nowrap}
 @media (max-width:560px){.alert{grid-template-columns:auto 1fr}.alert>.btn{grid-column:2;justify-self:start}}
-@media (max-width:760px){.ws .side{position:static}.pbar .seg button,.pbar .badge{white-space:nowrap;padding-inline:8px}.pbar .badge{display:none}.pbar .spacer{display:none}}.t.compact{min-width:440px}
+@media (max-width:760px){.ws .side{position:static}.pbar .seg button,.pbar .badge{white-space:nowrap;padding-inline:8px}.pbar .badge{display:none}.pbar .spacer{display:none}}
 .t.nw td,.t.nw th{white-space:nowrap}
-.stack>*,.grid>*,.grid2>*{min-width:0}.row{min-width:0}.seg{max-width:100%;overflow-x:auto;justify-self:start;width:fit-content}.seg button{flex:none}
+.stack>*,.grid>*,.grid2>*{min-width:0}.row{min-width:0}.seg{max-width:100%;justify-self:start;width:fit-content}.seg button{flex:none}
 .ws.wide{grid-template-columns:230px minmax(0,1fr)}
 /* 步驟頁單欄（方案 A、DESIGN 10.9）：沒有左側步驟欄，跳步用上方導覽列；步驟標題卡右側放「下一步」 */
 .ws.ws-one,.ws.wide.ws-one{grid-template-columns:minmax(0,1fr)}
@@ -399,7 +399,7 @@ section>header p{color:var(--text-2);max-width:72ch}
 .swatches button[aria-pressed="true"]{outline:3px solid var(--accent);outline-offset:2px}
 .mfade{position:fixed;inset:0;z-index:50;background:rgba(20,18,12,.45);display:grid;place-items:center;padding:16px}
 /* 表格與遮罩（原型移植） */
-table.t{border-collapse:collapse;width:100%;min-width:560px}
+table.t{border-collapse:collapse;width:100%}
 .t th{text-align:left;font-size:13px;color:var(--text-3);font-weight:700;padding:8px 10px;border-bottom:1px solid var(--line-2);background:var(--sunken);white-space:nowrap}
 .t td{padding:8px 10px;border-bottom:1px solid var(--line)}
 .t tbody tr:hover{background:var(--accent-soft)}
@@ -426,7 +426,6 @@ table.t{border-collapse:collapse;width:100%;min-width:560px}
 
 /* ④⑤（施工B）：自原型移植；座位表在 .scroll 內等比縮小（最小 0.4 倍），再窄才在卡片內捲動 */
 .lab{font-family:var(--f-head);font-size:18px;font-weight:700;color:var(--text);margin-bottom:4px;line-height:1.4}
-.scroll{overflow-x:auto;max-width:100%}
 .cell[role="button"]{cursor:pointer}
 .blk-row{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:8px}
 
@@ -614,7 +613,7 @@ table.t{border-collapse:collapse;width:100%;min-width:560px}
 .swatches button[aria-pressed="true"]{outline:3px solid var(--accent);outline-offset:2px}
 .mfade{position:fixed;inset:0;z-index:50;background:rgba(20,18,12,.45);display:grid;place-items:center;padding:16px}
 /* 表格與遮罩（原型移植） */
-table.t{border-collapse:collapse;width:100%;min-width:560px}
+table.t{border-collapse:collapse;width:100%}
 .t th{text-align:left;font-size:13px;color:var(--text-3);font-weight:700;padding:8px 10px;border-bottom:1px solid var(--line-2);background:var(--sunken);white-space:nowrap}
 .t td{padding:8px 10px;border-bottom:1px solid var(--line)}
 .t tbody tr:hover{background:var(--accent-soft)}
@@ -641,7 +640,6 @@ table.t{border-collapse:collapse;width:100%;min-width:560px}
 
 /* ④⑤（施工B）：自原型移植；座位表在 .scroll 內等比縮小（最小 0.4 倍），再窄才在卡片內捲動 */
 .lab{font-family:var(--f-head);font-size:18px;font-weight:700;color:var(--text);margin-bottom:4px;line-height:1.4}
-.scroll{overflow-x:auto;max-width:100%}
 .cell[role="button"]{cursor:pointer}
 .blk-row{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:8px}
 
@@ -855,7 +853,7 @@ table.t{border-collapse:collapse;width:100%;min-width:560px}
 .ttr .sub label{display:flex;align-items:center;gap:6px}.ttr .sub .input{width:120px}
 .ttc>.end{padding:8px 10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 @media (max-width:480px){.ttr{grid-template-columns:auto minmax(0,1fr) auto}.ttr .sn{grid-column:2}.ttr .ops{grid-column:3;grid-row:1}.ttr>.input{grid-column:1/-1}.ttr .dur{grid-column:1/-1}.ttr .sub{grid-column:1/-1}}
-.seg.ttseg{overflow-x:auto;flex-wrap:nowrap}.seg.ttseg button{flex:none;white-space:nowrap}
+.seg.ttseg{flex-wrap:wrap}.seg.ttseg button{flex:1 1 auto}
 /* 預備教室合併標籤範例（D94：每座位一張、每節一行、同字級、印節次＋科目、不印時間） */
 .plbls{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
 
@@ -926,7 +924,6 @@ details.more{font-size:14px;color:var(--text-2)}details.more summary{cursor:poin
 .ulg i.u-ex{background:var(--text);border-color:var(--text)}.ulg i.u-st{background:var(--sunken)}.ulg i.u-bor{background:var(--sunken);border-style:dashed;border-color:var(--text-2)}
 .ulg i.u-pend{background:var(--warn-soft);border-color:var(--warn-line)}.ulg i.u-home{background:transparent}
 .propcard .acts{display:grid;gap:6px;align-content:start;min-width:140px}
-.chartbox{overflow-x:auto;max-width:100%}
 @media(max-width:700px){.propcard{grid-template-columns:auto 1fr}.propcard .acts{grid-column:1/-1;grid-auto-flow:column}}
 
 /* ───── 分科時程、鎖定、階段、版本（AST-3；稿 v2.34 的階段條、時程候選、鎖定） ───── */
@@ -1091,6 +1088,7 @@ details[open]:not(.moremenu)>summary::after{content:" ▴"}
   .rt-t:not(.rt-a) td{display:flex;gap:12px;justify-content:space-between;align-items:baseline;padding:0;border:0;text-align:right;background:transparent}
   .rt-t:not(.rt-a) td::before{content:attr(data-label);color:var(--text-3);font-size:13px;font-weight:700;text-align:left;flex:none}
   .rt-t:not(.rt-a) td.ti{justify-content:flex-start;text-align:left;font-size:16px;font-weight:700}
+  .rt-t:not(.rt-a) td.ti{order:-1}
   .rt-t:not(.rt-a) td.ti::before,.rt-t:not(.rt-a) td.noL::before{content:none}
   .rt-t:not(.rt-a) td.hid{display:none}
   .rt-t:not(.rt-a) td.act{justify-content:flex-end;padding-top:4px}
@@ -1098,6 +1096,11 @@ details[open]:not(.moremenu)>summary::after{content:" ▴"}
   .rt-t:not(.rt-a) tr.grp{border:0;background:transparent;padding:6px 0 0;margin-bottom:0}
   .rt-t:not(.rt-a) tr.grp td{font-size:13px;color:var(--text-2);font-weight:700}
   .rt-t:not(.rt-a) td.on{padding:4px 8px;border-radius:var(--r-sm)}
+  .rt-mx:not(.rt-a) tr{display:flex;flex-wrap:wrap;gap:6px}
+  .rt-mx:not(.rt-a) td.ti{flex:1 1 100%}
+  .rt-mx:not(.rt-a) td:not(.ti){display:block;flex:1 1 56px;border:1px solid var(--line);border-radius:var(--r-sm);padding:4px 6px;text-align:center;background:var(--sunken)}
+  .rt-mx:not(.rt-a) td:not(.ti)::before{display:block;font-size:12px;text-align:center}
+  .rt-mx:not(.rt-a) td.tot{background:var(--surface);font-weight:700}
   .ut thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
   .ut,.ut tbody{display:block;width:auto}
   .ut tr{display:flex;flex-wrap:wrap;gap:6px;border:1px solid var(--line);border-radius:var(--r-md);padding:10px 12px;margin-bottom:8px;background:var(--surface)}
@@ -1126,3 +1129,4 @@ details[open]:not(.moremenu)>summary::after{content:" ▴"}
 .rt-cells span{border:1px solid var(--line);border-radius:var(--r-sm);padding:4px 6px;text-align:center;background:var(--sunken);font-variant-numeric:tabular-nums}
 .rt-cells small{display:block;font-size:12px;color:var(--text-3)}
 .t td.on{background:var(--accent-soft)}
+.chartfit{max-width:100%;overflow:hidden}

@@ -174,8 +174,8 @@ function Roster({ doc, onChange, division }: Props) {
         <Button kind="primary" onClick={() => setEditing('new')}>新增學生</Button>
         <RosterIO doc={doc} division={division} onChange={onChange} />
       </div>
-      <div class="scroll" style="max-height:520px;overflow-y:auto">
-        <table class="t compact nw">
+      <div class="rtw">
+        <table class="t compact nw rt-t">
           <thead><tr><th>班級</th><th>座號</th><th>考生編號</th><th>姓名</th><th>學號</th>{!isJ && <th>組別</th>}<th>特殊生需求</th><th /></tr></thead>
           <tbody>
             {rows.map((r) => {
@@ -183,20 +183,20 @@ function Roster({ doc, onChange, division }: Props) {
                 const c = cls(activeCf as number);
                 return (
                   <tr class="gap" key={`gap-${r.no}`}>
-                    <td>{c ? c.name : activeCf}</td><td class="num">{r.no}</td><td class="num">——</td><td>空號（保留，不自動補號）</td><td />{!isJ && <td />}<td />
-                    <td><Button small onClick={() => setEditing({ classNo: activeCf as number, seatNo: r.no })}>填入學生</Button></td>
+                    <td data-label="班級">{c ? c.name : activeCf}</td><td class="num" data-label="座號">{r.no}</td><td class="num hid" data-label="考生編號">——</td><td class="ti" data-label="姓名">空號（保留，不自動補號）</td><td class="hid" />{!isJ && <td class="hid" />}<td class="hid" />
+                    <td class="act"><Button small onClick={() => setEditing({ classNo: activeCf as number, seatNo: r.no })}>填入學生</Button></td>
                   </tr>
                 );
               }
               const s = r.s;
               return (
                 <tr key={`${s.classNo}-${s.seatNo}`}>
-                  <td>{cls(s.classNo) ? <ClassChip colorIndex={cls(s.classNo)!.colorIndex}>{cls(s.classNo)!.name}</ClassChip> : s.classNo}</td>
-                  <td class="num">{s.seatNo}</td><td class="num">{studentCode(s.classNo, s.seatNo)}</td><td>{s.name}</td>
-                  <td class="muted">{s.schoolId ?? '未填'}</td>
-                  {!isJ && <td>{s.groupCode ?? '—'}</td>}
-                  <td class="small muted">{s.special ?? '—'}</td>
-                  <td><div class="btnrow" style="flex-wrap:nowrap"><Button small onClick={() => setEditing(s)}>編輯</Button><ConfirmButton small copy={confirmCopy.deleteStudent(s.name, studentCode(s.classNo, s.seatNo))} onConfirm={() => onChange(removeStudent(doc, division, s))}>刪除</ConfirmButton></div></td>
+                  <td data-label="班級">{cls(s.classNo) ? <ClassChip colorIndex={cls(s.classNo)!.colorIndex}>{cls(s.classNo)!.name}</ClassChip> : s.classNo}</td>
+                  <td class="num" data-label="座號">{s.seatNo}</td><td class="num" data-label="考生編號">{studentCode(s.classNo, s.seatNo)}</td><td class="ti" data-label="姓名">{s.name}</td>
+                  <td class="muted" data-label="學號">{s.schoolId ?? '未填'}</td>
+                  {!isJ && <td data-label="組別">{s.groupCode ?? '—'}</td>}
+                  <td class="small muted" data-label="特殊生需求">{s.special ?? '—'}</td>
+                  <td class="act"><div class="btnrow" style="flex-wrap:nowrap"><Button small onClick={() => setEditing(s)}>編輯</Button><ConfirmButton small copy={confirmCopy.deleteStudent(s.name, studentCode(s.classNo, s.seatNo))} onConfirm={() => onChange(removeStudent(doc, division, s))}>刪除</ConfirmButton></div></td>
                 </tr>
               );
             })}
@@ -273,19 +273,19 @@ function Classes({ doc, onChange, division }: Props) {
       </div>
       {err && <Alert tone="danger">{err}</Alert>}
       {adding && <AddClassModal doc={doc} division={division} onClose={() => setAdding(false)} onAdd={(r) => { run(r); if (r.ok) setAdding(false); }} />}
-      <div class="scroll">
-        <table class="t compact nw">
+      <div class="rtw">
+        <table class="t compact nw rt-t">
           <thead><tr><th>班級</th><th>名稱</th>{!isJ && <th>文理組</th>}<th>班級色（{CLASS_COLOR_COUNT} 色）</th><th></th></tr></thead>
           <tbody>
             {list.map((c) => {
               const clash = colorConflicts(list, c.no, c.colorIndex);
               return (
                 <tr key={c.no}>
-                  <td><ClassChip colorIndex={c.colorIndex}>{String(c.no).padStart(2, '0')} {c.name}</ClassChip></td>
-                  <td><input class="input" style="min-width:90px;max-width:120px" value={c.name} aria-label={`第${c.no}班名稱`}
+                  <td class="ti" data-label="班級"><ClassChip colorIndex={c.colorIndex}>{String(c.no).padStart(2, '0')} {c.name}</ClassChip></td>
+                  <td data-label="名稱"><input class="input" style="min-width:90px;max-width:120px" value={c.name} aria-label={`第${c.no}班名稱`}
                     onChange={(e) => run(renameClass(doc, division, c.no, e.currentTarget.value))} /></td>
-                  {!isJ && <td><Seg<Track> label={`${c.name}班文理組`} value={c.track ?? 'science'} options={trackOpts} onChange={(tr) => onChange(setClassTrack(doc, division, c.no, tr))} /></td>}
-                  <td>
+                  {!isJ && <td data-label="文理組"><Seg<Track> label={`${c.name}班文理組`} value={c.track ?? 'science'} options={trackOpts} onChange={(tr) => onChange(setClassTrack(doc, division, c.no, tr))} /></td>}
+                  <td data-label="班級色" class="wide">
                     <div class="swatches" role="group" aria-label={`${c.name}班班級色`}>
                       {Array.from({ length: CLASS_COLOR_COUNT }, (_, i) => (
                         <button type="button" key={i} aria-pressed={c.colorIndex === i + 1} aria-label={`改成第 ${i + 1} 色 ${CLASS_COLOR_NAMES[i]}`} title={`${i + 1} ${CLASS_COLOR_NAMES[i]}`}
@@ -295,7 +295,7 @@ function Classes({ doc, onChange, division }: Props) {
                     </div>
                     {clash.length > 0 && <div class="hint">與 {clash.map((n) => String(n).padStart(2, '0')).join('、')} 班同色；黑白列印請核對班級名稱。</div>}
                   </td>
-                  <td>{(() => {
+                  <td class="act">{(() => {
                     const u = classUsage(doc, division, c.no);
                     return u.roster + u.examEntries > 0
                       ? <span class="hint">班上有 {u.roster || u.examEntries} 人，不能刪除</span>

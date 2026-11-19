@@ -81,12 +81,12 @@ export function Step4(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
       {/* 稿 v2.31：學測三張卡合成一張卡三區（對照表／各科標示／抽離人數），X、＋說明收合 */}
       <div class="card stack">
         <div><h3>組別對照表</h3><p class="small muted">組別代碼對應考科；第 {(exam.round ?? 1) >= 3 ? '3、4' : '1、2'} 次的對照（跟 ① 的次別連動）。</p></div>
-        <div class="scroll">
-          <table class="t compact">
+        <div class="rtw">
+          <table class="t compact rt-t">
             <thead><tr><th>組別代碼</th><th>考科</th><th>理組人數</th><th>文組人數</th></tr></thead>
             <tbody>
               {groups.map((g) => (
-                <tr key={g.code}><td><b>{g.code}</b></td><td><NoBreakList items={g.subjectIds.map((id) => subjName.get(id) ?? id)} />{g.differing > 0 && <><br /><Badge tone="warn">{g.differing} 人考科不同</Badge> <span class="small muted">（上列為人數最多的組合）</span></>}</td><td class="n">{g.science}</td><td class="n">{g.liberal}</td></tr>
+                <tr key={g.code}><td class="ti" data-label="組別代碼"><b>{g.code}</b></td><td data-label="考科" class="wide"><NoBreakList items={g.subjectIds.map((id) => subjName.get(id) ?? id)} />{g.differing > 0 && <><br /><Badge tone="warn">{g.differing} 人考科不同</Badge> <span class="small muted">（上列為人數最多的組合）</span></>}</td><td class="n" data-label="理組人數">{g.science}</td><td class="n" data-label="文組人數">{g.liberal}</td></tr>
               ))}
             </tbody>
           </table>
@@ -101,15 +101,15 @@ export function Step4(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
         {shown.length === 0
           ? <Alert tone="ok">每一組每一科都是全考或全不考，不用標示，也沒有人要抽離。</Alert>
           : (
-            <div class="scroll">
-              <table class="t compact">
+            <div class="rtw">
+              <table class="t compact rt-t">
                 <thead><tr><th>組</th><th>科目</th><th>考</th><th>不考</th><th>標示方式</th><th>座位表標示與狀態</th></tr></thead>
                 <tbody>
                   {shown.map((r) => (
                     <tr key={`${r.track}/${r.subjectId}`}>
-                      <td>{r.track ? TRACK[r.track] : '全部'}</td><td><b>{r.subjectName}</b></td>
-                      <td class="n">{r.taking}</td><td class="n">{r.notTaking}</td>
-                      <td>
+                      <td data-label="組">{r.track ? TRACK[r.track] : '全部'}</td><td class="ti" data-label="科目"><b>{r.subjectName}</b></td>
+                      <td class="n" data-label="考">{r.taking}</td><td class="n" data-label="不考">{r.notTaking}</td>
+                      <td data-label="標示方式" class="wide">
                         <Seg<MarkMode | ''>
                           label={`${r.track ? TRACK[r.track] : ''}${r.subjectName}標示方式`}
                           value={r.mode ?? ''}
@@ -123,7 +123,7 @@ export function Step4(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
                         {r.state === 'locked' && <div><Button kind="ghost" small onClick={() => choose(r, undefined)}>改回系統建議</Button></div>}
                         {moreSide(r) && <p class="small errnote">標的是人數較多的一邊（{r.mode === 'mark-absent' ? `不考 ${r.notTaking} 人` : `考 ${r.taking} 人`}），標示會變多、抽離的人也變多；建議標少數那一邊。仍可照你的選擇。</p>}
                       </td>
-                      <td>{markText(r)}<br /><StateBadge r={r} /></td>
+                      <td data-label="座位表標示與狀態" class="wide">{markText(r)}<br /><StateBadge r={r} /></td>
                     </tr>
                   ))}
                 </tbody>
