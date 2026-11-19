@@ -84,7 +84,7 @@ describe('⑤ 統計表（D147⑤、#391）：每個「天＋時段＋科目」�
     const p = buildSeatPages(real(), 'class')[0]!;
     const t = p.stats.table;
     expect(t.leadHeads).toEqual(['第幾天', '時段', '科目']);
-    const lead = t.rows.slice(1).map((r) => r.lead!);
+    const lead = t.rows.map((r) => r.lead!);
     expect(lead.length).toBe(4); // 學測國文有兩個時段（國綜、國寫），各自一列；英文、數學各一列
     for (const l of lead) expect(l).toHaveLength(3);
     expect(lead.map((l) => l[0])).toEqual(expect.arrayContaining(['第 1 天']));
@@ -96,6 +96,7 @@ describe('⑤ 統計表（D147⑤、#391）：每個「天＋時段＋科目」�
     expect(x).toContain('總計');
     // 版面高度計入每一列
     expect(statLayout(p).rowH).toHaveLength(t.rows.length + 1);
+    expect(t.rows.some((r) => r.label === '本教室考生人數')).toBe(false); // D170
     expect(statLayout(p).cols).toHaveLength(3 + t.classes.length + 1);
   });
 });

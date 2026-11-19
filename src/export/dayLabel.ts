@@ -20,3 +20,11 @@ export function dayRangeText(days: Iterable<number>, dates?: readonly string[]):
   const one = (d: number) => dayTag(d, dates?.[d]);
   return ds.length === 1 ? one(ds[0]!) : `${one(ds[0]!)}～${one(ds[ds.length - 1]!)}`;
 }
+
+/** 統計表「日期」欄（D170）：11/17（二）；沒有日期或格式不對回空字串。 */
+export function dateTag(date?: string): string {
+  const m = date ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(date) : null;
+  if (!m) return '';
+  const d = new Date(Date.UTC(+m[1]!, +m[2]! - 1, +m[3]!));
+  return `${+m[2]!}/${+m[3]!}（${WEEK[d.getUTCDay()]}）`;
+}
