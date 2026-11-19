@@ -35,7 +35,7 @@ import {
   type PeakLoad,
   type RoomPin,
 } from '../../core/makeup';
-import type { ProduceMakeupOptions } from '../../export/makeupFiles';
+import type { ProduceMakeupInput, ProduceMakeupOptions } from '../../export/makeupFiles';
 import { settingsOf, type MakeupSession } from './session';
 
 export const emptyRoster = (): MakeupRoster => ({ rawCount: 0, included: [], notified: [], skipped: [], unresolved: [], gradeOfClass: {} });
@@ -211,18 +211,19 @@ export function outputsOf(s: MakeupSession): OutputsState {
   return out;
 }
 
+/** K4 產出檔案要的輸入（檢核過的同一份產出模型） */
+export function makeupInputOf(s: MakeupSession): ProduceMakeupInput {
+  const b = baseOf(s);
+  return { title: s.name, settings: b.settings, roster: b.roster, plan: planOf(s).plan, schedule: scheduleOf(s).schedule, entries: b.entries, outputs: outputsOf(s).outputs };
+}
+
 /**
- * 產生 K4 的下載檔（Word）並回讀驗算；S-8 下載頁（K3）通過閘門後呼叫。
+ * 產生 K4 的下載檔（Word）並回讀驗算；S-8 下載頁通過閘門後呼叫。
  * 字型載入放在呼叫端（瀏覽器才有 fetch），本函式只組輸入，避免單元測試拖進網路。
  */
-export async function produceFiles(s: MakeupSession, ctx: { fonts: ProduceMakeupOptions['fonts']; generatedAt: string }) {
+export async function produceFiles(s: MakeupSession, ctx: { fonts: ProduceMakeupOptions['fonts']; generatedAt: string; kinds?: ProduceMakeupOptions['kinds']; dayId?: string }) {
   const { produceMakeupFiles } = await import('../../export/makeupFiles');
-  const b = baseOf(s);
-  const o = outputsOf(s);
-  return produceMakeupFiles(
-    { title: s.name, settings: b.settings, roster: b.roster, plan: planOf(s).plan, schedule: scheduleOf(s).schedule, entries: b.entries, outputs: o.outputs },
-    { fonts: ctx.fonts, generatedAt: ctx.generatedAt },
-  );
+  return produceMakeupFiles(makeupInputOf(s), { fonts: ctx.fonts, generatedAt: ctx.generatedAt, ...(ctx.kinds ? { kinds: ctx.kinds } : {}), ...(ctx.dayId ? { dayId: ctx.dayId } : {}) });
 }
 
 // ───────────── ③ 教室夠不夠（F-15：比最擁擠時段的同時在考人數，不比全日人次） ─────────────
