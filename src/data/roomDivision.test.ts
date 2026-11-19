@@ -8,7 +8,7 @@ import type { Doc } from '../ui/store';
 
 const room = (o: Partial<Classroom> & { id: string }): Classroom => ({ name: o.id, kind: 'class', rows: 5, depth: 6, seatCount: 30, ...o });
 const exam = (id: string, division: 'senior' | 'junior', classroomIds: string[]): ExamConfig => ({
-  id, name: id, kind: division === 'junior' ? 'bcct' : 'gsat', division, semester: 'first', participation: 'all',
+  id, name: id, kind: division === 'junior' ? 'bcct' : 'gsat', division, semester: 'first',
   subjects: [{ id: 'chi', name: '國文' }], markRules: [], classroomIds, labelLayout: { paper: 'B4', cols: 7, rows: 7 }, createdAt: '2026-01-01',
 });
 const classes: Settings['classes'] = [

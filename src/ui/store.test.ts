@@ -53,7 +53,7 @@ describe('班級與考試', () => {
     expect(newExam(g.doc, 'gsat', '學測第三次', now).ok).toBe(false);
     const a = newExam(demoDoc(), 'ast', '分科第一次', now);
     if (!a.ok) throw new Error(a.error);
-    expect(a.doc.exams[0]).toMatchObject({ division: 'senior', kind: 'ast', participation: 'partial' });
+    expect(a.doc.exams[0]).toMatchObject({ division: 'senior', kind: 'ast' });
     expect(a.doc.exams[0]?.subjects.map((x) => x.name)).toEqual(['數學甲', '數學乙', '物理', '化學', '生物', '歷史', '地理', '公民與社會']);
     const b = newExam(demoDoc(), 'bcct', '會考第一次', now);
     if (!b.ok) throw new Error(b.error);

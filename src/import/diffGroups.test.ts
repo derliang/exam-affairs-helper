@@ -9,7 +9,7 @@ const E = (classNo: number, seatNo: number, name: string): ExamEntry => ({ class
 describe('#201 差異分組', () => {
   const roster = [S(1, 1, '王小明'), S(1, 2, '李大華'), S(1, 3, '張三'), S(1, 4, '趙四')];
   const entries = [E(1, 1, '王小'), E(1, 2, '陳美玲'), E(1, 3, '張三'), E(1, 9, '新人')];
-  const { diffs } = compareRosters(roster, entries, 'all');
+  const { diffs } = compareRosters(roster, entries);
 
   it('缺字（子字串）歸 A，座號相同姓名完全不同歸 B', () => {
     const byCode = Object.fromEntries(diffs.map((d) => [d.code, classifyDiff(d)]));
@@ -24,7 +24,7 @@ describe('#201 差異分組', () => {
     const g = groupDiffs(diffs);
     expect(g.A.map((d) => d.code)).toEqual(['0101']);
     expect(g.B.map((d) => d.code)).toEqual(['0102']);
-    expect(g.C.map((d) => d.code).sort()).toEqual(['0104', '0109']);
+    expect(g.C.map((d) => d.code).sort()).toEqual(['0109']); // 學生名單單邊（0104）D143 起不算差異
     expect(g.other).toEqual([]);
   });
   it('整組套用某一邊：只動該組、不覆蓋已選', () => {
@@ -48,7 +48,7 @@ describe('#208 疑似缺字（差一字）與差異過多提示', () => {
     expect(nameSimilar('王小明', '李曉華')).toBe(false);
   });
   it('姓名差一字的 mismatch 歸 A', () => {
-    const { diffs } = compareRosters([S(1, 1, '王小明')], [E(1, 1, '王曉明')], 'all');
+    const { diffs } = compareRosters([S(1, 1, '王小明')], [E(1, 1, '王曉明')]);
     expect(groupDiffs(diffs).A).toHaveLength(1);
   });
   it('差異超過 30% 才提示', () => {

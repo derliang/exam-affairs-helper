@@ -73,11 +73,11 @@ describe('沿用上次設定', () => {
     const withRooms: Doc = { ...doc, exams: doc.exams.map((e) => (e.id === second.id ? { ...e, classroomIds: ['x'] } : e)) };
     const off = stopCarry(withRooms, withRooms.exams[1] as ExamConfig);
     const offExam = off.exams[1] as ExamConfig;
-    expect(offExam).toMatchObject({ carry: false, classroomIds: [], markRules: [], participation: 'all' });
+    expect(offExam).toMatchObject({ carry: false, classroomIds: [], markRules: [] });
     expect(carryMode(off, offExam)).toBe('off');
-    const prevWithRooms: Doc = { ...off, exams: off.exams.map((e) => (e.id === first.id ? { ...e, classroomIds: ['a', 'b'], participation: 'partial' as const } : e)) };
+    const prevWithRooms: Doc = { ...off, exams: off.exams.map((e) => (e.id === first.id ? { ...e, classroomIds: ['a', 'b'] } : e)) };
     const on = resumeCarry(prevWithRooms, prevWithRooms.exams[1] as ExamConfig);
-    expect(on.exams[1]).toMatchObject({ carry: true, classroomIds: ['a', 'b'], participation: 'partial' });
+    expect(on.exams[1]).toMatchObject({ carry: true, classroomIds: ['a', 'b'] });
   });
   it('列表：④ 在數學分科方式不同時標「需確認」，會考標「不需要」', () => {
     const { doc, first, second } = twoGsat();

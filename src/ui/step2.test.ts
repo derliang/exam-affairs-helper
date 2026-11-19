@@ -4,7 +4,7 @@ import { defaultSubjects } from './subjects';
 import type { ExamConfig } from '../data';
 
 const exam = (round: number): ExamConfig => ({
-  id: 'e', name: 't', kind: 'gsat', division: 'senior', semester: 'first', round, participation: 'all',
+  id: 'e', name: 't', kind: 'gsat', division: 'senior', semester: 'first', round,
   subjects: defaultSubjects('gsat', round), markRules: [], classroomIds: [], labelLayout: { paper: 'B4', cols: 6, rows: 8 }, createdAt: '2026-01-01',
 });
 const head = ['班級', '座號', '姓名', '組別', '特殊生需求註明'];

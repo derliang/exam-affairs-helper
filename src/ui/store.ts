@@ -80,7 +80,7 @@ export function setClassTrack(doc: Doc, division: Division, no: number, track: T
 }
 
 /**
- * 共用名單、班級或參加方式改動後，重算每次考試的名單比對（#60）。
+ * 共用名單或班級改動後，重算每次考試的名單比對（#60）。
  * 沒有變動的考試維持原物件（不會被蓋上修改時間）；已處理的差異只在內容相同時保留選擇。
  */
 /** 名單比對的偵測選項：班級資料有哪些班、這次考試要不要比組別（學測類的高中部才比） */
@@ -98,7 +98,7 @@ export function syncDiffs(doc: Doc): Doc {
     const f = files[e.id];
     if (!f?.entries) continue;
     // 名單與班級用該考試學年度的那一份（沒有自己的資料就退回目前這份，#208）
-    const fresh = refreshDiffs(rosterFor(doc, e)[e.division], f.entries, 'partial', f.diffs ?? [], diffOptions(viewForYear(doc, examYear(e)), e));
+    const fresh = refreshDiffs(rosterFor(doc, e)[e.division], f.entries, f.diffs ?? [], diffOptions(viewForYear(doc, examYear(e)), e));
     if (!diffsStale(f.diffs ?? [], fresh)) continue;
     files = { ...files, [e.id]: { ...f, diffs: fresh } };
   }
@@ -111,7 +111,7 @@ export interface NewExamOptions {
   semester?: Semester;
   /** 學年度（民國年）；沒給就依建立日期推算（#211） */
   year?: number;
-  /** 沿用上一次同類型模擬考的設定（教室、標示規則、參加方式、標籤格式、自訂考科） */
+  /** 沿用上一次同類型模擬考的設定（教室、標示規則、標籤格式、自訂考科） */
   prev?: ExamConfig;
 }
 
@@ -131,7 +131,6 @@ export function newExam(doc: Doc, kind: ExamKind, name: string, now: Date, opts:
   const prev = opts.prev && opts.prev.kind === kind ? opts.prev : undefined;
   const exam: ExamConfig = {
     id: `exam-${now.getTime()}`, name: n, kind, division, semester, schoolYear: year, round,
-    participation: prev?.participation ?? (kind === 'ast' ? 'partial' : 'all'), // 分科不是人人參加（D64）
     subjects: prev && isCustomized(prev.subjects) ? structuredClone(prev.subjects) : defaultSubjects(kind, round),
     markRules: prev ? structuredClone(prev.markRules) : [], classroomIds: prev ? [...prev.classroomIds] : [],
     // 標籤格數待使用者定案（D72），這裡只是預設值，一律由參數帶

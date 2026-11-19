@@ -29,7 +29,6 @@ export function makeFixture(opts: { labelCols?: number; labelRows?: number; pape
     division: 'senior',
     semester: 'first',
     round: 1,
-    participation: 'all',
     subjects: [
       { id: 'zh', name: '國文' },
       { id: 'en', name: '英文' },

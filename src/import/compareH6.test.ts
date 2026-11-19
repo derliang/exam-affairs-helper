@@ -11,25 +11,25 @@ describe('H-6 組別不同', () => {
   const roster = [S(1, 1, '甲', 'D'), S(1, 2, '乙', 'E'), S(1, 3, '丙')];
   it('同一人兩邊組別不同才列出；沒填的不比；同組別不同寫法（2-自然組）視為相同', () => {
     const entries = [E(1, 1, '甲', 'E'), E(1, 2, '乙', 'E-文組'), E(1, 3, '丙', 'D')];
-    const { diffs } = compareRosters(roster, entries, 'all', { groups: true });
+    const { diffs } = compareRosters(roster, entries, { groups: true });
     expect(diffs).toHaveLength(1);
     expect(diffs[0]).toMatchObject({ kind: 'group-diff', code: '0101', groups: { exam: 'E', roster: 'D' } });
   });
   it('沒開 groups 選項（分科、國中部）不偵測', () => {
-    expect(compareRosters(roster, [E(1, 1, '甲', 'E')], 'partial').diffs).toHaveLength(0);
+    expect(compareRosters(roster, [E(1, 1, '甲', 'E')]).diffs).toHaveLength(0);
   });
   it('姓名也不同時只列「姓名不同」，不重複列組別', () => {
-    const { diffs } = compareRosters(roster, [E(1, 1, '甲甲', 'E')], 'partial', { groups: true });
+    const { diffs } = compareRosters(roster, [E(1, 1, '甲甲', 'E')], { groups: true });
     expect(diffs.map((d) => d.kind)).toEqual(['mismatch']);
   });
   it('以考試名單為準：學生名單的組別改成考試名單的', () => {
     const entries = [E(1, 1, '甲', 'E')];
-    const diffs = compareRosters(roster, entries, 'partial', { groups: true }).diffs.map((d): RosterDiff => ({ ...d, choice: 'use-exam' }));
+    const diffs = compareRosters(roster, entries, { groups: true }).diffs.map((d): RosterDiff => ({ ...d, choice: 'use-exam' }));
     expect(applyDiffs(roster, entries, diffs).students.find((s) => s.seatNo === 1)?.groupCode).toBe('E');
   });
   it('以學生名單為準：考試名單的組別與考科改成學生名單的', () => {
     const entries = [E(1, 1, '甲', 'E')];
-    const diffs = compareRosters(roster, entries, 'partial', { groups: true }).diffs.map((d): RosterDiff => ({ ...d, choice: 'use-roster' }));
+    const diffs = compareRosters(roster, entries, { groups: true }).diffs.map((d): RosterDiff => ({ ...d, choice: 'use-roster' }));
     const r = applyDiffs(roster, entries, diffs, { subjectsOfGroup: (k) => (k === 'D' ? ['chi', 'sci'] : undefined) });
     expect(r.entries[0]).toMatchObject({ groupCode: 'D', subjectIds: ['chi', 'sci'] });
     expect(r.students.find((s) => s.seatNo === 1)?.groupCode).toBe('D'); // 學生名單不動
@@ -40,16 +40,16 @@ describe('H-6 考試名單有這個班級、班級資料沒有', () => {
   const roster = [S(1, 1, '甲')];
   const entries = [E(1, 1, '甲'), E(7, 3, '丁'), E(7, 7, '戊')];
   const diffsOf = (patch: Partial<RosterDiff>): RosterDiff[] =>
-    compareRosters(roster, entries, 'all', { classNos: known }).diffs.map((d) => (d.kind === 'new-class' ? { ...d, ...patch } : d));
+    compareRosters(roster, entries, { classNos: known }).diffs.map((d) => (d.kind === 'new-class' ? { ...d, ...patch } : d));
 
   it('整班一筆（不逐人列為「考試名單有、學生名單沒有」）', () => {
-    const { diffs } = compareRosters(roster, entries, 'all', { classNos: known });
+    const { diffs } = compareRosters(roster, entries, { classNos: known });
     expect(diffs).toHaveLength(1);
     expect(diffs[0]).toMatchObject({ kind: 'new-class', code: 'new-class-7' });
     expect(diffs[0]?.members?.map((m) => m.seatNo)).toEqual([3, 7]);
   });
   it('沒給 classNos 時維持舊行為（逐人列出）', () => {
-    expect(compareRosters(roster, entries, 'all').diffs.map((d) => d.kind)).toEqual(['only-in-exam', 'only-in-exam']);
+    expect(compareRosters(roster, entries).diffs.map((d) => d.kind)).toEqual(['only-in-exam', 'only-in-exam']);
   });
   it('新增班級：這班的人進學生名單，並回報要新增的班級序號', () => {
     const r = applyDiffs(roster, entries, diffsOf({ choice: 'add-class' }));
@@ -66,7 +66,7 @@ describe('H-6 考試名單有這個班級、班級資料沒有', () => {
     expect(validateResolved(r, known)).toBeNull();
   });
   it('改成既有班級時座號撞到人：套用前驗證擋下並指出兩人', () => {
-    const r = applyDiffs([S(1, 1, '甲'), S(2, 3, '己')], [E(1, 1, '甲'), E(2, 3, '己'), E(7, 3, '丁')], compareRosters([S(1, 1, '甲'), S(2, 3, '己')], [E(1, 1, '甲'), E(2, 3, '己'), E(7, 3, '丁')], 'all', { classNos: known }).diffs.map((d) => ({ ...d, choice: 'remap-class' as const, targetClassNo: 2 })));
+    const r = applyDiffs([S(1, 1, '甲'), S(2, 3, '己')], [E(1, 1, '甲'), E(2, 3, '己'), E(7, 3, '丁')], compareRosters([S(1, 1, '甲'), S(2, 3, '己')], [E(1, 1, '甲'), E(2, 3, '己'), E(7, 3, '丁')], { classNos: known }).diffs.map((d) => ({ ...d, choice: 'remap-class' as const, targetClassNo: 2 })));
     const msg = validateResolved(r, known);
     expect(msg).toContain('重複');
     expect(msg).toContain('丁');
@@ -84,13 +84,13 @@ describe('H-6 考試名單有這個班級、班級資料沒有', () => {
   });
   it('重算差異時沿用相同內容的選擇（含目標班）；內容變了就清掉', () => {
     const stored = diffsOf({ choice: 'remap-class', targetClassNo: 2 });
-    const same = refreshDiffs(roster, entries, 'all', stored, { classNos: known });
+    const same = refreshDiffs(roster, entries, stored, { classNos: known });
     expect(same[0]).toMatchObject({ choice: 'remap-class', targetClassNo: 2 });
-    const changed = refreshDiffs(roster, [...entries, E(7, 9, '庚')], 'all', stored, { classNos: known });
+    const changed = refreshDiffs(roster, [...entries, E(7, 9, '庚')], stored, { classNos: known });
     expect(changed[0]?.choice).toBeUndefined();
   });
   it('班級資料後來補上這班：不再是整班一筆，改成逐人的「考試名單有、學生名單沒有」', () => {
-    expect(compareRosters(roster, entries, 'all', { classNos: new Set([1, 7]) }).diffs.map((d) => d.kind)).toEqual(['only-in-exam', 'only-in-exam']);
+    expect(compareRosters(roster, entries, { classNos: new Set([1, 7]) }).diffs.map((d) => d.kind)).toEqual(['only-in-exam', 'only-in-exam']);
   });
 });
 
@@ -99,7 +99,7 @@ describe('C-9 以學生名單為準時保留個別 X／＋', () => {
   const table: Record<string, string[]> = { D: ['chi', 'eng', 'sci'], E: ['chi', 'eng'] };
   const opts = { subjectsOfGroup: (k: string) => table[k] };
   const useRoster = (entries: ExamEntry[]) =>
-    compareRosters(roster, entries, 'partial', { groups: true }).diffs.map((d): RosterDiff => ({ ...d, choice: 'use-roster' }));
+    compareRosters(roster, entries, { groups: true }).diffs.map((d): RosterDiff => ({ ...d, choice: 'use-roster' }));
 
   it('套用前後：個別缺考與加考疊在新組別預設上，標示欄位也保留', () => {
     const entries: ExamEntry[] = [
