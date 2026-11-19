@@ -581,7 +581,16 @@ class Ctx {
   private stickyStudy(plans: SlotPlan[]): Int32Array[] {
     if (this.fixed.size) return plans.map((p) => p.studyRoom);
     const anchor = new Map<number, number>();
-    return plans.map((p) => {
+    const moves = (rs: readonly Int32Array[]): number => {
+      let total = 0;
+      for (const st of this.stus) {
+        const seen = new Set<number>();
+        for (const r of rs) if (r[st.idx]! >= 0) seen.add(r[st.idx]!);
+        total += Math.max(0, seen.size - 1);
+      }
+      return total;
+    };
+    const sticky = plans.map((p) => {
       const room = Int32Array.from(p.studyRoom);
       const movable = this.stus.filter((st) => room[st.idx]! >= 0 && room[st.idx] !== this.home.get(st.classNo)?.idx);
       const cap = new Map<number, number>();
@@ -613,6 +622,9 @@ class Ctx {
       for (const st of movable) if (!anchor.has(st.idx)) anchor.set(st.idx, room[st.idx]!);
       return room;
     });
+    // G32②（D144）：整份與第一階段原本的分配比「換自習教室人次」，取少的（保證不比原本差）
+    const plain = plans.map((p) => p.studyRoom);
+    return moves(plain) < moves(sticky) ? plain : sticky;
   }
 
   private output(plans: SlotPlan[]): PlanOutput {
