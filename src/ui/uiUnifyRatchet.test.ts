@@ -1,7 +1,7 @@
 /**
  * UI 統一自動檢查（ratchet，#413；使用者 2026-11-19 在 UI 統一盤點稿 v2.72 十項全選 A）。
  * 掃 src/ui 的程式原始碼（不含測試）：已統一的項目不得退回；還沒全部統一的項目只准「變少」不准「變多」。
- * 要放寬任何一項，必須先經設計員與使用者同意並同步更新 docs/design/DESIGN.md〈10.40 全站同一種工作一種畫法〉，不是直接改這裡的數字。
+ * 要放寬任何一項，必須先經設計員與使用者同意並同步更新 docs/design/DESIGN.md〈10.41 全站同一種工作一種畫法〉，不是直接改這裡的數字。
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
