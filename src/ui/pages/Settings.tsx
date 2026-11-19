@@ -277,7 +277,7 @@ function Classes({ doc, onChange, division }: Props) {
           </tbody>
         </table>
       </div>
-      <p class="small muted">班級色會同步套用至座位表及標籤；黑白列印請依班級文字辨認。班級名稱可改，同一部別不可重名。</p>
+      <p class="small muted">班級色只用在座位表；黑白列印請依班級文字辨認。班級名稱可改，同一部別不可重名。</p>
     </div>
   );
 }
