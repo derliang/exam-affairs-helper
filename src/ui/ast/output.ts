@@ -193,11 +193,11 @@ function seatPages(c: Ctx): SeatPageModel[] {
     // 統計：每個時段一列（各班人數＋合計），最後「不重複人數」
     const classNos = [...new Set([...seats.values()].flat().map((x) => Number(x.code.slice(0, 2))))].sort((a, b) => a - b);
     const per = (codes: Iterable<string>) => { const a = [...codes]; return classNos.map((n) => a.filter((x) => Number(x.slice(0, 2)) === n).length); };
-    const rows = c.slots.flatMap((s) => {
+    const rows: { label: string; foot?: boolean; per: number[]; total: number }[] = c.slots.flatMap((s) => {
       const codes = new Set([...seats.values()].flat().filter((x) => x.slotId === s.id).map((x) => x.code));
       return codes.size ? [{ label: slotHead(c, s), per: per(codes), total: codes.size }] : [];
     });
-    rows.push({ label: '不重複人數', per: per(everyone), total: everyone.size });
+    rows.push({ label: '使用人數（不重複）', foot: true, per: per(everyone), total: everyone.size });
     pages.push({
       kind: 'seat', title: `${c.exam.name}　${rn(c, room.id)}　座位表`, examName: c.exam.name, roomName: rn(c, room.id),
       chips: [`共 ${everyone.size} 人`, `${rows.length - 1} 個時段`, '綜合教室'],

@@ -1,6 +1,6 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { LabelPaper } from '../../data';
-import { labelCellMm, defaultLabelLayout, PAPER_MM } from '../../export/model';
+import { labelCellMm, defaultLabelLayout, LABEL_EDGE_MM, LABEL_EDGE_X_MM, PAPER_MM } from '../../export/model';
 import { sampleHtml, sampleMarkLabelPage, sampleReserveLabelPage, SAMPLE_ROOM } from '../../export/sample';
 
 const PX = 96 / 25.4; // 1 mm ≈ 3.78 px
@@ -68,13 +68,16 @@ export function MarkLabelSample(p: { paper: LabelPaper; mark?: { kind: 'x' | 'ad
   const thumbZoom = 0.2;
   const thumb = useMemo(() => sampleHtml(page, `html{zoom:${thumbZoom}}body{margin:0;background:#fff}${NOSCROLL}`), [page]);
   const bigZoom = 0.95;
-  // 放大一格：隱藏抬頭與頁尾，格子從頁面左上（上邊界 3mm）開始
-  const big = useMemo(() => sampleHtml(page, `html{zoom:${bigZoom}}body{margin:0;background:#fff}${NOSCROLL}.pp-hd,.pp-foot,.pp-note{display:none!important}.sheet{margin-top:-3mm!important}`), [page]);
+  // 放大一格（#467、D170）：隱藏抬頭與頁尾後，格子左上角在頁面的 (左邊界 LABEL_EDGE_X_MM, 上邊界 LABEL_EDGE_MM)；視窗從那一點量起，
+  // 整格（含四邊框線）完整出現，不再因為沒扣左邊界而切掉右邊 10.5mm
+  const big = useMemo(() => sampleHtml(page, `html{zoom:${bigZoom}}body{margin:0;background:#fff}${NOSCROLL}.pp-hd,.pp-foot,.pp-note{display:none!important}`), [page]);
+  const offX = LABEL_EDGE_X_MM * PX * bigZoom;
+  const offY = LABEL_EDGE_MM * PX * bigZoom;
   return (
     <div class="lprev">
       <figure>
-        <div style={`width:${Math.ceil(cell.w * PX * bigZoom)}px;height:${Math.ceil(cell.h * PX * bigZoom)}px;overflow:hidden`}>
-          {frame(big, paper.w * PX * bigZoom, paper.h * PX * bigZoom, `${p.paper} 標籤放大一格`)}
+        <div class="lbig" style={`width:${Math.ceil(cell.w * PX * bigZoom) + 4}px;height:${Math.ceil(cell.h * PX * bigZoom) + 4}px;overflow:hidden;position:relative;max-width:100%`}>
+          <div style={`position:absolute;left:${(2 - offX).toFixed(2)}px;top:${(2 - offY).toFixed(2)}px`}>{frame(big, paper.w * PX * bigZoom, paper.h * PX * bigZoom, `${p.paper} 標籤放大一格`)}</div>
         </div>
         <figcaption><b>{p.paper}</b>　每格 {cell.w.toFixed(1)}×{cell.h.toFixed(1)} mm</figcaption>
       </figure>
