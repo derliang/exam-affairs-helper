@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { renderToString } from 'preact-render-to-string';
 import { describe, expect, it } from 'vitest';
 import { createMemoryRepository, demoDoc } from '../repository';
@@ -51,5 +52,14 @@ describe('#473 已建立的考試要找得到修改日期與各節時間的入�
   it('從列表「修改日期」進來：修改基本資料視窗直接開著', () => {
     const h = renderToString(<Step1 doc={doc} exam={doc.exams[0]!} onChange={noop} openBasic />);
     expect(h).toContain('第 1 天');
+  });
+});
+
+describe('#466 各班人數那列不被擠成兩行', () => {
+  it('每個班與「合計」都標不換行、間距縮小', () => {
+    const src = readFileSync('src/ui/pages/Step2.tsx', 'utf8');
+    const line = src.slice(src.indexOf('id="x-perclass"') - 80, src.indexOf('id="x-perclass"') + 900);
+    expect(line).toContain('各班人數');
+    expect((line.match(/white-space:nowrap/g) ?? []).length).toBeGreaterThanOrEqual(3);
   });
 });
