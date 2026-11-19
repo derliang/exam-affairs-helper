@@ -101,6 +101,8 @@ describe('G20 匯入預覽統計一行、用詞統一', () => {
       for (const t of ['新報名', '改報名內容', '取消報名', '沒變']) expect(html).toContain(t);
       for (const t of ['>新增<', '>變更<', '>移除<', '>不變<']) expect(html).not.toContain(t);
       expect(html).not.toContain('標示統計：有 0 筆'); // 0 筆不顯示
+      expect(html).toMatch(/確認匯入[^<]*人<\/button>/); // #374：確認鈕不附「（取代本次名單）」
+      expect(html).not.toContain('取代本次名單');
       expect(doc).toBeTruthy();
     });
   }
