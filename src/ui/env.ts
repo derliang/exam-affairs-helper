@@ -63,7 +63,7 @@ const TRACK_LABEL: Record<string, string> = { science: '理組', liberal: '文�
  * - 學測、會考（seatExam）是把同組（高中部依文理組、國中部全體）的學生合起來排進同組的班級教室，
  *   所以只有「同組學生總數 > 同組班級教室座位總數」才是真的排不下（紅燈，擋建立）。
  * - 分科依各科報名人數排考場（班級教室＋預備教室），只有「部別學生總數 > 全部教室座位」才擋。
- * - 單一班級人數超過自己教室座位（例如 50 人、班級教室上限 7×7＝49）只是提醒，不擋：多出的人會坐到同組其他教室的空位。
+ * - 單一班級人數超過自己教室座位（例如 50 人、班級教室上限 56 座）只是提醒，不擋：多出的人會坐到同組其他教室的空位。
  * kind 省略（首次設定精靈）時用學測、會考的口徑。
  */
 function classLines(doc: Doc, division: Division, kind?: ExamKind): EnvLine[] {
@@ -102,12 +102,12 @@ function classLines(doc: Doc, division: Division, kind?: ExamKind): EnvLine[] {
     for (const [gk, g] of groups) {
       if (g.n <= g.s) continue;
       const who = division === 'junior' ? name : `${name}${TRACK_LABEL[gk] ?? gk}`;
-      short = `${who}學生 ${g.n} 人，班級教室座位共 ${g.s} 個，還差 ${g.n - g.s} 個；請到教室清單加大班級教室座位（每間最多 7×7）`;
+      short = `${who}學生 ${g.n} 人，班級教室座位共 ${g.s} 個，還差 ${g.n - g.s} 個；請到教室清單加大班級教室座位（每間橫排、深位各最多 8，總座位 56）`;
       break;
     }
   }
   const note = !short && over.length
-    ? `${over.join('、')}，座位比人數少（班級教室最多 7×7＝49 座）。${kind === 'ast' ? '分科依各科報名人數排考場，不受影響。' : '排座時多出的人會坐到同組其他班級教室的空位，不影響建立；要讓同班坐在一起，可到教室清單調整座位或新增預備教室。'}`
+    ? `${over.join('、')}，座位比人數少（班級教室最多 56 座）。${kind === 'ast' ? '分科依各科報名人數排考場，不受影響。' : '排座時多出的人會坐到同組其他班級教室的空位，不影響建立；要讓同班坐在一起，可到教室清單調整座位或新增預備教室。'}`
     : undefined;
   const text = `班級教室 ${withStu.length} 間・座位 ${seats}${division === 'senior' ? `・預備教室 ${reserve.length} 間` : ''}`;
   const roomLine: EnvLine = { key: `rooms:${division}`, label: '教室與座位', text, sig: JSON.stringify(sig), tone: short ? 'bad' : 'ok', ...(short ? { problem: short } : {}), ...(note ? { note } : {}) };

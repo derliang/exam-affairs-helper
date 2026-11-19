@@ -129,7 +129,7 @@ function labelPages(c: Ctx, paper: LabelPaper): LabelPageModel[] {
     const rm0 = c.plan.input.rooms.find((r) => r.id === id);
     const maxRow = Math.max(1, ...(rm0?.seats ?? []).map((x) => x.row));
     const maxDepth = Math.max(1, ...(rm0?.seats ?? []).map((x) => x.depth));
-    if (roomTooBigForLabel({ rows: maxRow, depth: maxDepth })) return []; // 超過 7×7 標籤無法對應（D113），不輸出
+    if (roomTooBigForLabel({ rows: maxRow, depth: maxDepth })) return []; // 橫排或深位超過 8，標籤無法對應（D113、D154），不輸出
     const seats = [...bySeat.get(id)!.values()].sort((a, b) => a[0]!.row - b[0]!.row || a[0]!.depth - b[0]!.depth);
     const cells: CellModel[] = seats.map((list) => {
       const first = list[0]!;
