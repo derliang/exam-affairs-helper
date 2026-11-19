@@ -3,14 +3,15 @@ import type { ExamConfig, LabelPaper } from '../../data';
 import { buildPickupPages } from '../../export/pickup';
 import { buildAttendancePages } from '../../export/attendance';
 import { renderPrintHtml } from '../../export/htmlRender';
-import { buildLabelPages, buildSeatPages } from '../../export/model';
+import { buildSeatPages } from '../../export/model';
 import { defaultOptions, planFiles, preflight, runExport, type ExportFormat, type ExportOptions, type OutputFile } from '../../export/plan';
 import type { FontData } from '../../export/docxRender';
 import { Alert, Badge, Button, FormatButton, More, Seg, StepHead } from '../components';
+import { LabelPreview, labelPreviewHtml } from '../components/LabelPreview';
 import { enabledExportItems, useIsEnabled } from '../features';
 import { prepareExport, relevantIssues, unappliedDiffsOf, unresolvedDiffsOf } from '../exportInput';
 import { afterExport } from '../flow';
-import { labelSplitNote, roomsOverLabel } from '../rooms';
+import { roomsOverLabel } from '../rooms';
 import type { Doc } from '../store';
 import { isStale, validationChecks } from '../seating';
 import { defaultLabelLayout, labelSizeNote } from '../../export/model';
@@ -86,7 +87,7 @@ function PreviewCard(p: { prepared: Extract<ReturnType<typeof prepareExport>, { 
     try {
     const withPaper = { ...input, includeStudyRef: true, exam: { ...input.exam, labelLayout: defaultLabelLayout(p.paper) } };
     const meta = { generatedAt: input.result.generatedAt, dataVersion: input.result.dataVersion, extraCss: `html{background:#e9ecf1;zoom:${kind === 'label' ? (p.paper === 'A3' ? 0.38 : 0.45) : 0.5}}body{margin:0;padding:8px}.sheet{width:${kind === 'label' ? (p.paper === 'A3' ? 297 : 250) : 210}mm;box-sizing:border-box;margin:0 auto 8px!important;box-shadow:0 1px 4px #0003}` };
-    if (kind === 'label') { const pgs = buildLabelPages(withPaper, 'all').filter((x) => x.roomName === room.name || x.roomName.startsWith(`${room.name}（第`) || x.roomName.startsWith(`${room.name}　抽離考試`)); return pgs.length ? renderPrintHtml({ label: pgs }, meta) : ''; }
+    if (kind === 'label') return labelPreviewHtml(input, p.paper, room); // 與 ⑤ 預覽卡同一個畫法（D171④）
     if (kind === 'seat') { const pg = buildSeatPages(withPaper, 'all').find((x) => x.roomName === room.name); return pg ? renderPrintHtml({ seat: [pg] }, meta) : ''; }
     if (kind === 'attendance') { const pg = buildAttendancePages(withPaper).find((t) => t.subtitle?.startsWith(room.name)); return pg ? renderPrintHtml({ table: [pg] }, meta) : ''; }
     const pg = room.kind === 'reserve' ? undefined : buildPickupPages(withPaper).find((t) => t.subtitle?.startsWith(room.name));
@@ -109,12 +110,13 @@ function PreviewCard(p: { prepared: Extract<ReturnType<typeof prepareExport>, { 
       {rooms.length > 1 && (
         <div class="row"><Seg<string> label="預覽教室" value={String(idx)} onChange={(v) => setRi(Number(v))} options={rooms.map((r, i) => ({ value: String(i), label: r.kind === 'reserve' ? `${r.name}（預備）` : r.name }))} /></div>
       )}
-      {kind === 'label' && room && labelSplitNote(room, p.paper) && <Alert tone="info">{labelSplitNote(room, p.paper)}</Alert>}
-      {typeof html === 'object'
+      {kind === 'label'
+        ? <LabelPreview input={input} paper={p.paper} room={room} html={html} />
+        : typeof html === 'object'
         ? <Alert tone="danger"><b>這間教室的預覽排不出來</b>：{html.error}。請回 ③ 調整教室的座位。</Alert>
         : html
-        ? <iframe class="pvframe" title="下載預覽" sandbox="" srcdoc={html} style={`width:100%;height:${kind === 'label' ? 660 : 620}px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--sunken)`} />
-        : <Alert tone="info">{room?.kind === 'reserve' ? '這間預備教室沒有加考的人：抽離自習的人只排自習座位頁、不印標籤，名單另出。' : '這間教室沒有可預覽的內容。'}</Alert>}
+        ? <iframe class="pvframe" title="下載預覽" sandbox="" srcdoc={html} style={`width:100%;height:620px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--sunken)`} />
+        : <Alert tone="info">這間教室沒有可預覽的內容。</Alert>}
       <p class="small muted">{cap}</p>
     </div>
   );

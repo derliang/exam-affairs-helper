@@ -20,21 +20,18 @@ function CheckRow(p: { c: Check; onGo: (n: 2 | 3 | 5) => void }) {
   return (
     <div class={`rc-row rc-row-${c.light}`} data-check={c.id} data-light={c.light}>
       <div class="rc-name"><b>{c.id}</b>　{c.title}<Lamp light={c.light} /></div>
-      {c.light === 'na'
-        ? <div class="rc-val small muted">{c.summary}</div>
-        : (
-          <div class="rc-val">
-            <div class="rc-tri">
-              <div><span class="small muted">{x}</span><b>{c.a}</b></div>
-              <div><span class="small muted">{y}</span><b>{c.b}</b></div>
-              <div><span class="small muted">{z}</span><b>{c.d}</b></div>
-            </div>
-            <div class="small">{c.summary}</div>
-          </div>
-        )}
+      {c.light === 'na' && <div class="rc-val small muted">{c.summary}</div>}
+      {/* D171①②：通過列只顯示燈號、項目與「通過」；應有／實有／差異與說明都收進明細，收起時不留「差異 0」。不通過、警示直接展開 */}
+      {c.light === 'pass' && <div class="rc-val" />}
       {c.light !== 'na' && <button type="button" class="rc-more" aria-expanded={open} onClick={() => setOpen(!open)}>明細 {open ? '▴' : '▾'}</button>}
       {open && c.light !== 'na' && (
         <div class="rc-detail">
+          <div class="rc-tri">
+            <div><span class="small muted">{x}</span><b>{c.a}</b></div>
+            <div><span class="small muted">{y}</span><b>{c.b}</b></div>
+            <div><span class="small muted">{z}</span><b>{c.d}</b></div>
+          </div>
+          <div class="small">{c.summary}</div>
           {c.issues.map((i) => (
             <div key={i.text} class="rc-issue">
               <span>{i.text}</span>
@@ -83,25 +80,19 @@ export function ReconcilePanel(p: {
 
       <div class="lab"><b>總帳：每個時段，名單範圍內每個人都在一個地方</b></div>
       <div class="small">名單範圍 {r.scope.total} 人 ＝ 報名 {r.scope.enrolled} ＋ 不參加 {r.scope.absent}{r.hasAbsent ? '' : '（不參加的人就是自習，座位表上有他們的座位）'}</div>
-      <div class="rc-table scroll">
-        <table class="t compact">
+      {/* #480：原本 10 欄表格有最小寬度又包 .scroll，在兩欄版面溢出卡片。改 D168 的容器寬度表格：寬時是表格、容器 ≤640px 變一列一張卡，不橫向捲動 */}
+      <div class="rtw">
+        <table class="t compact rt-t">
           <thead><tr><th>時段</th><th>科目</th><th>名單範圍</th><th>＝ 考試</th>{r.hasStudy && <th>＋ 自習</th>}{r.hasAbsent && <th>＋ 不參加</th>}<th>座位表</th><th>標籤</th><th>教室加總</th><th>帳</th></tr></thead>
           <tbody>{r.ledger.map((l) => (
-            <tr key={l.key} data-ledger-ok={l.ok} class={l.ok ? '' : 'rc-bad'}>
-              <td>{l.when}</td><td>{l.subject}</td><td>{l.scope}</td><td>{l.exam}</td>{r.hasStudy && <td>{l.study}</td>}{r.hasAbsent && <td>{l.absent}</td>}
-              <td>{l.seat} {l.seat === ledgerWant(l).seat ? '✓' : '✕'}</td><td>{l.label} {l.label === ledgerWant(l).label ? '✓' : '✕'}</td><td>{l.room} {l.room === ledgerWant(l).room ? '✓' : '✕'}</td>
-              <td>{l.ok ? '✓ 平' : '✕ 不平'}</td>
+            <tr key={l.key} data-ledger-ok={l.ok} class={l.ok ? '' : 'bad rc-bad'}>
+              <td class="ti" data-label="時段">{l.when}</td><td data-label="科目">{l.subject}</td><td data-label="名單範圍">{l.scope}</td><td data-label="＝ 考試">{l.exam}</td>{r.hasStudy && <td data-label="＋ 自習">{l.study}</td>}{r.hasAbsent && <td data-label="＋ 不參加">{l.absent}</td>}
+              <td data-label="座位表">{l.seat} {l.seat === ledgerWant(l).seat ? '✓' : '✕'}</td><td data-label="標籤">{l.label} {l.label === ledgerWant(l).label ? '✓' : '✕'}</td><td data-label="教室加總">{l.room} {l.room === ledgerWant(l).room ? '✓' : '✕'}</td>
+              <td data-label="帳">{l.ok ? '✓ 平' : '✕ 不平'}</td>
             </tr>
           ))}</tbody>
         </table>
       </div>
-      <div class="rc-cards">{r.ledger.map((l) => (
-        <div key={l.key} class={`rc-pcard ${l.ok ? '' : 'rc-bad'}`}>
-          <div class="row sb"><b>{l.when}　{l.subject}</b><span>{l.ok ? '✓ 平' : '✕ 不平'}</span></div>
-          <div class="small">名單範圍 {l.scope} ＝ 考試 {l.exam}{r.hasStudy ? ` ＋ 自習 ${l.study}` : ''}{r.hasAbsent ? ` ＋ 不參加 ${l.absent}` : ''}</div>
-          <div class="small muted">座位表 {l.seat}　標籤 {l.label}　教室加總 {l.room}</div>
-        </div>
-      ))}</div>
       <div class="small muted">「考試」是這個時段坐進考場的人；{r.hasStudy ? '「自習」是這個時段不考的人，包括不參加本次考試的人；' : ''}{r.hasAbsent ? '「不參加」是名單範圍內沒有報名本次考試的人。' : ''}兩者加起來必須等於名單範圍：每個人每個時段都要有去處。</div>
 
       <div class="small muted">下載閘門：只有「不通過」會擋下載；警示只是提示，不擋下載、不用確認。</div>
