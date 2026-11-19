@@ -1128,3 +1128,11 @@ details[open]:not(.moremenu)>summary::after{content:" ▴"}
 .rt-cells small{display:block;font-size:12px;color:var(--text-3)}
 .t td.on{background:var(--accent-soft)}
 .chartfit{max-width:100%;overflow:hidden}
+
+/* 補考（K2，D113）：場次卡片左邊條＝對帳狀態（稿 S-1）。紅實線＝有不通過、琥珀虛線＝待確認、綠實線＝全過；只用 tokens，黑白列印靠文字「✕ ! ✓」分辨 */
+.exam.mk-card{border-left-width:10px}
+.exam.mk-red{border-left-color:var(--danger)}
+.exam.mk-amber{border-left-color:var(--warn-bar);border-left-style:dashed}
+.exam.mk-green{border-left-color:var(--ok-bar)}
+.exam.mk-card .prog .bad{color:var(--danger-ink)}
+.exam.mk-card .prog .ok{color:var(--ok-ink)}
