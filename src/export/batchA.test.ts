@@ -102,19 +102,19 @@ describe('匯出班名表只用本部別的班級（#371）', () => {
   });
 });
 
-describe('自習參考座位頁標示第幾天、哪個時段（#386）', () => {
+describe('自習座位頁標示第幾天、哪個時段（#386、D147⑦）', () => {
   const real = () => JSON.parse(JSON.stringify(makeFixture()).replace(/"zh"/g, '"chinese"').replace(/"en"/g, '"english"').replace(/"ma"/g, '"math"')) as ReturnType<typeof makeFixture>;
 
   it('統計表的「自習人數」列本身就寫第幾天、時段與科目（只看那張表也知道是哪一節）', () => {
-    const pg = buildSeatPages(real(), 'reserve').find((p) => p.roomName.includes('參考座位'))!;
+    const pg = buildSeatPages(real(), 'reserve').find((p) => p.roomName.includes('自習座位'))!;
     const label = pg.stats.table.rows[0]!.label;
-    expect(label).toMatch(/^自習人數（第.天 時段.+國文）$/);
+    expect(label).toMatch(/^自習人數（第 \d 天 時段.+國文）$/);
     // 頁首小標籤仍有同樣的天與時段
-    expect(pg.chips.some((c) => /第.天 時段./.test(c))).toBe(true);
+    expect(pg.chips.some((c) => /第 \d 天 時段./.test(c))).toBe(true);
   });
 
   it('列較長時統計表高度已計入（statLayout 依文字寬度決定列高，不會被截掉）', () => {
-    const pg = buildSeatPages(real(), 'reserve').find((p) => p.roomName.includes('參考座位'))!;
+    const pg = buildSeatPages(real(), 'reserve').find((p) => p.roomName.includes('自習座位'))!;
     const sl = statLayout(pg);
     expect(sl.rowH).toHaveLength(2);
     expect(sl.rowH[1]!).toBeGreaterThanOrEqual(8);
@@ -123,7 +123,7 @@ describe('自習參考座位頁標示第幾天、哪個時段（#386）', () => 
   it('Word 與列印頁都有這串字', async () => {
     const seat = buildSeatPages(real(), 'reserve');
     const x = await (await JSZip.loadAsync(await renderDocx({ seat }, { fonts, ...meta }))).file('word/document.xml')!.async('string');
-    expect(x).toContain('自習人數（第一天 時段三、第二天 時段三');
-    expect(renderPrintHtml({ seat }, meta)).toContain('自習人數（第一天 時段三、第二天 時段三');
+    expect(x).toContain('自習人數（第 1 天 時段三、第 2 天 時段三');
+    expect(renderPrintHtml({ seat }, meta)).toContain('自習人數（第 1 天 時段三、第 2 天 時段三');
   });
 });
