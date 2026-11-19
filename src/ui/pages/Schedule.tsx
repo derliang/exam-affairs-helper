@@ -5,8 +5,9 @@
  */
 import { useState } from 'preact/hooks';
 import type { PeriodTable, ScheduleKey } from '../../data';
-import { dropRow, isDefaultSchedule, moveRow, numberRows, removeRow, slotName, SCHEDULE_KEYS, scheduleOf, updateRow, withSchedule, type RowRef } from '../../core/periods';
-import { ConfirmButton } from '../components';
+import { addRow, dropRow, isDefaultSchedule, moveRow, numberRows, removeRow, slotName, SCHEDULE_KEYS, scheduleOf, updateRow, withSchedule, type RowRef } from '../../core/periods';
+import { Button, ConfirmButton, Modal } from '../components';
+import { defaultSubjects } from '../subjects';
 import { confirmCopy } from '../flow';
 import type { Doc } from '../store';
 
@@ -17,11 +18,47 @@ const NOTES: Record<ScheduleKey, string> = {
   bcct: '順序與時長同正式會考。會考不需要抽離，節次與時長只用在標籤與日程顯示。',
 };
 const DAY = ['一', '二', '三', '四'];
+const KEY_KIND: Record<ScheduleKey, { kind: 'gsat' | 'ast' | 'bcct'; round: number }> = { g12: { kind: 'gsat', round: 1 }, g34: { kind: 'gsat', round: 3 }, ast: { kind: 'ast', round: 1 }, bcct: { kind: 'bcct', round: 1 } };
+
+/** 開始時間＋時長 → 結束時間（HH:MM，自動算；沒有開始時間或時長回空字串） */
+export function endTimeOf(start: string | undefined, minutes: number | undefined): string {
+  const m = start ? /^(\d{1,2}):(\d{2})$/.exec(start) : null;
+  if (!m || !minutes) return '';
+  const t = (Number(m[1]) * 60 + Number(m[2]) + minutes) % (24 * 60);
+  return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
+}
+
+/** 把某一天的考科全部移到第 1 天最後（#365）；這一天保留成空天，不自動刪 */
+export function moveDayToFirst(t: PeriodTable, day: number): PeriodTable {
+  if (day <= 0 || !t.days[day]?.length) return t;
+  const c = JSON.parse(JSON.stringify(t)) as PeriodTable;
+  c.days[0]!.push(...c.days[day]!.splice(0));
+  return c;
+}
+
+/** 每天新增考科（#365、D164 G）：挑這個考試類型既有的科目。自訂名稱與 G38（科目名稱與時長寫死、新增的自訂科目一律忽略）衝突，等裁示，這一版沒做 */
+function AddSubjectModal(p: { scheduleKey: ScheduleKey; day: number; onAdd: (name: string, subjectId?: string) => void; onClose: () => void }) {
+  const kind = KEY_KIND[p.scheduleKey];
+  const subs = defaultSubjects(kind.kind, kind.round);
+  const [pick, setPick] = useState(subs[0]?.id ?? '');
+  const chosen = subs.find((s) => s.id === pick);
+  const name = chosen?.name ?? '';
+  return (
+    <Modal title={`新增考科（第 ${DAY[p.day] ?? p.day + 1} 天）`} onClose={p.onClose}
+      actions={<><Button onClick={p.onClose}>取消</Button><Button kind="primary" disabled={!name} onClick={() => { p.onAdd(name, chosen?.id); p.onClose(); }}>新增</Button></>}>
+      <div class="stack">
+        <div class="field"><label for="add-sub">從這個考試類型既有的科目挑</label>
+          <select id="add-sub" class="input" value={pick} onChange={(e) => setPick(e.currentTarget.value)}>{subs.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
+      </div>
+    </Modal>
+  );
+}
 
 export function ScheduleTab({ doc, onChange }: { doc: Doc; onChange: (d: Doc) => void }) {
   const [key, setKey] = useState<ScheduleKey>('g12');
   const [drag, setDrag] = useState<RowRef | null>(null);
   const [over, setOver] = useState<string | null>(null);
+  const [adding, setAdding] = useState<number | null>(null);
   const [note, setNote] = useState(false); // 與預設相同時按「還原預設」確認後顯示「已是預設值」
   const table = scheduleOf(doc.settings, key);
   const label = SCHEDULE_KEYS.find((x) => x.key === key)!.label;
@@ -54,6 +91,7 @@ export function ScheduleTab({ doc, onChange }: { doc: Doc; onChange: (d: Doc) =>
         <span aria-hidden="true">ℹ</span>
         <div><b>節次編號依順序自動算；同節＝同時進行。</b>{NOTES[key]}同一節各科的抽離人數會加總，再和預備教室容量比（預設一節一科，只有勾「與上一科同節」才會用到）。對應：1 月＝學測、7 月＝分科、5 月＝國中會考。</div>
       </div>
+      {adding !== null && <AddSubjectModal scheduleKey={key} day={adding} onClose={() => setAdding(null)} onAdd={(name, subjectId) => { const t = addRow(table, adding, name); const at = { day: adding, index: t.days[adding]!.length - 1 }; save(subjectId ? updateRow(t, at, { subjectId }) : t); }} />}
       <div class="tt">
         {table.days.map((day, di) => (
           <div class="ttc" key={di}>
@@ -79,13 +117,19 @@ export function ScheduleTab({ doc, onChange }: { doc: Doc; onChange: (d: Doc) =>
                   <span class="sub">
                     <label><input type="checkbox" checked={!!r.samePrev && !first} disabled={first} onChange={(e) => save(updateRow(table, at, { samePrev: e.currentTarget.checked || undefined }))} />與上一科同節</label>
                     <label>開始時間（選填）<input class="input" type="time" value={r.start ?? ''} onChange={(e) => save(updateRow(table, at, { start: e.currentTarget.value || undefined }))} /></label>
+                    {endTimeOf(r.start, r.minutes) && <span class="small muted">結束（自動）{endTimeOf(r.start, r.minutes)}</span>}
                     {chinese && <span class="badge b-acc">國文：整個一起標</span>}
                     {r.subjectId === 'en-listen' && key === 'g12' && <span class="badge">英聽固定排第一天最後一節</span>}
                   </span>
                 </div>
               );
             })}
+            {day.length === 0 && <div class="small muted" style="padding:8px 0">沒有考科</div>}
             <div class={`end${over === `${di},end` ? ' over' : ''}`} {...dropProps({ day: di, index: day.length }, `${di},end`)} />
+            <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:6px">
+              <Button small onClick={() => setAdding(di)}>＋ 新增考科</Button>
+              {di > 0 && day.length > 0 && <Button small onClick={() => save(moveDayToFirst(table, di))}>把這一天的考科全部移到第 1 天</Button>}
+            </div>
           </div>
         ))}
       </div>

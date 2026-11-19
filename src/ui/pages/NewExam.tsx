@@ -4,6 +4,7 @@ import { Alert, Button, PageHead } from '../components';
 import { checkExamName } from '../flow';
 import { confirmEnv, envReport } from '../env';
 import { EnvCard } from './EnvCard';
+import { ExamDatesFields, packDates } from './ExamDatesFields';
 import { defaultSemester, newExam, nextRound, previousExam, schoolYear, suggestExamName, type Doc } from '../store';
 
 const CN = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
@@ -54,6 +55,8 @@ export function NewExam(p: {
   useEffect(() => {
     p.onDraft?.({ kind, name, edited, semester, semEdited, yearText, round, roundEdited });
   }, [kind, name, edited, semester, semEdited, yearText, round, roundEdited]);
+  const [day1, setDay1] = useState(''); // #389：考試日期（選填）
+  const [day2, setDay2] = useState('');
   const [err, setErr] = useState('');
   const check = checkExamName(p.doc, name);
   const prev = previousExam(p.doc, kind);
@@ -90,7 +93,7 @@ export function NewExam(p: {
     if (!check.ok || !yearOk || !envOk) return;
     const t = now();
     const year = Number(yearText);
-    const r = newExam(p.doc, kind, name, t, { semester, year, ...(kind === 'gsat' ? { round } : {}), ...(prev ? { prev } : {}) });
+    const r = newExam(p.doc, kind, name, t, { semester, year, ...(kind === 'gsat' ? { round } : {}), ...(prev ? { prev } : {}), ...(packDates(day1, day2) ? { examDates: packDates(day1, day2)! } : {}) });
     if (!r.ok) { setErr(r.error); return; }
     p.onCreate(r.doc, r.doc.exams[r.doc.exams.length - 1]!.id);
   };
@@ -143,6 +146,7 @@ export function NewExam(p: {
             <div class={`field${!check.ok ? ' err' : ''}`}><label for="exam-name">模擬考名稱</label>
               <input id="exam-name" class="input" value={name} aria-invalid={!check.ok} onInput={(e) => { setName(e.currentTarget.value); setEdited(true); }} />
               <span class={check.ok ? 'hint' : 'field-msg'}>{check.ok ? '資料夾名稱會用這個名稱' : check.message}</span></div>
+            <ExamDatesFields day1={day1} day2={day2} onChange={(a, b) => { setDay1(a); setDay2(b); }} />
             <div class="field"><span class="label">對象</span>
               <div class="input" style="display:flex;align-items:center">{isJ ? '國三' : '高三'}</div>
               <span class="hint">由類型決定</span></div>
