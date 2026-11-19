@@ -71,9 +71,7 @@ export function Lookup(p: { doc: Doc; examId?: string; onGoStep: (examId: string
       {hit && (
         <div class="card stack">
           <h3>{hit.className}班 {hit.seatNo} 號　{hit.name}　<Badge>{hit.code}</Badge></h3>
-          {hit.allAbsent
-            ? <Alert tone="info"><b>沒有考科，未排座。</b>這位學生沒有任何考科，② 選了「不排座」，所以不佔座位。</Alert>
-            : (
+          {(
               <div class="scroll"><table class="t compact">
                 <thead><tr><th>科目</th><th>教室／地點</th><th>座位（排－深位）</th><th>說明</th></tr></thead>
                 <tbody>{hit.rows.map((r) => (

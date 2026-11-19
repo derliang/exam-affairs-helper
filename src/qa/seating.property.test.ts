@@ -138,8 +138,8 @@ describe('排座性質測試（固定種子）', () => {
 });
 
 describe('邊界案例', () => {
-  // 邊界案例的考生沒有填科目，用 seatFullyAbsent 讓他們照排（全科缺考的行為另見 core/d79d80.test.ts）
-  const base = { ...genCase(makeRng(1), { division: 'junior' }), seatFullyAbsent: true };
+  // 邊界案例的考生沒有填科目，一律照排（D142；全科缺考的行為另見 core/d79d80.test.ts）
+  const base = genCase(makeRng(1), { division: 'junior' });
   const room = (id: string, rows: number, depth: number, seatCount = rows * depth) => ({ id, name: id, kind: 'class' as const, rows, depth, seatCount });
 
   it('單一考生', () => {
@@ -240,7 +240,7 @@ describe('有 disabled 教室（使用者任意指定不排的座位）', () => 
   });
 
   it('座位數：不排的座位不算座位（用 disabled 把 2×3 教室壓到只剩 4 個，5 人就擋下）', () => {
-    const base = { ...genCase(makeRng(1), { division: 'junior' }), seatFullyAbsent: true };
+    const base = genCase(makeRng(1), { division: 'junior' });
     const mk = (n: number) => Array.from({ length: n }, (_, i) => ({ classNo: 1, seatNo: i + 1, name: `甲生01${i}`, subjectIds: [] as string[] }));
     const room = { id: 'A', name: 'A', kind: 'class' as const, rows: 2, depth: 3, seatCount: 4, disabled: ['1-2', '2-2'] };
     const common = { ...base, classes: [{ no: 1, name: 'A', division: 'junior' as const, colorIndex: 0 }], classrooms: [room], markRules: [], overrides: [] };

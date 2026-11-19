@@ -5,7 +5,7 @@
 import type { ExamConfig, ExamEntry, SeatingResult } from '../data';
 import { seatLabel, studentCode } from '../data';
 import { mixedMarkCodes, overridePurpose } from '../core/detach';
-import { examClasses, seatingEntries, examOverrides, examRooms } from './seating';
+import { examClasses, seatableEntries, examOverrides, examRooms } from './seating';
 import type { Doc } from './store';
 
 export type RowKind = 'class' | 'detach-exam' | 'detach-study' | 'override-exam' | 'override-study' | 'not-taking';
@@ -27,8 +27,7 @@ export interface LookupHit {
   classNo: number;
   className: string;
   seatNo: number;
-  /** 沒有考科又沒排座（只有學測在 ② 選「不排座」才會有，D137）；有座位的人一律逐科列去處 */
-  allAbsent: boolean;
+  /** 每科去處；沒有考科的人一律排座（D137、D142），一樣逐科列 */
   rows: LookupRow[];
 }
 
@@ -44,7 +43,7 @@ export function searchExaminees(doc: Doc, exam: ExamConfig, raw: string): Search
   const q = raw.trim();
   if (!q) return { kind: 'empty' };
   // 名冊有、考試名單沒有的人也排了座（D137），一樣查得到
-  const entries = seatingEntries(doc, exam);
+  const entries = seatableEntries(doc, exam);
   const classes = examClasses(doc, exam);
   const byCode = (c: number, s: number) => entries.filter((e) => e.classNo === c && e.seatNo === s);
   let found: ExamEntry[] = [];
@@ -88,8 +87,7 @@ export function lookupExaminee(doc: Doc, exam: ExamConfig, result: SeatingResult
   const className = examClasses(doc, exam).find((c) => c.no === e.classNo)?.name ?? String(e.classNo);
   const base = { code, name: e.name, classNo: e.classNo, className, seatNo: e.seatNo };
   const home = result.assignments.find((a) => a.code === code);
-  // 沒有考科的人（全科缺考、未參加）預設排座，每節是自習生，跟其他人一樣逐科列去處（D137）；沒排座的才另外說明
-  if (e.subjectIds.length === 0 && !home) return { ...base, allAbsent: true, rows: [] };
+  // 沒有考科的人（全科缺考、未參加）一律排座，每節是自習生，跟其他人一樣逐科列去處（D137、D142）
   const ov = examOverrides(doc, exam).find((o) => o.code === code);
   const rows: LookupRow[] = exam.subjects.map((s) => {
     const det = result.detaches.find((d) => d.code === code && d.subjectId === s.id);
@@ -114,7 +112,7 @@ export function lookupExaminee(doc: Doc, exam: ExamConfig, result: SeatingResult
       note: '在原教室考試',
     } as LookupRow;
   });
-  return { ...base, allAbsent: false, rows };
+  return { ...base, rows };
 }
 
 export const hitLabel = (e: ExamEntry, doc: Doc, exam: ExamConfig): string => {

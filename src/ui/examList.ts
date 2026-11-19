@@ -3,7 +3,7 @@ import type { ExamConfig } from '../data';
 import { flowOf } from './flow';
 import { stepNamesOf } from './nav';
 import { viewForYear } from './rosterYears';
-import { examEntries, needsMarks, unseatedFullyAbsent, type StepNo } from './seating';
+import { examEntries, needsMarks, type StepNo } from './seating';
 import { examYear, lastModified, type Doc } from './store';
 
 /** d 完成／s 過期／c 目前／n 不需要／空字串 未開始（與原型 .dots 的 class 一致） */
@@ -46,11 +46,6 @@ export function examProgress(rawDoc: Doc, exam: ExamConfig): ExamProgress {
 /** 本次考試的考生人數（Q2：只看本次考試名單；還沒匯入回 0，畫面顯示「尚未匯入名單」，不拿共用學生名單充數） */
 export function examHeadcount(doc: Doc, exam: ExamConfig): number {
   return examEntries(doc, exam).length;
-}
-
-/** 沒有考科又不排座的人數（只有學測在 ② 選「不排座」才會有，D137 取代 D79 的預設；#250） */
-export function examFullyAbsent(doc: Doc, exam: ExamConfig): number {
-  return unseatedFullyAbsent(doc, exam).length;
 }
 
 export const examLevel = (exam: ExamConfig): string => (exam.division === 'senior' ? '高三' : '國三');
