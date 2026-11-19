@@ -25,7 +25,7 @@ describe('#356 ＋標考的科目：留班自習算自習，總帳平衡', () =>
     for (const x of r.ledger) expect(x, x.subject).toMatchObject({ ok: true });
     expect(r.checks.map((c) => `${c.id}:${c.light}`).filter((x) => !x.endsWith(':pass') && !x.endsWith(':warn'))).toEqual([]);
     expect(light(r, 'M-2')).toBe('pass');
-    expect(gateOf(r, '').fails).toBe(0);
+    expect(gateOf(r).fails).toBe(0);
   });
 
   it('沒有國中班時結果相同（修正不依賴班級排列順序）', () => {
@@ -55,7 +55,7 @@ describe('#356 ＋標考的科目：留班自習算自習，總帳平衡', () =>
     const r = ready(reconcile(bad, exam));
     expect(row(r, '自然').ok).toBe(false);
     expect(light(r, 'M-2')).toBe('fail');
-    expect(gateOf(r, 'x').fails).toBeGreaterThan(0);
+    expect(gateOf(r).fails).toBeGreaterThan(0);
   });
 
   it('真正不平仍要紅：X數B 的人被漏標（留在原班卻沒標）→ 數學B列不平、M-2 不通過', () => {

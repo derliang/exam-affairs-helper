@@ -385,23 +385,20 @@ export const reconcile = (doc: Doc, exam: ExamConfig, outs?: AstOutputs): Reconc
 /* ---------------- 下載閘門 ---------------- */
 
 export interface Gate {
-  /** 紅燈不通過數、琥珀警示數 */
+  /** 紅燈不通過數、琥珀警示數（警示只是提示，不擋下載，D149①） */
   fails: number;
   warns: Check[];
-  /** 這次警示內容的指紋：資料或警示內容一變，確認就作廢 */
-  fingerprint: string;
-  /** 空字串＝可下載；否則是兩顆下載鈕停用的原因 */
+  /** 空字串＝可下載；否則是兩顆下載鈕停用的原因（只有紅燈才會有） */
   why: string;
 }
 
-export function gateOf(r: Reconcile, ackedFingerprint: string): Gate {
-  if (r.state !== 'ready') return { fails: 0, warns: [], fingerprint: '', why: '' };
+/** 下載閘門（D149①，取代 D129 的逐項確認）：只有紅燈（不通過）擋下載；琥珀警示只顯示提示、不擋、不用確認 */
+export function gateOf(r: Reconcile): Gate {
+  if (r.state !== 'ready') return { fails: 0, warns: [], why: '' };
   const fails = r.checks.filter((c) => c.light === 'fail').length;
   const warns = r.checks.filter((c) => c.light === 'warn');
-  const fingerprint = dataVersion({ v: r.version, w: warns.map((w) => [w.id, w.issues.map((i) => i.text)]), l: r.ledger.map((x) => [x.exam, x.study]) });
-  if (fails > 0) return { fails, warns, fingerprint, why: `考前對帳有 ${fails} 項不通過，須先修正才能下載。` };
-  if (warns.length > 0 && ackedFingerprint !== fingerprint) return { fails, warns, fingerprint, why: `考前對帳有 ${warns.length} 項警示，須先逐項確認才能下載。` };
-  return { fails, warns, fingerprint, why: '' };
+  if (fails > 0) return { fails, warns, why: `考前對帳有 ${fails} 項不通過，須先修正才能下載。` };
+  return { fails, warns, why: '' };
 }
 
 /** 「11/17 14:32」（台北時間），顯示對帳重算時間 */
