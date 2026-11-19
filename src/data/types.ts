@@ -132,9 +132,6 @@ export interface Subject {
   who?: 'all' | 'group';
 }
 
-/** 是否全員參加（D64） */
-export type Participation = 'all' | 'partial';
-
 /** 標示方式：不考則標「X」、加考則標「+」（D5/D11） */
 export type MarkMode = 'none' | 'mark-absent' | 'mark-extra';
 
@@ -172,7 +169,6 @@ export interface ExamConfig {
   schoolYear?: number;
   /** 學測第幾次（1～4）；決定數學是否分 A/B 與英聽（D36/D52） */
   round?: number;
-  participation: Participation;
   /** 預備教室排座方式（D94-4）：peer＝① 同學優先（沒設＝預設）、proctor＝② 監考優先 */
   reserveSeatMode?: 'peer' | 'proctor';
   /** 學測／會考預備教室座位排法（#258）：min-depth＝最少深位（沒設＝預設，人數平均分到各排）、min-rows＝最少排數（一排坐滿再下一排） */
@@ -254,7 +250,7 @@ export interface ExamEntry {
 /** 名單比對差異（D42/D54/D64） */
 export type RosterDiffKind =
   | 'only-in-exam' // 考試名單有、學生名單沒有
-  | 'only-in-roster' // 學生名單有、考試名單沒有（部分參加時不產生）
+  | 'only-in-roster' // 學生名單有、考試名單沒有：D125／D143 起不再產生（沒報名的人＝未參加，照樣排座），只為讀舊存檔的差異
   | 'mismatch' // 同一人班級／座號／姓名不一致
   | 'group-diff' // 同一人（班級、座號、姓名都相同）但組別不同（稿 v2.34 H-6）
   | 'new-class'; // 考試名單有這個班級、班級資料沒有（以班級為單位，一班一筆）

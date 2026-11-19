@@ -30,7 +30,7 @@ export function exportInputOf(seed: number): { input: ExportInput; cases: Return
     kind: 'gsat',
     division: cases.division,
     semester: 'first',
-    participation: 'all',
+   
     subjects: [...cases.subjects],
     markRules: [...cases.markRules],
     classroomIds: cases.classrooms.map((c) => c.id),
