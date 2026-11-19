@@ -44,7 +44,7 @@ export type RunSeatingResult =
 export function seatingVersion(input: RunSeatingInput): string {
   const { examId, division, classes, entries, subjects, markRules, overrides } = input;
   // 教室的「部別」（校-33）只決定步驟③列哪些教室，不影響排座；不放進版本碼，否則舊存檔讀檔補上部別後，所有排座結果都會變「過期」
-  // 「不排座」旗標（D159）只決定預設列入，引擎不看，也不放進版本碼
+  // 「不排座」旗標（D161）只決定預設列入，引擎不看，也不放進版本碼
   // 自習容量（D99）只給分科新模型用，不影響現行排座，也不放進版本碼；每排深位數（rowDepths）會改變座位，留在版本碼
   const classrooms = input.classrooms.map(({ division: _d, studyCapacity: _s, noSeat: _n, ...rest }) => rest);
   // 只在開啟時才放進版本碼，避免舊存檔的版本碼全部變成「過期」

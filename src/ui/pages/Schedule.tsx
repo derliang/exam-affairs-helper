@@ -6,6 +6,8 @@
 import { useState } from 'preact/hooks';
 import type { PeriodTable, ScheduleKey } from '../../data';
 import { dropRow, isDefaultSchedule, moveRow, numberRows, removeRow, slotName, SCHEDULE_KEYS, scheduleOf, updateRow, withSchedule, type RowRef } from '../../core/periods';
+import { ConfirmButton } from '../components';
+import { confirmCopy } from '../flow';
 import type { Doc } from '../store';
 
 const NOTES: Record<ScheduleKey, string> = {
@@ -20,6 +22,7 @@ export function ScheduleTab({ doc, onChange }: { doc: Doc; onChange: (d: Doc) =>
   const [key, setKey] = useState<ScheduleKey>('g12');
   const [drag, setDrag] = useState<RowRef | null>(null);
   const [over, setOver] = useState<string | null>(null);
+  const [note, setNote] = useState(false); // 與預設相同時按「還原預設」確認後顯示「已是預設值」
   const table = scheduleOf(doc.settings, key);
   const label = SCHEDULE_KEYS.find((x) => x.key === key)!.label;
   const save = (t: PeriodTable) => onChange({ ...doc, settings: withSchedule(doc.settings, key, t) });
@@ -38,9 +41,14 @@ export function ScheduleTab({ doc, onChange }: { doc: Doc; onChange: (d: Doc) =>
       </div>
       <div class="row" style="justify-content:space-between">
         <div class="seg ttseg" role="group" aria-label="考試類型">
-          {SCHEDULE_KEYS.map((x) => <button type="button" key={x.key} aria-pressed={key === x.key} onClick={() => setKey(x.key)}>{x.label}</button>)}
+          {SCHEDULE_KEYS.map((x) => <button type="button" key={x.key} aria-pressed={key === x.key} onClick={() => { setKey(x.key); setNote(false); }}>{x.label}</button>)}
         </div>
-        <button type="button" class="btn" disabled={isDefaultSchedule(table, key)} onClick={() => onChange({ ...doc, settings: withSchedule(doc.settings, key, undefined) })}>{`還原「${label}」預設`}</button>
+        <div class="row" style="gap:8px">
+          {note && isDefaultSchedule(table, key) && <span class="small muted" role="status">已是預設值</span>}
+          {/* D156：常駐可按（不因「與預設相同」停用）、主色外框、先確認；改過才真的還原，相同只提示 */}
+          <ConfirmButton kind="accent-outline" undoable={false} copy={confirmCopy.resetSchedule(label, isDefaultSchedule(table, key))}
+            onConfirm={() => { if (isDefaultSchedule(table, key)) setNote(true); else onChange({ ...doc, settings: withSchedule(doc.settings, key, undefined) }); }}>{`↺ 還原「${label}」預設`}</ConfirmButton>
+        </div>
       </div>
       <div class="alert a-info" role="status">
         <span aria-hidden="true">ℹ</span>

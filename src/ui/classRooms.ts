@@ -25,7 +25,7 @@ export function defaultSeatGrid(n: number): { rows: number; depth: number } {
   return best ?? { rows: DEFAULT_SIDE_MAX, depth: DEFAULT_SIDE_MAX };
 }
 
-/** skipped＝班級教室標了「不排座」（D159）且這次考試沒勾選：不算缺教室，也不自動補進本次考試；③ 勾選了就以勾選為準（inExam） */
+/** skipped＝班級教室標了「不排座」（D161）且這次考試沒勾選：不算缺教室，也不自動補進本次考試；③ 勾選了就以勾選為準（inExam） */
 export interface ClassRoomRow { cls: ClassInfo; students: number; room?: Classroom; inExam: boolean; skipped: boolean }
 
 /** 這次考試部別每個「有學生的班級」對應的班級教室（沒有就沒有 room） */

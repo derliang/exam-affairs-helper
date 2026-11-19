@@ -72,7 +72,7 @@ export function RoomList(p: {
   reserveName?: string;
   /** 每列的額外欄（分科自習容量、共用設定所屬部別、精靈學生人數）；room＝本次生效的教室，shared＝共用清單原樣 */
   extra?: (room: Classroom, shared: Classroom) => ComponentChildren;
-  /** 班級教室每列多一顆「不排座／改回排座」（首次設定步驟 4、共用設定；考試 ③ 有列入開關，不傳；#369、D155、D159） */
+  /** 班級教室每列多一顆「不排座／改回排座」（首次設定步驟 4、共用設定；考試 ③ 有列入開關，不傳；#369、D155、D161） */
   noSeatToggle?: boolean;
   /** 表尾新增鈕；null＝不顯示（預設「＋ 新增預備教室」，國中部不顯示） */
   addLabel?: string | null;
@@ -124,7 +124,7 @@ export function RoomList(p: {
           const shape = shapeText(r);
           const trackOf = r.track ?? p.classes?.find((c) => c.name === r.name)?.track;
           const stop = (e: Event) => e.stopPropagation();
-          const noSeat = !!r.noSeat && r.kind === 'class'; // D159：不排座列降一階、編輯座位停用，只剩「改回排座」
+          const noSeat = !!r.noSeat && r.kind === 'class'; // D161：不排座列降一階、編輯座位停用，只剩「改回排座」
           const canNoSeat = !!p.noSeatToggle && r.kind === 'class';
           return (
             <div key={shared.id} class="rw">
