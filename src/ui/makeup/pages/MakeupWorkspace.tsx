@@ -1,6 +1,6 @@
-/** 補考場次的七步驟工作區：左步驟列、中間各步畫面、右側摘要。⑥ 儀表板與 ⑦ 下載由 K3 接手（這裡只放說明頁） */
+/** 補考場次的七步驟工作區：左步驟列、中間各步畫面、右側摘要。⑥ 儀表板、⑦ 下載與每頁最上面的常駐摘要列由 K3 接手 */
 import { useEffect } from 'preact/hooks';
-import { Button, EmptyState, StepNav } from '../../components';
+import { Button, StepNav } from '../../components';
 import { scrollPageTop } from '../../nav';
 import { baseOf, outputsOf, scheduleOf } from '../pipeline';
 import type { MakeupSession } from '../session';
@@ -10,6 +10,9 @@ import { MkStep2 } from './MkStep2';
 import { MkStep3 } from './MkStep3';
 import { MkStep4 } from './MkStep4';
 import { MkStep5 } from './MkStep5';
+import { MkStep6 } from './MkStep6';
+import { MkStep7 } from './MkStep7';
+import { MakeupSummaryBar } from './MkSummaryBar';
 
 /** 右側摘要：學生、應補考人次、已排程、遺漏（稿 S-10 摘要列的最小版；完整儀表板是 K3） */
 export function MakeupSummary(p: { s: MakeupSession }) {
@@ -47,15 +50,14 @@ export function MakeupWorkspace(p: {
     <div class="ws">
       <aside class="side"><StepNav steps={stepStates(s, step)} onGo={(n) => p.onStep(n as MakeupStepNo)} /></aside>
       <div class="stack" style="min-width:0">
+        <MakeupSummaryBar s={s} onStep={p.onStep} />
         {step === 1 ? <MkStep1 s={s} onChange={p.onChange} />
           : step === 2 ? <MkStep2 s={s} onChange={p.onChange} />
           : step === 3 ? <MkStep3 s={s} onChange={p.onChange} />
           : step === 4 ? <MkStep4 s={s} onChange={p.onChange} />
           : step === 5 ? <MkStep5 s={s} onChange={p.onChange} onStep={p.onStep} />
-          : <section class="stack">
-            <div class="card stephead"><div><h2>{makeupStepTitle(step)}</h2></div></div>
-            <EmptyState title="這一步還沒開放">⑥ 檢核與對帳儀表板、⑦ 下載由後續施工包完成。目前 ① 到 ⑤ 的設定、名單、教室與考程都會正常存檔。</EmptyState>
-          </section>}
+          : step === 6 ? <MkStep6 s={s} onStep={p.onStep} />
+          : <MkStep7 s={s} onStep={p.onStep} />}
         <div class="row" style="justify-content:space-between">
           {prev ? <Button onClick={() => p.onStep(prev)}>‹ 上一步<small class="muted">　{MAKEUP_STEP_NAMES[prev - 1]}</small></Button> : <Button onClick={p.onList}>‹ 補考列表</Button>}
           {next ? <Button kind="primary" onClick={() => p.onStep(next)}>下一步 ›<small>　{MAKEUP_STEP_NAMES[next - 1]}</small></Button> : <span />}

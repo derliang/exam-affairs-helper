@@ -23,8 +23,15 @@ import type { Doc } from './store';
 import { astCapacity, astPlan, astSlots, astSnapshotMismatch, astFingerprint } from './ast/model';
 import type { AstOutputs } from './ast/output';
 
-export type Light = 'pass' | 'warn' | 'fail' | 'na';
-export interface Issue { text: string; /** 處理路徑：到第幾步 */ step?: 2 | 3 | 5 }
+/** wait＝待執行（只有補考 C-14：下載前沒有檔可回讀，不可假裝綠燈；DESIGN 10.27.1 第四態） */
+export type Light = 'pass' | 'warn' | 'fail' | 'na' | 'wait';
+export interface Issue {
+  text: string;
+  /** 處理路徑：到第幾步 */
+  step?: 2 | 3 | 5;
+  /** 補考沿用：自帶的跳轉（步驟名與動作），有的話優先於 step */
+  go?: { label: string; run: () => void };
+}
 export interface Check {
   id: string;
   title: string;
@@ -61,8 +68,8 @@ export type Reconcile =
   | { state: 'no-result' }
   | { state: 'ready'; kind: ExamConfig['kind']; scope: { total: number; enrolled: number; absent: number }; checks: Check[]; ledger: LedgerRow[]; /** 排座結果版本；資料變動後確認作廢用 */ version: string; hasStudy: boolean; /** 總帳有沒有「不參加」這一類：學測沒有（不參加的人算自習），會考、分科有 */ hasAbsent: boolean };
 
-export const LIGHT_TEXT: Record<Light, string> = { pass: '通過', warn: '警示', fail: '不通過', na: '不適用' };
-export const LIGHT_ICON: Record<Light, string> = { pass: '✓', warn: '▲', fail: '✕', na: '–' };
+export const LIGHT_TEXT: Record<Light, string> = { pass: '通過', warn: '警示', fail: '不通過', na: '不適用', wait: '待下載後執行' };
+export const LIGHT_ICON: Record<Light, string> = { pass: '✓', warn: '▲', fail: '✕', na: '–', wait: '…' };
 
 /** 琥珀建議值（稿 v2.47 待確認，照稿預設） */
 export const WARN_STUDY_RATIO = 0.9;
