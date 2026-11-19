@@ -224,7 +224,7 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
         {fullyAbsent > 0 && (
           <div class="card stack" style="gap:12px">
             <div class="row" style="justify-content:space-between">
-              <Badge tone="warn">{`${fullyAbsent} 人全科缺考`}</Badge>
+              <Badge>{`${fullyAbsent} 人全科缺考`}</Badge>
             </div>
             <div class="fact"><b>考試名單</b>{(entries ?? []).filter((e) => e.subjectIds.length === 0).map((e) => who(e)).join('、')}（備註：全科缺考）</div>
             <span class="hint">一律排座：他們每節都是自習生，跟考生一樣有座位（不印標籤、不計領卷份數）。</span>
