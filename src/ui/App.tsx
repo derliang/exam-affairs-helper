@@ -296,7 +296,7 @@ function Workspace(p0: { route: Extract<Route, { page: 'step' }>; doc: Doc; onTo
           : step === 4 ? (exam.kind === 'ast' ? <AstStep4 doc={p.doc} exam={exam} onChange={p.onChange} onStep={p.onFix} /> : <Step4 doc={p.doc} exam={exam} onChange={p.onChange} onStep={p.onFix} />)
           : step === 5 ? (exam.kind === 'ast' ? <AstStep5 doc={p.doc} exam={exam} onChange={p.onChange} onStep={p.onFix} /> : <Step5 doc={p.doc} exam={exam} onChange={p.onChange} onStep={p.onFix} onReserve={p.onReserve} />)
           : exam.kind === 'ast' ? <AstStep6 doc={p.doc} exam={exam} onGoStep={(n) => p.onFix(n)} onChange={p.onChange} onExams={p.onExams} />
-          : <Step6 doc={p.doc} exam={exam} onGoStep={(n) => p.onFix(n)} onExams={p.onExams} />}
+          : <Step6 doc={p.doc} exam={exam} onGoStep={(n) => p.onFix(n)} onChange={p.onChange} onExams={p.onExams} />}
         {enabledStepPanels({ settings: p.doc.settings, examKind: exam.kind }, step).map((s) => <div key={s.featureId}>{s.render({ doc: p.doc, exam, onChange: p.onChange, onStep: p.onFix })}</div>)}
       </div>
       <aside class="side side-r">
