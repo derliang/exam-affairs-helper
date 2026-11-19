@@ -76,6 +76,10 @@ export function RoomList(p: {
   noSeatToggle?: boolean;
   /** 表尾新增鈕；null＝不顯示（預設「＋ 新增預備教室」，國中部不顯示） */
   addLabel?: string | null;
+  /** 補考（K2）：教室沒有「班級／預備」之分，每間都能刪、能複製，不寫「預備教室不計入座位合計」，空清單與表尾說明改成一般教室的說法 */
+  flat?: boolean;
+  /** 表尾新增鈕自己處理（補考的教室帶自己的用途）；沒傳就用 addRoom */
+  onAdd?: () => void;
 }) {
   const [open, setOpen] = useState<string | null>(null);
   /** 編輯座位的套用範圍（G25）：預設共用設定；這間已有本次專用配置就從「只這次考試」開始 */
@@ -133,14 +137,14 @@ export function RoomList(p: {
                   {p.selected && p.onSelect ? (
                     <Switch label={swLabel} ariaLabel={`${swLabel}：${r.name}`} checked={on}
                       onChange={(v) => p.onSelect!(v ? [...p.selected!, r.id] : p.selected!.filter((x) => x !== r.id))} />
-                  ) : <RoomBadge room={r} index={idx} classes={p.classes} />}
+                  ) : <RoomBadge room={r} index={idx} classes={p.classes} {...(p.flat ? { flat: true } : {})} />}
                 </div>
                 <div class="field"><label class="small" for={`rn-${r.id}`}>{isReserve ? reserveName : '教室'}</label>
                   <input id={`rn-${r.id}`} class="input" value={r.name} onClick={stop} onChange={(e) => upd(r.id, (x) => ({ ...x, name: e.currentTarget.value.trim() || x.name }))} />
                   {orphan && <span class="hint">名冊已沒有這個班</span>}
                   {noSeat && <span><Badge>不排座</Badge></span>}</div>
                 <div class="row roomcfg"><SeatThumb room={r} /><span><b>{r.rows}</b> 排×<b>{r.depth}</b> 深位{hasOv && <> <Badge tone="info">本次專用</Badge></>}{shape && <><br /><span class="small muted">{shape}</span></>}</span></div>
-                <div class="info">座位 <b>{slots}</b>・不排 <b>{slots - r.seatCount}</b>・可排 <b>{r.seatCount}</b>{isReserve ? <><br />{reserveName}，不計入教室座位合計</> : null}</div>
+                <div class="info">座位 <b>{slots}</b>・不排 <b>{slots - r.seatCount}</b>・可排 <b>{r.seatCount}</b>{isReserve && !p.flat ? <><br />{reserveName}，不計入教室座位合計</> : null}</div>
                 {trackMode === 'seg' && r.kind === 'class' && (
                   <div onClick={stop}>
                     <Seg<Track> label={`${r.name}組別`} value={(r.track ?? '') as Track} options={[{ value: 'science', label: '理組' }, { value: 'liberal', label: '文組' }]}
@@ -153,10 +157,10 @@ export function RoomList(p: {
                 <div class="btnrow" onClick={stop}>
                   <Button small disabled={noSeat && canNoSeat} {...(isOpen ? { kind: 'primary' as const } : {})} onClick={() => openEditor(shared.id, hasOv, canOv)}>{isOpen ? '收合座位 ▴' : '編輯座位 ▾'}</Button>
                   {canNoSeat && <Button small onClick={() => { if (isOpen) setOpen(null); upd(r.id, (x) => setNoSeat(x, !x.noSeat)); }}>{noSeat ? '改回排座' : '不排座'}</Button>}
-                  {(isReserve || orphan) && (p.selected && p.onSelect
+                  {(isReserve || orphan || p.flat) && (p.selected && p.onSelect
                     ? <RoomRemove name={r.name} inThis={on} inUse={!!p.inUse?.(r.id)} onThis={() => p.onSelect!(p.selected!.filter((x) => x !== r.id))} onShared={() => p.onChange(removeRoom(p.rooms, r.id))} />
                     : <ConfirmButton small copy={confirmCopy.deleteRoom(r.name, !!p.inUse?.(r.id))} onConfirm={() => p.onChange(removeRoom(p.rooms, r.id))}>刪除</ConfirmButton>)}
-                  {isReserve && (
+                  {(isReserve || p.flat) && (
                     <details class="moremenu"><summary aria-label={`${r.name} 更多操作`}>⋯</summary>
                       <div class="menu stack" style="gap:6px">
                         <Button small onClick={() => p.onChange(duplicateRoom(p.rooms, r.id))}>複製這間教室</Button>
@@ -185,14 +189,16 @@ export function RoomList(p: {
             </div>
           );
         })}
-        {shown.length === 0 && (p.only === 'reserve'
+        {shown.length === 0 && (p.flat
+          ? <EmptyState title="還沒有教室">按下方「{addLabel ?? '新增'}」輸入這次可以用的教室與座位。</EmptyState>
+          : p.only === 'reserve'
           ? <EmptyState title={`還沒有${reserveName}`}>有人要抽離或自習、需要另外的教室時，按下方「{addLabel ?? '新增'}」。</EmptyState>
           : <EmptyState title="還沒有教室">班級教室依名冊的班級自動帶出：還沒匯入學生名單請先匯入；已匯入就按上方「依名冊帶出班級教室」。</EmptyState>)}
       </div>
       {addLabel && (
         <div class="btnrow">
-          <Button onClick={() => p.onChange(addRoom(p.rooms, 'reserve', p.division ?? 'senior', ctx))}>{addLabel}</Button>
-          <span class="small muted">班級教室跟著名冊班級走，不能手動新增；手動新增的都是{reserveName}（抽離用，座位另計）。</span>
+          <Button onClick={() => (p.onAdd ? p.onAdd() : p.onChange(addRoom(p.rooms, 'reserve', p.division ?? 'senior', ctx)))}>{addLabel}</Button>
+          {!p.flat && <span class="small muted">班級教室跟著名冊班級走，不能手動新增；手動新增的都是{reserveName}（抽離用，座位另計）。</span>}
         </div>
       )}
     </div>
@@ -259,10 +265,10 @@ function RoomRemove(p: { name: string; inThis: boolean; inUse: boolean; onThis: 
 }
 
 /** 教室列前的圓圈：名稱與某班相同＝該班縮寫＋代表色；其他班級教室＝編號；預備教室＝「備」（不再寫莫名的「班」） */
-function RoomBadge(p: { room: Classroom; index: number; classes?: { name: string; colorIndex?: number }[] }) {
+function RoomBadge(p: { room: Classroom; index: number; classes?: { name: string; colorIndex?: number }[]; /** 補考：每間都是一般教室，編號 */ flat?: boolean }) {
   const cls = p.room.kind === 'class' ? p.classes?.find((c) => c.name === p.room.name) : undefined;
   if (cls && cls.colorIndex !== undefined) return <span class="no" aria-hidden="true" style={classColorVars(cls.colorIndex)}>{[...cls.name][0]}</span>;
-  return <span class="no" aria-hidden="true">{p.room.kind === 'class' ? p.index + 1 : '備'}</span>;
+  return <span class="no" aria-hidden="true">{p.room.kind === 'class' || p.flat ? p.index + 1 : '備'}</span>;
 }
 
 /** 取出教室的座位配置（本次專用覆寫只存這幾個欄位） */
