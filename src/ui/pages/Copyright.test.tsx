@@ -18,9 +18,9 @@ describe('版權頁', () => {
     expect(html).toContain('<b>所有使用者都限非營利使用</b>');
     expect(html).not.toContain('待確認');
   });
-  it('有一到十一小節標題，順序正確', () => {
+  it('有十個小節標題（編號一、三～十一，無二），順序正確', () => {
     const titles = ['一、授權範圍', '三、其他學校、機構或個人', '四、所有使用者均須遵守非營利限制', '五、保留權利', '六、公開網頁與原始碼之說明', '七、第三方素材與既有授權', '八、不附保證', '九、學生與教師資料', '十、聯絡', '十一、生效與版本'];
-    expect(html.match(/<h2>/g)?.length).toBe(11);
+    expect(html.match(/<h2>/g)?.length).toBe(10);
     let at = -1;
     for (const t of titles) {
       const i = html.indexOf(`<h2>${t}</h2>`);
@@ -44,10 +44,10 @@ describe('版權頁', () => {
   it('第九節是資料說明', () => {
     expect(html).toContain('本網站不會上傳');
   });
-  it('頁面條文與 LICENSE.md 一致：同樣十一個小節標題', () => {
+  it('頁面條文與 LICENSE.md 一致：同樣十個小節標題', () => {
     const md = readFileSync(new URL('LICENSE.md', root), 'utf8');
     const mdTitles = [...md.matchAll(/^## (.+)$/gm)].map((m) => m[1]);
-    expect(mdTitles.length).toBe(11);
+    expect(mdTitles.length).toBe(10);
     for (const t of mdTitles) expect(html).toContain(`<h2>${t}</h2>`);
     expect(md).toContain('聲明日期：2026-11-08');
   });
