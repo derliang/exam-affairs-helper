@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>模擬考設計系統 稿 v2.69</title>
+<title>模擬考設計系統 稿 v2.75</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -490,11 +490,40 @@ details.more{font-size:14px;color:var(--text-2)}details.more summary{cursor:poin
 .avseg button{flex:0 0 auto}
 .card.stack .stack{grid-template-columns:minmax(0,1fr)}
 </style>
+<style id="v275ds">
+.btn-ao{border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+details.more2>summary{list-style:none;cursor:pointer;font-weight:700;color:var(--accent-ink);min-height:44px;display:flex;align-items:center}
+details.more2>summary::-webkit-details-marker{display:none}
+details.more2>summary::after{content:" ▾";white-space:pre}
+details.more2[open]>summary::after{content:" ▴"}
+.retbar2{position:sticky;top:0;z-index:5;display:flex;gap:10px;align-items:center;padding:8px 0;background:var(--bg);border-bottom:1px solid var(--line)}
+.dz{border:1.5px dashed var(--danger-line);border-radius:var(--r-lg);background:var(--danger-soft);padding:16px;display:grid;gap:10px}
+.exr{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center;padding:10px 14px;border:1px solid var(--line-2);border-radius:var(--r-md);background:var(--surface)}
+.exr span.chk{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;font-size:14px;font-weight:800}
+.exr.on{border-color:var(--accent);background:var(--accent-soft)}
+.grphd{font:inherit;font-weight:700;display:flex;justify-content:space-between;align-items:center;width:100%;min-height:44px;padding:0 14px;border:1px solid var(--line-2);border-radius:var(--r-md);background:var(--sunken);color:var(--text);cursor:pointer}
+</style>
+
+<style id="cbx-v275">
+/* 稿 v2.75 選取方塊（使用者 2026-11-20：不可用黑色）：淺色底框＋藍色打勾；已選＝淡藍底＋藍框＋藍勾。Switch（.sw／.swx／.swrow）不受影響 */
+:root{--cbx-bg:#FFFDF8;--cbx-line:#7B91CC;--cbx-on-bg:#E8EDF8;--cbx-on-line:#2A5FD6;--cbx-tick:#2A5FD6}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--cbx-bg:#1C1A15;--cbx-line:#5470B8;--cbx-on-bg:#1B2540;--cbx-on-line:#8FAAF0;--cbx-tick:#8FAAF0}}
+:root[data-theme="dark"]{--cbx-bg:#1C1A15;--cbx-line:#5470B8;--cbx-on-bg:#1B2540;--cbx-on-line:#8FAAF0;--cbx-tick:#8FAAF0}
+input[type=checkbox]:not(.sw input):not(.swx input):not(.swrow input){appearance:none;-webkit-appearance:none;width:22px;height:22px;flex:none;margin:0;border:1.5px solid var(--cbx-line);border-radius:6px;background:var(--cbx-bg);display:inline-grid;place-content:center;cursor:pointer;vertical-align:middle}
+input[type=checkbox]:not(.sw input):not(.swx input):not(.swrow input)::after{content:"";width:5px;height:10px;border:solid var(--cbx-tick);border-width:0 2.5px 2.5px 0;transform:translateY(-1px) rotate(45deg);opacity:0}
+input[type=checkbox]:not(.sw input):not(.swx input):not(.swrow input):checked{background:var(--cbx-on-bg);border-color:var(--cbx-on-line)}
+input[type=checkbox]:not(.sw input):not(.swx input):not(.swrow input):checked::after{opacity:1}
+input[type=checkbox]:not(.sw input):not(.swx input):not(.swrow input):indeterminate{background:var(--cbx-on-bg);border-color:var(--cbx-on-line)}
+input[type=checkbox]:not(.sw input):not(.swx input):not(.swrow input):indeterminate::after{opacity:1;width:10px;height:0;border-width:0 0 2.5px 0;transform:none}
+input[type=checkbox]:not(.sw input):not(.swx input):not(.swrow input):focus-visible{outline:3px solid var(--accent-line);outline-offset:2px}
+span.chk{background:var(--cbx-bg);border:1.5px solid var(--cbx-line);color:var(--cbx-tick)}
+span.chk.on{background:var(--cbx-on-bg);border-color:var(--cbx-on-line);color:var(--cbx-tick)}
+</style>
 
 <div class="top">
-  <span class="brand">模擬考小幫手 設計系統 <span class="badge b-acc">稿 v2.69・2026-11-19</span></span>
+  <span class="brand">模擬考小幫手 設計系統 <span class="badge b-acc">稿 v2.75・2026-11-20</span></span>
   <nav class="toc" aria-label="目錄">
-    <a href="#color">色彩</a><a href="#type">字型</a><a href="#base">間距圓角</a><a href="#comp">元件</a><a href="#steps">步驟導覽</a><a href="#special">專屬元件</a><a href="#ast">分科新模型</a><a href="#ast2">分科下一批</a><a href="#paper">座位表與標籤</a><a href="#paper36">輸出補強 v2.36</a><a href="#paper36b">名單與教室 v2.36</a><a href="#brandbar">品牌列</a><a href="#footer">頁尾</a><a href="#align">對位測試頁</a><a href="#open">待確認</a>
+    <a href="#color">色彩</a><a href="#type">字型</a><a href="#base">間距圓角</a><a href="#comp">元件</a><a href="#steps">步驟導覽</a><a href="#special">專屬元件</a><a href="#ast">分科新模型</a><a href="#ast2">分科下一批</a><a href="#paper">座位表與標籤</a><a href="#paper36">輸出補強 v2.36</a><a href="#paper36b">名單與教室 v2.36</a><a href="#brandbar">品牌列</a><a href="#footer">頁尾</a><a href="#align">對位測試頁</a><a href="#v275">v2.75 納入</a><a href="#open">待確認</a>
   </nav>
   <div class="seg" role="group" aria-label="深淺色">
     <button type="button" id="thSys" aria-pressed="true">跟隨系統</button>
@@ -1583,6 +1612,40 @@ details.more{font-size:14px;color:var(--text-2)}details.more summary{cursor:poin
       </div></div>
   </section>
 
+  <section id="v275">
+    <header><h2>稿 v2.75　施工對話自行加的樣式，納入設計系統（#413 第 10 項後續；DESIGN §10.42）</h2><p>以下六項在程式 1.26.23～1.26.25 已有施工版 CSS（<code>app.css</code>），<b>本節是設計員定案版</b>：施工版若與本節不同，以本節為準（差異寫在 DESIGN §10.42）。全部假資料、只用 tokens。</p></header>
+    <div class="grid">
+      <div class="card"><div class="lab">① Button kind＝accent-outline（主色外框）</div>
+        <div class="stack">
+          <div class="row"><button class="btn btn-ao" type="button">↺ 還原「分科」預設</button><button class="btn btn-ao btn-sm" type="button">全部重置</button><button class="btn btn-ao" type="button" disabled>停用示意</button></div>
+          <p class="small muted">用途：<b>可逆、整頁覆蓋類</b>的次要動作（還原預設、重置為預設）。層級：實心藍主要鈕 ＞ <b>主色外框</b> ＞ 一般外框鈕 ＞ 幽靈鈕；紅色危險鈕只給刪除與清空資料。邊框 <code>--accent</code>、文字 <code>--accent-ink</code>、粗體、高度同一般鈕 40px（小 32px）；<b>常駐可按，不 disabled</b>（D162）。</p></div></div>
+      <div class="card"><div class="lab">② 展開收合符號 ▾（收著）／▴（展開）</div>
+        <div class="stack">
+          <details class="more2"><summary>明細（3 筆）</summary><div class="small muted" style="padding:6px 0">這是展開後的內容。</div></details>
+          <details class="more2" open><summary>查看沿用內容</summary><div class="small muted" style="padding:6px 0">展開時符號變 ▴。</div></details>
+          <p class="small muted">全站原生 <code>&lt;details&gt;</code>、<code>More</code>、自寫展開鈕<b>一律「標題 ＋ 空一格 ＋ ▾／▴」</b>（符號在文字後、同色）。<code>summary</code> 與展開鈕點擊高度 ≥ 44px。<b>例外</b>：<code>⋯</code> 選單（<code>.moremenu</code>）不加。教室列「▸ 編輯座位／▾ 收合座位」維持（使用者 2026-11-18 截圖指定）。</p></div></div>
+      <div class="card"><div class="lab">③ .retbar 回到原頁列</div>
+        <div class="stack">
+          <div class="retbar2"><button class="btn btn-sm" type="button">← 回到 模擬考列表</button></div>
+          <p class="small muted">有來源頁才出現（共用設定、考生查詢、對帳、覆寫、預備教室、精靈、新增考試頁）。<code>position:sticky; top:0; z-index:5</code>、不透明 <code>--bg</code> 底（內容捲過時不穿透）、底線 <code>1px --line</code>、內距 8px 0、一顆「← 回到 ○○」鈕（寫不出頁名才寫「← 回到上一頁」，D165 第 4 列）；手機整列高 ≤ 52px。</p></div></div>
+      <div class="card"><div class="lab">④ 危險操作區（共用設定最下方）</div>
+        <div class="stack">
+          <div class="dz"><h3 style="margin:0">危險操作</h3><p class="small muted">按下去不會立刻執行，先跳出確認視窗。</p><div class="row"><button class="btn btn-ao" type="button">新學年重置</button><button class="btn btn-danger" type="button">全部重置</button></div></div>
+          <p class="small muted"><b>定案與施工版不同處</b>：區塊加危險色虛線外框（<code>1.5px dashed --danger-line</code>、<code>--danger-soft</code> 淡底），讓使用者一眼知道這區不一樣；<b>兩顆鈕分層</b>——「新學年重置」（保留較多、較常用）用主色外框 accent-outline，「全部重置」才用紅色 danger；兩顆都走 <code>ConfirmButton</code>、確認視窗按鈕紅色實心、不輸入文字。</p></div></div>
+      <div class="card"><div class="lab">⑤ 列表選取方塊與展開鈕（模擬考列表）</div>
+        <div class="stack">
+          <div class="exr"><span class="chk" role="img" aria-label="未選取"></span><div><b>115 學年度學測模擬考 第四次</b><div class="small muted">2026-12-14（一）～12-15（二）　學測</div></div></div>
+          <div class="exr on"><span class="chk on" role="img" aria-label="已選取">✓</span><div><b>115 學年度學測模擬考 第三次</b><div class="small muted">2026-11-02（一）　學測</div></div></div>
+          <button class="grphd" type="button" aria-expanded="false">已經結束（2）<span aria-hidden="true">▾</span></button>
+          <p class="small muted">每場一個選取方塊（命中區 ≥ 44px，方塊本身 22px）；已選的整列淡藍底＋藍框（<code>--accent-soft</code>／<code>--accent</code>）。群組標題「全選」方塊在標題左側；<b>「已經結束」群整列標題可點</b>，右側 ▾／▴，取代原本的小鈕 <code>.rc-more</code>。</p></div></div>
+      <div class="card"><div class="lab">⑥ 選取方塊（全站 checkbox；使用者 2026-11-20：不可用黑色）</div>
+        <div class="stack">
+          <div class="row" style="gap:18px"><label class="row" style="gap:8px"><input type="checkbox"> 未選</label><label class="row" style="gap:8px"><input type="checkbox" checked> 已選</label><label class="row" style="gap:8px"><input type="checkbox" id="ind"> 部分選取</label><label class="row" style="gap:8px"><input type="checkbox" disabled> 停用</label></div>
+          <p class="small muted"><b>淺色底框＋藍色打勾</b>：未選＝<code>--cbx-bg</code> 底、<code>--cbx-line</code> 1.5px 框；已選＝<code>--cbx-on-bg</code> 淡藍底、<code>--cbx-on-line</code> 藍框、<code>--cbx-tick</code> 藍勾；<b>不再使用實心深色填滿、不用瀏覽器預設樣式</b>（<code>accent-color:var(--accent)</code> 的深藍填滿看起來近黑）。22×22、圓角 6px、焦點 3px 外框；Switch（開關）不受影響。tokens 已加進 <code>tokens.css</code>（亮暗各一組）。</p></div></div>
+      <div class="card"><div class="lab">⑦ 表格↔卡片（.rt-t）</div>
+        <p class="small muted">窄表、卡片、矩陣三種畫法與 23 處逐頁定稿見 <code>mockups/表格改卡片稿.html</code>（稿 v2.75）與 DESIGN §10.42。通則：全站不出現橫向捲軸、<code>table.t</code> 無 <code>min-width</code>、容器 ≤640px 才變卡片（<code>rc-pcard</code> 長相）。</p></div>
+    </div>
+  </section>
   <section id="open">
     <header><h2>待使用者確認的提案</h2></header>
     <div class="card"><ol style="margin:0;padding-left:20px;display:grid;gap:8px">
@@ -1709,5 +1772,7 @@ details.more{font-size:14px;color:var(--text-2)}details.more summary{cursor:poin
 })();
 </script>
 
+<script>var i=document.getElementById("ind");if(i)i.indeterminate=true;</script>
 </body>
 </html>
+
