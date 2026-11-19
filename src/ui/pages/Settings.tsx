@@ -4,8 +4,9 @@ import { rosterYearOf, rosterYears, switchRosterYear } from '../rosterYears';
 import { useEffect, useState } from 'preact/hooks';
 import type { Division, LabelPaper, Student, Track } from '../../data';
 import { DEFAULT_LABEL_NOTES, LABEL_NOTE_MAX_CHARS, LABEL_NOTE_MAX_LINES, noteLineLength, studentCode } from '../../data';
-import { Alert, Badge, Button, ClassChip, ConfirmButton, EmptyState, Modal, More, Seg, Switch } from '../components';
+import { Alert, Badge, Button, ClassChip, ConfirmButton, ConfirmModal, EmptyState, Modal, More, Seg, Switch } from '../components';
 import { confirmCopy } from '../flow';
+import { fullReset, newYearReset, resetCounts } from '../resetSettings';
 import { RoomTable } from '../components/RoomList';
 import { classesWithoutRoom, ensureClassRooms } from '../env';
 import { CLASS_COLOR_COUNT, CLASS_COLOR_NAMES, colorConflicts } from '../colors';
@@ -48,7 +49,36 @@ export function Settings(p: { doc: Doc; onChange: (d: Doc) => void; tab?: Tab; d
       {tab === 'sched' && <ScheduleTab doc={p.doc} onChange={p.onChange} />}
       {tab === 'features' && <Features doc={p.doc} onChange={p.onChange} />}
       {tab === 'rooms' && <Rooms doc={p.doc} onChange={p.onChange} division={division} onGoSchool={() => setTab('school')} />}
+      <DangerZone doc={p.doc} onChange={p.onChange} />
     </section>
+  );
+}
+
+/** 危險操作區（#353、#354；D163、D164；稿 v2.74 第 2 節）：放共用設定最下方；兩顆鈕都先跳確認視窗（列出會清掉、會保留，紅色鈕，不用輸入文字），一步可用「↶ 復原」回來 */
+function DangerZone({ doc, onChange }: { doc: Doc; onChange: (d: Doc) => void }) {
+  const [which, setWhich] = useState<'year' | 'all' | null>(null);
+  const c = resetCounts(doc);
+  return (
+    <div class="card stack" style="margin-top:24px" data-k="danger-zone">
+      <h3>危險操作</h3>
+      <p class="small muted">按下去不會立刻執行，先跳出確認視窗。</p>
+      <div class="row" style="gap:8px;flex-wrap:wrap">
+        <Button kind="danger" onClick={() => setWhich('year')}>新學年重置</Button>
+        <Button kind="danger" onClick={() => setWhich('all')}>全部重置</Button>
+      </div>
+      {which === 'year' && (
+        <ConfirmModal copy={{ title: '新學年重置？', body: `會清掉：學生名單（${c.students} 人）、班級教室的座位配置（${c.classRooms} 間）。`, confirm: '清空名單與座位' }}
+          onConfirm={() => onChange(newYearReset(doc))} onClose={() => setWhich(null)}>
+          <p style="margin-top:8px"><b>會保留：</b>已建立的模擬考（考試裡已排好的座位表不受影響，但考生對照會因名單清空而失效，顯示「名單已清空」提示）、學校與表頭設定、節次設定、教室清單、資料夾連結。</p>
+        </ConfirmModal>
+      )}
+      {which === 'all' && (
+        <ConfirmModal copy={{ title: '全部重置共用設定？', body: `會清掉（回到預設值）：學生名單（${c.students} 人）、班級（${c.classes} 個）、教室（含預備教室，${c.rooms} 間）、節次設定、標籤預設、學校與表頭設定。`, confirm: '重置共用設定' }}
+          onConfirm={() => onChange(fullReset(doc))} onClose={() => setWhich(null)}>
+          <p style="margin-top:8px"><b>會保留：</b>選用功能開關、外觀（淺色／深色）、已建立的全部模擬考（含考試設定與座位表）、資料夾連結與資料夾裡的檔案。</p>
+        </ConfirmModal>
+      )}
+    </div>
   );
 }
 
