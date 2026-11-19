@@ -1078,7 +1078,8 @@ details[open]:not(.moremenu)>summary::after{content:" ▴"}
 .rtw{container-type:inline-size;min-width:0}
 .t.rt-t{width:100%;min-width:0;border-collapse:collapse}
 .t.rt-t td,.t.rt-t th{white-space:normal}
-.t.rt-t.rt-a td:first-child,.t.rt-t.rt-a.compact td:first-child{white-space:normal}
+.t.rt-t td:first-child,.t.rt-t.compact td:first-child{white-space:normal;min-width:0}
+.t.rt-t td.ti>div{min-width:0}
 @container (max-width:640px){
   .rt-t:not(.rt-a) thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
   .rt-t:not(.rt-a),.rt-t:not(.rt-a) tbody,.rt-t:not(.rt-a) tr,.rt-t:not(.rt-a) td{display:block;width:auto}
