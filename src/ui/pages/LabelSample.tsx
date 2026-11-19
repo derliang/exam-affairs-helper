@@ -24,7 +24,9 @@ function AutoFrame(p: { html: string; w: number; title: string }) {
   const [z, setZ] = useState(1);
   const measure = (el: HTMLIFrameElement | null) => {
     const d = el?.contentDocument;
-    if (d?.documentElement) setH(Math.ceil(Math.max(d.documentElement.scrollHeight, d.body?.scrollHeight ?? 0)));
+    // 內容頁用了 CSS zoom：scrollHeight 是沒縮放的值，要用實際版面（最後一頁底緣）才對
+    const sheet = d?.querySelector('.sheet');
+    if (sheet) setH(Math.ceil(sheet.getBoundingClientRect().bottom) + 2);
   };
   useLayoutEffect(() => {
     const el = host.current;
