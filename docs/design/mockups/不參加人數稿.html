@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>名單比對全科缺考卡片 稿 v2.67</title>
+<title>不參加的人 稿 v2.68</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700&display=swap">
 <style>
@@ -1190,64 +1190,54 @@ code{background:var(--sunken);padding:1px 5px;border-radius:6px}
 </head>
 <body>
 <header class="dhead">
-  <div><h1>名單比對「全科缺考」卡片 稿 v2.67</h1>
-  <p class="muted">考務小幫手・第 ② 步「名單比對」的全科缺考卡片，以及匯入後的提示條。只用假資料。</p></div>
-  <span class="badge">稿 v2.67・2026-11-19</span>
+  <div><h1>不參加的人（第 ② 步與名單比對） 稿 v2.68</h1>
+  <p class="muted">考務小幫手・第 ② 步「考試名單」下方的人數與提示，以及名單比對。只用假資料。</p></div>
+  <span class="badge">稿 v2.68・2026-11-19</span>
 </header>
 
 <section class="sec" id="sum">
   <h2>先看重點</h2>
   <ul>
-    <li><b>使用者 2026-11-18 裁示（調度員轉達）</b>：拿掉學測「全科缺考不排座」選項，<b>每個人一律排座</b>（D142，程式 1.26.10 已實作）。</li>
-    <li><b>定稿</b>：卡片只剩三樣東西——徽章「N 人全科缺考」、名單、一句「一律排座」說明。<b>不算差異、不計入「差異 N 筆」、不擋套用、沒有任何選項。</b></li>
-    <li><b>版面就是 1.26.10 現在的畫面，只有徽章改色</b>：使用者 2026-11-19 裁示（調度員轉達）徽章由琥珀改<b>中性灰</b>（不帶色調的 <code>Badge</code>），程式只改這一個屬性。</li>
-    <li>只用共用元件與既有樣式：卡片（<code>card stack</code>）、徽章（<code>Badge</code>）、資料格（<code>fact</code>）、說明小字（<code>hint</code>）、提示條（<code>Alert</code> 說明色）；不新增任何樣式。</li>
+    <li><b>用詞（使用者 2026-11-19 原話）</b>：「沒有所謂的缺考，只有不參加，改變用詞，缺考是指有參加但沒有應考」。全站一律叫<b>不參加</b>；「缺考」只用在有報考、當天沒到。取代「未參加」「全科缺考」（D146）。</li>
+    <li><b>合併（使用者 2026-11-19 問題卡）</b>：「名冊有、考試名單沒有」與「考試名單上一科都沒報」是同一種人——<b>不參加</b>，整天都是自習生。畫面只有一個人數「不參加 N 人」。</li>
+    <li><b>名單比對不再有另一張卡</b>（取代稿 v2.66／v2.67 的「全科缺考」卡）：不參加不是差異，不用處理，也沒有選項。</li>
+    <li>只用共用元件：提示條（<code>Alert</code>）、說明小字；不新增任何樣式。</li>
   </ul>
 </section>
 
-<section class="sec" id="after">
-  <h2>一、定稿：名單比對的全科缺考卡片（逐筆差異卡之後）</h2>
-  <p class="muted">左：手機寬 375；右：電腦寬。上方的逐筆差異卡與下方的「先不處理／套用」按鈕都不變，這裡只畫灰色示意。</p>
+<section class="sec" id="step2">
+  <h2>一、定稿：第 ② 步考試名單下方</h2>
+  <p class="muted">左：手機寬 375；右：電腦寬。「考試名單.xlsx　已匯入 N 筆」那一列與匯入精靈不變，這裡只畫灰色示意。</p>
   <div class="frames">
     <div class="frame w375"><div class="cap">手機 375</div><div class="app stack" style="gap:12px;padding-top:16px">
-      <div class="ghost">（逐筆差異卡，不變）</div>
-      <div class="card stack" style="gap:12px">
-        <div class="row" style="justify-content:space-between"><span class="badge">3 人全科缺考</span></div>
-        <div class="fact"><b>考試名單</b>溫班 5 號　王小明、恭班 12 號　林大同、良班 30 號　陳美美（備註：全科缺考）</div>
-        <span class="hint">一律排座：他們每節都是自習生，跟考生一樣有座位（不印標籤、不計領卷份數）。</span>
-      </div>
-      <div class="ghost">（先不處理／套用 N 筆核對結果，不變）</div>
+      <div class="ghost">（考試名單.xlsx　已匯入 244 筆　重新匯入，不變）</div>
+      <p class="small muted">學生名單＝全體學生；考試名單＝每位學生報名這次考試的情況。學生名單裡有、但考試名單沒有的人，以及考試名單上一科都沒報的人，都是<b>不參加</b>：每節都是自習生，不算考生、不印標籤，一樣進排座（考生多數則自習生抽離，反之考生抽離），座位表上列出班級、座號、姓名。</p>
+      <div class="alert a-info" role="status"><span class="ico" aria-hidden="true" data-i="i"></span><div>不參加 30 人：每節都是自習生，一樣排座（不印標籤、不計領卷份數）。
+        <details><summary class="small">列出是誰</summary><ul><li>溫班 5 號</li><li>恭班 12 號</li><li>良班 30 號</li><li>……</li></ul></details></div><div></div></div>
+      <div class="small muted">考生 241 人，不參加 30 人</div>
     </div></div>
-    <div class="frame wdesk"><div class="cap">電腦</div><div class="app stack" style="gap:12px;padding-top:16px">
-      <div class="ghost">（逐筆差異卡，不變）</div>
-      <div class="card stack" style="gap:12px">
-        <div class="row" style="justify-content:space-between"><span class="badge">3 人全科缺考</span></div>
-        <div class="fact"><b>考試名單</b>溫班 5 號　王小明、恭班 12 號　林大同、良班 30 號　陳美美（備註：全科缺考）</div>
-        <span class="hint">一律排座：他們每節都是自習生，跟考生一樣有座位（不印標籤、不計領卷份數）。</span>
-      </div>
-      <div class="ghost">（先不處理／套用 N 筆核對結果，不變）</div>
+    <div class="frame wdesk"><div class="cap">電腦（不參加達名冊 20% 以上的學測，多一條琥珀提醒）</div><div class="app stack" style="gap:12px;padding-top:16px">
+      <div class="ghost">（考試名單.xlsx　已匯入 210 筆　重新匯入，不變）</div>
+      <p class="small muted">學生名單＝全體學生；考試名單＝每位學生報名這次考試的情況。學生名單裡有、但考試名單沒有的人，以及考試名單上一科都沒報的人，都是<b>不參加</b>：每節都是自習生，不算考生、不印標籤，一樣進排座（考生多數則自習生抽離，反之考生抽離），座位表上列出班級、座號、姓名。</p>
+      <div class="alert a-warn" role="status"><span class="ico" aria-hidden="true" data-i="!"></span><div>不參加 62 人（23%）。學測通常人人報名，請確認考試名單是否漏列。</div><div></div></div>
+      <div class="alert a-info" role="status"><span class="ico" aria-hidden="true" data-i="i"></span><div>不參加 62 人：每節都是自習生，一樣排座（不印標籤、不計領卷份數）。
+        <details><summary class="small">列出是誰</summary><ul><li>溫班 5 號</li><li>……</li></ul></details></div><div></div></div>
+      <div class="small muted">考生 208 人，不參加 62 人</div>
     </div></div>
   </div>
 </section>
 
-<section class="sec" id="banner">
-  <h2>二、定稿：匯入後的提示條（第 ② 步名單下方）</h2>
-  <div class="frames">
-    <div class="frame wdesk"><div class="cap">電腦（手機同一個元件，自動換行）</div><div class="app" style="padding-top:16px">
-      <div class="alert a-info" role="status"><span class="ico" aria-hidden="true" data-i="i"></span><div>其中 3 位全科缺考：照樣排座，每節都是自習生（不印標籤、不計領卷份數）。
-        <details><summary class="small">列出是誰</summary><ul><li>溫班 5 號</li><li>恭班 12 號</li><li>良班 30 號</li></ul></details></div><div></div></div>
-    </div></div>
-  </div>
+<section class="sec" id="cmp">
+  <h2>二、名單比對：拿掉「全科缺考」卡</h2>
+  <p>逐筆差異卡之後直接是按鈕列（「先不處理」「套用 N 筆核對結果」），<b>不再有另一張卡</b>。名單上一科都沒報的人不是差異，比對時不列出，也不算進「差異 N 筆」。</p>
 </section>
 
 <section class="sec" id="before">
-  <h2>三、改前（1.26.9 以前，已拿掉）</h2>
-  <p class="muted">只列出拿掉了什麼，不再畫。</p>
+  <h2>三、改前（1.26.15 以前）</h2>
   <ul>
-    <li>卡片右上的第二個徽章「目前：列入缺考清單，不排座／仍排座」。</li>
-    <li>分段切換「全科缺考處理方式：列入缺考清單，不排座｜仍排座」。</li>
-    <li>說明句後半「學測可改成列入缺考清單、不排座，但考前對帳會因為他們沒有座位而不通過；會考、分科一律排座。這一項已有預設，不必選也能繼續。」</li>
-    <li>提示條裡的勾選框「全科缺考者仍排座」與「已選不排座，⑤ 的人數會比這裡少…」那句。</li>
+    <li>名單比對最後一張卡：徽章「N 人全科缺考」、名單、「一律排座…」說明。</li>
+    <li>第 ② 步：琥珀提醒寫「被視為未參加（自習）」；另一條說明色提示「其中 N 位全科缺考：照樣排座…」；人數列「考生 N 人，未參加 M 人，全科缺考 K 人」（考生數含一科都沒報的人）。</li>
+    <li>說明句寫「視為未參加」。</li>
   </ul>
 </section>
 
@@ -1256,22 +1246,23 @@ code{background:var(--sunken);padding:1px 5px;border-radius:6px}
   <table class="tbl">
     <thead><tr><th>項目</th><th>規則</th></tr></thead>
     <tbody>
-      <tr><td>什麼時候出現</td><td>考試名單裡有人「沒有任何考科」（全科缺考）時。學測、會考、分科都一樣。</td></tr>
-      <tr><td>位置</td><td>名單比對：逐筆差異卡之後、按鈕列之前，另一張卡。第 ② 步名單下方：一條說明色提示條。</td></tr>
-      <tr><td>徽章</td><td>「N 人全科缺考」，<b>中性灰</b>（<code>Badge</code> 不帶 <code>tone</code>；使用者 2026-11-19 裁示）。琥珀是「待處理」色，這張卡不需處理，所以不用琥珀。</td></tr>
-      <tr><td>名單</td><td>資料格標題「考試名單」，內容「○班 N 號　姓名」以「、」串接，結尾「（備註：全科缺考）」。</td></tr>
-      <tr><td>說明</td><td>「一律排座：他們每節都是自習生，跟考生一樣有座位（不印標籤、不計領卷份數）。」</td></tr>
-      <tr><td>不算差異</td><td>不計入「差異 N 筆」，不擋「套用」，沒有任何選項或確認。</td></tr>
-      <tr><td>不動</td><td>逐筆差異卡、按鈕列、排座引擎、存檔格式。</td></tr>
+      <tr><td>誰是「不參加」</td><td>名冊有、考試名單沒有的人；或考試名單上一科都沒報的人。兩種合計成一個人數。</td></tr>
+      <tr><td>用詞</td><td>全站畫面、匯出檔一律「不參加」；不再出現「未參加」「全科缺考」。「缺考」只指有報考、當天沒到。</td></tr>
+      <tr><td>人數列</td><td>「考生 N 人，不參加 M 人」；考生＝考試名單上至少報一科的人。</td></tr>
+      <tr><td>說明色提示</td><td>不參加 &gt; 0 時出現：「不參加 M 人：每節都是自習生，一樣排座（不印標籤、不計領卷份數）。」＋「列出是誰」展開（○班 N 號）。</td></tr>
+      <tr><td>琥珀提醒（只有學測）</td><td>不參加達名冊 20% 以上：「不參加 M 人（P%）。學測通常人人報名，請確認考試名單是否漏列。」</td></tr>
+      <tr><td>名單比對</td><td>沒有不參加的卡；不算差異、不擋套用。</td></tr>
+      <tr><td>座位表（原班）</td><td>不參加的人有正式座位，格內黑底小牌「X 不參加」（沿用不考小牌樣式，使用者 2026-11-19 裁示）；每個時段到預備教室自習（見 G36 稿 v2.68）。</td></tr>
+      <tr><td>不動</td><td>排座引擎、存檔格式、程式內部欄位名。</td></tr>
     </tbody>
   </table>
 </section>
 
 <section class="sec" id="q">
-  <h2>五、設計員的決定與待確認</h2>
+  <h2>五、設計員的決定</h2>
   <ol>
-    <li><b>定稿＝程式現況</b>：D142 施工時只刪控制項、沒有新增樣式，留下的三樣東西剛好就是派工要的內容，所以不另畫新版面（避免「又一套」）。</li>
-    <li><b>已裁示（v2.67）</b>：徽章原為琥珀（<code>Badge tone="warn"</code>），使用者 2026-11-19 裁示改中性灰（拿掉 <code>tone</code>）。程式要跟進：<code>src/ui/pages/Step2.tsx</code> 全科缺考卡的 <code>Badge</code> 拿掉 <code>tone="warn"</code>，其餘不動。</li>
+    <li>說明色提示與人數列都保留：提示條給「列出是誰」，人數列給一眼總數；兩者用同一個數字。</li>
+    <li>琥珀提醒的 20% 門檻沿用現行，只改成用合併後的人數。</li>
   </ol>
 </section>
 
