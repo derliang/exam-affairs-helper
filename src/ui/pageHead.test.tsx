@@ -32,4 +32,10 @@ describe('步驟條文字（校-08）', () => {
     expect(html).toContain('第 2／6 步');
     expect(html).toContain('已完成 1 步');
   });
+  it('#362 停在第 1 步時，後面步驟的資料已符合條件也不算「已完成」：顯示已完成 0 步', () => {
+    const steps = [1, 2, 3, 4, 5, 6].map((no) => ({ no, name: `s${no}`, state: (no === 1 ? 'cur' : no === 2 ? 'done' : 'todo') as 'done' | 'cur' | 'todo' }));
+    const html = renderToString(<StepNav steps={steps} onGo={noop} />);
+    expect(html).toContain('第 1／6 步');
+    expect(html).toContain('已完成 0 步');
+  });
 });
