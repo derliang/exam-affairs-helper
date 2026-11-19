@@ -2,6 +2,7 @@ import { useState } from 'preact/hooks';
 import type { ExamConfig, Semester, Subject } from '../../data';
 import { Alert, Badge, Button, ConfirmButton, Modal, More, Seg, StepHead } from '../components';
 import { ExamDatesFields, packDates } from './ExamDatesFields';
+import { dateRangeText } from '../examDates';
 import { carryMode, carryRows, carrySource, resumeCarry, stopCarry } from '../carry';
 import { confirmCopy } from '../flow';
 import { updateExam, examLabel, examYear, KIND_LABEL, type Doc } from '../store';
@@ -10,11 +11,11 @@ import { defaultSubjects, isCustomized, mathSplit, removeSubject, saveSubject, s
 const CN = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
 
 /** ① 考試設定：基本資料卡、考科表卡（含「誰要考」）、沿用上次設定卡（原型 v1） */
-export function Step1(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => void }) {
+export function Step1(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => void; openBasic?: boolean; onToSched?: () => void }) {
   const { exam, doc } = p;
   const [err, setErr] = useState('');
   const [editing, setEditing] = useState<{ id: string | null } | null>(null);
-  const [basic, setBasic] = useState(false);
+  const [basic, setBasic] = useState(!!p.openBasic);
   const set = (patch: Partial<ExamConfig>) => {
     const r = updateExam(doc, exam.id, patch);
     if (r.ok) { setErr(''); p.onChange(r.doc); } else setErr(r.error);
@@ -39,6 +40,18 @@ export function Step1(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
             <p class="small muted">只確認考科；類型、學期、次別在新增時已設定。</p>
           </div>
           <Button onClick={() => setBasic(true)}>修改基本資料</Button>
+        </div>
+        {/* #473：考試日期與各節時間的入口放在第 1 步最上面，不藏在「修改基本資料」裡讓人找不到 */}
+        <div class="row basicbar" style="justify-content:space-between">
+          <div>
+            <div class="lab">考試日期與各節時間</div>
+            <p id="x-dates">考試日期：{dateRangeText(exam) || <Badge tone="info">未填日期</Badge>}</p>
+            <p class="small muted">各節開始時間是全部模擬考共用的，在「共用設定」的「節次與時長」修改。</p>
+          </div>
+          <div class="row">
+            <Button onClick={() => setBasic(true)}>修改考試日期</Button>
+            {p.onToSched && <Button onClick={p.onToSched}>修改各節開始時間</Button>}
+          </div>
         </div>
         {err && <Alert tone="danger">{err}</Alert>}
 
