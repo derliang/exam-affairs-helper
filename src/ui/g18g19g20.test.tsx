@@ -84,7 +84,7 @@ describe('G19 取消「誰會參加」切換：名單沒有的人＝未參加', 
       for (const t of ['誰會參加', '全部學生參加', '只有部分學生參加']) expect(html).not.toContain(t);
       if (kind !== 'bcct') expect(html).toContain('學生名單＝全體學生'); // 會考沒有考試名單匯入區
       const entries = [{ classNo: 1, seatNo: 1, name: '假生1', subjectIds: [] }];
-      const r = compareRosters(fake(3), entries, 'partial');
+      const r = compareRosters(fake(3), entries);
       expect(r.diffs).toHaveLength(0);
       expect(r.notParticipating).toBe(2);
     });

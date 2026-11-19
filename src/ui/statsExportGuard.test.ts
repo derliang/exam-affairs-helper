@@ -15,7 +15,7 @@ const SUBJ = [{ id: 'soc', name: '社會' }, { id: 'sci', name: '自然' }, { id
 
 function exam(patch: Partial<ExamConfig> = {}): ExamConfig {
   return {
-    id: 'e1', name: '測試考', kind: 'gsat', division: 'senior', semester: 'first', round: 3, participation: 'all',
+    id: 'e1', name: '測試考', kind: 'gsat', division: 'senior', semester: 'first', round: 3,
     subjects: SUBJ, markRules: [], classroomIds: ['S', 'P'], labelLayout: { paper: 'B4', cols: 6, rows: 8 }, createdAt: NOW, ...patch,
   };
 }

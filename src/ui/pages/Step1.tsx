@@ -8,7 +8,7 @@ import { defaultSubjects, isCustomized, mathSplit, removeSubject, saveSubject, s
 
 const CN = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
 
-/** ① 考試設定：基本資料卡、考科表卡（含「誰要考」）、沿用上次設定卡（原型 v1；參加方式在 ② 的「誰會參加」卡） */
+/** ① 考試設定：基本資料卡、考科表卡（含「誰要考」）、沿用上次設定卡（原型 v1） */
 export function Step1(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => void }) {
   const { exam, doc } = p;
   const [err, setErr] = useState('');

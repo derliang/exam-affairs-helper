@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import type { ExamConfig, ExamEntry, Participation, RosterDiff, RosterDiffChoice } from '../../data';
+import type { ExamConfig, ExamEntry, RosterDiff, RosterDiffChoice } from '../../data';
 import { hasPua, puaCodes, showPua, allResolved, applyDiffs, applyGroupChoice, compareRosters, groupDiffs, manyDiffs, type DiffGroup, diffsStale, isResolved, readXlsx, XlsError, refreshDiffs, validateResolved, type Sheet } from '../../import';
 import { Alert, Badge, Button, ClassChip, ConfirmButton, More, PageHead, Seg, StatsBar, StepHead } from '../components';
 import { confirmCopy } from '../flow';
@@ -54,12 +54,12 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
   const fullyAbsent = entries ? entries.filter((e) => e.subjectIds.length === 0).length : 0;
   const classNames = doc.settings.classes.filter((c) => c.division === exam.division).map((c) => c.name);
   const dopts = diffOptions(doc, exam);
-  const compare = (list: ExamEntry[]) => compareRosters(roster, list, 'partial', dopts);
+  const compare = (list: ExamEntry[]) => compareRosters(roster, list, dopts);
 
-  // 共用名單、考試名單、參加方式任一改變，已存的差異就過期：重算並只沿用內容完全相同的選擇（#60）
-  const stale = !!entries && diffsStale(diffs, refreshDiffs(roster, entries, 'partial', diffs, dopts));
+  // 共用名單、考試名單任一改變，已存的差異就過期：重算並只沿用內容完全相同的選擇（#60）
+  const stale = !!entries && diffsStale(diffs, refreshDiffs(roster, entries, diffs, dopts));
   useEffect(() => {
-    if (entries && stale) save({ diffs: refreshDiffs(roster, entries, 'partial', diffs, dopts) });
+    if (entries && stale) save({ diffs: refreshDiffs(roster, entries, diffs, dopts) });
   }, [stale, roster, entries]);
 
   const onFile = async (file: File) => {
