@@ -337,7 +337,7 @@ export function reconcileAst(doc: Doc, exam: ExamConfig, outs?: AstOutputs): Rec
   const issues3: Issue[] = [];
   const m2issues: Issue[] = [];
   const overlap: Issue[] = [];
-  let sumExpPlaces = 0; let sumPlaces = 0; let dupN = 0; let missN = 0; let sumExp = 0; let sumDiff = 0; let sumLabel = 0; let sumSeat = 0; let sumRoom = 0; let overlapN = 0;
+  let sumExpPlaces = 0; let sumPlaces = 0; let dupN = 0; let missN = 0; let sumExp = 0; let sumDiff = 0; let sumLabel = 0; let sumSeat = 0; let sumRoom = 0; let overlapN = 0; let sumScope = 0; let sumExamN = 0; let sumResExam = 0; let sumResFile = 0;
   slots.forEach((s, gi) => {
     const ids = new Set(s.subjectIds);
     const exams = plan.out.exams.filter((e) => e.slotId === s.id);
@@ -362,28 +362,32 @@ export function reconcileAst(doc: Doc, exam: ExamConfig, outs?: AstOutputs): Rec
       uses.push({ reserve: roomById.get(rid)?.kind === 'reserve', room: rid, roomName: rname(rid), slot: gi, exam: ex.length, study: st, seats: roomById.get(rid)?.seats.length ?? 0, dup: [...seatKeys.values()].filter((n) => n > 1).length });
       if (ex.length > 0 && st > 0) { overlapN++; overlap.push({ text: `${rname(rid)} ${s.label}：同時有考試 ${ex.length} 人與自習 ${st} 人`, step: 5 }); }
     }
-    const room = exams.length;
-    const seat = exams.filter((e) => roomById.get(e.roomId)?.kind === 'class').length + (outs ? countLines(outs.seat, shortOf(gi)) : exams.filter((e) => roomById.get(e.roomId)?.kind === 'reserve').length);
-    const label = outs ? countLines(outs.label, shortOf(gi)) : room;
-    const row0 = { key: s.id, when: s.label, subject: s.subjectIds.map((id) => subjName.get(id) ?? id).join('、'), scope: R.size, exam: exams.length, study: study.length, absent: 0, seat, label, room };
+    // D159（D153 延伸）：座位表＝各教室加總＝名冊全部（含不參加者；每人每時段只算一個去處），標籤＝應考人數
+    const resExam = exams.filter((e) => roomById.get(e.roomId)?.kind === 'reserve').length;
+    const resFile = outs ? countLines(outs.seat, shortOf(gi)) : resExam;
+    const studySeated = (plan.out.studySeats ?? []).filter((x) => x.slotId === s.id).length;
+    const room = exams.length + study.length;
+    const seat = exams.length - resExam + resFile + studySeated;
+    const label = outs ? countLines(outs.label, shortOf(gi)) : exams.length;
+    const row0 = { key: s.id, when: s.label, subject: s.subjectIds.map((id) => subjName.get(id) ?? id).join('、'), scope: R.size, exam: exams.length, study: study.length, absent: 0, seat, label, room, all: true as const };
     ledger.push({ ...row0, ok: ledgerOk(row0, expExam, expStudy) });
-    sumExp += expExam; sumLabel += label; sumSeat += seat; sumRoom += room;
-    const dd = Math.abs(seat - expExam) + Math.abs(label - expExam) + Math.abs(room - expExam);
+    sumExp += expExam; sumLabel += label; sumSeat += seat; sumRoom += room; sumScope += R.size; sumExamN += exams.length; sumResExam += resExam; sumResFile += resFile;
+    const dd = Math.abs(seat - R.size) + Math.abs(room - R.size) + Math.abs(label - expExam);
     sumDiff += dd;
-    if (dd) m2issues.push({ text: `${s.label} ${row0.subject}：應考 ${expExam}，座位表 ${seat}、標籤 ${label}、教室加總 ${room}`, step: 5 });
+    if (dd) m2issues.push({ text: `${s.label} ${row0.subject}：名冊 ${R.size} 人（其中應考 ${expExam}），座位表 ${seat}、各教室加總 ${room}；標籤 ${label}（應等於應考 ${expExam}）`, step: 5 });
   });
   const cp = astCapacity(doc, exam, plan);
   const m1d = R.size - (scope.enrolled + scope.absent);
   const m1 = tri('M-1', '學生數', R.size, scope.enrolled + scope.absent, m1d, '名冊人數＝報名人數＋不參加人數', `名冊 ${R.size} ＝ 報名 ${scope.enrolled} ＋ 不參加 ${scope.absent}`, m1d !== 0 ? [{ text: `名冊 ${R.size} 人、報名 ${scope.enrolled} 人，考試名單有名冊沒有的人或重複`, step: 2 }] : []);
   if (m1.light === 'pass' && R.size > 0 && scope.absent / R.size > WARN_ABSENT_RATIO) { m1.light = 'warn'; m1.issues = [{ text: `不參加 ${scope.absent} 人，超過名單範圍 ${R.size} 人的 ${Math.round(WARN_ABSENT_RATIO * 100)}%（常見於名單匯錯）`, step: 2 }]; }
-  const m2 = tri('M-2', '每時段人數', sumExp, sumLabel, sumDiff, '應考＝座位表＝標籤＝各教室加總', `${slots.length} 個時段${sumDiff ? `，差異共 ${sumDiff} 人次` : '全部相符'}`, m2issues);
+  const m2 = tri('M-2', '每時段人數', sumScope, sumSeat, sumDiff, '座位表＝各教室加總＝名冊總人數（含不參加者，每個學生不管考不考都佔一個座位）；標籤＝應考人數（自習者不印標籤）；每人每時段只算一個去處', `${slots.length} 個時段${sumDiff ? `，差異共 ${sumDiff} 人次` : '全部相符'}`, m2issues);
   const m3 = tri('M-3', '每人每時段一個去處', sumExpPlaces, sumPlaces, sumPlaces - sumExpPlaces, '同一人同一節次只有一個去處（考試座位或自習位置；跨組、跨抽離都算）', `${enrolled.size + absentN} 人 × ${slots.length} 時段；重複 ${dupN}、遺漏 ${missN}`, issues3.slice(0, 20));
   const m4c = m4(uses, (i) => slots[i]?.label ?? `時段 ${i + 1}`, (u) => u.seats);
   const short = cp.study.slotsShort > 0 || plan.unplaced > 0 || cp.study.need > cp.study.capacity;
   const m5c = m5('M-5', cp.study.capacity, cp.study.need, short, `自習位置不足：自習 ${cp.study.need} 人，自習位置 ${cp.study.capacity}`, '自習最多的時段',
     short ? [{ text: `${cp.study.slotsShort} 個時段的自習位置不足${plan.unplaced ? `，${plan.unplaced} 人排不進` : ''}`, step: 3 }] : []);
-  const m6d = outs ? Math.abs(sumLabel - sumRoom) + Math.abs(sumSeat - sumRoom) : 0;
-  const m6 = tri('M-6', '檔案與畫面', sumRoom, outs ? sumLabel : sumRoom, m6d, '整合標籤與綜合教室座位表的人數＝畫面', outs ? `標籤 ${outs.label.length} 頁、座位表 ${outs.seat.length} 頁` : '輸出尚未產生', m6d ? [{ text: `畫面 ${sumRoom} 人次，標籤 ${sumLabel}、座位表 ${sumSeat}`, step: 5 }] : []);
+  const m6d = outs ? Math.abs(sumLabel - sumExamN) + Math.abs(sumResFile - sumResExam) : 0;
+  const m6 = tri('M-6', '檔案與畫面', sumExamN + sumResExam, outs ? sumLabel + sumResFile : sumExamN + sumResExam, m6d, '整合標籤的人數＝畫面應考人次；綜合教室座位表的人數＝畫面綜合教室考試人次', outs ? `標籤 ${outs.label.length} 頁、座位表 ${outs.seat.length} 頁` : '輸出尚未產生', m6d ? [{ text: `畫面應考 ${sumExamN} 人次、綜合教室考試 ${sumResExam}；標籤檔 ${sumLabel}、綜合教室座位表檔 ${sumResFile}`, step: 5 }] : []);
   const mismatch = astSnapshotMismatch(exam, plan);
   const fp = astFingerprint(exam, plan);
   const m7c = m7(fp, mismatch ? (exam.astFinalFp ?? '') : fp, mismatch ?? '');
