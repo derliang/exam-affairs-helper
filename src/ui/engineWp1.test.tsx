@@ -126,7 +126,7 @@ describe('WP-1 學測：未參加者、全科缺考者直接進排座引擎（D1
     const r = reconcileStandard(s.doc, exam);
     if (r.state !== 'ready') throw new Error(r.state);
     expect(r.checks.find((c) => c.id === 'M-3')!.light).not.toBe('fail');
-    expect(gateOf(r, '').fails).toBe(0);
+    expect(gateOf(r).fails).toBe(0);
   });
 });
 

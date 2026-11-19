@@ -31,7 +31,7 @@ describe('G35 學測（有預備教室、抽離、自習）', () => {
     // 數學：每班 2 人不考（4、8 號）→ 自習 6 人；其餘 24 人考
     const math = r.ledger.find((x) => x.subject.includes('數'))!;
     expect(math.study).toBeGreaterThanOrEqual(6);
-    expect(gateOf(r, '').why).toBe('');
+    expect(gateOf(r).why).toBe('');
     // 每項都有「應有／實有／差異」三個數字：差異＝實有－應有
     for (const c of r.checks.filter((x) => x.light !== 'na' && !x.cap && typeof x.a === 'number')) expect(c.d).toBe(Number(c.b) - Number(c.a));
   });
@@ -42,7 +42,7 @@ describe('G35 學測（有預備教室、抽離、自習）', () => {
     const r = ready(reconcile(bad, exam));
     expect(light(r, 'M-3')).toBe('fail');
     expect(r.checks.find((c) => c.id === 'M-3')!.d).toBeLessThan(0);
-    const g = gateOf(r, 'anything');
+    const g = gateOf(r);
     expect(g.fails).toBeGreaterThan(0);
     expect(g.why).toMatch(/不通過.*須先修正/);
     expect(r.checks.find((c) => c.id === 'M-3')!.issues[0]!.text).toMatch(/沒有去處/);
@@ -65,27 +65,27 @@ describe('G35 學測（有預備教室、抽離、自習）', () => {
     const stale = { ...doc, rosters: { ...doc.rosters, senior: roster } };
     const r = ready(reconcile(stale, exam));
     expect(light(r, 'M-7')).toBe('fail');
-    expect(gateOf(r, '').why).not.toBe('');
+    expect(gateOf(r).why).not.toBe('');
   });
 
-  it('琥珀：未參加超過名單範圍 20% → M-1 警示；須逐項確認，確認後放行；資料一變確認作廢', () => {
+  it('琥珀：未參加超過名單範圍 20% → M-1 警示；只提示，不擋下載、不用確認（D149①）', () => {
     // 每班 10 人、各班 3 人沒報名 → 未參加 9／30 ＝ 30%；他們是自習，原班教室有空位，座位表上有參考座位（D125）
     const { doc, exam } = gsatDoc({ absentRoster: 3 });
     const r = ready(reconcile(doc, exam));
     expect(r.scope.absent).toBe(9);
     expect(light(r, 'M-1')).toBe('warn');
     expect(r.checks.filter((c) => c.light === 'fail')).toEqual([]);
-    const g = gateOf(r, '');
+    const g = gateOf(r);
     expect(g.warns.map((w) => w.id)).toEqual(['M-1']);
-    expect(g.why).toMatch(/警示.*逐項確認/);
-    expect(gateOf(r, g.fingerprint).why).toBe('');
-    // 資料變動（再多一個未參加）→ 警示內容變 → 指紋不同 → 確認作廢
+    expect(g.why).toBe('');
+    expect(g.fails).toBe(0);
+    // 資料再變動（多一個未參加）警示仍然只是提示，一樣可以下載
     const more: Student = { classNo: 1, seatNo: 11, name: '假生111' };
     const d3: Doc = { ...doc, rosters: { ...doc.rosters, senior: [...doc.rosters.senior, more] } };
     const re3 = reseat(d3, exam, '2026-11-10T04:00:00Z');
     if (!re3.ok) throw new Error(re3.error);
-    const g3 = gateOf(reconcile(re3.doc, exam), g.fingerprint);
-    expect(g3.why).not.toBe('');
+    const g3 = gateOf(reconcile(re3.doc, exam));
+    expect(g3.why).toBe('');
   });
 
   it('空白：沒有排座結果 → no-result；沒匯入名冊 → no-roster', () => {
@@ -123,7 +123,7 @@ describe('G35 會考（無抽離、無自習）', () => {
     expect(lights(r)).toBe('M-1:pass M-2:pass M-3:pass M-4:pass M-5:na M-6:pass M-7:pass M-8:na');
     expect(r.hasStudy).toBe(false);
     for (const row of r.ledger) { expect(row.study).toBe(0); expect(row.ok).toBe(true); expect(row.exam).toBe(20); }
-    expect(gateOf(r, '').why).toBe('');
+    expect(gateOf(r).why).toBe('');
   });
   it('紅燈：標籤對不上（座位被刪）擋下載；班級教室剛好滿座不警示', () => {
     const { doc, exam } = bcctDoc();
@@ -167,10 +167,10 @@ describe('G35 分科（D99：不考的人＝自習，算進座位容量）', () 
     const r = ready(reconcile(doc, exam, broken));
     expect(light(r, 'M-2')).toBe('fail');
     expect(light(r, 'M-6')).toBe('fail');
-    expect(gateOf(r, '').why).toMatch(/不通過/);
+    expect(gateOf(r).why).toMatch(/不通過/);
   });
 
-  it('琥珀：名冊多出很多沒報名的人（名單匯錯的徵兆）→ M-1 警示，須確認才能下載', () => {
+  it('琥珀：名冊多出很多沒報名的人（名單匯錯的徵兆）→ M-1 警示，只提示、不擋下載', () => {
     const { doc, exam } = astDoc();
     const more = Array.from({ length: 30 }, (_, k) => ({ classNo: 1 + (k % 6), seatNo: 40 + k, name: `外加${k}` }));
     const d2: Doc = { ...doc, rosters: { ...doc.rosters, senior: [...doc.rosters.senior, ...more] } };
@@ -178,10 +178,10 @@ describe('G35 分科（D99：不考的人＝自習，算進座位容量）', () 
     const r = ready(reconcile(d2, exam, astOutputs(d2, exam, plan, 'B4')));
     expect(r.scope.absent).toBe(30);
     expect(light(r, 'M-1')).toBe('warn');
-    const g = gateOf(r, '');
+    const g = gateOf(r);
     expect(g.fails).toBe(0);
-    expect(g.why).toMatch(/警示/);
-    expect(gateOf(r, g.fingerprint).why).toBe('');
+    expect(g.warns.map((w) => w.id)).toContain('M-1');
+    expect(g.why).toBe('');
   });
 
   it('空白：名冊空 → no-roster', () => {
