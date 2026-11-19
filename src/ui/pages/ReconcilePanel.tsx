@@ -91,10 +91,10 @@ export function ReconcilePanel(p: {
       <div class="rc-list">{r.checks.map((c) => <CheckRow key={`${c.id}-${c.light}-${c.a}-${c.b}`} c={c} onGo={p.onGo} />)}</div>
 
       <div class="lab"><b>總帳：每個時段，名單範圍內每個人都在一個地方</b></div>
-      <div class="small">名單範圍 {r.scope.total} 人 ＝ 報名 {r.scope.enrolled} ＋ 未參加 {r.scope.absent}{r.hasAbsent ? '' : '（未參加的人就是自習，座位表上有他們的座位）'}</div>
+      <div class="small">名單範圍 {r.scope.total} 人 ＝ 報名 {r.scope.enrolled} ＋ 不參加 {r.scope.absent}{r.hasAbsent ? '' : '（不參加的人就是自習，座位表上有他們的座位）'}</div>
       <div class="rc-table scroll">
         <table class="t compact">
-          <thead><tr><th>時段</th><th>科目</th><th>名單範圍</th><th>＝ 考試</th>{r.hasStudy && <th>＋ 自習</th>}{r.hasAbsent && <th>＋ 未參加</th>}<th>座位表</th><th>標籤</th><th>教室加總</th><th>帳</th></tr></thead>
+          <thead><tr><th>時段</th><th>科目</th><th>名單範圍</th><th>＝ 考試</th>{r.hasStudy && <th>＋ 自習</th>}{r.hasAbsent && <th>＋ 不參加</th>}<th>座位表</th><th>標籤</th><th>教室加總</th><th>帳</th></tr></thead>
           <tbody>{r.ledger.map((l) => (
             <tr key={l.key} data-ledger-ok={l.ok} class={l.ok ? '' : 'rc-bad'}>
               <td>{l.when}</td><td>{l.subject}</td><td>{l.scope}</td><td>{l.exam}</td>{r.hasStudy && <td>{l.study}</td>}{r.hasAbsent && <td>{l.absent}</td>}
@@ -107,11 +107,11 @@ export function ReconcilePanel(p: {
       <div class="rc-cards">{r.ledger.map((l) => (
         <div key={l.key} class={`rc-pcard ${l.ok ? '' : 'rc-bad'}`}>
           <div class="row sb"><b>{l.when}　{l.subject}</b><span>{l.ok ? '✓ 平' : '✕ 不平'}</span></div>
-          <div class="small">名單範圍 {l.scope} ＝ 考試 {l.exam}{r.hasStudy ? ` ＋ 自習 ${l.study}` : ''}{r.hasAbsent ? ` ＋ 未參加 ${l.absent}` : ''}</div>
+          <div class="small">名單範圍 {l.scope} ＝ 考試 {l.exam}{r.hasStudy ? ` ＋ 自習 ${l.study}` : ''}{r.hasAbsent ? ` ＋ 不參加 ${l.absent}` : ''}</div>
           <div class="small muted">座位表 {l.seat}　標籤 {l.label}　教室加總 {l.room}</div>
         </div>
       ))}</div>
-      <div class="small muted">「考試」是這個時段坐進考場的人；{r.hasStudy ? '「自習」是這個時段不考的人，包括未參加本次考試的人；' : ''}{r.hasAbsent ? '「未參加」是名單範圍內沒有報名本次考試的人。' : ''}兩者加起來必須等於名單範圍：每個人每個時段都要有去處。</div>
+      <div class="small muted">「考試」是這個時段坐進考場的人；{r.hasStudy ? '「自習」是這個時段不考的人，包括不參加本次考試的人；' : ''}{r.hasAbsent ? '「不參加」是名單範圍內沒有報名本次考試的人。' : ''}兩者加起來必須等於名單範圍：每個人每個時段都要有去處。</div>
 
       <div class="small muted">下載閘門：任何一項不通過就禁止下載；有警示要逐項確認；全部通過才直接放行。</div>
       {gate.fails > 0 && <Alert tone="danger"><b>還不能下載：</b>{gate.why}紅燈沒有「確認放行」，修正後會自動重新對帳。</Alert>}

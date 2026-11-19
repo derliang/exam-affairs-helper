@@ -113,7 +113,10 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
   /** 會考全員參加：沒匯入名單時，學生名單就是考試名單，這一步視為完成 */
   const bcctAll = exam.kind === 'bcct' && entries === null;
   const done = bcctAll ? roster.length > 0 : entries !== null && diffs.length === 0;
-  const notJoin = entries ? compare(entries).notParticipating : 0;
+  /** 不參加（D146）：名冊有、考試名單沒有的人，加上考試名單上一科都沒報的人，合併成一種、一個人數 */
+  const notJoinRoster = entries ? roster.filter((s) => !entries.some((e) => e.classNo === s.classNo && e.seatNo === s.seatNo)) : [];
+  const notJoinList = entries ? [...notJoinRoster, ...entries.filter((e) => e.subjectIds.length === 0)] : [];
+  const notJoin = entries ? compare(entries).notParticipating + fullyAbsent : 0;
   const classes = doc.settings.classes.filter((c) => c.division === exam.division);
   /** 「恭班 45 號　張小翔」：班名＋座號＋姓名（原型寫法） */
   const who = (x?: { classNo: number; seatNo: number; name: string }) => (x ? `${classes.find((c) => c.no === x.classNo)?.name ?? x.classNo}班 ${x.seatNo} 號　${x.name}` : "—");
@@ -221,15 +224,6 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
             </div>
           );
         })}
-        {fullyAbsent > 0 && (
-          <div class="card stack" style="gap:12px">
-            <div class="row" style="justify-content:space-between">
-              <Badge>{`${fullyAbsent} 人全科缺考`}</Badge>
-            </div>
-            <div class="fact"><b>考試名單</b>{(entries ?? []).filter((e) => e.subjectIds.length === 0).map((e) => who(e)).join('、')}（備註：全科缺考）</div>
-            <span class="hint">一律排座：他們每節都是自習生，跟考生一樣有座位（不印標籤、不計領卷份數）。</span>
-          </div>
-        )}
         {applyErr && <Alert tone="danger"><b>沒有套用，兩份名單都維持原樣。</b>{applyErr}</Alert>}
         <div class="row" style="justify-content:flex-end">
           <Button onClick={() => setShowCmp(false)}>先不處理</Button>
@@ -353,23 +347,23 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
           </div>
         </div>
         <p class="small muted">匯入接受 .xlsx 檔；舊版 .xls 請先用 Excel 另存新檔成 .xlsx。</p>
-        <p class="small muted">學生名單＝全體學生；考試名單＝每位學生報名這次考試的情況。學生名單裡有、但考試名單沒有的人，{exam.kind !== 'bcct'
-          ? '視為未參加、每節都是自習生：不算考生、不印標籤，一樣進排座（考生多數則自習生抽離，反之考生抽離），座位表上列出班級、座號、姓名，人數顯示在下方。'
-          : '視為未參加，但會考不可不參加：一樣排座位（頂多該座位沒人坐），座位表上列出、不印標籤，人數顯示在下方。'}</p>
+        <p class="small muted">學生名單＝全體學生；考試名單＝每位學生報名這次考試的情況。學生名單裡有、但考試名單沒有的人，以及考試名單上一科都沒報的人，{exam.kind !== 'bcct'
+          ? '都是不參加：每節都是自習生，不算考生、不印標籤，一樣進排座（考生多數則自習生抽離，反之考生抽離），座位表上列出班級、座號、姓名，人數顯示在下方。'
+          : '都是不參加，但會考不可不參加：一樣排座位（頂多該座位沒人坐），座位表上列出、不印標籤，人數顯示在下方。'}</p>
         {entries && exam.kind === 'gsat' && roster.length > 0 && notJoin / roster.length >= 0.2 && (
-          <Alert tone="warn">考試名單有 {notJoin} 人（{Math.round((notJoin / roster.length) * 100)}%）不在名單內、被視為未參加（自習）。學測通常人人報名，請確認是否漏列。</Alert>
+          <Alert tone="warn">不參加 {notJoin} 人（{Math.round((notJoin / roster.length) * 100)}%）。學測通常人人報名，請確認考試名單是否漏列。</Alert>
         )}
-        {fullyAbsent > 0 && (
+        {notJoin > 0 && (
           <Alert tone="info">
-            其中 {fullyAbsent} 位全科缺考：照樣排座，每節都是自習生（不印標籤、不計領卷份數）。
-            <details><summary class="small">列出是誰</summary><ul>{(entries ?? []).filter((e) => e.subjectIds.length === 0).map((e) => <li key={`${e.classNo}-${e.seatNo}`}>{who(e).replace(/　.*$/, '')}</li>)}</ul></details>
+            不參加 {notJoin} 人：每節都是自習生，一樣排座（不印標籤、不計領卷份數）。
+            <details><summary class="small">列出是誰</summary><ul>{notJoinList.map((e) => <li key={`${e.classNo}-${e.seatNo}`}>{who(e).replace(/　.*$/, '')}</li>)}</ul></details>
           </Alert>
         )}
         {sheets && (
           <ImportWizard sheets={sheets} exam={exam} classNames={classNames} trackOf={(n) => doc.settings.classes.find((c) => c.division === exam.division && c.no === n)?.track} previous={entries ?? undefined} saved={doc.settings.markMap ?? {}}
             onCancel={() => setSheets(null)} onDone={adopt} />
         )}
-        {entries && <div class="small muted">考生 {entries.length} 人，{exam.kind === 'gsat' ? '未參加' : '未參加'} {notJoin} 人{fullyAbsent > 0 ? `，全科缺考 ${fullyAbsent} 人` : ''}</div>}
+        {entries && <div class="small muted">考生 {entries.length - fullyAbsent} 人，不參加 {notJoin} 人</div>}
       </div>
     </section>
   );

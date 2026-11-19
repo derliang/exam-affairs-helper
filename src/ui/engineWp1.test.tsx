@@ -98,6 +98,23 @@ describe('WP-1 學測：未參加者、全科缺考者直接進排座引擎（D1
     expect(labelCodes.has('0203')).toBe(true);
   });
 
+  it('D146：學測原班座位表，不參加的人（名單外與一科都沒報）格內小牌「X 不參加」、頁首有人數；考生沒有；預備教室頁沒有', () => {
+    const { doc, exam } = gsat270Doc({ notJoined: 2, fullyAbsent: 2, reserve2: true });
+    const p = prepareExport(doc, exam);
+    if (!p.ok) throw new Error(p.errors.join());
+    const flagged = new Set<string>();
+    let chips = 0;
+    for (const pg of buildSeatPages(p.input, 'class')) {
+      for (const c of pg.cells.values()) if ((c.corners ?? []).some((k) => k.text === 'X 不參加')) flagged.add(c.code);
+      if (pg.chips.some((x) => x.startsWith('不參加 '))) chips++;
+    }
+    const none = new Set(p.input.entries.filter((e) => e.subjectIds.length === 0).map((e) => studentCode(e.classNo, e.seatNo)));
+    expect(none.size).toBe(flagged.size);
+    expect([...none].every((c) => flagged.has(c))).toBe(true);
+    expect(flagged.size).toBeGreaterThanOrEqual(4);
+    expect(chips).toBeGreaterThan(0);
+  });
+
   it('D142：拿掉「不排座」選項；舊存檔帶 seatFullyAbsent: false 也照樣排座，對帳無紅燈', () => {
     const f = gsat270Doc({ fullyAbsent: 2, reserve2: true, noSeat: true });
     const u = updateExam(f.doc, f.exam.id, ({ seatFullyAbsent: false } as Partial<ExamConfig>));
@@ -154,8 +171,8 @@ describe('WP-4 容量數字：第 2、3、5 步、流程摘要、對帳、自習
       const r = reconcile(doc, exam);
       const recon = r.state === 'ready' ? r.scope.total : -1;
       expect([seatable, cc, flow, recon]).toEqual([n, n, n, n]);
-      // ② 匯入統計：考生＋未參加＝名冊；③、⑤ 畫面顯示的考生人數
-      const s2 = /考生 (\d+) 人，未參加 (\d+) 人/.exec(renderToString(<Step2 doc={doc} exam={exam} onChange={noop} onToRoster={noop} />));
+      // ② 匯入統計：考生＋不參加＝名冊；③、⑤ 畫面顯示的考生人數
+      const s2 = /考生 (\d+) 人，不參加 (\d+) 人/.exec(renderToString(<Step2 doc={doc} exam={exam} onChange={noop} onToRoster={noop} />));
       if (examEntries(doc, exam).length !== n || exam.kind !== 'bcct') expect(s2 && Number(s2[1]) + Number(s2[2])).toBe(n);
       const s3 = renderToString(<Step3 doc={doc} exam={exam} onChange={noop} />);
       const sum3 = [...s3.matchAll(/class="sub">考生 (\d+)</g)].reduce((m, x) => m + Number(x[1]), 0);
