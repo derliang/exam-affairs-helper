@@ -132,7 +132,7 @@ export function reconcileStandard(doc: Doc, exam: ExamConfig): Reconcile {
   const scope = { total: R.size, enrolled: listedSeated.length, absent: [...R].filter((c) => !listedSet.has(c)).length };
   // 學測：每時段「名冊＝考試＋自習」，沒有第三類；會考沒有自習：沒考這節的人（有座位）算未參加欄
   const absentStudy = exam.kind === 'gsat';
-  const ab = '未參加';
+  const ab = '不參加';
 
   // 輸出：座位表頁面與標籤頁面（與下載同一份頁面模型、同一份排座名單）
   const input: ExportInput = { settings, exam, students: roster, entries: seatableEntries(doc, exam), result };
@@ -269,7 +269,7 @@ export function reconcileStandard(doc: Doc, exam: ExamConfig): Reconcile {
 
   // M-1
   const m1d = R.size - (scope.enrolled + scope.absent);
-  const m1 = tri('M-1', '學生數', R.size, scope.enrolled + scope.absent, m1d, `名冊人數＝報名人數＋${ab}人數${absentStudy || exam.kind === 'ast' ? '（未參加的人是自習，座位在 M-3 檢核）' : ''}`, `名冊 ${R.size} ＝ 報名 ${scope.enrolled} ＋ ${ab} ${scope.absent}`,
+  const m1 = tri('M-1', '學生數', R.size, scope.enrolled + scope.absent, m1d, `名冊人數＝報名人數＋${ab}人數${absentStudy || exam.kind === 'ast' ? '（不參加的人是自習，座位在 M-3 檢核）' : ''}`, `名冊 ${R.size} ＝ 報名 ${scope.enrolled} ＋ ${ab} ${scope.absent}`,
     m1d !== 0 ? [{ text: `考試名單有 ${scope.enrolled + scope.absent - R.size > 0 ? '名冊沒有的人' : '重複或遺漏'}，名冊 ${R.size} 人、報名 ${scope.enrolled} 人`, step: 2 }] : []);
   if (m1.light === 'pass' && R.size > 0 && scope.absent / R.size > WARN_ABSENT_RATIO) {
     m1.light = 'warn';
@@ -278,7 +278,7 @@ export function reconcileStandard(doc: Doc, exam: ExamConfig): Reconcile {
   // M-2
   const m2 = tri('M-2', '每時段人數', sumExpExam, sumLabel, sumDiffExam, (bcct ? '應考＝座位表＝標籤＝各教室加總' : '應考＝座位表＝標籤＝各教室加總（含抽離）'), `${groups.length} 個時段${sumDiffExam ? `，差異共 ${sumDiffExam} 人次` : '全部相符'}`, buildErr ? [{ text: `座位表或標籤排不出來：${buildErr}`, step: 3 }, ...m2issues] : m2issues);
   // M-3
-  const m3 = tri('M-3', '每人每時段一個去處', sumExpPlaces, sumPlaces, sumPlaces - sumExpPlaces, (bcct ? '同一人同一節次只有一個座位' : '同一人同一節次只有一個去處（考試座位或自習位置；跨組、跨抽離都算；名冊上未參加的人也要有自習座位）'), `${R.size} 人 × ${groups.length} 時段；重複 ${dupN}、遺漏 ${missN}`, issues3.slice(0, 20));
+  const m3 = tri('M-3', '每人每時段一個去處', sumExpPlaces, sumPlaces, sumPlaces - sumExpPlaces, (bcct ? '同一人同一節次只有一個座位' : '同一人同一節次只有一個去處（考試座位或自習位置；跨組、跨抽離都算；名冊上不參加的人也要有自習座位）'), `${R.size} 人 × ${groups.length} 時段；重複 ${dupN}、遺漏 ${missN}`, issues3.slice(0, 20));
   // M-4
   const m4c = m4(uses, (i) => slotLabel[i] ?? `時段 ${i + 1}`, (u) => u.seats);
   // M-5
@@ -363,8 +363,8 @@ export function reconcileAst(doc: Doc, exam: ExamConfig, outs?: AstOutputs): Rec
   });
   const cp = astCapacity(doc, exam, plan);
   const m1d = R.size - (scope.enrolled + scope.absent);
-  const m1 = tri('M-1', '學生數', R.size, scope.enrolled + scope.absent, m1d, '名冊人數＝報名人數＋未參加人數', `名冊 ${R.size} ＝ 報名 ${scope.enrolled} ＋ 未參加 ${scope.absent}`, m1d !== 0 ? [{ text: `名冊 ${R.size} 人、報名 ${scope.enrolled} 人，考試名單有名冊沒有的人或重複`, step: 2 }] : []);
-  if (m1.light === 'pass' && R.size > 0 && scope.absent / R.size > WARN_ABSENT_RATIO) { m1.light = 'warn'; m1.issues = [{ text: `未參加 ${scope.absent} 人，超過名單範圍 ${R.size} 人的 ${Math.round(WARN_ABSENT_RATIO * 100)}%（常見於名單匯錯）`, step: 2 }]; }
+  const m1 = tri('M-1', '學生數', R.size, scope.enrolled + scope.absent, m1d, '名冊人數＝報名人數＋不參加人數', `名冊 ${R.size} ＝ 報名 ${scope.enrolled} ＋ 不參加 ${scope.absent}`, m1d !== 0 ? [{ text: `名冊 ${R.size} 人、報名 ${scope.enrolled} 人，考試名單有名冊沒有的人或重複`, step: 2 }] : []);
+  if (m1.light === 'pass' && R.size > 0 && scope.absent / R.size > WARN_ABSENT_RATIO) { m1.light = 'warn'; m1.issues = [{ text: `不參加 ${scope.absent} 人，超過名單範圍 ${R.size} 人的 ${Math.round(WARN_ABSENT_RATIO * 100)}%（常見於名單匯錯）`, step: 2 }]; }
   const m2 = tri('M-2', '每時段人數', sumExp, sumLabel, sumDiff, '應考＝座位表＝標籤＝各教室加總', `${slots.length} 個時段${sumDiff ? `，差異共 ${sumDiff} 人次` : '全部相符'}`, m2issues);
   const m3 = tri('M-3', '每人每時段一個去處', sumExpPlaces, sumPlaces, sumPlaces - sumExpPlaces, '同一人同一節次只有一個去處（考試座位或自習位置；跨組、跨抽離都算）', `${enrolled.size + absentN} 人 × ${slots.length} 時段；重複 ${dupN}、遺漏 ${missN}`, issues3.slice(0, 20));
   const m4c = m4(uses, (i) => slots[i]?.label ?? `時段 ${i + 1}`, (u) => u.seats);

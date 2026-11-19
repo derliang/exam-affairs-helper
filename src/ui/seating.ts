@@ -361,10 +361,11 @@ function studentCtx(doc: Doc, exam: ExamConfig, result: SeatingResult) {
     const classNo = e?.classNo ?? Number(code.slice(0, 2));
     const c = classes.get(classNo);
     // 覆寫只改「被標示的那幾科」去哪裡（core/detach）；沒標示的人覆寫不生效，座位表照常
-    const own = marksBy.get(code) ?? [];
+    // D146④：不參加（一科都沒報）只標一個「X 不參加」
+    const own = e?.subjectIds.length === 0 ? ['X 不參加'] : marksBy.get(code) ?? [];
     const o = own.length ? over.get(code) : undefined;
     const marks = o ? [...own, `→${o.location}`] : own;
-    const markKind = marks.length ? (absent.has(code) ? 'x' : 'add') : undefined;
+    const markKind = marks.length ? (absent.has(code) || e?.subjectIds.length === 0 ? 'x' : 'add') : undefined;
     return {
       kind: 'student', co, code, name: nameOf.get(code) ?? e?.name ?? '（不在名單）', classNo, className: c?.name ?? String(classNo), colorIndex: c?.colorIndex ?? classNo,
       marks, ...(markKind ? { markKind } : {}),
