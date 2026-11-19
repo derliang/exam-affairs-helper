@@ -35,10 +35,10 @@ export function carryRows(doc: Doc, exam: ExamConfig, prev: ExamConfig): CarryRo
   ];
 }
 
-/** 不沿用：③ 教室、④ 規則、參加方式、標籤格式回到空白預設（一次改動，可復原） */
+/** 不沿用：③ 教室、④ 規則、標籤格式回到空白預設（一次改動，可復原） */
 export function stopCarry(doc: Doc, exam: ExamConfig): Doc {
   const r = updateExam(doc, exam.id, {
-    carry: false, classroomIds: [], markRules: [], participation: 'all', labelLayout: defaultLabelLayout(doc.settings.defaultLabelPaper),
+    carry: false, classroomIds: [], markRules: [], labelLayout: defaultLabelLayout(doc.settings.defaultLabelPaper),
   });
   return r.ok ? r.doc : doc;
 }
@@ -48,7 +48,7 @@ export function resumeCarry(doc: Doc, exam: ExamConfig): Doc {
   const prev = carrySource(doc, exam);
   if (!prev) return doc;
   const r = updateExam(doc, exam.id, {
-    carry: true, classroomIds: [...prev.classroomIds], markRules: structuredClone(prev.markRules), participation: prev.participation, labelLayout: structuredClone(prev.labelLayout),
+    carry: true, classroomIds: [...prev.classroomIds], markRules: structuredClone(prev.markRules), labelLayout: structuredClone(prev.labelLayout),
   });
   return r.ok ? r.doc : doc;
 }

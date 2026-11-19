@@ -29,7 +29,7 @@ describe('存檔往返', () => {
         kind: 'gsat',
         division: input.division,
         semester: 'first',
-        participation: 'all',
+       
         subjects: [...input.subjects],
         markRules: [...input.markRules],
         classroomIds: input.classrooms.map((c) => c.id),
@@ -147,13 +147,13 @@ describe('名單比對往返', () => {
         if (kind === 'moved') entries.push({ classNo: c, seatNo: s + 50, name, subjectIds: ['a'] });
       }
     }
-    return { roster, entries, participation: rng.pick(['all', 'partial'] as const) };
+    return { roster, entries };
   }
 
   it('INV-23：全部「以考試名單為準」或全部「以學生名單為準」處理後，兩份名單完全吻合（再比對零差異）、人數守恆（200 案例）', () => {
     for (let seed = 1; seed <= 200; seed++) {
-      const { roster, entries, participation } = scenario(seed);
-      const { diffs } = compareRosters(roster, entries, participation);
+      const { roster, entries } = scenario(seed);
+      const { diffs } = compareRosters(roster, entries);
       for (const choice of ['use-exam', 'use-roster'] as const) {
         const decided = diffs.map((d) => ({ ...d, choice }));
         expect(allResolved(decided)).toBe(true);
@@ -163,20 +163,20 @@ describe('名單比對往返', () => {
         const ec = out.entries.map((s) => studentCode(s.classNo, s.seatNo));
         expect(new Set(sc).size, `seed=${seed} ${choice} 學生名單重複`).toBe(sc.length);
         expect(new Set(ec).size, `seed=${seed} ${choice} 考試名單重複`).toBe(ec.length);
-        // 再比對：全員參加時兩邊必須完全一致；部分參加時考試名單必須是學生名單的子集且姓名相同
+        // 再比對：考試名單必須是學生名單的子集且姓名相同（沒報名的人不算差異，D125）
         // 不經過 compareRosters，直接逐筆比：同編號的人，兩份名單的姓名必須相同
         const nameOf = new Map(out.students.map((x) => [studentCode(x.classNo, x.seatNo), x.name.trim()]));
         for (const e of out.entries) expect(nameOf.get(studentCode(e.classNo, e.seatNo)), `seed=${seed} ${choice} ${e.classNo}-${e.seatNo}`).toBe(e.name.trim());
-        const again = compareRosters(out.students, out.entries, participation);
-        expect(again.diffs, `seed=${seed} ${choice} ${participation}`).toEqual([]);
+        const again = compareRosters(out.students, out.entries);
+        expect(again.diffs, `seed=${seed} ${choice}`).toEqual([]);
       }
     }
   });
 
   it('INV-24：沒有差異的人，處理後科目原封不動（考試名單的 subjectIds 不遺失）', () => {
     for (let seed = 1; seed <= 100; seed++) {
-      const { roster, entries, participation } = scenario(seed);
-      const { diffs } = compareRosters(roster, entries, participation);
+      const { roster, entries } = scenario(seed);
+      const { diffs } = compareRosters(roster, entries);
       const touched = new Set(diffs.flatMap((d) => [d.code, ...(d.exam ? [studentCode(d.exam.classNo, d.exam.seatNo)] : [])]));
       const out = applyDiffs(roster, entries, diffs.map((d) => ({ ...d, choice: 'use-exam' as const })));
       for (const e of entries) {

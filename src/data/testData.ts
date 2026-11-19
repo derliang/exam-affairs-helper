@@ -22,7 +22,7 @@ export function bigDoc(exams: number, people: number): Doc {
   const students: Student[] = Array.from({ length: people }, (_, i) => ({ classNo: 101 + (i % 20), seatNo: 1 + Math.floor(i / 20), name: `學生${i}` }));
   const entries: ExamEntry[] = students.map((s) => ({ ...s, subjectIds: ['chi', 'eng', 'math'] }));
   const list: ExamConfig[] = Array.from({ length: exams }, (_, i) => ({
-    id: `exam-${i}`, name: `範例考${i}`, kind: 'monthly', division: 'senior', semester: '1', participation: 'all',
+    id: `exam-${i}`, name: `範例考${i}`, kind: 'monthly', division: 'senior', semester: '1',
     subjects: [], markRules: [], classroomIds: [], labelLayout: {}, createdAt: `2026-01-${String((i % 28) + 1).padStart(2, '0')}T00:00:00Z`,
   } as unknown as ExamConfig));
   const examFiles: NonNullable<Doc['examFiles']> = {};

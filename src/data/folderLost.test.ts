@@ -8,7 +8,7 @@ import type { Doc } from '../ui/store';
 
 const tick = (ms = 5) => new Promise<void>((r) => setTimeout(r, ms));
 const mk = (n: number): Doc => ({ ...emptyDoc(), settings: { ...emptyDoc().settings, schoolName: `範例學校${n}` } });
-const exam = (id: string) => ({ id, name: `考試${id}`, kind: 'gsat', division: 'senior', semester: 'first', participation: 'all', subjects: [{ id: 'chi', name: '國文' }], markRules: [], classroomIds: [], labelLayout: { paper: 'B4', cols: 7, rows: 7 }, createdAt: '2026-01-01' }) as unknown as Doc['exams'][number];
+const exam = (id: string) => ({ id, name: `考試${id}`, kind: 'gsat', division: 'senior', semester: 'first', subjects: [{ id: 'chi', name: '國文' }], markRules: [], classroomIds: [], labelLayout: { paper: 'B4', cols: 7, rows: 7 }, createdAt: '2026-01-01' }) as unknown as Doc['exams'][number];
 
 /** 一組假資料夾：名稱 → 記憶體檔案系統；handle 只是 { name } */
 function world(setup: Record<string, Record<string, string>> = {}) {

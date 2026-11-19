@@ -13,18 +13,18 @@ describe('#59 套用差異保留學號／類組／特殊註記', () => {
   const rich = S(1, 1, '甲', { schoolId: '11500001', groupCode: 'D', special: '延長' });
   it('同座號改名（以考試名單為準）', () => {
     const entries = [E(1, 1, '甲乙')];
-    const diffs = compareRosters([rich], entries, 'all').diffs.map((d) => ({ ...d, choice: 'use-exam' as const }));
+    const diffs = compareRosters([rich], entries).diffs.map((d) => ({ ...d, choice: 'use-exam' as const }));
     const r = applyDiffs([rich], entries, diffs);
     expect(r.students).toEqual([{ ...rich, name: '甲乙' }]);
   });
   it('跨班換號（同名一人）保留附加欄位', () => {
     const entries = [E(2, 5, '甲')];
-    const diffs = compareRosters([rich], entries, 'all').diffs.map((d) => ({ ...d, choice: 'use-exam' as const }));
+    const diffs = compareRosters([rich], entries).diffs.map((d) => ({ ...d, choice: 'use-exam' as const }));
     expect(applyDiffs([rich], entries, diffs).students[0]).toMatchObject({ classNo: 2, seatNo: 5, schoolId: '11500001', groupCode: 'D', special: '延長' });
   });
   it('手動修改保留；原本無 Student 的新增不憑空產生欄位', () => {
     const entries = [E(1, 1, '甲乙'), E(1, 3, '新')];
-    const diffs = compareRosters([rich], entries, 'all').diffs.map((d): RosterDiff =>
+    const diffs = compareRosters([rich], entries).diffs.map((d): RosterDiff =>
       d.code === '0101' ? { ...d, choice: 'manual', edited: { classNo: 1, seatNo: 7, name: '甲丙' } } : { ...d, choice: 'use-exam' });
     const r = applyDiffs([rich], entries, diffs);
     expect(r.students.find((s) => s.seatNo === 7)).toMatchObject({ schoolId: '11500001', groupCode: 'D', special: '延長' });
@@ -32,7 +32,7 @@ describe('#59 套用差異保留學號／類組／特殊註記', () => {
   });
   it('重載（JSON 往返）後學號仍在', () => {
     const entries = [E(1, 1, '甲乙')];
-    const diffs = compareRosters([rich], entries, 'all').diffs.map((d) => ({ ...d, choice: 'use-exam' as const }));
+    const diffs = compareRosters([rich], entries).diffs.map((d) => ({ ...d, choice: 'use-exam' as const }));
     const back = JSON.parse(JSON.stringify(applyDiffs([rich], entries, diffs).students)) as Student[];
     expect(back[0]?.schoolId).toBe('11500001');
   });
@@ -55,7 +55,7 @@ describe('#67 套用前驗證整份名單', () => {
   it('手動改成已存在學生的座號會被擋下', () => {
     const roster = [S(1, 1, '王'), S(1, 2, '李')];
     const entries = [E(1, 1, '王小')];
-    const diffs: RosterDiff[] = compareRosters(roster, entries, 'partial').diffs.map((d) => ({ ...d, choice: 'manual' as const, edited: { classNo: 1, seatNo: 2, name: '王小' } }));
+    const diffs: RosterDiff[] = compareRosters(roster, entries).diffs.map((d) => ({ ...d, choice: 'manual' as const, edited: { classNo: 1, seatNo: 2, name: '王小' } }));
     expect(validateResolved(applyDiffs(roster, entries, diffs), nos)).toContain('0102');
   });
 });
@@ -63,38 +63,37 @@ describe('#67 套用前驗證整份名單', () => {
 describe('#60 差異依輸入重算', () => {
   const roster = [S(1, 1, '甲'), S(1, 2, '乙')];
   const entries = [E(1, 1, '甲')];
-  it('全員 ↔ 部分雙向切換，差異筆數正確', () => {
-    const partial = refreshDiffs(roster, entries, 'partial', []);
-    expect(partial).toHaveLength(0);
-    const all = refreshDiffs(roster, entries, 'all', partial);
-    expect(all.map((d) => d.kind)).toEqual(['only-in-roster']);
-    expect(diffsStale(partial, all)).toBe(true);
-    expect(refreshDiffs(roster, entries, 'partial', all)).toHaveLength(0);
+  it('沒報名的人不算差異；舊存檔留下的「學生名單單邊」差異重算後消失（D143）', () => {
+    expect(refreshDiffs(roster, entries, [])).toHaveLength(0);
+    const legacy: RosterDiff[] = [{ kind: 'only-in-roster', code: '0102', roster: S(1, 2, '乙') }];
+    const fresh = refreshDiffs(roster, entries, legacy);
+    expect(fresh).toHaveLength(0);
+    expect(diffsStale(legacy, fresh)).toBe(true);
   });
   it('相符的舊選擇保留，不同考生不沿用', () => {
-    const all = refreshDiffs(roster, entries, 'all', []).map((d) => ({ ...d, choice: 'use-exam' as const }));
-    const same = refreshDiffs(roster, entries, 'all', all);
+    const renamed = [E(1, 1, '甲改')];
+    const all = refreshDiffs(roster, renamed, []).map((d) => ({ ...d, choice: 'use-exam' as const }));
+    expect(all.map((d) => d.kind)).toEqual(['mismatch']);
+    const same = refreshDiffs(roster, renamed, all);
     expect(same[0]?.choice).toBe('use-exam');
-    const other = refreshDiffs([S(1, 1, '甲'), S(1, 2, '丙')], entries, 'all', all);
+    const other = refreshDiffs([S(1, 1, '甲乙'), S(1, 2, '乙')], renamed, all);
     expect(other[0]?.choice).toBeUndefined();
   });
-  const doc = (participation: 'all' | 'partial'): Doc => {
+  const doc = (): Doc => {
     let d = withDefaults(emptyDoc());
     const r = newExam(d, 'gsat', '考', new Date(2026, 10, 8), { semester: 'first' });
     if (!r.ok) throw new Error(r.error);
     d = r.doc;
     const id = d.exams[0]!.id;
     d = { ...d, rosters: { ...d.rosters, senior: roster }, examFiles: { [id]: { entries, diffs: [] } } };
-    const u = updateExam(d, id, { participation });
-    if (!u.ok) throw new Error(u.error);
-    return u.doc;
+    return d;
   };
   it('syncDiffs：改參加方式、新增／刪除／改名共用學生後差異跟著變', () => {
-    const d = doc('partial');
+    const d = doc();
     const id = d.exams[0]!.id;
     expect(syncDiffs(d)).toBe(d); // 沒變動就是同一份
-    // G19：不論 participation 存什麼，名單沒有的人一律視為未參加，不是差異
-    const all = syncDiffs({ ...d, exams: [{ ...d.exams[0]!, participation: 'all' }] });
+    // G19：名單沒有的人一律視為未參加，不是差異
+    const all = syncDiffs({ ...d, exams: [{ ...d.exams[0]! }] });
     expect(all.examFiles![id]!.diffs).toHaveLength(0);
     const added = syncDiffs({ ...all, rosters: { ...all.rosters, senior: [...roster, S(1, 3, '丁')] } });
     expect(added.examFiles![id]!.diffs).toHaveLength(0);
@@ -143,7 +142,7 @@ describe('#68 學測次別依學年度與學期推算', () => {
 });
 
 describe('#206 取代共用名單的影響', () => {
-  const e = { id: 'e1', name: '學測第一次', kind: 'gsat', division: 'senior', semester: 'first', round: 1, participation: 'all', subjects: [{ id: 'chinese', name: '國文' }], markRules: [], classroomIds: [], labelLayout: { paper: 'B4', cols: 6, rows: 8 }, createdAt: '2026-11-01T00:00:00.000Z' } as const;
+  const e = { id: 'e1', name: '學測第一次', kind: 'gsat', division: 'senior', semester: 'first', round: 1, subjects: [{ id: 'chinese', name: '國文' }], markRules: [], classroomIds: [], labelLayout: { paper: 'B4', cols: 6, rows: 8 }, createdAt: '2026-11-01T00:00:00.000Z' } as const;
   const mk = (roster: Student[], entries: ExamEntry[]): Doc => ({ ...emptyDoc(), rosters: { senior: roster, junior: [] }, exams: [e as never], examFiles: { e1: { entries } } });
   it('名單一致：不標；共用名單換人：標「名單已更動」', () => {
     const d = mk([S(1, 1, '甲'), S(1, 2, '乙')], [E(1, 1, '甲'), E(1, 2, '乙')]);
