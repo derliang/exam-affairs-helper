@@ -2,8 +2,8 @@ import { useEffect, useState } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
 import type { Classroom, Division, ExamConfig, LabelPaper, RoomSeatLayout, Track } from '../../data';
 import { effectiveRoom, roomDivision, rowDepthOf, seatLabel, seatSlotCount } from '../../data';
-import { Alert, Badge, Button, ConfirmButton, EmptyState, Modal, Seg, Stepper, Switch } from './index';
-import { confirmCopy, UNDO_HINT } from '../flow';
+import { Alert, Badge, Button, ConfirmButton, ConfirmModal, EmptyState, Seg, Stepper, Switch } from './index';
+import { confirmCopy } from '../flow';
 import { classColorVars } from '../colors';
 import { addRoom, clickSeat, duplicateRoom, fillDefaultTracks, isSeatActive, patchRoom, removeRoom, labelSplitNote, resize, roomLimitsOf, seatLimitNote, stepMax, setNoSeat, setRoomDivision, setRoomTrack } from '../rooms';
 import { rowDepthsOf, setAllDepth, setRowCount, toggleSeat } from '../ast/roomEdit';
@@ -242,9 +242,9 @@ function RoomRemove(p: { name: string; inThis: boolean; inUse: boolean; onThis: 
     <>
       <Button small kind="danger" onClick={() => setOpen(true)}>刪除</Button>
       {open && (
-        <Modal title={`刪除「${p.name}」？`} onClose={close}
-          actions={<><Button onClick={close}>取消</Button><Button kind="danger" onClick={() => { close(); if (shared) p.onShared(); else p.onThis(); }}>{shared ? '刪除（含共用設定）' : '從本次考試移除'}</Button></>}>
-          <p>{p.inThis ? '預設只從「本次考試」移除這間教室，不動共用教室清單，也不影響其他模擬考；之後可用開關再列回。' : '這間教室目前沒有列入本次考試，只能從共用設定刪除。'}</p>
+        <ConfirmModal
+          copy={{ title: `刪除「${p.name}」？`, body: p.inThis ? '預設只從「本次考試」移除這間教室，不動共用教室清單，也不影響其他模擬考；之後可用開關再列回。' : '這間教室目前沒有列入本次考試，只能從共用設定刪除。', confirm: shared ? '刪除（含共用設定）' : '從本次考試移除' }}
+          onConfirm={() => { if (shared) p.onShared(); else p.onThis(); }} onClose={close}>
           {p.inThis && (
             <label class="chk" style="display:flex;gap:8px;align-items:flex-start;margin-top:10px">
               <input type="checkbox" checked={alsoShared} onChange={(e) => setAlsoShared(e.currentTarget.checked)} />
@@ -252,8 +252,7 @@ function RoomRemove(p: { name: string; inThis: boolean; inUse: boolean; onThis: 
             </label>
           )}
           {shared && <Alert tone="warn">共用設定刪除後，所有模擬考都會少這間教室{p.inUse || p.inThis ? '；已選用它的模擬考排座結果可能因此過期' : ''}。</Alert>}
-          <p class="small muted" style="margin-top:8px">{UNDO_HINT}</p>
-        </Modal>
+        </ConfirmModal>
       )}
     </>
   );

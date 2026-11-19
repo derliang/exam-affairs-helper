@@ -44,7 +44,7 @@ export function Step4(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
     return (
       <section class="stack">
         <StepHead title="④ 標示與抽離規則" />
-        <Alert tone="info" action={<Button onClick={() => p.onStep(2)}>前往 ② 考試名單</Button>}>
+        <Alert tone="info" action={<Button onClick={() => p.onStep(2)}>到 ② 考試名單 ›</Button>}>
           <b>還沒有考試名單。</b>這一步要依考試名單算出每組每科考與不考的人數，請先到 ② 匯入大考中心的考生名單。
         </Alert>
       </section>
@@ -136,7 +136,7 @@ export function Step4(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
         <div><h3>抽離人數</h3><p class="small muted">標示一變，這裡立即重算。抽離考試的人依序排進 ③ 勾選的預備教室；抽離自習只出名單。</p></div>
         {!preview.ok
           ? (
-            <Alert tone="danger" action={<Button onClick={() => p.onStep(3)}>前往 ③ 教室設定</Button>}>
+            <Alert tone="danger" action={<Button onClick={() => p.onStep(3)}>到 ③ 教室設定 ›</Button>}>
               <b>抽離排不下：</b>{preview.errors.join('；')}。<br />請到 ③ 多勾一間預備教室、加大預備教室的座位，或回上面改標示的方式。（這裡與 ③ 教室設定的「預備教室需求」是同一組數字。）
             </Alert>
           )

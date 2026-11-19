@@ -31,7 +31,7 @@ export function FolderLostAlert(p: { name: string; pending: number; detail?: str
     <Alert tone="danger" action={<div class="folder-acts"><Button small kind="primary" onClick={p.onRelink}>重新連結</Button><Button small onClick={p.onChange}>更換資料夾</Button>{p.pending > 0 && <Button small kind="danger" onClick={p.onDiscard}>放棄未存的修改…</Button>}</div>}>
       <b>找不到資料夾{q(p.name)}</b>
       <div>可能被刪除、改名或移到別處了。{p.pending > 0 ? <><b>有 {p.pending} 項修改還沒存進去</b>，仍暫存在這個分頁，請先不要關閉頁面。</> : '目前沒有未存的修改。'}</div>
-      {p.onSettings && <div class="small"><button type="button" class="linkbtn" onClick={p.onSettings}>前往資料夾設定</button></div>}
+      {p.onSettings && <div class="small"><button type="button" class="linkbtn" onClick={p.onSettings}>到資料夾設定 ›</button></div>}
       <More title="技術細節">瀏覽器回報：NotFoundError（找不到檔案或資料夾）{p.detail ? `；${p.detail}` : ''}</More>
     </Alert>
   );

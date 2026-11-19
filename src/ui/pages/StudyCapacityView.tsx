@@ -1,4 +1,4 @@
-import { Alert, Badge, Button, More } from '../components';
+import { Alert, Badge, Button, EmptyState, More } from '../components';
 import type { StudyCapacity, StudyGroupRow } from '../capacity';
 
 /** 第 3、4、5 步共用的「自習容量」顯示（G29、G31；數字都來自 capacity.ts 的 studyCapacity，三處一致） */
@@ -65,7 +65,7 @@ export function StudySlotTable(p: { sc: StudyCapacity; classNames: Map<number, s
   const { sc } = p;
   if (!sc.applicable) return null;
   const rows = sc.groups.filter((g) => g.studyCount + g.stay > 0 || g.examCount > 0);
-  if (rows.length === 0) return <p class="small muted">每個時段所有人都考，沒有自習的人。</p>;
+  if (rows.length === 0) return <EmptyState title="每個時段所有人都考，沒有自習的人" />;
   return (
     <div class="scroll">
       <table class="t compact">

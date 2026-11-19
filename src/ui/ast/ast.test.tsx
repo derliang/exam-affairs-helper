@@ -220,10 +220,10 @@ describe('⑤ 時段教室與座位', () => {
   });
   it('沒有名單／沒有教室：給前往 ② 或 ③ 的提示', () => {
     const { doc, exam } = fixture();
-    expect(renderToString(<AstStep5 doc={{ ...doc, examFiles: {} }} exam={exam} onChange={noop} onStep={noop} />)).toContain('前往 ② 考試名單');
+    expect(renderToString(<AstStep5 doc={{ ...doc, examFiles: {} }} exam={exam} onChange={noop} onStep={noop} />)).toContain('到 ② 考試名單 ›');
     const u = updateExam(doc, exam.id, { classroomIds: [] });
     if (!u.ok) throw new Error();
-    expect(renderToString(<AstStep5 doc={u.doc} exam={u.doc.exams.find((e) => e.id === exam.id)!} onChange={noop} onStep={noop} />)).toContain('前往 ③ 教室與自習空間');
+    expect(renderToString(<AstStep5 doc={u.doc} exam={u.doc.exams.find((e) => e.id === exam.id)!} onChange={noop} onStep={noop} />)).toContain('到 ③ 教室與自習空間 ›');
   });
 });
 

@@ -2,7 +2,7 @@ import { useEffect } from 'preact/hooks';
 import { missingClassRooms, syncClassRooms } from '../classRooms';
 import type { Classroom, ExamConfig, RoomSeatLayout, Track } from '../../data';
 import { roomDivision, studyCapacityOf } from '../../data';
-import { Alert, Badge, Button, More, Seg, StepHead, Stepper } from '../components';
+import { Alert, Badge, Button, EmptyState, More, Seg, StepHead, Stepper, Switch } from '../components';
 import { RoomList } from '../components/RoomList';
 import { AST_STEP_BLURBS } from '../nav';
 import { newClassRoomIds, patchRoom } from '../rooms';
@@ -129,7 +129,7 @@ export function AstStep3(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
             </div>
           ))}
         </div>
-        {classes.length === 0 && <p class="small muted">共用設定還沒有高中部的班級。</p>}
+        {classes.length === 0 && <EmptyState title="共用設定還沒有高中部的班級" />}
         {noTrack > 0 && <Alert tone="warn">有 {noTrack} 個班級還沒分理組、文組，排座會被擋下。</Alert>}
       </div>
 
@@ -143,7 +143,7 @@ export function AstStep3(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
       <div class="card stack">
         <div class="row" style="justify-content:space-between;align-items:flex-start">
           <div><h3>自習可以去哪裡</h3><p class="small muted">預設自習只去上面勾選的綜合教室。若綜合教室不夠，程式會在 ⑤ 提出「改用某班原班教室」的替代方案並說明影響，<b>由你核可才採用，不會自動採用</b>。你也可以直接開啟右邊的開關，讓自習不夠時自動去沒當考場的原班教室。</p></div>
-          <button type="button" class="btn" aria-pressed={!!exam.astAllowOtherStudy} onClick={() => patchExam({ astAllowOtherStudy: !exam.astAllowOtherStudy })}>{exam.astAllowOtherStudy ? '已允許自習去他班原班 ✓' : '允許自習去他班原班教室'}</button>
+          <Switch label="自習去他班原班教室" ariaLabel="允許自習去他班原班教室" checked={!!exam.astAllowOtherStudy} onChange={(v) => patchExam({ astAllowOtherStudy: v })} onText="已允許" offText="未允許" />
         </div>
       </div>
 
@@ -152,12 +152,12 @@ export function AstStep3(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
           <h3>固定自習教室（自習座位）</h3>
           <p class="small muted">不考的人就是自習，也會排自習座位（只用來檢核座位夠不夠、可照坐，<b>不印標籤</b>）。被指定為固定自習教室的教室<b>全程不當考場</b>，每個人整天只去同一間。沒指定＝程式自動讓同一個人各節盡量在同一間自習、同班盡量在一起。自習座位每節各自排，不必每節同一個位子。座位以每間教室的編制人數為準，不足不硬排、會列出未排入的人。</p>
         </div>
-        <div class="row" style="gap:6px;flex-wrap:wrap" role="group" aria-label="固定自習教室">
+        <div class="row" style="gap:12px;flex-wrap:wrap" role="group" aria-label="固定自習教室">
           {[...reserves, ...classRooms].filter((r) => selected.has(r.id)).map((r) => {
             const on = !!exam.astFixedStudyRooms?.includes(r.id);
-            return <button type="button" class="btn" key={r.id} aria-pressed={on} onClick={() => patchExam({ astFixedStudyRooms: on ? (exam.astFixedStudyRooms ?? []).filter((x) => x !== r.id) : [...(exam.astFixedStudyRooms ?? []), r.id] })}>{r.name}{on ? ' ✓ 固定自習' : ''}</button>;
+            return <div class="row" key={r.id} style="gap:8px;align-items:center"><b>{r.name}</b><Switch label="固定自習" ariaLabel={`${r.name} 設為固定自習教室`} checked={on} onChange={(v) => patchExam({ astFixedStudyRooms: v ? [...(exam.astFixedStudyRooms ?? []), r.id] : (exam.astFixedStudyRooms ?? []).filter((x) => x !== r.id) })} onText="固定自習" offText="不固定" /></div>;
           })}
-          {selected.size === 0 && <p class="small muted">先在上方勾選本次可用的教室。</p>}
+          {selected.size === 0 && <EmptyState title="先在上方勾選本次可用的教室" />}
         </div>
       </div>
 
@@ -168,7 +168,7 @@ export function AstStep3(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
             <p class="small muted">座位圖可以每排深位數不同、可停用個別座位；要留空就停用座位，不另做「隔排、隔位」規則。<b>自習容量預設等於可排座位</b>，可以手動調高，程式不會自己調大。座位上限：每間橫排、深位各最多 8，總座位 56（與標籤一致）。</p>
             <More title="說明：教室清單與勾選">教室清單是所有模擬考共用的：修改座位圖與自習容量會影響其他使用這間教室的模擬考。「列入本次」沿用原有的勾選，沒列入的教室不會被排考試或自習。</More>
           </div>
-          {p.onToRooms && <Button onClick={p.onToRooms}>到共用設定看教室清單</Button>}
+          {p.onToRooms && <Button onClick={p.onToRooms}>到共用設定的教室清單 ›</Button>}
         </div>
         <RoomList {...listProps} only="class" track="badge" addLabel={null} switchLabel={() => '列入本次'} />
       </div>

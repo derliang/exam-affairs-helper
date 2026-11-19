@@ -277,7 +277,7 @@ function Overview(p: { doc: Doc; divs: Division[]; onStep: (n: number) => void; 
               <span class="envmk" aria-hidden="true">{m === 'done' ? '✓' : '▲'}</span>
               <span class="envlab">{s.name}</span>
               <span class="envtext">{summary(s.no)}</span>
-              <Button small onClick={() => p.onStep(s.no)}>{m === 'done' ? '查看／修改 ›' : '前往補做 ›'}</Button>
+              <Button small onClick={() => p.onStep(s.no)}>{m === 'done' ? '查看／修改 ›' : '到該步補做 ›'}</Button>
             </li>
           );
         })}

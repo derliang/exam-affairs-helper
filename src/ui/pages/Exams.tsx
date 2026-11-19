@@ -1,28 +1,22 @@
 import type { ComponentChildren } from 'preact';
 import { useState } from 'preact/hooks';
 import type { ExamConfig } from '../../data';
-import { Alert, Badge, Button, EmptyState, Modal, More, PageHead } from '../components';
+import { Alert, Badge, Button, ConfirmModal, EmptyState, More, PageHead } from '../components';
 import { rosterChanged } from '../rosterIO';
 import { examHeadcount, examLevel, examProgress, formatModified, sortExams } from '../examList';
 import { examLabel, lastModified, examYear, type Doc } from '../store';
 import { envBanner } from '../env';
 
 /** 模擬考列表（DESIGN 10.x）：頁首 h1＋資料夾 chip，每列有六格進度條、學年與人數、最後修改；依最後修改由新到舊 */
-/** 刪除考試前的確認（G1）：寫明會刪什麼、不會動什麼，並要輸入考試名稱才能刪 */
-export const deleteNameMatches = (examName: string, typed: string): boolean => typed.trim() === examName;
-
+/** 刪除考試前的確認（G1；#413 第 2 項：改用標準 ConfirmModal，不再要輸入考試名稱）：寫明會刪什麼、不會動什麼 */
 export function DeleteExamModal(p: { exam: ExamConfig; onConfirm: () => void; onClose: () => void }) {
-  const [typed, setTyped] = useState('');
-  const ok = deleteNameMatches(p.exam.name, typed);
   return (
-    <Modal title={`刪除「${p.exam.name}」？`} onClose={p.onClose} actions={<><Button onClick={p.onClose}>取消</Button><button type="button" class="btn btn-danger" disabled={!ok} onClick={() => { p.onClose(); p.onConfirm(); }}>刪除這次模擬考</button></>}>
-      <p><b>會刪掉：</b>這次模擬考在 App 裡的資料——考試設定、本次考試名單、名單比對結果、標示與抽離設定、座位與排座結果（分科含時程與版本紀錄）。刪除後無法從列表找回，只有這次開啟 App 期間還能用上方「↶ 復原」。</p>
+    <ConfirmModal
+      copy={{ title: `刪除「${p.exam.name}」？`, body: '會刪掉：這次模擬考在 App 裡的資料——考試設定、本次考試名單、名單比對結果、標示與抽離設定、座位與排座結果（分科含時程與版本紀錄）。', confirm: '刪除這次模擬考' }}
+      onConfirm={p.onConfirm} onClose={p.onClose}>
       <p style="margin-top:8px"><b>不會動：</b>你已經下載到電腦的 Word、PDF 等檔案，以及「共用設定」裡的學校、班級、教室與學生名單。</p>
       <p style="margin-top:8px">如果只是暫時不用，建議改用「封存」，之後還能查看與還原。</p>
-      <label class="field" style="margin-top:12px"><span class="label">請輸入考試名稱「{p.exam.name}」確認刪除</span>
-        <input type="text" value={typed} aria-label="輸入考試名稱確認刪除" onInput={(e) => setTyped(e.currentTarget.value)} />
-      </label>
-    </Modal>
+    </ConfirmModal>
   );
 }
 

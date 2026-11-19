@@ -61,8 +61,8 @@ export function ReconcilePanel(p: {
       <div class="card stack" data-reconcile="empty">
         <div class="row sb"><h3>考前對帳</h3><Button small onClick={p.onRecheck}>↻ 重新對帳</Button></div>
         {r.state === 'no-roster'
-          ? <EmptyState title="還沒有名單，無法對帳" action={<Button small kind="primary" onClick={() => p.onGo(2)}>去 ② 考試名單</Button>}>名冊或考試名單還沒匯入，沒有名單範圍可以對。</EmptyState>
-          : <EmptyState title="還沒有排座結果" action={<Button small kind="primary" onClick={() => p.onGo(5)}>去 ⑤ 排座與預覽</Button>}>排座完成後，這裡會從座位表與標籤重新點人，核對每個時段的帳。</EmptyState>}
+          ? <EmptyState title="還沒有名單，無法對帳" action={<Button small kind="primary" onClick={() => p.onGo(2)}>到 ② 考試名單 ›</Button>}>名冊或考試名單還沒匯入，沒有名單範圍可以對。</EmptyState>
+          : <EmptyState title="還沒有排座結果" action={<Button small kind="primary" onClick={() => p.onGo(5)}>到 ⑤ 排座與預覽 ›</Button>}>排座完成後，這裡會從座位表與標籤重新點人，核對每個時段的帳。</EmptyState>}
       </div>
     );
   }

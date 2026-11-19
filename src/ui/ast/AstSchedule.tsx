@@ -3,7 +3,7 @@ import { useState } from 'preact/hooks';
 import type { ExamConfig } from '../../data';
 import type { CandId, Candidate } from '../../core/astD99/schedule';
 import { parseVersions } from '../../core/astD99/release';
-import { Alert, Badge, Button, More } from '../components';
+import { Alert, Badge, Button, ConfirmModal, More } from '../components';
 import { examYear, updateExam, type Doc } from '../store';
 import { astCandidates, astInvigilators, astPlan, carrySource } from './model';
 
@@ -17,18 +17,23 @@ export function ScheduleCard(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc)
   const cands = astCandidates(doc, exam);
   const base = cands[0]!;
   const sched = exam.astSchedule;
+  // #413 第 2 項：換時程的確認改用標準 ConfirmModal（原本是瀏覽器原生 window.confirm）
+  const [pend, setPend] = useState<Candidate | null>(null);
   const cur: CandId = sched?.cand ?? 'A';
   const inv = astInvigilators(exam);
   const names = new Map(exam.subjects.map((s) => [s.id, s.name]));
   const patch = (x: Partial<ExamConfig>): void => { const r = updateExam(doc, exam.id, x); if (r.ok) p.onChange(r.doc); };
   // 換時程會讓時段 id 對不上，原本的核可與鎖定一併清掉（不會悄悄留著失效的鎖定）
-  const choose = (c: Candidate): void => {
-    if (c.id === cur) return; // #278：再按已選的方案不是換時程，不可清掉核准與鎖定
-    const nLock = (exam.astLocks?.seats?.length ?? 0) + (exam.astLocks?.classes?.length ?? 0) + (exam.astLocks?.rooms?.length ?? 0);
-    const nApr = (exam.astApprovals?.length ?? 0) + (sched?.approved ? 1 : 0);
-    if (nLock + nApr > 0 && typeof window !== 'undefined' && typeof window.confirm === 'function' && !window.confirm(`換時程會清掉 ${nApr} 筆核可（含時程核准）與 ${nLock} 筆鎖定，因為時段會不同。確定要換嗎？`)) return;
+  const nLock = (exam.astLocks?.seats?.length ?? 0) + (exam.astLocks?.classes?.length ?? 0) + (exam.astLocks?.rooms?.length ?? 0);
+  const nApr = (exam.astApprovals?.length ?? 0) + (sched?.approved ? 1 : 0);
+  const apply = (c: Candidate): void => {
     if (c.id === 'A') patch({ astSchedule: undefined, astApprovals: [], astLocks: undefined });
     else patch({ astSchedule: { cand: c.id, days: c.days }, astApprovals: [], astLocks: undefined });
+  };
+  const choose = (c: Candidate): void => {
+    if (c.id === cur) return; // #278：再按已選的方案不是換時程，不可清掉核准與鎖定
+    if (nLock + nApr > 0) { setPend(c); return; }
+    apply(c);
   };
   const approve = (c: Candidate): void => patch({ astSchedule: { cand: c.id, days: c.days, approved: !sched?.approved } });
   const dayName = (i: number): string => ['第一天', '第二天', '第三天'][i] ?? `第 ${i + 1} 天`;
@@ -83,6 +88,7 @@ export function ScheduleCard(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc)
       {cur === 'A' && had && <Alert tone="info">目前用基準時程。</Alert>}
       <More title="說明：指標怎麼算">同時考場峰值＝同一時段各科需要的考場加總的最大值（每間考場的座位數依本次勾選的班級教室平均）；監考人力＝每間考場監考人數（目前 {inv} 人），峰值＝同時考場峰值×{inv}，總人次＝所有時段考場數加總×{inv}。共同考生＝兩科都報名的人；同組的兩科（例如物理×化學）多數考生都考，不能同時段。分科每科時長不鎖死，這裡不看分鐘數。</More>
       {!astPlan(doc, exam) && <p class="small muted">還沒有名單或教室，指標以目前名單算；排座結果在 ⑤。</p>}
+      {pend && <ConfirmModal copy={{ title: '換時程？', body: `換時程會清掉 ${nApr} 筆核可（含時程核准）與 ${nLock} 筆鎖定，因為時段會不同。`, confirm: '確定換時程' }} onConfirm={() => apply(pend)} onClose={() => setPend(null)} />}
     </div>
   );
 }

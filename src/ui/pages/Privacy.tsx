@@ -43,7 +43,7 @@ export function Privacy(p: { backLabel?: string; onBack: () => void; onCopyright
   return (
     <section class="lic">
       <div class="pagehead">
-        <Button kind="ghost" onClick={p.onBack}>← {p.backLabel ? `回到 ${p.backLabel}` : '返回'}</Button>
+        <Button kind="ghost" onClick={p.onBack}>← {p.backLabel ? `回到 ${p.backLabel}` : '回到上一頁'}</Button>
         <span class="small muted">隱私權政策｜{APP_NAME}</span>
       </div>
       <article class="stack lic-doc">

@@ -1,6 +1,6 @@
 /** ⑤ 最下面：鎖定（AST-3；DESIGN 10.19、H-09）。三種範圍：教室用途、班級考場、單一學生座位。衝突只回報，不自動解鎖。 */
 import type { AstLocks, ExamConfig } from '../../data';
-import { Alert, Badge, Button } from '../components';
+import { Alert, Badge, Button, EmptyState } from '../components';
 import { updateExam, type Doc } from '../store';
 import type { AstPlan, AstSlot } from './model';
 
@@ -70,7 +70,7 @@ export function LockCard(p: {
         ? <div class="scroll"><table class="t compact"><thead><tr><th>範圍</th><th>時段</th><th>教室／座位</th><th>內容</th><th></th></tr></thead><tbody>
             {rows.map((r, i) => <tr key={i}><td><Badge>{r.kind}</Badge></td><td>{r.slot}</td><td>{r.where}</td><td>{r.what}</td><td><Button small kind="ghost" disabled={dis} onClick={r.remove}>解除</Button></td></tr>)}
           </tbody></table></div>
-        : <p class="small muted">目前沒有鎖定。</p>}
+        : <EmptyState title="目前沒有鎖定" />}
       {total(L) > 0 && <p class="small muted">鎖定算進方案的輸入：相同的名單、設定與鎖定，一定得到相同的結果。</p>}
     </div>
   );

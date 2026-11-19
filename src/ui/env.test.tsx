@@ -176,7 +176,7 @@ describe('畫面（renderToString）', () => {
     expect(h0).toMatch(/disabled[^>]*>建立並開始/);
     const h1 = renderToString(<NewExam doc={confirmEnv(d, 'gsat', 1, NOW)} onCancel={noop} onCreate={noop} now={() => NOW} />);
     expect(h1).toContain('環境已確認');
-    expect(h1).toContain('展開明細');
+    expect(h1).toContain('明細');
     expect(h1).not.toMatch(/disabled[^>]*>建立並開始/);
   });
   it('環境卡：紅燈沒有「確認使用」；琥珀變動列出前 → 後', () => {
