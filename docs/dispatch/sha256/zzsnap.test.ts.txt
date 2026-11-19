@@ -1,0 +1,52 @@
+// 一次性快照（不進版控）：#400 WP-1/5/4（PR #414）沒有未參加者的輸出，修改前後 sha256 逐位比對。
+// 由 run-compare.sh 複製到受測 checkout 的 src/ 底下執行；輸出寫到環境變數 SNAP_OUT 指定的 JSON。
+import { createHash } from 'node:crypto';
+import { writeFileSync } from 'node:fs';
+import { it } from 'vitest';
+import { astDoc, bcctDoc, gsat270Doc, gsatDoc } from './ui/reconcileFixtures';
+import { prepareExport } from './ui/exportInput';
+import { buildLabelPages, buildSeatPages } from './export/model';
+import { reconcile } from './ui/reconcile';
+import { classCapacity, reserveNeed, studyCapacity } from './ui/capacity';
+import { effectiveMarkRules, examResult } from './ui/seating';
+import { astCapacity, astPlan } from './ui/ast/model';
+import { astOutputs } from './ui/ast/output';
+import type { Doc } from './ui/store';
+import type { ExamConfig } from './data';
+
+const ser = (v: unknown) => JSON.stringify(v, (_k, x) => (x instanceof Map ? { __m: [...x.entries()] } : x instanceof Set ? { __s: [...x] } : x instanceof Uint8Array ? Buffer.from(x).toString('base64') : x));
+const h = (v: unknown) => createHash('sha256').update(ser(v)).digest('hex');
+
+it('snap', () => {
+  const out: Record<string, string> = {};
+  const std = (name: string, f: { doc: Doc; exam: ExamConfig }) => {
+    const { doc, exam } = f;
+    out[`${name}/result`] = h(examResult(doc, exam));
+    out[`${name}/rules`] = h(effectiveMarkRules(doc, exam));
+    out[`${name}/capacity`] = h([studyCapacity(doc, exam), classCapacity(doc, exam), reserveNeed(doc, exam)]);
+    out[`${name}/reconcile`] = h(reconcile(doc, exam));
+    const p = prepareExport(doc, exam);
+    if (!p.ok) { out[`${name}/export`] = `ERR ${p.errors.join('|')}`; return; }
+    for (const ref of [undefined, true, false]) {
+      const input = { ...p.input, ...(ref === undefined ? {} : { includeStudyRef: ref }) };
+      out[`${name}/seat/${ref}`] = h(buildSeatPages(input, 'all'));
+      out[`${name}/label/${ref}`] = h(buildLabelPages(input, 'all'));
+    }
+  };
+  std('gsat', gsatDoc());
+  std('gsat-absent2', gsatDoc({ absentRoster: 2 })); // 有未參加者：預期改變
+  std('gsat270', gsat270Doc());
+  std('gsat270-junior', gsat270Doc({ junior: true }));
+  std('gsat270-libnone', gsat270Doc({ libMathB: 'none' }));
+  std('bcct', bcctDoc());
+  for (const a of [[12, 12, 5], [12, 4, 5], [10, 12, 3], [8, 30, 2]] as const) {
+    const { doc, exam } = astDoc(...a);
+    const name = `ast${a.join(',')}`;
+    const plan = astPlan(doc, exam);
+    out[`${name}/plan`] = h(plan);
+    out[`${name}/capacity`] = h(astCapacity(doc, exam, plan));
+    out[`${name}/reconcile`] = h(reconcile(doc, exam));
+    if (plan) for (const ref of [false, true]) out[`${name}/out/${ref}`] = h(astOutputs(doc, exam, plan, 'B4', ref));
+  }
+  writeFileSync(process.env.SNAP_OUT ?? 'snap.json', JSON.stringify(out, null, 1));
+});
