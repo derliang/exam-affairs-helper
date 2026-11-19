@@ -68,6 +68,8 @@ export interface CellModel {
   persons?: PersonModel[];
   /** 特殊考生單字角標（v2.36，#223）：右下角；取代整格粗框與整句小牌 */
   corners?: CornerTag[];
+  /** D146：不參加（一科都沒報）；角標只印一個「X 不參加」 */
+  notJoin?: boolean;
   /** 自習參考座位格（非考試座位、不印標籤）：虛線框，黑白列印也分得出（分科自習座位頁用；學測原班虛線格已拿掉，D137） */
   ref?: boolean;
 }
@@ -290,7 +292,9 @@ function makeCell(code: string, seat: { row: number; depth: number }, ctx: Ctx):
   const classNo = Number(code.slice(0, 2));
   const cls = ctx.classes.get(classNo);
   const col = classColor(cls?.colorIndex ?? classNo);
-  const tags = ctx.input.result.marks
+  // D146④：不參加（考試名單上一科都沒報，或名冊有、名單沒有）＝一個「X 不參加」，不逐科列 X
+  const notJoin = ctx.entries.get(code)?.subjectIds.length === 0;
+  const tags = notJoin ? [{ kind: 'absent' as const, text: 'X 不參加' }] : ctx.input.result.marks
     .filter((m) => m.code === code)
     .map((m) => ({
       kind: m.mode,
@@ -307,7 +311,8 @@ function makeCell(code: string, seat: { row: number; depth: number }, ctx: Ctx):
     colorLine: col.line,
     colorFg: col.fg,
     tags,
-    marks: ctx.input.result.marks
+    ...(notJoin ? { notJoin: true } : {}),
+    marks: notJoin ? [] : ctx.input.result.marks
       .filter((m) => m.code === code)
       .map((m) => ({ kind: m.mode, head: m.mode === 'absent' ? 'X' : '＋', subject: subjectShort(ctx.subjectName.get(m.subjectId) ?? '') })),
   };
@@ -337,13 +342,16 @@ function fromRoomStats(rs: RoomStats, ctx: Ctx): StatsModel {
 }
 
 /** 頁首小標籤：共幾人、各科不考、各科加考的人數（依考試科目順序） */
-function chipsOf(total: number, cells: Iterable<CellModel>, subjects: { name: string }[]): string[] {
+function chipsOf(total: number, cellIt: Iterable<CellModel>, subjects: { name: string }[]): string[] {
+  const cells = [...cellIt];
   const n = { absent: new Map<string, number>(), extra: new Map<string, number>() };
   for (const c of cells) for (const m of c.marks) if (m.kind !== 'detach') n[m.kind].set(m.subject, (n[m.kind].get(m.subject) ?? 0) + 1);
   const order = subjects.map((s) => s.name);
   const list = (k: 'absent' | 'extra', head: string) =>
     [...n[k].entries()].sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0])).map(([s, c]) => `${head}${s} ${c} 人`);
-  return [`共 ${total} 人`, ...list('absent', '不考'), ...list('extra', '加考')];
+  let nj = 0;
+  for (const c of cells) if (c.notJoin) nj++;
+  return [`共 ${total} 人`, ...(nj ? [`不參加 ${nj} 人`] : []), ...list('absent', '不考'), ...list('extra', '加考')];
 }
 
 
@@ -367,6 +375,7 @@ export function applyCorners(cells: CellModel[], subjectOrder: readonly string[]
   const rank = (s: string) => { const i = subjectOrder.findIndex((x) => subjectShortEq(x, s)); return i < 0 ? 99 : i; };
   flipped.sort((a, b) => rank(a) - rank(b));
   for (const c of real) {
+    if (c.notJoin) { c.corners = [{ kind: 'x', text: 'X 不參加' }]; continue; }
     const tags: CornerTag[] = [];
     const xs = c.marks.filter((m) => m.kind === 'absent' && !flipped.includes(m.subject)).map((m) => abbrevSubject(m.subject));
     if (xs.length) tags.push({ kind: 'x', text: xs.join('') });

@@ -154,8 +154,8 @@ describe('WP-4 容量數字：第 2、3、5 步、流程摘要、對帳、自習
       const r = reconcile(doc, exam);
       const recon = r.state === 'ready' ? r.scope.total : -1;
       expect([seatable, cc, flow, recon]).toEqual([n, n, n, n]);
-      // ② 匯入統計：考生＋未參加＝名冊；③、⑤ 畫面顯示的考生人數
-      const s2 = /考生 (\d+) 人，未參加 (\d+) 人/.exec(renderToString(<Step2 doc={doc} exam={exam} onChange={noop} onToRoster={noop} />));
+      // ② 匯入統計：考生＋不參加＝名冊（D146：不參加含名單上一科都沒報的人）；③、⑤ 畫面顯示的考生人數
+      const s2 = /考生 (\d+) 人，不參加 (\d+) 人/.exec(renderToString(<Step2 doc={doc} exam={exam} onChange={noop} onToRoster={noop} />));
       if (examEntries(doc, exam).length !== n || exam.kind !== 'bcct') expect(s2 && Number(s2[1]) + Number(s2[2])).toBe(n);
       const s3 = renderToString(<Step3 doc={doc} exam={exam} onChange={noop} />);
       const sum3 = [...s3.matchAll(/class="sub">考生 (\d+)</g)].reduce((m, x) => m + Number(x[1]), 0);

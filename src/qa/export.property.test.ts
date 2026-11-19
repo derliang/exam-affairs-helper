@@ -88,9 +88,11 @@ describe('輸出版面模型與排座結果逐筆一致', () => {
       expect(cellTotal, `seed=${seed}`).toBe(input.result.assignments.length);
 
       // INV-14 標示：每格的標示文字數＝結果裡該考生的標示數
+      const noSubjectCodes = new Set(input.entries.filter((e) => e.subjectIds.length === 0).map((e) => studentCode(e.classNo, e.seatNo)));
       for (const p of mainPages)
         for (const c of p.cells.values()) {
-          const n = input.result.marks.filter((m) => m.code === c.code).length;
+          // D146④：不參加（一科都沒報）只有一個「X 不參加」
+          const n = noSubjectCodes.has(c.code) ? 1 : input.result.marks.filter((m) => m.code === c.code).length;
           expect(c.tags.length, `seed=${seed} ${c.code}`).toBe(n);
         }
 
