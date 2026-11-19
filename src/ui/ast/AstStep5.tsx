@@ -1,10 +1,11 @@
-import { useState } from 'preact/hooks';
+import { useRef, useState } from 'preact/hooks';
 import type { Classroom, ExamConfig } from '../../data';
 import { classroomSeats, effectiveRooms, rowDepthOf } from '../../data';
 import type { PlanRoom } from '../../core/astD99/contract';
 import { Alert, Badge, Button, EmptyState, StepHead } from '../components';
 import { AST_STEP_BLURBS } from '../nav';
 import { normColor } from '../colors';
+import { useChartFit } from '../components/SeatChart';
 import { updateExam, type Doc } from '../store';
 import { examEntries } from '../seating';
 import { PhaseCard, PhaseGuard } from './AstRelease';
@@ -15,6 +16,9 @@ const KIND_TEXT: Record<string, string> = { exam: '考', study: '自習', borrow
 
 /** 考場座位圖（深位 1 靠講臺在下，排由左到右）；格子沿用班級色，停用／沒有的座位畫斜線 */
 function RoomChart(p: { doc: Doc; plan: AstPlan; slot: AstSlot; roomId: string; roomName: string; room: Classroom | undefined; only: number; lockMode?: boolean; locked?: ReadonlySet<string>; onSeat?: (code: string, row: number, depth: number) => void }) {
+  const fitHost = useRef<HTMLDivElement>(null);
+  const fitChart = useRef<HTMLDivElement>(null);
+  useChartFit(fitHost, fitChart);
   const { room } = p;
   const cols = room ? room.rows : 0;
   if (!room || cols === 0) return <p class="small muted">找不到這間教室的座位資料。</p>;
@@ -49,8 +53,8 @@ function RoomChart(p: { doc: Doc; plan: AstPlan; slot: AstSlot; roomId: string; 
     }
   }
   return (
-    <div class="chartbox">
-      <div class="chart"><div class="chart-wrap">
+    <div class="chartfit" ref={fitHost}>
+      <div class="chart" ref={fitChart}><div class="chart-wrap">
         <div class="chart-title">{p.slot.label}　{p.slot.subjectLabel}<small>{p.roomName}　考生 {placed.size} 人{mixed.size ? `・同排混科 ${mixed.size} 排` : ''}</small></div>
         <div class="axis-y" style={{ gridTemplateRows: `repeat(${mx},var(--ch))` }} aria-hidden="true">{Array.from({ length: mx }, (_, i) => <span key={i}>{mx - i}</span>)}</div>
         <div>
@@ -139,7 +143,7 @@ export function AstStep5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
           <div class="small muted">目前模式：<b>{MODE_LABEL[mode]}</b>・用 {plan.out.metrics?.roomsTotal ?? 0} 間教室・離開原班 {plan.out.metrics?.leaveHome ?? 0} 人次</div>
           <Button small onClick={() => p.onStep(4)}>到 ④ 換模式</Button>
         </div>
-        <div class="scroll">
+        <div class="rtw">
           <table class="ut">
             <thead>
               <tr><th class="rn" rowSpan={2}>教室</th>{[...new Set(slots.map((s) => s.day))].map((d) => <th class="day" key={d} colSpan={slots.filter((s) => s.day === d).length}>{slots.find((s) => s.day === d)!.label.split(' ')[0]}</th>)}</tr>
@@ -155,7 +159,7 @@ export function AstStep5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
                     const c = usageCell(plan, s, r);
                     const cls = c.kind === 'exam' ? 'u-ex' : c.kind === 'study' ? 'u-st' : c.kind === 'borrow' ? 'u-bor' : c.kind === 'pending' ? 'u-pend' : c.kind === 'home' ? 'u-home' : '';
                     return (
-                      <td class={cls} key={s.id}>
+                      <td class={cls} key={s.id} data-label={`${s.label} ${s.subjectLabel}`}>
                         <button type="button" aria-pressed={sel.slot === i && roomId === r.id} {...(lockedUse.has(`${s.id}|${r.id}`) ? { 'data-lock': '1' } : {})} aria-label={`${roomName(r.id)}，${s.label} ${s.subjectLabel}：${KIND_TEXT[c.kind]}${c.count ? ` ${c.count} 人` : ''}${lockedUse.has(`${s.id}|${r.id}`) ? '，已鎖定' : ''}`}
                           onClick={() => setSel({ slot: i, ...(c.kind === 'exam' ? { room: r.id } : {}) })}>
                           <span>{c.kind === 'exam' ? `考 ${c.subjectLabel}` : KIND_TEXT[c.kind]}</span>{c.count > 0 && <b>{c.kind === 'pending' ? `+${c.count}` : c.count}</b>}
@@ -213,13 +217,13 @@ export function AstStep5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
           <div><small>應考</small><strong>{examTotal} 人</strong></div><div><small>考場</small><strong>{roster.exam.size} 間</strong></div>
           <div class={studyTotal > 0 && plan.pending.some((x) => x.slotId === slot.id) ? 'bad' : ''}><small>自習（離開原班）</small><strong>{studyTotal} 人</strong></div>
         </div>
-        <div class="scroll">
-          <table class="t compact">
+        <div class="rtw">
+          <table class="t compact rt-t">
             <thead><tr><th>用途</th><th>教室</th><th>人數</th><th>來自</th></tr></thead>
             <tbody>
-              {[...roster.exam.entries()].map(([id, m]) => <tr key={`e${id}`}><td><Badge tone="info">考試</Badge></td><td><b>{roomName(id)}</b></td><td class="n">{[...m.values()].reduce((a, b) => a + b, 0)}</td><td>{fromText(m)}</td></tr>)}
-              {[...roster.study.entries()].map(([id, m]) => <tr key={`s${id}`}><td><Badge>{roomData.get(id)?.kind === 'class' ? '借用自習' : '自習'}</Badge></td><td><b>{roomName(id)}</b></td><td class="n">{[...m.values()].reduce((a, b) => a + b, 0)}</td><td>{fromText(m)}</td></tr>)}
-              {plan.pending.filter((x) => x.slotId === slot.id).map((x) => <tr key={`p${x.roomId}`}><td><Badge tone="warn">待核可</Badge></td><td>—</td><td class="n">{x.count ?? 0}</td><td>待核可後安置</td></tr>)}
+              {[...roster.exam.entries()].map(([id, m]) => <tr key={`e${id}`}><td class="ti" data-label="用途"><Badge tone="info">考試</Badge></td><td class="ti" data-label="教室"><b>{roomName(id)}</b></td><td data-label="人數" class="n">{[...m.values()].reduce((a, b) => a + b, 0)}</td><td data-label="來自">{fromText(m)}</td></tr>)}
+              {[...roster.study.entries()].map(([id, m]) => <tr key={`s${id}`}><td class="ti" data-label="用途"><Badge>{roomData.get(id)?.kind === 'class' ? '借用自習' : '自習'}</Badge></td><td class="ti" data-label="教室"><b>{roomName(id)}</b></td><td data-label="人數" class="n">{[...m.values()].reduce((a, b) => a + b, 0)}</td><td data-label="來自">{fromText(m)}</td></tr>)}
+              {plan.pending.filter((x) => x.slotId === slot.id).map((x) => <tr key={`p${x.roomId}`}><td class="ti" data-label="用途"><Badge tone="warn">待核可</Badge></td><td class="ti" data-label="教室">—</td><td data-label="人數" class="n">{x.count ?? 0}</td><td data-label="來自">待核可後安置</td></tr>)}
             </tbody>
           </table>
         </div>

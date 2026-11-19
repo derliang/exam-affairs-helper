@@ -164,7 +164,7 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
               <div class="small muted">{meta.desc}</div>
               {g === 'B' && <Alert tone="warn"><b>可能不是同一人，名冊版本不同？</b>（座號對得上但姓名沒有任何重疊字）</Alert>}
               <details><summary class="small">明細（{list.length} 筆）</summary>
-                <div class="scroll"><table class="t compact nw"><thead><tr><th>班級座號</th><th>考試名單</th><th>學生名單</th></tr></thead><tbody>
+                <div class="rtw"><table class="t compact nw rt-t rt-a"><thead><tr><th>班級座號</th><th>考試名單</th><th>學生名單</th></tr></thead><tbody>
                   {list.map((d) => { const at = (d.exam ?? d.roster)!; return <tr key={d.code}><td>{classes.find((c) => c.no === at.classNo)?.name ?? at.classNo} {String(at.seatNo).padStart(2, '0')}</td><td>{d.exam?.name ?? '—（沒有）'}</td><td>{d.roster?.name ?? '—（沒有）'}</td></tr>; })}
                 </tbody></table></div>
               </details>

@@ -108,24 +108,24 @@ export function VersionCard(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) 
         </div>
       </div>
       {msg && <Alert tone={msg.tone}>{msg.text}</Alert>}
-      <div class="scroll">
-        <table class="t compact">
+      <div class="rtw">
+        <table class="t compact rt-t">
           <thead><tr><th>版本</th><th>狀態</th><th>公告時間</th><th>修改項目</th><th>受影響（考生／教室）</th><th>理由</th></tr></thead>
           <tbody>
             {vs.map((v, i) => (
               <tr key={v.n}>
-                <td><b>第 {v.n} 版</b><br /><span class="small muted">{v.code}</span></td>
-                <td>{i === vs.length - 1 && ph === 'announced' ? <Badge tone="ok">目前公告</Badge> : <Badge>已被取代</Badge>}</td>
-                <td>{fmt(v.at)}</td>
-                <td>{v.changes}{i > 0 && <><br /><button type="button" class="linkbtn" aria-expanded={open === i} onClick={() => setOpen(open === i ? null : i)}>{open === i ? '收起差異' : '看與上一版的差異'}</button></>}</td>
-                <td>{v.affected.students} 位考生／{v.affected.rooms.length ? v.affected.rooms.join('、') : '—'}</td>
-                <td>{v.reason}{open === i && i > 0 && <div class="small muted" style="margin-top:6px">{diffSnap(vs[i - 1]!.snap, v.snap).students.slice(0, 40).join('、')}{diffSnap(vs[i - 1]!.snap, v.snap).students.length > 40 ? '…' : ''}</div>}</td>
+                <td class="ti" data-label="版本"><div><b>第 {v.n} 版</b><br /><span class="small muted">{v.code}</span></div></td>
+                <td data-label="狀態">{i === vs.length - 1 && ph === 'announced' ? <Badge tone="ok">目前公告</Badge> : <Badge>已被取代</Badge>}</td>
+                <td data-label="公告時間">{fmt(v.at)}</td>
+                <td data-label="修改項目" class="wide">{v.changes}{i > 0 && <><br /><button type="button" class="linkbtn" aria-expanded={open === i} onClick={() => setOpen(open === i ? null : i)}>{open === i ? '收起差異' : '看與上一版的差異'}</button></>}</td>
+                <td data-label="受影響（考生／教室）" class="wide">{v.affected.students} 位考生／{v.affected.rooms.length ? v.affected.rooms.join('、') : '—'}</td>
+                <td data-label="理由" class="wide">{v.reason}{open === i && i > 0 && <div class="small muted" style="margin-top:6px">{diffSnap(vs[i - 1]!.snap, v.snap).students.slice(0, 40).join('、')}{diffSnap(vs[i - 1]!.snap, v.snap).students.length > 40 ? '…' : ''}</div>}</td>
               </tr>
             ))}
             {ph !== 'announced' && (
-              <tr class="vdraft"><td><b>第 {vs.length + 1} 版</b></td><td><Badge tone={ph === 'final' ? 'info' : 'warn'}>{ph === 'final' ? '已定案，待公告' : '規劃中'}</Badge></td><td>—</td><td class="small muted">公告時填入</td><td class="small muted">公告時依修改項目計算</td><td class="small muted">公告時填入</td></tr>
+              <tr class="vdraft"><td class="ti" data-label="版本"><b>第 {vs.length + 1} 版</b></td><td data-label="狀態"><Badge tone={ph === 'final' ? 'info' : 'warn'}>{ph === 'final' ? '已定案，待公告' : '規劃中'}</Badge></td><td data-label="公告時間">—</td><td data-label="修改項目" class="small muted">公告時填入</td><td data-label="受影響（考生／教室）" class="small muted">公告時依修改項目計算</td><td data-label="理由" class="small muted">公告時填入</td></tr>
             )}
-            {vs.length === 0 && ph === 'announced' && <tr><td colSpan={6} class="muted">還沒有版本。</td></tr>}
+            {vs.length === 0 && ph === 'announced' && <tr><td colSpan={6} class="muted noL">還沒有版本。</td></tr>}
           </tbody>
         </table>
       </div>

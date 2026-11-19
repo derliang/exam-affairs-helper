@@ -91,7 +91,7 @@ export function ImportWizard(p: {
         <>
           <h4 style="margin-top:16px">② 科目標示的寫法（共 {scan.groups.length} 組）</h4>
           <p class="muted small">整份名單用到的標示寫法已依相似度分組、計次。請為每一組選擇它代表哪一科，或選「忽略」。程式的建議只是參考，不會自動套用；但你先前確認並記住的對應會先帶入，請核對。</p>
-          <div style="overflow-x:auto"><table class="t"><thead><tr><th>原始標示</th><th>出現次數</th><th>對應科目</th></tr></thead><tbody>
+          <div class="rtw"><table class="t rt-t rt-a"><thead><tr><th>原始標示</th><th>出現次數</th><th>對應科目</th></tr></thead><tbody>
             {scan.groups.map((g) => (
               <tr key={g.id}>
                 <td>{g.members.map((m) => `「${m.raw}」×${m.count}`).join('　')}</td>

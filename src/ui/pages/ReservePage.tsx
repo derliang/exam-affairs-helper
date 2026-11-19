@@ -37,6 +37,7 @@ export function reserveSlots(doc: Doc, exam: ExamConfig): ReserveSlot[] {
 export function ReservePage(p: { doc: Doc; examId: string; crumbs: { label: string; onClick: () => void }[]; onGoStep: (n: StepNo) => void; onExams: () => void }) {
   const exam = p.doc.exams.find((e) => e.id === p.examId);
   const [sel, setSel] = useState('');
+  const [allRows, setAllRows] = useState<Record<string, boolean>>({}); // 稿 v2.75 §6：預備教室名單前 10 筆，其餘按「顯示全部」
   if (!exam) {
     return <section><PageHead crumbs={p.crumbs} title="預備教室與抽離" /><EmptyState title="找不到這個模擬考" action={<Button kind="primary" onClick={p.onExams}>回模擬考列表</Button>}>它可能已被刪除，或資料夾換了。</EmptyState></section>;
   }
@@ -60,7 +61,7 @@ export function ReservePage(p: { doc: Doc; examId: string; crumbs: { label: stri
     <section class="stack">
       {head}
       <p class="muted">每一節科目各自計算；不同節可重用預備教室，同一節的考試抽離與自習抽離用不同教室。</p>
-      <div class="seg" role="group" aria-label="節次科目" style="max-width:100%;overflow-x:auto">
+      <div class="seg" role="group" aria-label="節次科目">
         {slots.map((s) => (
           <button type="button" key={s.subjectId} aria-pressed={s.subjectId === active.subjectId} onClick={() => setSel(s.subjectId)}>
             {s.when ? `${s.when} ` : ''}{s.name}{n(s) ? `（${n(s)}）` : ''}
@@ -99,11 +100,12 @@ export function ReservePage(p: { doc: Doc; examId: string; crumbs: { label: stri
           : active.study.map((g) => (
             <div key={g.roomId} class="stack" style="gap:6px">
               <div class="lab">{roomName(g.roomId)}　{g.codes.length} 人</div>
-              <div class="scroll" style="max-height:220px;overflow-y:auto">
-                <table class="t compact">
+              <div class="rtw">
+                <table class="t compact rt-t rt-a">
                   <thead><tr><th>序</th><th>考生編號</th><th>班級</th><th>姓名</th></tr></thead>
-                  <tbody>{[...g.codes].sort().map((c, i) => <tr key={c}><td class="n">{i + 1}</td><td class="n">{c}</td><td>{classes.get(Number(c.slice(0, 2))) ?? ''}</td><td>{names.get(c) ?? ''}</td></tr>)}</tbody>
+                  <tbody>{[...g.codes].sort().slice(0, allRows[`${active.subjectId}|${g.roomId}`] ? undefined : 10).map((c, i) => <tr key={c}><td class="n">{i + 1}</td><td class="n">{c}</td><td>{classes.get(Number(c.slice(0, 2))) ?? ''}</td><td>{names.get(c) ?? ''}</td></tr>)}</tbody>
                 </table>
+                {g.codes.length > 10 && <Button small kind="ghost" onClick={() => setAllRows({ ...allRows, [`${active.subjectId}|${g.roomId}`]: !allRows[`${active.subjectId}|${g.roomId}`] })}>{allRows[`${active.subjectId}|${g.roomId}`] ? '收合 ▴' : `顯示全部 ${g.codes.length} 筆 ▾`}</Button>}
               </div>
             </div>
           ))}
