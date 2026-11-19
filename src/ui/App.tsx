@@ -187,6 +187,8 @@ export function App() {
   // 「↩ 回到 ○ 步」附條（稿 wsRet）：從別的步驟按「前往處理」過來才有，來源步驟與目前不同時顯示
   const lastBack = gnav.back[gnav.back.length - 1]?.route;
   const retStep = r.page === 'step' && lastBack?.page === 'step' && lastBack.examId === r.examId && lastBack.step !== r.step ? lastBack.step : undefined;
+  const lastEntry = gnav.back[gnav.back.length - 1];
+  const retBar = lastEntry && ['settings', 'lookup', 'reconcile', 'override', 'reserve', 'wizard', 'new'].includes(r.page) && lastEntry.route.page !== 'exams' ? lastEntry : undefined;
   const undoCtl = <UndoGroup undoLabel={nextUndoLabel(hist)} onUndo={() => { setStaleNote(undefined); onUndo(); }} steps={undoSteps(hist)} onUndoTo={onUndoTo} />;
 
   useEffect(() => {
@@ -202,6 +204,8 @@ export function App() {
     <FeatureContext.Provider value={hist.present.settings}>
       <AppBar version={formatVersion(APP_VERSION)} theme={theme} onTheme={setTheme} onHome={() => go({ page: 'exams' })} homeDisabled={!hasFolder} items={barItems} />
       <main class="wrap">
+        {/* #363、D164 F：從別頁跳來處理事情時，頁面頂端固定一條「↩ 回到 原頁」列；點了回到原來的那一步與位置（原頁路徑列仍保留） */}
+        {retBar && <div class="retbar" role="navigation" aria-label="回到原頁"><Button kind="primary" onClick={back}>↩ 回到 {retBar.label}</Button><span class="small muted">你是從那裡過來處理事情的</span></div>}
         {stepExam && r.page === 'step' && (
           <PageHead crumbs={[listCrumb]} title={stepExam.name} badge={examLabel(stepExam)} status="已儲存到資料夾">
             {undoCtl}
