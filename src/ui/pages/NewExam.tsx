@@ -9,12 +9,12 @@ import { defaultSemester, newExam, nextRound, previousExam, schoolYear, suggestE
 
 const CN = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
 
-/** kind 省略＝佔位卡（補考即將推出）：不是 ExamKind，不能選、不進 tab 順序 */
-const TYPES: { kind?: ExamKind; level: string; title: string; subj: string; soon?: boolean }[] = [
+/** kind 省略＝補考卡：不是 ExamKind，按下去是進補考新增畫面（K5），不是在這頁選類型 */
+const TYPES: { kind?: ExamKind; level: string; title: string; subj: string }[] = [
   { kind: 'gsat', level: '高中部', title: '學測模擬考', subj: '國、英、數（第 3 次起分數 A、數 B）、自然、社會' },
   { kind: 'ast', level: '高中部', title: '分科模擬考', subj: '數學甲、數學乙、物理、化學、生物、歷史、地理、公民與社會；每科都是選考，國英不加考' },
   { kind: 'bcct', level: '國中部', title: '會考模擬考', subj: '國文、英語閱讀、英語聽力、數學、社會、自然、寫作測驗（固定七科），不分文理組、沒有選考' },
-  { level: '高中部、國中部', title: '補考', subj: '為缺考的學生另排場次、座位與標籤', soon: true },
+  { level: '高中部、國中部', title: '補考', subj: '為不及格的學生另排補考場次、教室與座位，匯入教務系統名單' },
 ];
 
 /** 新增模擬考整頁三段式：1 選類型、2 基本資料、3 預設設定（沿用上一次同類型） */
@@ -28,7 +28,7 @@ export interface NewExamDraft {
 }
 
 export function NewExam(p: {
-  doc: Doc; onCancel: () => void; onCreate: (d: Doc, examId: string) => void; now?: () => Date;
+  doc: Doc; onCancel: () => void; /** K5：按「補考」卡，進補考新增畫面 */ onMakeup?: () => void; onCreate: (d: Doc, examId: string) => void; now?: () => Date;
   /** #344：上次離開時的草稿（從共用設定「← 回到」時帶回）；沒有就從預設開始 */
   draft?: NewExamDraft | undefined;
   /** #344：草稿每次變動都回報，讓 App 在離開本頁後仍保留 */
@@ -108,16 +108,16 @@ export function NewExam(p: {
           <div class="typegrid">
             {TYPES.map((t) => {
               const k = t.kind;
-              const on = !t.soon && k !== undefined && kind === k;
+              const on = k !== undefined && kind === k;
               return (
-                <button type="button" key={t.title} class="tcard" {...(t.soon ? { 'aria-describedby': 'soon-note', title: `${t.title}功能即將推出` } : { 'aria-pressed': on })} disabled={t.soon} aria-disabled={t.soon} onClick={() => { if (k && !t.soon) pick(k); }}>
+                <button type="button" key={t.title} class="tcard" {...(k ? { 'aria-pressed': on } : {})} onClick={() => { if (k) pick(k); else p.onMakeup?.(); }}>
                   <span class="lv">{t.level}</span><strong>{t.title}</strong><span class="subj">{t.subj}</span>
-                  {t.soon ? <span class="tick badge b-soon">即將推出</span> : on ? <span class="tick badge b-acc">已選</span> : null}
+                  {on ? <span class="tick badge b-acc">已選</span> : null}
                 </button>
               );
             })}
           </div>
-          <p class="small muted" id="soon-note">高中部：學測、分科；國中部：會考。補考即將推出，現在還不能選。</p>
+          <p class="small muted">高中部：學測、分科；國中部：會考。補考是另一種流程，按「補考」會進到補考場次的新增畫面。</p>
 
         <div class="psec"><div class="lab">2　基本資料</div>
           {/* G17：兩欄對齊——「學年度｜學期」「名稱｜對象」各一列，「次別」整列、說明在格子下方跨整行；手機單欄 */}

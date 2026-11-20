@@ -16,7 +16,7 @@ import {
 } from '../../core/makeup';
 import type { Check, Light } from '../reconcile';
 import { baseOf, outputsOf, planOf, scheduleOf } from './pipeline';
-import type { MakeupSession } from './session';
+import type { MakeupSession, ReconcileSnapshot } from './session';
 import type { MakeupStepNo } from './steps';
 
 /** 最近一次「產出檔案並回讀」的結果（只留在記憶體，不存檔：檔案是下載到使用者電腦的，這裡只記版本與回讀數字，供 C-14、C-15） */
@@ -198,4 +198,29 @@ export function fixTargets(gate: DownloadGate): { step: MakeupStepNo; ids: strin
 export function dashboardDone(s: MakeupSession): { six: boolean; seven: boolean } {
   const d = dashboardOf(s);
   return { six: d.state === 'ok' || d.state === 'warn', seven: !!d.run && d.run.ok && !d.stale };
+}
+
+// ───────────── 對帳快照存檔（規格 6.1：對帳結果隨補考場次存檔，留下查核軌跡） ─────────────
+
+/** 目前的檢核結果整理成快照；`at` 由呼叫端給（測試可固定） */
+export function snapshotOf(s: MakeupSession, at: string, run: RunRecord | undefined = runOf(s.id)): ReconcileSnapshot {
+  const d = dashboardOf(s, run);
+  return {
+    at,
+    version: d.version,
+    gate: d.state,
+    rows: d.checks.map((c) => ({ id: c.id, title: c.title, status: c.status, expected: c.expected, actual: c.actual, diff: c.diff })),
+  };
+}
+
+/**
+ * 把快照記到場次上。檢核結果與上一份相同（只有時間不同）就原樣回傳，避免每次點擊都多一筆存檔與復原記錄。
+ * 還沒有名單的場次不記。
+ */
+export function withSnapshot(s: MakeupSession, at: string = new Date().toISOString(), run: RunRecord | undefined = runOf(s.id)): MakeupSession {
+  const snap = snapshotOf(s, at, run);
+  if (snap.gate === 'none' && !s.snapshot) return s;
+  const prev = s.snapshot;
+  if (prev && prev.version === snap.version && prev.gate === snap.gate && JSON.stringify(prev.rows) === JSON.stringify(snap.rows)) return s;
+  return { ...s, snapshot: snap };
 }

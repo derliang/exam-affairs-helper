@@ -87,6 +87,7 @@ function makeupLabel(prev: Doc['makeups'], next: Doc['makeups']): string | undef
   if (!same(x.plan, y.plan)) return '調整補考考程';
   if (!same(x.trackSplit, y.trackSplit)) return '修改選組拆分';
   if (!same(x.days, y.days) || !same(x.gradeDay, y.gradeDay)) return '修改補考考日';
+  if (!same(x.snapshot, y.snapshot) && same({ ...x, snapshot: undefined }, { ...y, snapshot: undefined })) return '記錄補考對帳結果';
   return '修改補考設定';
 }
 
