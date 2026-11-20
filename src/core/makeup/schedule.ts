@@ -155,12 +155,27 @@ const asClassroom = (r: MakeupRoom): Classroom => ({
 /** 教室可用的座位數（依座位排列實際排得出的座位，不超過 seatCount） */
 export const roomSeats = (r: MakeupRoom): number => classroomSeats(asClassroom(r)).length;
 
-const USE_ORDER: Record<MakeupRoom['use'], number> = { class: 0, mixed: 1, special: 2 };
+// D180（U-4）：混班教室由系統自動挑，不再要求使用者標記。舊存檔的 'mixed' 與 'class' 一樣當一般教室；只有「特別」教室另外排在最後。
+const USE_ORDER: Record<MakeupRoom['use'], number> = { class: 0, mixed: 0, special: 1 };
+
+/** 某時段實際當作混班使用的教室：同一時段收了兩個（含）以上原班的一般教室（系統自動判斷；特別教室不算）。 */
+export function mixedRoomsOf(schedule: Pick<MakeupSchedule, 'sittings'>, rooms: readonly MakeupRoom[]): { slotId: string; roomId: string; classes: string[] }[] {
+  const special = new Set(rooms.filter((r) => r.use === 'special').map((r) => r.id));
+  const by = new Map<string, Set<string>>();
+  for (const s of schedule.sittings) {
+    if (special.has(s.roomId)) continue;
+    const k = `${s.slotId}|${s.roomId}`;
+    const set = by.get(k);
+    if (set) set.add(s.oldClass);
+    else by.set(k, new Set([s.oldClass]));
+  }
+  return [...by].filter(([, set]) => set.size >= 2).map(([k, set]) => { const [slotId, roomId] = k.split('|') as [string, string]; return { slotId, roomId, classes: [...set].sort(collator.compare) }; });
+}
 
 /**
  * 依計畫產生排程。
  * 教室分配（R-9、R-10、D116）：一個時段內，同班的學生是一個單位，依班級順序放進第一間放得下的一般教室；
- * 一般教室放不下就整班搬到混班教室，再不行才用特別教室；整班大到任何一間都放不下時才拆班（記在 splits，C-13 會提示）；
+ * 一般教室放不下就整班搬到還有空位的別間（系統自動挑混班教室，D180），再不行才用特別教室；整班大到任何一間都放不下時才拆班（記在 splits，C-13 會提示）；
  * 教室全滿就列為 unplaced（C-2／C-3 會紅燈）。同一間教室在重疊時間只給一個時段使用。
  * 提前開考學生優先放特別教室（其次混班、一般）。
  */
@@ -253,7 +268,7 @@ export function buildSchedule(entries: readonly MakeupEntry[], settings: MakeupS
 
   const place = (s: SlotInfo, g: MakeupGroup, units: Unit[], preferSpecial: boolean): void => {
     const allowed = (g.roomIds ?? settings.rooms.map((r) => r.id)).map((id) => roomById.get(id)).filter((r): r is MakeupRoom => !!r);
-    const order = (r: MakeupRoom): number => (preferSpecial ? (r.use === 'special' ? 0 : r.use === 'mixed' ? 1 : 2) : USE_ORDER[r.use]);
+    const order = (r: MakeupRoom): number => (preferSpecial ? (r.use === 'special' ? 0 : 1) : USE_ORDER[r.use]);
     const rooms = allowed
       .map((r, i) => ({ r, i }))
       .sort((a, b) => order(a.r) - order(b.r) || a.i - b.i)
@@ -277,7 +292,7 @@ export function buildSchedule(entries: readonly MakeupEntry[], settings: MakeupS
     }
     for (const u of rest) {
       const n = u.students.length;
-      const tiers = preferSpecial ? [rooms] : [rooms.filter((r) => r.use === 'class'), rooms.filter((r) => r.use === 'mixed'), rooms.filter((r) => r.use === 'special')];
+      const tiers = preferSpecial ? [rooms] : [rooms.filter((r) => r.use !== 'special'), rooms.filter((r) => r.use === 'special')];
       let target: MakeupRoom | undefined;
       for (const tier of tiers) {
         target = tier.find((r) => (left.get(r.id) ?? 0) >= n);
