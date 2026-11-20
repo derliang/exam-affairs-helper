@@ -1095,6 +1095,8 @@ details[open]:not(.moremenu)>summary::after{content:" ▴"}
   .rt-t:not(.rt-a) tr.grp{border:0;background:transparent;padding:6px 0 0;margin-bottom:0}
   .rt-t:not(.rt-a) tr.grp td{font-size:13px;color:var(--text-2);font-weight:700}
   .rt-t:not(.rt-a) td.on{padding:4px 8px;border-radius:var(--r-sm)}
+  /* 稿 v2.78：總帳卡（#482）——「座位表」那列上方畫虛線，分開「等式」與「別處核對」 */
+  .rt-t:not(.rt-a) td[data-label="座位表"]{border-top:1px dashed var(--line);padding-top:5px}
   .rt-mx:not(.rt-a) tr{display:flex;flex-wrap:wrap;gap:6px}
   .rt-mx:not(.rt-a) td.ti{flex:1 1 100%}
   .rt-mx:not(.rt-a) td:not(.ti){display:block;flex:1 1 56px;border:1px solid var(--line);border-radius:var(--r-sm);padding:4px 6px;text-align:center;background:var(--sunken)}
@@ -1128,6 +1130,7 @@ details[open]:not(.moremenu)>summary::after{content:" ▴"}
 .rt-cells span{border:1px solid var(--line);border-radius:var(--r-sm);padding:4px 6px;text-align:center;background:var(--sunken);font-variant-numeric:tabular-nums}
 .rt-cells small{display:block;font-size:12px;color:var(--text-3)}
 .t td.on{background:var(--accent-soft)}
+.t td.rc-x{color:var(--danger-ink);font-weight:700}
 .chartfit{max-width:100%;overflow:hidden}
 
 /* 補考（K2，D113）：場次卡片左邊條＝對帳狀態（稿 S-1）。紅實線＝有不通過、琥珀虛線＝待確認、綠實線＝全過；只用 tokens，黑白列印靠文字「✕ ! ✓」分辨 */
