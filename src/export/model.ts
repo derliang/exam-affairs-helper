@@ -21,7 +21,8 @@ import {
   type Student,
 } from '../data';
 import { roomStats, specialOf, type RoomStats } from '../core/stats';
-import { dayName, examSubjectPeriods, slotName } from '../core/periods';
+import { slotRange } from '../core/examTimes';
+import { dayName, examSubjectPeriods, scheduleKeyOf, scheduleOf, slotName } from '../core/periods';
 import { dateTag, dayRangeText, dayTag } from './dayLabel';
 import { periodGroups } from '../core/detach';
 import { studyReference } from '../core/studyRef';
@@ -347,7 +348,7 @@ function fromRoomStats(rs: RoomStats, ctx: Ctx): StatsModel {
         const name = ctx.subjectName.get(s.subjectId) ?? s.subjectId;
         const base = { per: pick(s.inRoomPerClass), total: s.inRoom };
         if (!sps.length) return [{ ...base, day: 99, slot: 99, ord: order.indexOf(s.subjectId), lead: ['', '', name] }];
-        return sps.map((p) => ({ ...base, day: p.day ?? 0, slot: p.slot!, ord: order.indexOf(s.subjectId), lead: [dayTag(p.day ?? 0), slotName(p.slot!), name] }));
+        return sps.map((p) => ({ ...base, day: p.day ?? 0, slot: p.slot!, ord: order.indexOf(s.subjectId), lead: [dayTag(p.day ?? 0), slotName(p.slot!) + timeSuffix(ctx.input, p.day ?? 0, p.slot), name] }));
       }).sort((a, b) => a.day - b.day || a.slot - b.slot || a.ord - b.ord);
       // D170：有日期資料（#389）才加「日期」欄（含星期）；移除「本教室考生人數」列
       const dates = ctx.input.exam.examDates;
@@ -638,7 +639,7 @@ function personsOf(cell: MergedCell, ctx: ReturnType<typeof ctxOf>): PersonModel
 /** 預備教室時段版的下方統計（#220）：每個時段一列（各班人數＋合計），最後一列「不重複人數」 */
 function slotStats(seats: Map<string, MergedCell>, ctx: ReturnType<typeof ctxOf>): StatsModel['table'] {
   const classNos = new Set<number>();
-  const bySlot = new Map<string, { day: number; period: number; slot: string; subject: string; codes: Set<string> }>();
+  const bySlot = new Map<string, { day: number; period: number; slot: string; slotNo?: number; subject: string; codes: Set<string> }>();
   const all = new Set<string>();
   for (const m of seats.values()) {
     for (const l of m.lines) {
@@ -646,7 +647,7 @@ function slotStats(seats: Map<string, MergedCell>, ctx: ReturnType<typeof ctxOf>
       all.add(l.code);
       const day = l.head ? (l.day ?? 0) : 99;
       const key = `${day}|${l.head}|${l.subject}`;
-      const e = bySlot.get(key) ?? { day, period: l.period, slot: l.head ? (l.head.split(' ')[1] ?? '') : '', subject: l.subject, codes: new Set<string>() };
+      const e = bySlot.get(key) ?? { day, period: l.period, slot: l.head ? (l.head.split(' ')[1] ?? '') : '', ...(l.slotNo ? { slotNo: l.slotNo } : {}), subject: l.subject, codes: new Set<string>() };
       e.codes.add(l.code); e.period = Math.min(e.period, l.period); bySlot.set(key, e);
     }
   }
@@ -662,7 +663,7 @@ function slotStats(seats: Map<string, MergedCell>, ctx: ReturnType<typeof ctxOf>
     classes: nos.map((n) => ctx.classes.get(n)?.name ?? String(n)),
     rows: [
       ...list.map((e) => {
-        const lead = [e.day === 99 ? '' : dayTag(e.day), e.slot, e.subject];
+        const lead = [e.day === 99 ? '' : dayTag(e.day), e.slot + timeSuffix(ctx.input, e.day, e.slotNo), e.subject];
         return { label: e.subject, lead: hasDate ? [dateTag(dates?.[e.day]), ...lead] : lead, per: per(e.codes), total: e.codes.size };
       }),
       { label: FOOT, lead: [FOOT], foot: true, per: per(all), total: all.size },
@@ -695,8 +696,14 @@ function rotationRows(seats: Map<string, MergedCell>, ctx: ReturnType<typeof ctx
   }
   return rows.length ? { heads: ['座位', '天與科目', '班級', '座號', '姓名'], rows } : undefined;
 }
-type MergedLine = { period: number; head: string; text: string; code: string; day: number | undefined; subject: string };
+type MergedLine = { period: number; head: string; text: string; code: string; day: number | undefined; subject: string; slotNo?: number };
 type MergedCell = { seat: { row: number; depth: number }; lines: MergedLine[] };
+/** 時段後面的「起–訖」小字（D177、稿 v2.79 Q2）：這場考試自己填的，沒填就沿用共用節次表，都沒有就不加（舊輸出完全不變） */
+function timeSuffix(input: ExportInput, day: number, slot: number | undefined): string {
+  if (!slot || day === 99) return '';
+  const r = slotRange(scheduleOf(input.settings, scheduleKeyOf(input.exam.kind, input.exam.round)), input.exam.dayTimes, day, slot);
+  return r ? ` ${r}` : '';
+}
 /** 預備教室「時段版」合併（D94-5、稿 v2.28）：每間預備教室、每個座位，各時段一行（天・時段／科目 班座號）；只含抽離考試 */
 function reserveMerged(input: ExportInput, ctx: ReturnType<typeof ctxOf>): Map<string, Map<string, MergedCell>> {
   const periods = examSubjectPeriods(input.exam, input.settings);
@@ -712,7 +719,7 @@ function reserveMerged(input: ExportInput, ctx: ReturnType<typeof ctxOf>): Map<s
     const who = `${ctx.classes.get(p.classNo)?.name ?? p.classNo} ${String(p.seatNo).padStart(2, '0')}`;
     for (const sp of periods.get(d.subjectId) ?? [{ period: 0, label: ctx.subjectName.get(d.subjectId) ?? d.subjectId }]) {
       if (cell.lines.some((l) => l.period === sp.period && l.text.endsWith(who))) continue;
-      cell.lines.push({ period: sp.period, head: sp.slot ? `${dayName(sp.day ?? 0)} ${slotName(sp.slot)}` : '', text: `${sp.label}　${who}`, code: d.code, day: sp.slot ? (sp.day ?? 0) : undefined, subject: sp.label });
+      cell.lines.push({ period: sp.period, head: sp.slot ? `${dayName(sp.day ?? 0)} ${slotName(sp.slot)}` : '', text: `${sp.label}　${who}`, code: d.code, day: sp.slot ? (sp.day ?? 0) : undefined, subject: sp.label, ...(sp.slot ? { slotNo: sp.slot } : {}) });
     }
   }
   return byRoom;

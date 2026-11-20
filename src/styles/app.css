@@ -1140,3 +1140,11 @@ details[open]:not(.moremenu)>summary::after{content:" ▴"}
 .exam.mk-green{border-left-color:var(--ok-bar)}
 .exam.mk-card .prog .bad{color:var(--danger-ink)}
 .exam.mk-card .prog .ok{color:var(--ok-ink)}
+
+/* 稿 v2.79（#389、D177）每場考試各自的各節時間：時間輸入欄與每天一張小卡，只用 token */
+.tmcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:12px;display:grid;gap:10px;min-width:0}
+.tmcard h4{margin:0;font-size:15px}
+.tmset{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tm-t td,.tm-t th{font-variant-numeric:tabular-nums}
+.tm-t tr.bad td{background:var(--danger-soft)}
+.tm-t .tm-in,.tmset .input[type=time]{width:120px;min-width:0;font-variant-numeric:tabular-nums}

@@ -16,6 +16,8 @@ import type { Doc } from '../store';
 import { isStale, validationChecks } from '../seating';
 import { defaultLabelLayout, labelSizeNote } from '../../export/model';
 import { gateOf, reconcile, stampNow } from '../reconcile';
+import { hasBlockingTimeIssue, timeIssues } from '../../core/examTimes';
+import { scheduleKeyOf, scheduleOf } from '../../core/periods';
 import { ReconcilePanel } from './ReconcilePanel';
 
 type Loaded = { fonts: FontData; has: (ch: string) => boolean };
@@ -193,7 +195,9 @@ export function Step6(p: {
   const rec = useMemo(() => reconcile(p.doc, exam), [p.doc, exam, recheck]);
   const at = useMemo(() => stampNow(), [rec]);
   const gate = gateOf(rec);
-  const noDlWhy = downloadGate({ stale, blocked, nothing: chosenExtras.length === 0 && (mainNone || (!blocked && files.length === 0)) }) || gate.why;
+  // D177：這場考試自己填的各節時間有紅字（格式、重疊、跨午夜）就不能下載，回第 1 步修；琥珀「太晚」只提醒
+  const timeBad = hasBlockingTimeIssue(timeIssues(scheduleOf(p.doc.settings, scheduleKeyOf(exam.kind, exam.round)), exam.dayTimes));
+  const noDlWhy = downloadGate({ stale, blocked, nothing: chosenExtras.length === 0 && (mainNone || (!blocked && files.length === 0)) }) || (timeBad ? '各節時間有要修的地方（第 1 步「考試日期與各節時間」），修好才能下載。' : '') || gate.why;
   const noDl = noDlWhy !== '';
   const go = async (fmt: ExportFormat) => {
     if (!prepared.ok) return;
