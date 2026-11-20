@@ -11,7 +11,7 @@ export type Route =
   | { page: 'privacy' }
   | { page: 'lookup'; examId?: string }
   | { page: 'settings'; tab?: 'roster' | 'classes' | 'school' | 'rooms' | 'sched' | 'features'; division?: 'senior' | 'junior' }
-  | { page: 'step'; examId: string; step: 1 | 2 | 3 | 4 | 5 | 6; /** 進入第 1 步時直接開「修改基本資料」（列表卡片的「修改日期」，#473） */ edit?: 'basic' }
+  | { page: 'step'; examId: string; step: 1 | 2 | 3 | 4 | 5 | 6; /** 進入第 1 步時直接對準「考試日期與各節時間」區塊並展開（列表卡片的「修改日期」，#473、D177 Q4）；'basic'＝開「修改基本資料」 */ edit?: 'basic' | 'times' }
   | { page: 'reconcile'; examId: string }
   | { page: 'override'; examId: string }
   | { page: 'reserve'; examId: string }

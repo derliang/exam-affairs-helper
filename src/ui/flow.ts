@@ -225,6 +225,9 @@ export const confirmCopy = {
   resetNotes: (isDefault: boolean): ConfirmCopy => (isDefault
     ? { title: '已與預設相同', body: '標籤注意事項目前已與預設相同，不會有任何變更。', confirm: '確定' }
     : { title: '還原預設注意事項？', body: '你改過的標籤注意事項會被取代成預設內容（上方「↶ 復原」可回上一步）。', confirm: '還原預設' }),
+  resetExamTimes: (): ConfirmCopy => ({
+    title: '把這場考試的各節時間還原成共用時間？', body: '你填的第一節開始、休息與手動改的時間都會清掉，考試日期不變。上方「↶ 復原」可以回來。', confirm: '還原為共用時間',
+  }),
   resetSubjects: (): ConfirmCopy => ({
     title: '還原本次的預設考科？', body: '你對本次考科表做的新增、修改、刪除都會被取代成預設值。', confirm: '還原本次考科',
   }),
