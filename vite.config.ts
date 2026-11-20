@@ -6,9 +6,9 @@ import { readFileSync } from 'node:fs';
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string };
 const buildDate = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Taipei' }).format(new Date());
 
-// GitHub Pages 部署在 /mock-exam-helper/ 子路徑
+// GitHub Pages 部署在 /exam-affairs-helper/ 子路徑
 export default defineConfig({
-  base: process.env.GITHUB_ACTIONS ? '/mock-exam-helper/' : '/',
+  base: process.env.GITHUB_ACTIONS ? '/exam-affairs-helper/' : '/',
   plugins: [preact()],
   define: { __APP_VERSION__: JSON.stringify(pkg.version), __BUILD_DATE__: JSON.stringify(buildDate) },
   test: { include: ['src/**/*.test.{ts,tsx}'], environment: 'node', testTimeout: 30000 },

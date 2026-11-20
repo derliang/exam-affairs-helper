@@ -5,7 +5,7 @@ import { APP_NAME } from '../version';
 /** 隱私權政策是對外聲明：每一句都必須與程式實際行為一致（核對結果見 docs/archive/dispatch/完工-Q.md；test 會檢查原始碼沒有外部請求）。 */
 export const PRIVACY_MAIL = 'derliang@gmail.com';
 export const PRIVACY_UPDATED = '2026 年 11 月 8 日';
-export const APP_URL = 'https://derliang.github.io/mock-exam-helper/';
+export const APP_URL = 'https://derliang.github.io/exam-affairs-helper/';
 
 const Mail = () => <a href={`mailto:${PRIVACY_MAIL}`}>{PRIVACY_MAIL}</a>;
 type Section = { title: string; body: ComponentChildren };
