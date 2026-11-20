@@ -21,6 +21,12 @@ describe('H0 程式名稱', () => {
     const src = readFileSync('src/data/fsRepository.ts', 'utf8');
     expect(src).toContain("const DB = 'mock-exam-helper'");
   });
+  it('D181 repo 改名 exam-affairs-helper：Vite base 與隱私權頁網址用新名，本機資料庫名稱仍是舊名', () => {
+    expect(readFileSync('vite.config.ts', 'utf8')).toContain("'/exam-affairs-helper/'");
+    expect(readFileSync('vite.config.ts', 'utf8')).not.toContain('/mock-exam-helper/');
+    expect(readFileSync('src/ui/pages/Privacy.tsx', 'utf8')).toContain('derliang.github.io/exam-affairs-helper/');
+    expect(readFileSync('src/data/fsRepository.ts', 'utf8')).toContain("const DB = 'mock-exam-helper'");
+  });
   it('index.html 與 manifest 用相對路徑，不寫死舊 repo 路徑', () => {
     const html = readFileSync('index.html', 'utf8');
     expect(html).toContain('<title>考務小幫手</title>');

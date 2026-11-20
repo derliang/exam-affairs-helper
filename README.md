@@ -2,7 +2,7 @@
 
 學校模擬考的行政小幫手。第一個功能是**考場座位安排**：依學生名單與教室座位配置，自動編排座位、產出 A4 座位表與 A3／B4 座位標籤（D74）。
 
-- 純前端 Web App，部署在 GitHub Pages（<https://derliang.github.io/mock-exam-helper/>），沒有後端。
+- 純前端 Web App，部署在 GitHub Pages（<https://derliang.github.io/exam-affairs-helper/>），沒有後端。
 - **本儲存庫與 GitHub Pages 不放任何學生資料。** 學生名單、座位結果都只存在使用者自己電腦的資料夾，程式初始化時由使用者選擇資料夾（File System Access API；畫面上限使用 Chrome，見 D53）。
 - 以桌機操作為主。
 - 結果必須 100% 正確：排座後由獨立驗證器逐項檢查，沒通過不能匯出。
