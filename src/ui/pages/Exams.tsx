@@ -33,7 +33,7 @@ export function Exams(p: {
   doc: Doc; folder?: string;
   /** G37：開首次使用精靈（橫幅按鈕）；沒給就不顯示橫幅 */
   onEnv?: () => void;
-  onOpen: (examId: string) => void; /** 直接開到第 1 步的「修改基本資料」改考試日期（#473） */ onEditDates?: (examId: string) => void; onNew: () => void; onSettings: () => void; onChangeFolder: () => void;
+  onOpen: (examId: string) => void; /** 直接到第 1 步並對準「考試日期與各節時間」區塊（#473、D177） */ onEditDates?: (examId: string) => void; onNew: () => void; onSettings: () => void; onChangeFolder: () => void;
   /** G16：資料夾找不到時取代列表的錯誤狀態（不顯示「還沒有模擬考」） */
   listError?: ComponentChildren;
   /** 刪除（G1）：單場或批次；沒給就不顯示刪除鈕與選取方塊 */
@@ -81,7 +81,7 @@ export function Exams(p: {
         </div>
         <div class="row" style="flex-wrap:wrap">
           <Button kind="primary" onClick={() => p.onOpen(e.id)}>查看／安排</Button>
-          {p.onEditDates && <Button onClick={() => p.onEditDates!(e.id)}>{dates ? '修改日期' : '填寫日期'}</Button>}
+          {p.onEditDates && <Button onClick={() => p.onEditDates!(e.id)}>{dates ? '修改日期 ›' : '填寫日期 ›'}</Button>}
           {canDelete && <Button kind="danger" onClick={() => setDel([e])}>刪除</Button>}
         </div>
       </article>

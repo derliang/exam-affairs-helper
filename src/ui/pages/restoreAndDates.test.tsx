@@ -42,11 +42,25 @@ describe('#473 已建立的考試要找得到修改日期與各節時間的入�
     expect(h).toContain('填寫日期');
     expect(h).toContain('未填日期');
   });
-  it('第 1 步：日期區塊有「修改考試日期」「修改各節開始時間」', () => {
-    const h = renderToString(<Step1 doc={doc} exam={doc.exams[0]!} onChange={noop} onToSched={noop} />);
+  it('第 1 步：日期區塊有「修改考試日期」「設定各節時間」，沒設定顯示沿用共用設定（D177）', () => {
+    const h = renderToString(<Step1 doc={doc} exam={doc.exams[0]!} onChange={noop} />);
     expect(h).toContain('考試日期與各節時間');
     expect(h).toContain('修改考試日期');
-    expect(h).toContain('修改各節開始時間');
+    expect(h).toContain('設定各節時間');
+    expect(h).toContain('沿用共用設定');
+    expect(h).not.toContain('第一節開始');
+  });
+  it('第 1 步（D177）：從列表「修改日期」進來就展開時間表；填了時間顯示本場自訂、結束自動算、重疊紅字', () => {
+    const e = doc.exams[0]!;
+    const open = renderToString(<Step1 doc={doc} exam={e} onChange={noop} openTimes />);
+    expect(open).toContain('第一節開始');
+    expect(open).toContain('節間休息');
+    const set = { ...e, dayTimes: [{ first: '08:30' }] };
+    const h = renderToString(<Step1 doc={{ ...doc, exams: [set] }} exam={set} onChange={noop} openTimes />);
+    expect(h).toContain('本場自訂');
+    expect(h).toContain('還原為共用時間');
+    const bad = { ...e, dayTimes: [{ first: '08:30', manual: { '2': '08:40' } }] };
+    expect(renderToString(<Step1 doc={{ ...doc, exams: [bad] }} exam={bad} onChange={noop} openTimes />)).toContain('才結束');
   });
   it('從列表「修改日期」進來：修改基本資料視窗直接開著', () => {
     const h = renderToString(<Step1 doc={doc} exam={doc.exams[0]!} onChange={noop} openBasic />);
