@@ -1,0 +1,840 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>每場考試各自開始時間 稿 v2.79</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700&display=swap">
+<style>
+/* 模擬考小幫手 design tokens（M1 定案）。沿用座位小幫手 v3.4.0，只加班級六色與標示色。只用十六進位色碼（匯出函式庫不吃 oklch）。 */
+:root{
+  --bg:#F5F2EA; --surface:#FFFDF8; --sunken:#F1EDE3;
+  --line:#E4DECF; --line-2:#CFC7B2;
+  --text:#22201B; --text-2:#4F493D; --text-3:#6F6858;
+  --accent:#274690; --accent-on:#FFFFFF; --accent-soft:#E8EDF8; --accent-ink:#1F3877; --accent-line:#B9C6E6;
+  --danger:#C81E45; --danger-soft:#FDECEF; --danger-ink:#9B1237; --danger-line:#F3B4C1;
+  --warn-soft:#FBF0D5; --warn-ink:#6B4300; --warn-line:#E3C07A; --warn-bar:#C98A12;
+  --ok-soft:#E3F2E0; --ok-ink:#1F5A1A; --ok-line:#A5D39D; --ok-bar:#3C8B34;
+  --att-fill:#22201B; --att-on:#FFFDF8;
+  --cut:#8E8670;
+  --c1-bg:#E7DCF5; --c1-line:#B39DD9; --c1-ink:#4A2E80;
+  --c2-bg:#F6D6EC; --c2-line:#D98ABF; --c2-ink:#7A1C5E;
+  --c3-bg:#CDEDE9; --c3-line:#6FC0B6; --c3-ink:#0F5A52;
+  --c4-bg:#EBDCCB; --c4-line:#C09A72; --c4-ink:#5C3A17;
+  --c5-bg:#DFE3E8; --c5-line:#9AA5B1; --c5-ink:#2F3B48;
+  --c6-bg:#EBD9E3; --c6-line:#C79BB5; --c6-ink:#5E2D49;
+  --c7-bg:#CDB6EA; --c7-line:#8F6FC4; --c7-ink:#35205F;
+  --c8-bg:#EFB6DC; --c8-line:#C4569F; --c8-ink:#5F0F46;
+  --c9-bg:#A9DDD6; --c9-line:#3E9E92; --c9-ink:#093F39;
+  --c10-bg:#D9BE9F; --c10-line:#A4743F; --c10-ink:#432810;
+  --c11-bg:#BCC5CF; --c11-line:#6C7B8B; --c11-ink:#1E2833;
+  --c12-bg:#D9B6CB; --c12-line:#A5668A; --c12-ink:#46172F;
+  --fmt-word:#2A6AC8; --fmt-pdf:#B8423A; --fmt-xls:#1F7A47;
+  --fmt-word-soft:#E6EEFB; --fmt-pdf-soft:#FBEAE8; --fmt-xls-soft:#E3F2E8;
+  --shadow-1:0 1px 2px rgba(34,32,27,.07),0 2px 6px -2px rgba(34,32,27,.06);
+  --shadow-2:0 2px 4px rgba(34,32,27,.06),0 10px 24px -8px rgba(34,32,27,.16);
+  --shadow-3:0 4px 8px rgba(34,32,27,.08),0 24px 48px -12px rgba(34,32,27,.30);
+  --shadow-accent:0 1px 2px rgba(39,70,144,.35),0 5px 12px -5px rgba(39,70,144,.50);
+  --shadow-inset:inset 0 1px 2px rgba(34,32,27,.08);
+  --shadow-bar:0 8px 14px -12px rgba(34,32,27,.40);
+  --ease:cubic-bezier(.2,.7,.2,1); --dur:.16s;
+  --r-sm:8px; --r-md:12px; --r-lg:16px; --r-xl:24px;
+  --f-ui:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+  --f-head:"Noto Serif TC","Noto Sans TC","PMingLiU",serif;
+  --f-no:"Noto Sans TC","Microsoft JhengHei",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#13120E; --surface:#1C1A15; --sunken:#17150F;
+  --line:#302D24; --line-2:#433F33;
+  --text:#F1EDE2; --text-2:#CFC8B6; --text-3:#A0987F;
+  --accent:#3F63C4; --accent-on:#FFFFFF; --accent-soft:#1B2540; --accent-ink:#AFC2F5; --accent-line:#33467E;
+  --danger:#F0617F; --danger-soft:#3A1A22; --danger-ink:#F7B2C0; --danger-line:#6B2B3B;
+  --warn-soft:#3A2E12; --warn-ink:#F3D690; --warn-line:#6F5620; --warn-bar:#E0A832;
+  --ok-soft:#1C3220; --ok-ink:#B9E3B2; --ok-line:#3B6B3C; --ok-bar:#5DB257;
+  --att-fill:#F1EDE2; --att-on:#13120E;
+  --cut:#7C755F;
+  --c1-bg:#2E2347; --c1-line:#6B568F; --c1-ink:#E0D2F5;
+  --c2-bg:#43203A; --c2-line:#8C4478; --c2-ink:#F5C3E4;
+  --c3-bg:#12332F; --c3-line:#3F8078; --c3-ink:#BEEAE4;
+  --c4-bg:#3A2D1F; --c4-line:#7C5E3C; --c4-ink:#EBD6BC;
+  --c5-bg:#26292E; --c5-line:#566170; --c5-ink:#D3D9E0;
+  --c6-bg:#3A2230; --c6-line:#8A5A75; --c6-ink:#EBD0DE;
+  --c7-bg:#3C2E5C; --c7-line:#8468B8; --c7-ink:#E8DBFA;
+  --c8-bg:#52294A; --c8-line:#A8558F; --c8-ink:#FAD0EB;
+  --c9-bg:#1A423D; --c9-line:#4F9B91; --c9-ink:#C9F0EA;
+  --c10-bg:#4A3826; --c10-line:#92704A; --c10-ink:#F0DEC8;
+  --c11-bg:#343A42; --c11-line:#6C7886; --c11-ink:#E2E7EC;
+  --c12-bg:#4A2D3E; --c12-line:#9C6B88; --c12-ink:#F2DCE8;
+  --fmt-word:#5B93E6; --fmt-pdf:#E0766E; --fmt-xls:#4DB57A;
+  --fmt-word-soft:#1B2740; --fmt-pdf-soft:#3A1F1D; --fmt-xls-soft:#1A3326;
+  --shadow-1:0 1px 2px rgba(0,0,0,.55),0 2px 8px -2px rgba(0,0,0,.40),inset 0 1px 0 rgba(255,255,255,.03); --shadow-2:0 2px 4px rgba(0,0,0,.5),0 10px 24px -8px rgba(0,0,0,.6); --shadow-3:0 4px 8px rgba(0,0,0,.5),0 24px 48px -12px rgba(0,0,0,.75);
+  --shadow-accent:0 1px 2px rgba(0,0,0,.5),0 5px 12px -5px rgba(63,99,196,.55); --shadow-inset:inset 0 1px 2px rgba(0,0,0,.35); --shadow-bar:0 8px 14px -12px rgba(0,0,0,.8);
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#13120E; --surface:#1C1A15; --sunken:#17150F;
+  --line:#302D24; --line-2:#433F33;
+  --text:#F1EDE2; --text-2:#CFC8B6; --text-3:#A0987F;
+  --accent:#3F63C4; --accent-on:#FFFFFF; --accent-soft:#1B2540; --accent-ink:#AFC2F5; --accent-line:#33467E;
+  --danger:#F0617F; --danger-soft:#3A1A22; --danger-ink:#F7B2C0; --danger-line:#6B2B3B;
+  --warn-soft:#3A2E12; --warn-ink:#F3D690; --warn-line:#6F5620; --warn-bar:#E0A832;
+  --ok-soft:#1C3220; --ok-ink:#B9E3B2; --ok-line:#3B6B3C; --ok-bar:#5DB257;
+  --att-fill:#F1EDE2; --att-on:#13120E;
+  --cut:#7C755F;
+  --c1-bg:#2E2347; --c1-line:#6B568F; --c1-ink:#E0D2F5;
+  --c2-bg:#43203A; --c2-line:#8C4478; --c2-ink:#F5C3E4;
+  --c3-bg:#12332F; --c3-line:#3F8078; --c3-ink:#BEEAE4;
+  --c4-bg:#3A2D1F; --c4-line:#7C5E3C; --c4-ink:#EBD6BC;
+  --c5-bg:#26292E; --c5-line:#566170; --c5-ink:#D3D9E0;
+  --c6-bg:#3A2230; --c6-line:#8A5A75; --c6-ink:#EBD0DE;
+  --c7-bg:#3C2E5C; --c7-line:#8468B8; --c7-ink:#E8DBFA;
+  --c8-bg:#52294A; --c8-line:#A8558F; --c8-ink:#FAD0EB;
+  --c9-bg:#1A423D; --c9-line:#4F9B91; --c9-ink:#C9F0EA;
+  --c10-bg:#4A3826; --c10-line:#92704A; --c10-ink:#F0DEC8;
+  --c11-bg:#343A42; --c11-line:#6C7886; --c11-ink:#E2E7EC;
+  --c12-bg:#4A2D3E; --c12-line:#9C6B88; --c12-ink:#F2DCE8;
+  --fmt-word:#5B93E6; --fmt-pdf:#E0766E; --fmt-xls:#4DB57A;
+  --fmt-word-soft:#1B2740; --fmt-pdf-soft:#3A1F1D; --fmt-xls-soft:#1A3326;
+  --shadow-1:0 1px 2px rgba(0,0,0,.55),0 2px 8px -2px rgba(0,0,0,.40),inset 0 1px 0 rgba(255,255,255,.03); --shadow-2:0 2px 4px rgba(0,0,0,.5),0 10px 24px -8px rgba(0,0,0,.6); --shadow-3:0 4px 8px rgba(0,0,0,.5),0 24px 48px -12px rgba(0,0,0,.75);
+  --shadow-accent:0 1px 2px rgba(0,0,0,.5),0 5px 12px -5px rgba(63,99,196,.55); --shadow-inset:inset 0 1px 2px rgba(0,0,0,.35); --shadow-bar:0 8px 14px -12px rgba(0,0,0,.8);
+  color-scheme:dark}
+
+
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--f-ui);font-size:14px;line-height:1.65;margin:0;
+  padding-block:0 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3,h4{font-family:var(--f-head);font-weight:700;margin:0;text-wrap:balance;letter-spacing:.01em}
+h1{font-size:26px}h2{font-size:24px}h3{font-size:18px}h4{font-size:15px}
+p{margin:0}.muted{color:var(--text-3)}.small{font-size:13px}.num{font-variant-numeric:tabular-nums}
+code{font-family:ui-monospace,Consolas,monospace;font-size:12px;background:var(--sunken);border:1px solid var(--line);border-radius:6px;padding:1px 5px}
+.hd{position:sticky;top:env(safe-area-inset-top,0px);z-index:40;background:var(--bg);border-bottom:1px solid var(--line);margin-inline:calc(-1 * max(16px,env(safe-area-inset-left,0px)));padding:10px max(16px,env(safe-area-inset-left,0px));display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:50;background:var(--bg)}
+.hd b{font-family:var(--f-head);margin-right:auto}
+.toc{display:flex;gap:2px;flex-wrap:wrap}
+.toc a{color:var(--text-2);text-decoration:none;padding:4px 8px;border-radius:var(--r-sm);font-weight:500;font-size:13px}
+.toc a:hover{background:var(--sunken)}
+.main{max-width:1180px;margin:0 auto}
+.hero{padding-block:24px 4px;display:grid;gap:10px}
+.hero p{max-width:70ch;color:var(--text-2)}
+section.sec{padding-top:44px;scroll-margin-top:60px;display:grid;gap:16px}
+.sec>header{display:grid;gap:6px}.sec>header p{max-width:74ch;color:var(--text-2)}
+.gtag{display:inline-flex;gap:6px;flex-wrap:wrap}
+.say{background:var(--sunken);border:1px solid var(--line);border-radius:var(--r-md);padding:10px 14px;color:var(--text-2);max-width:78ch}
+.say b{color:var(--text)}
+.cap{font-size:13px;font-weight:700;color:var(--text-3);margin-bottom:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.cols{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));align-items:start}
+.tabs{display:inline-flex;border:1px solid var(--line-2);border-radius:var(--r-sm);overflow:hidden;background:var(--sunken);flex-wrap:wrap}
+.tabs button{font:inherit;font-weight:700;min-height:36px;padding:0 14px;border:0;background:transparent;color:var(--text-2);cursor:pointer}
+.tabs button[aria-pressed="true"]{background:var(--accent);color:var(--accent-on)}
+.pn[hidden]{display:none!important}
+.fit{width:100%;position:relative;overflow:hidden}
+.dev{transform-origin:top left;position:absolute;left:0;top:0}
+.dev.mob{border-radius:28px}
+.shot{border:1px solid var(--line-2);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--shadow-2);background:var(--bg);position:relative}
+.dw{font-size:13px;color:var(--text-3);font-weight:700}
+/* ===== 模擬 App（與實作同一套 token） ===== */
+.app{background:var(--bg);color:var(--text);font-family:var(--f-ui);font-size:14px;line-height:1.6}
+.app *{box-sizing:border-box}
+.brand{display:flex;gap:14px;align-items:center;padding:10px 20px;border-bottom:1px solid var(--line);background:var(--surface)}
+.brand b{font-family:var(--f-head);font-size:15px;margin-right:auto}
+.brand nav{display:flex;gap:4px}
+.brand nav a{padding:5px 12px;border-radius:var(--r-sm);color:var(--text-2);font-weight:500;font-size:13px}
+.brand nav a.on{background:var(--accent-soft);color:var(--accent-ink);font-weight:700}
+.pad{padding:18px 20px;display:grid;gap:14px}
+.pghd{display:grid;gap:0;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--shadow-1)}
+.crumbs{display:flex;flex-wrap:wrap;gap:2px 8px;align-items:center;padding:7px 14px;border-bottom:1px solid var(--line);background:var(--sunken);border-radius:var(--r-lg) var(--r-lg) 0 0;font-size:13px;color:var(--text-3)}
+.crumbs a{color:var(--accent-ink);font-weight:700}.crumbs .sep{color:var(--text-3)}
+.crumbs .cur{color:var(--text-2);font-weight:700}
+.crumbs.dup .cur{background:var(--warn-soft);outline:1.5px dashed var(--warn-bar);border-radius:6px;padding:0 6px}
+.ttl{display:flex;gap:10px 12px;flex-wrap:wrap;align-items:center;padding:12px 16px}
+.ttl h1{font-size:22px;margin-right:auto}
+.ttl.dup h1{outline:1.5px dashed var(--warn-bar);border-radius:6px;padding:0 6px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:16px;box-shadow:var(--shadow-1);min-width:0;display:grid;gap:12px}
+.psec{display:grid;gap:10px;padding-top:12px;border-top:1px solid var(--line)}
+.psec:first-child{border-top:0;padding-top:0}
+.lab{font-size:13px;font-weight:700;color:var(--text-3);letter-spacing:.04em}
+.row{display:flex;gap:8px 10px;flex-wrap:wrap;align-items:center}
+.row.sb{justify-content:space-between}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr))}
+.btn{font:inherit;font-weight:700;min-height:40px;padding:0 16px;border-radius:var(--r-sm);border:1px solid var(--line-2);background:var(--surface);color:var(--text);display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;cursor:pointer}
+.btn-primary{background:var(--accent);color:var(--accent-on);border-color:var(--accent);box-shadow:var(--shadow-accent)}
+.btn-danger{background:var(--danger-soft);color:var(--danger-ink);border-color:var(--danger-line)}
+.btn-dsolid{background:var(--danger);color:#fff;border-color:var(--danger)}
+.btn-ghost{background:transparent;border-color:transparent;color:var(--accent-ink)}
+.btn-gdanger{background:transparent;border-color:transparent;color:var(--danger-ink)}
+.btn-sm{min-height:34px;padding:0 11px;font-size:13px}
+.btn-lg{min-height:46px;padding:0 20px;font-size:15px}
+.btn[disabled],.btn.off{background:var(--sunken);color:var(--text-3);border-color:var(--line);box-shadow:none;cursor:not-allowed}
+.btn .fi{width:22px;height:22px;border-radius:5px;display:grid;place-items:center;font-size:11px;font-weight:700;color:#fff;flex:none}
+.fi.w{background:var(--fmt-word)}.fi.p{background:var(--fmt-pdf)}.fi.x{background:var(--fmt-xls)}
+.field{display:grid;gap:5px;min-width:0}
+.field label,.label{font-size:13px;font-weight:700;color:var(--text-2)}
+.input{font:inherit;height:40px;padding:0 12px;border-radius:var(--r-sm);border:1px solid var(--line-2);background:var(--sunken);color:var(--text);width:100%;display:flex;align-items:center}
+.input.ro{background:var(--surface)}
+.input.err{border-color:var(--danger);background:var(--danger-soft)}
+.hint{font-size:13px;color:var(--text-3)}.fmsg{font-size:13px;color:var(--danger-ink);font-weight:700}
+.seg{display:inline-flex;border:1px solid var(--line-2);border-radius:var(--r-sm);overflow:hidden;background:var(--sunken);flex-wrap:wrap}
+.seg span{font-weight:700;min-height:36px;padding:0 14px;color:var(--text-2);display:inline-flex;align-items:center;white-space:nowrap}
+.seg span.on{background:var(--accent);color:var(--accent-on)}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:700;padding:1px 9px;border-radius:99px;border:1px solid var(--line-2);background:var(--sunken);color:var(--text-2);white-space:nowrap}
+.b-acc{background:var(--accent-soft);color:var(--accent-ink);border-color:var(--accent-line)}
+.b-ok{background:var(--ok-soft);color:var(--ok-ink);border-color:var(--ok-line)}
+.b-warn{background:var(--warn-soft);color:var(--warn-ink);border-color:var(--warn-line)}
+.b-err{background:var(--danger-soft);color:var(--danger-ink);border-color:var(--danger-line)}
+.alert{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:start;padding:11px 14px;border-radius:var(--r-md);border:1px solid;font-weight:500}
+.alert b{font-weight:700}
+.a-info{background:var(--accent-soft);color:var(--accent-ink);border-color:var(--accent-line)}
+.a-warn{background:var(--warn-soft);color:var(--warn-ink);border-color:var(--warn-line)}
+.a-err{background:var(--danger-soft);color:var(--danger-ink);border-color:var(--danger-line)}
+.a-ok{background:var(--ok-soft);color:var(--ok-ink);border-color:var(--ok-line)}
+.ico{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;background:currentColor;margin-top:2px}
+.ico::before{content:attr(data-i);color:var(--surface)}
+.t{width:100%;border-collapse:collapse;font-size:14px}
+.t th{text-align:left;font-size:13px;color:var(--text-3);font-weight:700;padding:8px 10px;border-bottom:1px solid var(--line-2);background:var(--sunken);white-space:nowrap}
+.t td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+.t.cmp td,.t.cmp th{vertical-align:top;white-space:normal}
+.scroll{overflow-x:auto}
+.more{border:1px solid var(--line);border-radius:var(--r-sm);padding:6px 12px;font-size:13px;color:var(--text-2);background:var(--sunken)}
+.more::before{content:"▸ ";color:var(--text-3)}
+/* 步驟頁骨架 */
+.shell{display:grid;grid-template-columns:230px minmax(0,1fr) 290px;gap:16px;align-items:start}
+.shell.two{grid-template-columns:230px minmax(0,1fr)}
+.shell.one{grid-template-columns:minmax(0,1fr)}
+.steps{display:grid;gap:4px;list-style:none;margin:0;padding:10px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-1)}
+.step{display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:center;padding:7px 8px;border-radius:var(--r-md);border:1px solid transparent}
+.step .no{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:13px;border:1.5px solid var(--line-2);background:var(--surface);color:var(--text-2)}
+.step small{display:block;color:var(--text-3);font-size:12px;line-height:1.3}
+.step.cur{background:var(--sunken);border-color:var(--line-2)}
+.step.cur .no{background:var(--text);border-color:var(--text);color:var(--surface)}
+.step.done .no{background:var(--ok-soft);border-color:var(--ok-bar);color:var(--ok-ink)}
+.step.stale .no{background:var(--warn-soft);border-color:var(--warn-bar);color:var(--warn-ink)}
+.sumbar{display:grid;gap:8px;padding:10px 14px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);box-shadow:var(--shadow-1)}
+.sstats{display:flex;flex-wrap:wrap;gap:6px 10px}
+.sc{display:flex;align-items:baseline;gap:8px;padding:3px 12px;border-radius:var(--r-sm);background:var(--sunken)}
+.sc .sl{font-size:13px;color:var(--text-3)}.sc b{font-size:18px;font-variant-numeric:tabular-nums}
+.sc.warn{background:var(--warn-soft);box-shadow:inset 0 0 0 1.5px var(--warn-bar)}.sc.warn b,.sc.warn .sl{color:var(--warn-ink)}
+.sc.bad{background:var(--danger-soft)}.sc.bad b{color:var(--danger-ink)}
+.sc.okc{background:var(--ok-soft)}.sc.okc b{color:var(--ok-ink);font-size:14px}
+.issue{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px;padding:6px 0;border-top:1px dashed var(--line-2)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden}
+.stats>div{background:var(--surface);padding:8px 12px;display:grid;gap:2px}
+.stats small{font-size:13px;font-weight:700;color:var(--text-3)}.stats strong{font-size:28px;line-height:1.2;font-variant-numeric:tabular-nums}
+.stats .sub{font-size:13px;color:var(--text-3)}
+.stats .bad strong{color:var(--danger-ink)}
+.done-card{position:sticky;top:12px;display:grid;gap:10px;background:var(--surface);border:1px solid var(--accent-line);border-radius:var(--r-lg);padding:14px;box-shadow:var(--shadow-2)}
+.done-card .why{font-size:13px;color:var(--warn-ink);background:var(--warn-soft);border:1px solid var(--warn-line);border-radius:var(--r-sm);padding:6px 10px}
+.mbar{position:absolute;left:0;right:0;bottom:0;display:flex;gap:10px;padding:10px 14px;background:var(--surface);border-top:1px solid var(--line-2);box-shadow:0 -8px 18px -12px rgba(34,32,27,.35)}
+.mbar .btn{flex:1}
+.mbar .btn.back{flex:0 0 auto}
+.mscroll{height:100%;overflow:hidden;padding-bottom:70px}
+/* 教室卡與座位小圖 */
+.rooms{display:grid;gap:10px}
+.room{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface)}
+.room .nm{font-weight:700;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.room .meta{font-size:13px;color:var(--text-3)}
+.room .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center}
+.room .acts .sepv{width:1px;height:22px;background:var(--line-2);margin:0 4px}
+.smap{display:grid;gap:2px;padding:5px;background:var(--sunken);border:1px solid var(--line);border-radius:6px}
+.smap i{width:10px;height:10px;border-radius:2px;background:var(--cb);border:1px solid var(--cl)}
+.smap i.e{background:repeating-linear-gradient(135deg,transparent 0 2px,var(--line-2) 2px 4px);border-color:var(--line-2)}
+.cdot{display:inline-block;width:12px;height:12px;border-radius:4px;background:var(--cb);border:1.5px solid var(--cl);vertical-align:-1px}
+.room.gone{opacity:.85;border-style:dashed;background:var(--sunken)}
+/* 彈窗 */
+.mframe{background:rgba(20,18,12,.5);padding:26px 14px;display:grid;place-items:center;border-radius:var(--r-lg)}
+.modal{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-xl);box-shadow:var(--shadow-3);width:min(100%,520px);padding:20px;display:grid;gap:12px;color:var(--text)}
+.modal.wide{width:min(100%,760px)}
+.modal h3{font-size:18px}
+.acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.toast{display:inline-flex;gap:10px;align-items:center;background:var(--att-fill);color:var(--att-on);padding:9px 14px;border-radius:var(--r-md);box-shadow:var(--shadow-3);font-weight:700}
+.toast a{text-decoration:underline}
+/* 匯入區 */
+.drop{border:2px dashed var(--accent-line);border-radius:var(--r-lg);background:var(--accent-soft);padding:26px 18px;display:grid;gap:8px;justify-items:center;text-align:center;color:var(--accent-ink)}
+.drop strong{font-size:17px}
+.empty{border:1.5px dashed var(--line-2);border-radius:var(--r-lg);padding:24px 16px;text-align:center;display:grid;gap:8px;justify-items:center;background:var(--sunken)}
+/* 列表 */
+.exam{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto;gap:14px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:14px 16px;box-shadow:var(--shadow-1)}
+.exam h3{font-size:17px}.exam .meta{display:flex;gap:6px 10px;flex-wrap:wrap;align-items:center;margin-top:6px;color:var(--text-3);font-size:13px}
+.exam.arch{background:var(--sunken);box-shadow:none}
+.dots{display:flex;gap:4px}.dots i{width:26px;height:8px;border-radius:4px;background:var(--line-2)}
+.dots i.d{background:var(--ok-bar)}.dots i.c{background:var(--text)}.dots i.s{background:var(--warn-bar)}.dots i.n{background:repeating-linear-gradient(135deg,transparent 0 3px,var(--line-2) 3px 6px)}
+.menu{position:absolute;right:16px;top:44px;background:var(--surface);border:1px solid var(--line-2);border-radius:var(--r-md);box-shadow:var(--shadow-3);padding:6px;display:grid;gap:2px;min-width:170px;z-index:3}
+.menu a{padding:8px 10px;border-radius:var(--r-sm);font-weight:500;display:block}.menu a.dg{color:var(--danger-ink)}
+.menu hr{border:0;border-top:1px solid var(--line);margin:3px 0;width:100%}
+/* 標籤紙 */
+.sheet{background:#fff;color:#22201B;border:1px solid var(--line-2);box-shadow:var(--shadow-2);position:relative;flex:none}
+.sheet .lc{position:absolute;border:1px solid #CFC7B2;padding:2px 3px;display:grid;align-content:center;justify-items:center;text-align:center;line-height:1.25;overflow:hidden}
+.sheet .lc .a{font-size:8px;color:#6F6858}.sheet .lc .b{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}.sheet .lc .c{font-size:9px}
+.sheet .gh{position:absolute;border:1px dashed #E3C07A;background:repeating-linear-gradient(135deg,transparent 0 3px,#FBF0D5 3px 6px);opacity:.9}
+.sheet .gx{position:absolute;border:1px dashed #CFC7B2;background:#F7F4EC}
+.leg{display:flex;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--text-2)}
+.leg i{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:4px}
+.q{display:grid;gap:10px}
+.q .qi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:12px 14px;display:grid;gap:4px}
+.q .qi b{font-size:15px}
+.q .qi .rec{color:var(--ok-ink)}
+.map td,.map th{vertical-align:top;white-space:normal}
+.dk{font-weight:700}
+@media (max-width:560px){.cols{grid-template-columns:minmax(0,1fr)}}
+
+
+.dev{background:var(--bg)}
+.col{display:grid;gap:14px;min-width:0;align-content:start}
+.stm{display:flex;align-items:center;gap:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:8px 12px;box-shadow:var(--shadow-1)}
+.stm .no{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:12px;border:1.5px solid var(--line-2);background:var(--surface);color:var(--text-2);flex:none}
+.stm .no.cur{background:var(--text);border-color:var(--text);color:var(--surface)}.stm .no.done{background:var(--ok-soft);border-color:var(--ok-bar);color:var(--ok-ink)}
+.stm i{width:8px;height:2px;background:var(--line-2);flex:none}.stm b{margin-left:auto;padding-left:10px;font-size:13px}
+.w390 .stm b{display:none}.w390 .stm i{flex:1}
+.nv{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:10px;align-items:start}.nv.one{grid-template-columns:1fr}
+.nvc{display:grid;gap:4px;justify-items:stretch;text-align:center}.nvc small{font-size:12px;color:var(--text-3);line-height:1.3}
+.nvc .btn{width:100%}
+.mbar2{display:grid;gap:8px;padding:10px 14px;background:var(--surface);border-top:2px solid var(--line-2);box-shadow:0 -8px 18px -12px rgba(34,32,27,.35);margin:0 -20px -18px;position:sticky;bottom:0}
+.w390 .mbar2{margin:0 -20px -18px}
+.mbar2 .why{font-size:13px;color:var(--warn-ink);background:var(--warn-soft);border:1px solid var(--warn-line);border-radius:var(--r-sm);padding:5px 10px}
+.sw{width:38px;height:22px;border-radius:99px;background:var(--line-2);display:inline-block;position:relative;flex:none}.sw i{position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:#fff}.sw.on{background:var(--accent)}.sw.on i{left:19px}
+.stp{display:inline-flex;align-items:center;border:1px solid var(--line-2);border-radius:var(--r-sm);background:var(--surface);overflow:hidden}.stp .b{width:34px;height:34px;display:grid;place-items:center;font-weight:700;color:var(--accent-ink)}.stp .b.off{color:var(--text-3);background:var(--sunken)}.stp b{min-width:34px;text-align:center}
+.rt{display:grid;border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;background:var(--surface)}
+.rh,.rr{display:grid;gap:10px;align-items:center;padding:9px 12px;border-top:1px solid var(--line)}
+.rh{background:var(--sunken);font-size:13px;font-weight:700;color:var(--text-3);border-top:0}
+.w1280 .rh,.w1280 .rr{grid-template-columns:52px minmax(0,1.1fr) minmax(0,1.6fr) minmax(0,1fr) 92px auto}
+.w820 .rh,.w820 .rr{grid-template-columns:52px minmax(0,1.2fr) minmax(0,1.3fr) minmax(0,1fr) auto}
+.w820 .c-grp{display:none}
+.w390 .rh{display:none}
+.w390 .rr{grid-template-columns:auto minmax(0,1fr);grid-template-areas:"t n" "m m" "s g" "a a"}
+.w390 .c-on{grid-area:t}.w390 .c-nm{grid-area:n}.w390 .c-cfg{grid-area:m}.w390 .c-seat{grid-area:s}.w390 .c-grp{grid-area:g}.w390 .c-act{grid-area:a}
+.rr .c-nm{font-weight:700;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.rr .c-cfg{display:flex;gap:10px;align-items:center;font-size:13px;color:var(--text-2)}
+.rr .c-act{display:flex;gap:6px;justify-content:flex-end;align-items:center;flex-wrap:wrap}
+.rr.gone{background:var(--sunken);border-style:dashed}.rr.off .c-nm,.rr.off .c-cfg{opacity:.55}
+.rx{padding:12px 14px;background:var(--sunken);border-top:1px dashed var(--line-2);display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
+.rx .field{gap:6px}.rx .hint{font-size:12.5px}
+.rgrp{padding:8px 12px;background:var(--surface);border-top:1px solid var(--line);font-weight:700;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.opt{display:grid;grid-template-columns:150px minmax(0,1fr);gap:6px 14px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}.opt:first-of-type{border-top:0}
+.w390 .opt{grid-template-columns:1fr}
+.fcard{border:1px solid var(--line);border-radius:var(--r-lg);padding:14px;display:grid;gap:10px;background:var(--surface)}
+.fcard.lost{border-color:var(--danger-line);box-shadow:0 0 0 2px var(--danger-soft)}
+.fname{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:20px;font-weight:700;font-family:var(--f-head)}
+.fgl{width:28px;height:22px;border-radius:4px 4px 5px 5px;background:var(--warn-bar);position:relative;flex:none}.fgl::before{content:"";position:absolute;left:0;top:-5px;width:12px;height:6px;border-radius:3px 3px 0 0;background:var(--warn-bar)}.fcard.lost .fgl{background:var(--danger);opacity:.7}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px}
+.tile{min-height:44px;border:1px solid var(--line-2);border-radius:var(--r-sm);background:var(--surface);display:grid;place-items:center;font-weight:700;color:var(--text-2)}
+.tile.on{background:var(--accent);color:var(--accent-on);border-color:var(--accent);box-shadow:var(--shadow-accent)}
+.form2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.w390 .form2{grid-template-columns:1fr}.form2 .full{grid-column:1/-1}
+.pcl{display:flex;gap:8px;flex-wrap:wrap}
+.gseg{display:inline-flex;gap:0;border:1px solid var(--line-2);border-radius:var(--r-sm);overflow:hidden;background:var(--sunken);max-width:100%}
+.gseg span{padding:0 11px;min-height:34px;display:inline-flex;align-items:center;font-weight:700;font-size:13px;color:var(--text-2);border-left:1px solid var(--line-2);white-space:nowrap}.gseg span:first-child{border-left:0}
+.gseg span.on{background:var(--accent);color:var(--accent-on)}
+.mk{display:grid;gap:8px;padding:12px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface)}
+.mk.pick{border-color:var(--warn-bar);box-shadow:inset 3px 0 0 var(--warn-bar)}
+.w1280 .mk{grid-template-columns:minmax(0,1.1fr) 120px minmax(0,2fr) minmax(0,1.2fr);align-items:center}
+.w820 .mk{grid-template-columns:minmax(0,1fr) minmax(0,2fr);align-items:center}
+.pr{display:grid;gap:6px}.pr .bar{height:8px;border-radius:4px;background:var(--line);overflow:hidden}.pr .bar i{display:block;height:100%;background:var(--accent)}
+.pbtn{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}.w390 .pbtn{grid-template-columns:1fr}
+.act{min-height:44px;border-radius:var(--r-sm);border:1.5px solid var(--accent-line);background:var(--surface);color:var(--accent-ink);font-weight:700;display:flex;gap:6px;align-items:center;justify-content:center;padding:0 10px;text-align:center}
+.act.on{background:var(--accent);color:var(--accent-on);border-color:var(--accent);box-shadow:var(--shadow-accent)}
+.act.off{background:var(--sunken);color:var(--text-3);border-color:var(--line);border-style:dashed}
+.pcard{border:1px solid var(--line);border-left:5px solid var(--warn-bar);border-radius:var(--r-md);padding:12px 14px;display:grid;gap:10px;background:var(--surface)}
+.pcard.decided{border-left-color:var(--ok-bar);background:var(--sunken)}
+.rawrow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));font-size:13px;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden}
+.rawrow span{padding:4px 8px;border-left:1px solid var(--line);background:var(--surface)}.rawrow span:first-child{border-left:0}.rawrow .hd2{background:var(--sunken);font-weight:700;color:var(--text-3)}.rawrow .bad{background:var(--danger-soft);color:var(--danger-ink);font-weight:700}
+.oneline{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline;padding:10px 14px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface)}
+.oneline .it{display:flex;gap:6px;align-items:baseline}.oneline .it span{font-size:13px;color:var(--text-3);font-weight:700}.oneline .it b{font-size:22px;font-variant-numeric:tabular-nums}
+.oneline .vs{font-size:13px;color:var(--text-3);font-weight:700}
+.oneline .sepl{width:1px;align-self:stretch;background:var(--line-2)}
+.w390 .oneline .sepl{display:none}
+.paper{display:inline-block;position:relative;background:#fff;border:1px solid var(--line-2);box-shadow:var(--shadow-2);flex:none}
+.paper .pc{position:absolute;border:1px solid #CFC7B2;background:#fff}.paper .pc.hl{background:#FBF0D5}
+.dim{font-size:12px;color:var(--text-3);font-variant-numeric:tabular-nums}
+.chart{display:grid;gap:3px;padding:8px;background:#fff;border:1px solid var(--line-2);border-radius:6px;color:#22201B;min-width:0}
+.chart i{border:1px solid #CFC7B2;border-radius:3px;min-height:30px;padding:1px 2px;display:grid;justify-items:center;align-content:center;font-style:normal;background:#fff;line-height:1.15}
+.chart i small{font-size:9px;color:#6F6858}.chart i b{font-size:11px}
+.chart i.x{background:repeating-linear-gradient(135deg,#fff 0 3px,#E4DECF 3px 6px);border-style:dashed}
+.chart i.hl{background:#FBF0D5;border-color:#C98A12}
+.chart i.ref{border-style:dashed;background:#F7F4EC}
+.lbl{width:150px;min-height:150px;background:#fff;color:#22201B;border:1px solid #CFC7B2;box-shadow:var(--shadow-2);padding:6px 7px;display:grid;gap:4px;align-content:start;font-size:10px}
+.lbl .lh{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid #CFC7B2;padding-bottom:2px}.lbl .lh b{font-size:11px}.lbl .lh em{font-style:normal;font-weight:700;font-size:13px}
+.lbl .lp{display:grid;gap:1px;padding:2px 0;border-bottom:1px dotted #CFC7B2}.lbl .lp:last-child{border:0}.lbl .lp b{font-size:11px}.lbl .lp span{font-size:10px;color:#4F493D}
+.lblrow{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start}
+.ptab{display:flex;gap:0;border-bottom:2px solid var(--line)}.ptab span{padding:8px 14px;font-weight:700;color:var(--text-2);border-bottom:3px solid transparent;margin-bottom:-2px}.ptab span.on{color:var(--accent-ink);border-bottom-color:var(--accent)}
+.refban{border:1.5px dashed var(--warn-bar);background:var(--warn-soft);color:var(--warn-ink);border-radius:var(--r-sm);padding:6px 10px;font-weight:700;font-size:13px}
+.pgstrip{display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end}
+.pg{width:46px;height:62px;border:1px solid var(--line-2);background:#fff;border-radius:3px;display:grid;place-items:center;font-size:11px;color:#22201B;position:relative;text-align:center;line-height:1.2}
+.pg.rs{background:#FBF0D5;border-color:var(--warn-bar)}.pg.rf{background:#F7F4EC;border-style:dashed;border-color:var(--warn-bar)}
+.fileopt{display:grid;grid-template-columns:auto 1fr;gap:8px 12px;align-items:start;padding:12px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface)}
+.chk{width:22px;height:22px;border-radius:5px;border:1.5px solid var(--line-2);display:grid;place-items:center;font-size:14px;font-weight:700;margin-top:1px;background:var(--surface)}.chk.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.tabx{display:grid;gap:0}.tabx .tr{display:grid;gap:8px;align-items:center;padding:8px 10px;border-top:1px solid var(--line)}
+.dtbl{width:100%;border-collapse:collapse;font-size:13.5px}.dtbl th{text-align:left;font-size:12.5px;color:var(--text-3);padding:6px 8px;background:var(--sunken);border-bottom:1px solid var(--line-2);white-space:nowrap}.dtbl td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.dtbl tr.bad td{background:var(--danger-soft)}.dtbl tr.ok td{background:transparent}
+.w390 .dtbl.rs thead{display:none}.w390 .dtbl.rs tr{display:grid;gap:2px;padding:8px 4px;border-bottom:1px solid var(--line)}.w390 .dtbl.rs td{border:0;padding:1px 4px}
+.q .qi .opt2{display:grid;gap:1px;padding-left:2px}
+.badge.nb{font-weight:500}
+.sheetcap{font-size:12px;color:var(--text-3);text-align:center}
+.mframe{border-radius:var(--r-lg)}
+.alert.big{padding:14px 16px}.alert.big h4{font-family:var(--f-ui);font-size:16px}
+.stk{display:grid;gap:8px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:13.5px}.kv dt{color:var(--text-3);font-weight:700}.kv dd{margin:0}
+.nvb{border:1.5px dashed var(--danger-line);border-radius:var(--r-md);padding:10px;display:grid;gap:8px;background:var(--danger-soft)}
+.anno{font-size:12.5px;color:var(--text-3)}
+.pn{margin-bottom:6px}
+.blk{margin-top:14px}
+.field .stp,.field .gseg,.field .seg{justify-self:start}.rr .c-cfg span{white-space:nowrap}.tag{font-size:12px;font-weight:700;color:var(--text-3);border:1px solid var(--line-2);border-radius:99px;padding:0 8px;background:var(--surface)}
+
+
+/* ===== G35 考前對帳：只用既有 tokens，新增的只是列的排法 ===== */
+.lamp{margin-top:0;flex:none;min-width:20px}.lamp.g{color:var(--ok-bar)}.lamp.y{color:var(--warn-bar)}.lamp.r{color:var(--danger)}.lamp.n{color:var(--text-3)}
+.crt{display:grid;border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;background:var(--surface)}
+.cr{display:grid;gap:6px 12px;align-items:center;padding:10px 12px;border-top:1px solid var(--line);grid-template-columns:28px minmax(0,1.1fr) minmax(0,1.5fr) auto}
+.cr:first-child{border-top:0}
+.cr .cn b{display:block}.cr .cv{font-size:14px}.cr .ca{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.cr.y{background:var(--warn-soft);box-shadow:inset 4px 0 0 var(--warn-bar)}
+.cr.r{background:var(--danger-soft);box-shadow:inset 4px 0 0 var(--danger)}
+.cr.n .cn,.cr.n .cv{opacity:.75}
+.w820 .cr{grid-template-columns:28px minmax(0,1fr) auto}.w820 .cr .cv{grid-column:2/-1}
+.w390 .cr{grid-template-columns:28px minmax(0,1fr)}.w390 .cr .cv,.w390 .cr .ca{grid-column:2}.w390 .cr .ca{justify-content:flex-start}
+.cx{grid-column:2/-1;display:grid;gap:0;margin-top:2px}
+.cx .issue{border-top:1px dashed var(--line-2)}
+.cx .issue .grow{flex:1;min-width:0}
+.lgd{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--text-2);align-items:center}
+.lgd span{display:inline-flex;gap:6px;align-items:center}
+.ldg td.k,.ldg th.k{text-align:center}
+.eq{font-variant-numeric:tabular-nums;white-space:nowrap}
+.ldg .x{color:var(--danger-ink);font-weight:700}
+.ldg tr.bad td{background:var(--danger-soft)}
+.ldg td b{font-variant-numeric:tabular-nums}
+.sumline{display:flex;gap:6px 16px;flex-wrap:wrap;align-items:baseline;padding:8px 12px;background:var(--sunken);border:1px solid var(--line);border-radius:var(--r-md);font-size:14px}
+.sumline b{font-size:18px;font-variant-numeric:tabular-nums}
+.w390 .sumline b{font-size:16px}
+.fchk{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface)}
+.fchk.on{border-color:var(--danger-line);background:var(--danger-soft)}
+.tbl-mini td{padding:6px 8px}
+.figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:10px}
+.fig{border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);padding:10px 12px;display:grid;gap:4px}
+.fig .big{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums}
+.adj{font-size:12px}
+
+.tri{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.tri>div{display:grid;gap:0;padding:3px 8px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm)}
+.tri small{font-size:12px;color:var(--text-3);line-height:1.3}
+.tri b{font-size:17px;font-variant-numeric:tabular-nums}
+.tri .bad{background:var(--danger-soft);border-color:var(--danger-line)}.tri .bad b{color:var(--danger-ink)}
+.tri .amb{background:var(--warn-soft);border-color:var(--warn-line)}.tri .amb b{color:var(--warn-ink)}
+.cr .cv{display:grid;gap:4px}
+.cr .cn .badge{margin-top:3px;justify-self:start}
+.cr{grid-template-columns:28px minmax(0,1.15fr) minmax(0,1.7fr) auto}
+.w820 .cr{grid-template-columns:28px minmax(0,1fr) auto}
+.w390 .tri{grid-template-columns:repeat(3,minmax(0,1fr))}.w390 .tri b{font-size:15px}
+.cx[hidden]{display:none}
+.comp{display:inline-flex;font-size:12px;font-weight:700;border:1px solid var(--accent-line);background:var(--accent-soft);color:var(--accent-ink);border-radius:99px;padding:0 8px}
+
+/* v2.56 對帳 12 項新面板（只用既有 tokens） */
+.rc{border:1px solid var(--line-2);border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--shadow-1);overflow:hidden}
+.rc-hd{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--sunken)}
+.rc-hd h3{margin:0;font-family:var(--f-head);font-size:17px}
+.rc-hd .sm{color:var(--text-2);font-size:13px}
+.rc-row{border-bottom:1px solid var(--line)}
+.rc-row:last-child{border-bottom:0}
+.rc-line{display:grid;grid-template-columns:auto 1fr auto;gap:4px 12px;align-items:center;padding:10px 16px;min-height:48px}
+.rc-lamp{display:inline-flex;align-items:center;gap:4px;font-weight:700;font-size:13px;padding:2px 9px;border-radius:99px;border:1px solid;white-space:nowrap}
+.rc-lamp.ok{background:var(--ok-soft);color:var(--ok-ink);border-color:var(--ok-line)}
+.rc-lamp.wa{background:var(--warn-soft);color:var(--warn-ink);border-color:var(--warn-line)}
+.rc-lamp.fl{background:var(--danger-soft);color:var(--danger-ink);border-color:var(--danger-line)}
+.rc-lamp.na{background:var(--sunken);color:var(--text-3);border-color:var(--line-2)}
+.rc-name{font-weight:700}
+.rc-name .no{color:var(--text-3);font-weight:400;margin-right:6px;font-size:13px}
+.rc-one{grid-column:2/3;color:var(--text-2);font-size:14px;margin-top:-2px}
+.rc-more{font:inherit;font-size:13px;font-weight:700;color:var(--accent-ink);background:transparent;border:0;min-height:44px;padding:0 6px;cursor:pointer}
+.rc-detail{padding:4px 16px 14px 16px;display:grid;gap:8px}
+.rc-detail[hidden]{display:none}
+.rc-fig{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:14px}
+.rc-fig b{font-size:18px}
+.rc-list{margin:0;padding-left:20px;color:var(--text-2);font-size:14px}
+.rc-formula{font-size:13px;color:var(--text-3);border-top:1px dashed var(--line-2);padding-top:6px}
+.rc-gate{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid var(--line-2)}
+.rc-gate.ok{background:var(--ok-soft);color:var(--ok-ink)}
+.rc-gate.fl{background:var(--danger-soft);color:var(--danger-ink)}
+.rc-gate.wa{background:var(--warn-soft);color:var(--warn-ink)}
+.rc-gate b{font-size:15px}
+.rc-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
+.rc-tabs button{font:inherit;font-weight:700;min-height:40px;padding:0 14px;border-radius:99px;border:1px solid var(--line-2);background:var(--surface);color:var(--text-2);cursor:pointer}
+.rc-tabs button[aria-pressed="true"]{background:var(--accent);color:var(--accent-on);border-color:var(--accent)}
+.opt-card{border:1px solid var(--line-2);border-radius:var(--r-md);padding:10px 14px;background:var(--surface);display:grid;gap:4px}
+.opt-card.rec{border-color:var(--accent-line);background:var(--accent-soft)}
+@media (max-width:520px){.rc-line{grid-template-columns:auto 1fr}.rc-more{grid-column:1/3;justify-self:start}.rc-one{grid-column:1/3}}
+.k-card{border:1px solid var(--line-2);border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--shadow-1);padding:14px 16px;display:grid;gap:10px}
+.k-card h3{margin:0;font-family:var(--f-head);font-size:17px}
+.k-note{font-size:13px;color:var(--text-3)}
+.k-tabs{display:flex;flex-wrap:wrap;gap:6px}
+.k-tabs button{font:inherit;font-weight:700;min-height:40px;padding:0 14px;border-radius:99px;border:1px solid var(--line-2);background:var(--surface);color:var(--text-2);cursor:pointer}
+.k-tabs button[aria-pressed="true"]{background:var(--accent);color:var(--accent-on);border-color:var(--accent)}
+.q-opt{border:1px solid var(--line-2);border-radius:var(--r-md);padding:8px 12px;background:var(--surface);margin:6px 0}
+.q-opt.rec{border-color:var(--accent-line);background:var(--accent-soft)}
+
+
+.ex-grp{display:grid;gap:8px}
+.ex-grp h4{margin:0;display:flex;gap:10px;align-items:center;font-family:var(--f-head)}
+.ex-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:6px 12px;align-items:center;padding:10px 14px;border:1px solid var(--line-2);border-radius:var(--r-md);background:var(--surface)}
+.ex-row.sel{border-color:var(--accent);background:var(--accent-soft)}
+.ex-row input[type=checkbox]{width:22px;height:22px}
+.ex-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:10px 14px;border-radius:var(--r-md);background:var(--accent-soft);border:1px solid var(--accent-line)}
+.dlg{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-xl);box-shadow:var(--shadow-3);width:min(100%,460px);padding:22px;display:grid;gap:14px}
+.dlg h3{margin:0;font-family:var(--f-head);font-size:18px}
+.dlg .btns{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+.dlg ul{margin:0;padding-left:20px;color:var(--text-2)}
+.dlg .small{font-size:13px;color:var(--text-3)}
+.pr{display:grid;gap:6px}.pr .bar{height:8px;border-radius:4px;background:var(--line);overflow:hidden}.pr .bar i{display:block;height:100%;background:var(--accent)}
+.pbtn{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}.w390 .pbtn{grid-template-columns:1fr}
+.act{min-height:44px;border-radius:var(--r-sm);border:1.5px solid var(--accent-line);background:var(--surface);color:var(--accent-ink);font-weight:700;display:flex;gap:6px;align-items:center;justify-content:center;padding:0 10px;text-align:center}
+.act.on{background:var(--accent);color:var(--accent-on);border-color:var(--accent);box-shadow:var(--shadow-accent)}
+.act.off{background:var(--sunken);color:var(--text-3);border-color:var(--line);border-style:dashed}
+.pcard{border:1px solid var(--line);border-left:5px solid var(--warn-bar);border-radius:var(--r-md);padding:12px 14px;display:grid;gap:10px;background:var(--surface)}
+.pcard.decided{border-left-color:var(--ok-bar);background:var(--sunken)}
+.rawrow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));font-size:13px;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden}
+.rawrow span{padding:4px 8px;border-left:1px solid var(--line);background:var(--surface)}.rawrow span:first-child{border-left:0}.rawrow .hd2{background:var(--sunken);font-weight:700;color:var(--text-3)}.rawrow .bad{background:var(--danger-soft);color:var(--danger-ink);font-weight:700}
+.oneline{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline;padding:10px 14px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface)}
+.oneline .it{display:flex;gap:6px;align-items:baseline}.oneline .it span{font-size:13px;color:var(--text-3);font-weight:700}.oneline .it b{font-size:22px;font-variant-numeric:tabular-nums}
+.oneline .vs{font-size:13px;color:var(--text-3);font-weight:700}
+.oneline .sepl{width:1px;align-self:stretch;background:var(--line-2)}
+.w390 .oneline .sepl{display:none}
+.paper{display:inline-block;position:relative;background:#fff;border:1px solid var(--line-2);box-shadow:var(--shadow-2);flex:none}
+.paper .pc{position:absolute;border:1px solid #CFC7B2;background:#fff}.paper .pc.hl{background:#FBF0D5}
+.dim{font-size:12px;color:var(--text-3);font-variant-numeric:tabular-nums}
+.chart{display:grid;gap:3px;padding:8px;background:#fff;border:1px solid var(--line-2);border-radius:6px;color:#22201B;min-width:0}
+.chart i{border:1px solid #CFC7B2;border-radius:3px;min-height:30px;padding:1px 2px;display:grid;justify-items:center;align-content:center;font-style:normal;background:#fff;line-height:1.15}
+.chart i small{font-size:9px;color:#6F6858}.chart i b{font-size:11px}
+.chart i.x{background:repeating-linear-gradient(135deg,#fff 0 3px,#E4DECF 3px 6px);border-style:dashed}
+.chart i.hl{background:#FBF0D5;border-color:#C98A12}
+.chart i.ref{border-style:dashed;background:#F7F4EC}
+.lbl{width:150px;min-height:150px;background:#fff;color:#22201B;border:1px solid #CFC7B2;box-shadow:var(--shadow-2);padding:6px 7px;display:grid;gap:4px;align-content:start;font-size:10px}
+.lbl .lh{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid #CFC7B2;padding-bottom:2px}.lbl .lh b{font-size:11px}.lbl .lh em{font-style:normal;font-weight:700;font-size:13px}
+.lbl .lp{display:grid;gap:1px;padding:2px 0;border-bottom:1px dotted #CFC7B2}.lbl .lp:last-child{border:0}.lbl .lp b{font-size:11px}.lbl .lp span{font-size:10px;color:#4F493D}
+.lblrow{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start}
+.ptab{display:flex;gap:0;border-bottom:2px solid var(--line)}.ptab span{padding:8px 14px;font-weight:700;color:var(--text-2);border-bottom:3px solid transparent;margin-bottom:-2px}.ptab span.on{color:var(--accent-ink);border-bottom-color:var(--accent)}
+.refban{border:1.5px dashed var(--warn-bar);background:var(--warn-soft);color:var(--warn-ink);border-radius:var(--r-sm);padding:6px 10px;font-weight:700;font-size:13px}
+.pgstrip{display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end}
+.pg{width:46px;height:62px;border:1px solid var(--line-2);background:#fff;border-radius:3px;display:grid;place-items:center;font-size:11px;color:#22201B;position:relative;text-align:center;line-height:1.2}
+.pg.rs{background:#FBF0D5;border-color:var(--warn-bar)}.pg.rf{background:#F7F4EC;border-style:dashed;border-color:var(--warn-bar)}
+.fileopt{display:grid;grid-template-columns:auto 1fr;gap:8px 12px;align-items:start;padding:12px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface)}
+.chk{width:22px;height:22px;border-radius:5px;border:1.5px solid var(--line-2);display:grid;place-items:center;font-size:14px;font-weight:700;margin-top:1px;background:var(--surface)}.chk.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.tabx{display:grid;gap:0}.tabx .tr{display:grid;gap:8px;align-items:center;padding:8px 10px;border-top:1px solid var(--line)}
+.dtbl{width:100%;border-collapse:collapse;font-size:13.5px}.dtbl th{text-align:left;font-size:12.5px;color:var(--text-3);padding:6px 8px;background:var(--sunken);border-bottom:1px solid var(--line-2);white-space:nowrap}.dtbl td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.dtbl tr.bad td{background:var(--danger-soft)}.dtbl tr.ok td{background:transparent}
+.w390 .dtbl.rs thead{display:none}.w390 .dtbl.rs tr{display:grid;gap:2px;padding:8px 4px;border-bottom:1px solid var(--line)}.w390 .dtbl.rs td{border:0;padding:1px 4px}
+.q .qi .opt2{display:grid;gap:1px;padding-left:2px}
+.badge.nb{font-weight:500}
+.sheetcap{font-size:12px;color:var(--text-3);text-align:center}
+.mframe{border-radius:var(--r-lg)}
+.alert.big{padding:14px 16px}.alert.big h4{font-family:var(--f-ui);font-size:16px}
+.stk{display:grid;gap:8px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:13.5px}.kv dt{color:var(--text-3);font-weight:700}.kv dd{margin:0}
+.nvb{border:1.5px dashed var(--danger-line);border-radius:var(--r-md);padding:10px;display:grid;gap:8px;background:var(--danger-soft)}
+.anno{font-size:12.5px;color:var(--text-3)}
+.pn{margin-bottom:6px}
+.blk{margin-top:14px}
+.field .stp,.field .gseg,.field .seg{justify-self:start}.rr .c-cfg span{white-space:nowrap}.tag{font-size:12px;font-weight:700;color:var(--text-3);border:1px solid var(--line-2);border-radius:99px;padding:0 8px;background:var(--surface)}
+
+
+/* ===== G35 考前對帳：只用既有 tokens，新增的只是列的排法 ===== */
+.lamp{margin-top:0;flex:none;min-width:20px}.lamp.g{color:var(--ok-bar)}.lamp.y{color:var(--warn-bar)}.lamp.r{color:var(--danger)}.lamp.n{color:var(--text-3)}
+.crt{display:grid;border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;background:var(--surface)}
+.cr{display:grid;gap:6px 12px;align-items:center;padding:10px 12px;border-top:1px solid var(--line);grid-template-columns:28px minmax(0,1.1fr) minmax(0,1.5fr) auto}
+.cr:first-child{border-top:0}
+.cr .cn b{display:block}.cr .cv{font-size:14px}.cr .ca{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.cr.y{background:var(--warn-soft);box-shadow:inset 4px 0 0 var(--warn-bar)}
+.cr.r{background:var(--danger-soft);box-shadow:inset 4px 0 0 var(--danger)}
+.cr.n .cn,.cr.n .cv{opacity:.75}
+.w820 .cr{grid-template-columns:28px minmax(0,1fr) auto}.w820 .cr .cv{grid-column:2/-1}
+.w390 .cr{grid-template-columns:28px minmax(0,1fr)}.w390 .cr .cv,.w390 .cr .ca{grid-column:2}.w390 .cr .ca{justify-content:flex-start}
+.cx{grid-column:2/-1;display:grid;gap:0;margin-top:2px}
+.cx .issue{border-top:1px dashed var(--line-2)}
+.cx .issue .grow{flex:1;min-width:0}
+.lgd{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--text-2);align-items:center}
+.lgd span{display:inline-flex;gap:6px;align-items:center}
+.ldg td.k,.ldg th.k{text-align:center}
+.eq{font-variant-numeric:tabular-nums;white-space:nowrap}
+.ldg .x{color:var(--danger-ink);font-weight:700}
+.ldg tr.bad td{background:var(--danger-soft)}
+.ldg td b{font-variant-numeric:tabular-nums}
+.sumline{display:flex;gap:6px 16px;flex-wrap:wrap;align-items:baseline;padding:8px 12px;background:var(--sunken);border:1px solid var(--line);border-radius:var(--r-md);font-size:14px}
+.sumline b{font-size:18px;font-variant-numeric:tabular-nums}
+.w390 .sumline b{font-size:16px}
+.fchk{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface)}
+.fchk.on{border-color:var(--danger-line);background:var(--danger-soft)}
+.tbl-mini td{padding:6px 8px}
+.figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:10px}
+.fig{border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);padding:10px 12px;display:grid;gap:4px}
+.fig .big{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums}
+.adj{font-size:12px}
+
+.tri{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.tri>div{display:grid;gap:0;padding:3px 8px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm)}
+.tri small{font-size:12px;color:var(--text-3);line-height:1.3}
+.tri b{font-size:17px;font-variant-numeric:tabular-nums}
+.tri .bad{background:var(--danger-soft);border-color:var(--danger-line)}.tri .bad b{color:var(--danger-ink)}
+.tri .amb{background:var(--warn-soft);border-color:var(--warn-line)}.tri .amb b{color:var(--warn-ink)}
+.cr .cv{display:grid;gap:4px}
+.cr .cn .badge{margin-top:3px;justify-self:start}
+.cr{grid-template-columns:28px minmax(0,1.15fr) minmax(0,1.7fr) auto}
+.w820 .cr{grid-template-columns:28px minmax(0,1fr) auto}
+.w390 .tri{grid-template-columns:repeat(3,minmax(0,1fr))}.w390 .tri b{font-size:15px}
+.cx[hidden]{display:none}
+.comp{display:inline-flex;font-size:12px;font-weight:700;border:1px solid var(--accent-line);background:var(--accent-soft);color:var(--accent-ink);border-radius:99px;padding:0 8px}
+
+/* v2.56 對帳 12 項新面板（只用既有 tokens） */
+.rc{border:1px solid var(--line-2);border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--shadow-1);overflow:hidden}
+.rc-hd{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--sunken)}
+.rc-hd h3{margin:0;font-family:var(--f-head);font-size:17px}
+.rc-hd .sm{color:var(--text-2);font-size:13px}
+.rc-row{border-bottom:1px solid var(--line)}
+.rc-row:last-child{border-bottom:0}
+.rc-line{display:grid;grid-template-columns:auto 1fr auto;gap:4px 12px;align-items:center;padding:10px 16px;min-height:48px}
+.rc-lamp{display:inline-flex;align-items:center;gap:4px;font-weight:700;font-size:13px;padding:2px 9px;border-radius:99px;border:1px solid;white-space:nowrap}
+.rc-lamp.ok{background:var(--ok-soft);color:var(--ok-ink);border-color:var(--ok-line)}
+.rc-lamp.wa{background:var(--warn-soft);color:var(--warn-ink);border-color:var(--warn-line)}
+.rc-lamp.fl{background:var(--danger-soft);color:var(--danger-ink);border-color:var(--danger-line)}
+.rc-lamp.na{background:var(--sunken);color:var(--text-3);border-color:var(--line-2)}
+.rc-name{font-weight:700}
+.rc-name .no{color:var(--text-3);font-weight:400;margin-right:6px;font-size:13px}
+.rc-one{grid-column:2/3;color:var(--text-2);font-size:14px;margin-top:-2px}
+.rc-more{font:inherit;font-size:13px;font-weight:700;color:var(--accent-ink);background:transparent;border:0;min-height:44px;padding:0 6px;cursor:pointer}
+.rc-detail{padding:4px 16px 14px 16px;display:grid;gap:8px}
+.rc-detail[hidden]{display:none}
+.rc-fig{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:14px}
+.rc-fig b{font-size:18px}
+.rc-list{margin:0;padding-left:20px;color:var(--text-2);font-size:14px}
+.rc-formula{font-size:13px;color:var(--text-3);border-top:1px dashed var(--line-2);padding-top:6px}
+.rc-gate{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid var(--line-2)}
+.rc-gate.ok{background:var(--ok-soft);color:var(--ok-ink)}
+.rc-gate.fl{background:var(--danger-soft);color:var(--danger-ink)}
+.rc-gate.wa{background:var(--warn-soft);color:var(--warn-ink)}
+.rc-gate b{font-size:15px}
+.rc-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
+.rc-tabs button{font:inherit;font-weight:700;min-height:40px;padding:0 14px;border-radius:99px;border:1px solid var(--line-2);background:var(--surface);color:var(--text-2);cursor:pointer}
+.rc-tabs button[aria-pressed="true"]{background:var(--accent);color:var(--accent-on);border-color:var(--accent)}
+.opt-card{border:1px solid var(--line-2);border-radius:var(--r-md);padding:10px 14px;background:var(--surface);display:grid;gap:4px}
+.opt-card.rec{border-color:var(--accent-line);background:var(--accent-soft)}
+@media (max-width:520px){.rc-line{grid-template-columns:auto 1fr}.rc-more{grid-column:1/3;justify-self:start}.rc-one{grid-column:1/3}}
+.k-card{border:1px solid var(--line-2);border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--shadow-1);padding:14px 16px;display:grid;gap:10px}
+.k-card h3{margin:0;font-family:var(--f-head);font-size:17px}
+.k-note{font-size:13px;color:var(--text-3)}
+.k-tabs{display:flex;flex-wrap:wrap;gap:6px}
+.k-tabs button{font:inherit;font-weight:700;min-height:40px;padding:0 14px;border-radius:99px;border:1px solid var(--line-2);background:var(--surface);color:var(--text-2);cursor:pointer}
+.k-tabs button[aria-pressed="true"]{background:var(--accent);color:var(--accent-on);border-color:var(--accent)}
+.q-opt{border:1px solid var(--line-2);border-radius:var(--r-md);padding:8px 12px;background:var(--surface);margin:6px 0}
+.q-opt.rec{border-color:var(--accent-line);background:var(--accent-soft)}
+
+
+.ex-grp{display:grid;gap:8px}
+.ex-grp h4{margin:0;display:flex;gap:10px;align-items:center;font-family:var(--f-head)}
+.ex-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:6px 12px;align-items:center;padding:10px 14px;border:1px solid var(--line-2);border-radius:var(--r-md);background:var(--surface)}
+.ex-row.sel{border-color:var(--accent);background:var(--accent-soft)}
+.ex-row input[type=checkbox]{width:22px;height:22px}
+.ex-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:10px 14px;border-radius:var(--r-md);background:var(--accent-soft);border:1px solid var(--accent-line)}
+.dlg{border:1px solid var(--danger-line);border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--shadow-3);padding:16px;display:grid;gap:10px;max-width:520px}
+.dlg h4{margin:0;color:var(--danger-ink);font-family:var(--f-head);font-size:18px}
+.dlg ul{margin:0;padding-left:20px;color:var(--text-2)}
+.dlg .btns{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+.pr{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
+.pr .st{display:inline-flex;gap:4px;align-items:center;padding:3px 10px;border-radius:99px;border:1px solid var(--line-2);background:var(--sunken);color:var(--text-2);font-weight:700;font-size:13px}
+.pr .st.cur{background:var(--accent);color:var(--accent-on);border-color:var(--accent)}
+.pr .st.dn{background:var(--ok-soft);color:var(--ok-ink);border-color:var(--ok-line)}
+.back{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 14px;background:var(--warn-soft);border:1px solid var(--warn-line);border-radius:var(--r-md);color:var(--warn-ink);position:sticky;top:0}
+.back b{font-size:15px}
+.fld{display:grid;gap:4px}.fld label{font-weight:700;font-size:13px;color:var(--text-2)}
+.fld input{font:inherit;min-height:40px;padding:0 10px;border:1px solid var(--line-2);border-radius:var(--r-sm);background:var(--surface);color:var(--text)}
+.slot{display:grid;grid-template-columns:minmax(0,1.2fr) 110px 90px 110px;gap:8px;align-items:end;padding:6px 0;border-bottom:1px solid var(--line)}
+.slot .calc{min-height:40px;display:flex;align-items:center;color:var(--text-2);font-weight:700}
+@media (max-width:560px){.slot{grid-template-columns:1fr 1fr}}
+
+</style>
+<style id="cbx-v275">
+/* 稿 v2.75 選取方塊（使用者 2026-11-20：不可用黑色）：淺色底框＋藍色打勾；已選＝淡藍底＋藍框＋藍勾。Switch（.sw／.swx／.swrow）不受影響 */
+:root{--cbx-bg:#FFFDF8;--cbx-line:#7B91CC;--cbx-on-bg:#E8EDF8;--cbx-on-line:#2A5FD6;--cbx-tick:#2A5FD6}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--cbx-bg:#1C1A15;--cbx-line:#5470B8;--cbx-on-bg:#1B2540;--cbx-on-line:#8FAAF0;--cbx-tick:#8FAAF0}}
+:root[data-theme="dark"]{--cbx-bg:#1C1A15;--cbx-line:#5470B8;--cbx-on-bg:#1B2540;--cbx-on-line:#8FAAF0;--cbx-tick:#8FAAF0}
+input[type=checkbox]:not(.sw input):not(.swx input):not(.swrow input){appearance:none;-webkit-appearance:none;width:22px;height:22px;flex:none;margin:0;border:1.5px solid var(--cbx-line);border-radius:6px;background:var(--cbx-bg);display:inline-grid;place-content:center;cursor:pointer;vertical-align:middle}
+input[type=checkbox]:not(.sw input):not(.swx input):not(.swrow input)::after{content:"";width:5px;height:10px;border:solid var(--cbx-tick);border-width:0 2.5px 2.5px 0;transform:translateY(-1px) rotate(45deg);opacity:0}
+input[type=checkbox]:not(.sw input):not(.swx input):not(.swrow input):checked{background:var(--cbx-on-bg);border-color:var(--cbx-on-line)}
+input[type=checkbox]:not(.sw input):not(.swx input):not(.swrow input):checked::after{opacity:1}
+input[type=checkbox]:not(.sw input):not(.swx input):not(.swrow input):indeterminate{background:var(--cbx-on-bg);border-color:var(--cbx-on-line)}
+input[type=checkbox]:not(.sw input):not(.swx input):not(.swrow input):indeterminate::after{opacity:1;width:10px;height:0;border-width:0 0 2.5px 0;transform:none}
+input[type=checkbox]:not(.sw input):not(.swx input):not(.swrow input):focus-visible{outline:3px solid var(--accent-line);outline-offset:2px}
+span.chk{background:var(--cbx-bg);border:1.5px solid var(--cbx-line);color:var(--cbx-tick)}
+span.chk.on{background:var(--cbx-on-bg);border-color:var(--cbx-on-line);color:var(--cbx-tick)}
+</style>
+<style id="v279">
+/* 稿 v2.79：只用 tokens。.tm-t 的卡片化是 D168（.rtw .rt-t）的示意；.phone 是 375 寬示意框 */
+.tmcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:12px;display:grid;gap:10px;min-width:0}
+.tmcard h4{margin:0;font-size:15px}
+.tmset{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tm-t td,.tm-t th{font-variant-numeric:tabular-nums}
+.tm-t .manual{border-bottom:1px dashed var(--warn-bar)}
+.tm-t tr.samep td{color:var(--text-3)}
+.tm-t tr.bad td{background:var(--danger-soft)}
+.phone{max-width:375px;width:100%;border:1px solid var(--line-2);border-radius:28px;padding:12px;background:var(--bg);box-shadow:var(--shadow-2)}
+.rtw.m .tm-t,.rtw.m .tm-t tbody,.rtw.m .tm-t tr,.rtw.m .tm-t td{display:block}
+.rtw.m .tm-t tr{border:1px solid var(--line);border-radius:var(--r-md);padding:8px 10px;margin-bottom:8px;background:var(--surface)}
+.rtw.m .tm-t td{display:flex;justify-content:space-between;gap:8px;padding:5px 0;border:0;min-height:30px}
+.rtw.m .tm-t td::before{content:attr(data-label);color:var(--text-3);font-size:13px;font-weight:700}
+.rtw.m .tm-t td.ti{display:block;font-size:16px;font-weight:700}
+.rtw.m .tm-t td.ti::before{content:none}
+.rtw.m .tm-t tr.bad{border-color:var(--danger-line);background:var(--danger-soft)}
+</style>
+</head>
+<body>
+<div class="hd"><b>每場考試各自設定各節開始時間 稿 v2.79</b></div>
+<div class="main">
+<div class="hero"><h1>每場考試各自設定各節開始時間 稿 v2.79</h1>
+<p>#389、D177（推翻 D167b；使用者 2026-11-20 裁示現在做）。<b>稿 v2.79，2026-11-20，設計員（暫代）；待使用者審，審過前不實作。</b>全部假資料。範圍：考試設定第 1 步「考試日期與各節時間」區塊、列表卡片「修改日期」入口、沒設定時沿用共用節次表、輸入方式與防呆、對統計表與標籤時段顯示的影響（只標出，不實作）。只用既有 tokens 與共用元件；新增處在第 7 節逐項寫明。</p></div>
+
+<section class="sec" id="s0"><header><h2>0　一句話與假設</h2></header>
+<div class="say"><b>一句話</b>：每場考試可以自己填「第 1 天、第 2 天每一節幾點開始」，結束時間由系統用該科時長算出；<b>沒填就沿用共用設定「節次與時長」的開始時間</b>（原本的選填欄位不動），所以舊考試完全不受影響。<br>
+<b>我的假設（請審）</b>：①資料放在「考試」自己身上（只存使用者填過的時間，沒填的格子沒有值），共用設定不變；②改時間只影響「顯示」（統計表、座位表頁首與時段說明），<b>不會重新排座、不改教室用途、不改名單</b>；③標籤不印時間（D92／D94 使用者否決過，D177 沒推翻）；④編輯立刻生效、可復原，跟其他設定頁一樣沒有「儲存」鈕。</div></section>
+
+<section class="sec" id="s1"><header><h2>1　第 1 步「考試日期與各節時間」區塊（桌面 1280）</h2>
+<p>D169 做的區塊保留位置與標題。「修改考試日期」照舊開「修改基本資料」小視窗；「修改各節開始時間」<b>不再跳去共用設定</b>，改成就地展開下面的時間表（再按一次收合）。</p></header>
+
+<div class="cap">狀態 A：沒設定任何時間（沿用共用）——舊考試打開就是這樣，什麼都不會變</div>
+<div class="card stack">
+ <div class="row" style="justify-content:space-between;gap:12px;flex-wrap:wrap">
+  <div><div class="lab">考試日期與各節時間</div>
+   <p>考試日期：<b>2026-12-14（一）～ 12-15（二）</b></p>
+   <p class="small muted">各節時間：<span class="badge">沿用共用設定</span> 第 1 節 08:00 起（共用設定「節次與時長」）。要讓這場考試有自己的時間，按右邊。</p></div>
+  <div class="row"><button class="btn" type="button">修改考試日期</button><button class="btn btn-primary" type="button">設定各節時間 ▾</button></div>
+ </div>
+</div>
+
+<div class="cap" style="margin-top:22px">狀態 B：展開編輯（方案 B，建議）——填「這天第一節幾點開始」＋「節間休息」，其餘自動接上；任何一節可單獨改</div>
+<div class="card stack">
+ <div class="row" style="justify-content:space-between;gap:12px;flex-wrap:wrap">
+  <div><div class="lab">考試日期與各節時間</div><p>考試日期：<b>2026-12-14（一）～ 12-15（二）</b>　<span class="badge b-acc">本場自訂</span></p></div>
+  <div class="row"><button class="btn" type="button">修改考試日期</button><button class="btn" type="button">收合 ▴</button></div>
+ </div>
+ <div class="cols" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr))">
+  <div class="tmcard"><h4>第 1 天　12/14（一）</h4>
+   <div class="tmset"><div class="field"><label>第一節開始</label><div class="input">08:30</div></div><div class="field"><label>節間休息（分）</label><div class="input">10</div></div></div>
+   <div class="rtw"><table class="t tm-t"><thead><tr><th>節</th><th>科目</th><th>時長</th><th>開始</th><th>結束</th></tr></thead><tbody>
+    <tr><td data-label="節" class="ti">第 1 節</td><td data-label="科目">國綜</td><td data-label="時長">70 分</td><td data-label="開始">08:30</td><td data-label="結束">09:40</td></tr>
+    <tr><td data-label="節" class="ti">第 2 節</td><td data-label="科目">數學A</td><td data-label="時長">100 分</td><td data-label="開始">09:50</td><td data-label="結束">11:30</td></tr>
+    <tr><td data-label="節" class="ti">第 3 節</td><td data-label="科目">英文</td><td data-label="時長">100 分</td><td data-label="開始"><span class="manual">13:00</span> <span class="badge b-warn">手動</span></td><td data-label="結束">14:40</td></tr>
+    <tr class="samep"><td data-label="節" class="ti">第 3 節</td><td data-label="科目">英聽</td><td data-label="時長">30 分</td><td data-label="開始">與上一科同時</td><td data-label="結束">13:30</td></tr>
+   </tbody></table></div>
+   <p class="small muted">每列「開始」的數字可以點開改；改過的那列標「手動」，後面的節自動接在它後面。「手動」旁的 ✕ 可取消。結束時間＝開始＋該科時長（同節多科各算各的，節的結束取最晚者）。</p>
+  </div>
+  <div class="tmcard"><h4>第 2 天　12/15（二）</h4>
+   <div class="tmset"><div class="field"><label>第一節開始</label><div class="input">08:30</div></div><div class="field"><label>節間休息（分）</label><div class="input">10</div></div></div>
+   <div class="rtw"><table class="t tm-t"><thead><tr><th>節</th><th>科目</th><th>時長</th><th>開始</th><th>結束</th></tr></thead><tbody>
+    <tr><td data-label="節" class="ti">第 1 節</td><td data-label="科目">物理</td><td data-label="時長">70 分</td><td data-label="開始">08:30</td><td data-label="結束">09:40</td></tr>
+    <tr><td data-label="節" class="ti">第 2 節</td><td data-label="科目">化學</td><td data-label="時長">70 分</td><td data-label="開始">09:50</td><td data-label="結束">11:00</td></tr>
+   </tbody></table></div>
+  </div>
+ </div>
+ <div class="row" style="justify-content:flex-end"><button class="btn btn-danger" type="button">還原為共用時間</button></div>
+ <p class="small muted">「還原為共用時間」用既有的確認視窗（D165，ConfirmButton）：「確定把這場考試的各節時間還原成共用設定？你填的時間會被清掉，考試日期不變。」按了可用上方「復原」回來。</p>
+</div>
+
+<div class="cap" style="margin-top:22px">方案 A（備選）：每一節各填一格，不自動接</div>
+<div class="card"><div class="rtw"><table class="t tm-t"><thead><tr><th>節</th><th>科目</th><th>時長</th><th>開始（自己填）</th><th>結束</th></tr></thead><tbody>
+ <tr><td data-label="節" class="ti">第 1 節</td><td data-label="科目">國綜</td><td data-label="時長">70 分</td><td data-label="開始"><div class="input" style="max-width:120px">08:30</div></td><td data-label="結束">09:40</td></tr>
+ <tr><td data-label="節" class="ti">第 2 節</td><td data-label="科目">數學A</td><td data-label="時長">100 分</td><td data-label="開始"><div class="input" style="max-width:120px">09:50</div></td><td data-label="結束">11:30</td></tr>
+ <tr><td data-label="節" class="ti">第 3 節</td><td data-label="科目">英文</td><td data-label="時長">100 分</td><td data-label="開始"><div class="input" style="max-width:120px;color:var(--text-3)">沿用 13:00</div></td><td data-label="結束">14:40</td></tr></tbody></table></div>
+ <p class="small muted">優點：跟共用設定「節次與時長」的「開始時間」一樣，學得最快；缺點：每節都要打，十來格容易漏、容易打成互相重疊。</p></div>
+<div class="say" style="margin-top:12px"><b>為什麼建議 B</b>：學校考試的節次通常是「一個起點＋固定休息」，B 只要填兩個數字（每天），改個別節是例外；A 要打滿每一格（學測兩天約 10 格）。B 的例外處理（手動）也讓午休這類斷點填得出來。兩案的資料一樣（都只存「使用者明確填的開始時間」），日後換案不用轉資料。</div>
+</section>
+
+<section class="sec" id="s2"><header><h2>2　防呆（輸入時當場出現，不等按儲存）</h2></header>
+<div class="cols">
+ <div class="card stack"><div class="cap">開始時間重疊</div>
+  <div class="field"><label>第 2 節　數學A　開始</label><div class="input" style="border-color:var(--danger);background:var(--danger-soft)">09:30</div></div>
+  <div class="alert a-err"><span class="ico">✕</span><div><b>第 2 節 09:30 開始，但第 1 節要到 09:40 才結束。</b><br>改成 09:40 以後，或縮短第 1 節時長（共用設定「節次與時長」）。</div><span></span></div>
+  <p class="small muted">不阻擋輸入（可以先打再改），但紅字留著，第 1 步下方的「下一步」旁寫「各節時間有 1 處要修」；有紅字不能到第 6 步下載。</p></div>
+ <div class="card stack"><div class="cap">時間格式不對</div>
+  <div class="field"><label>第一節開始</label><div class="input" style="border-color:var(--danger);background:var(--danger-soft)">8點半</div></div>
+  <div class="alert a-err"><span class="ico">✕</span><div><b>請填 24 小時制「時:分」，例如 08:30 或 13:00。</b></div><span></span></div>
+  <p class="small muted">手機優先用瀏覽器的時間選擇器（type=time），不能用時就是文字欄加這個檢查。分鐘不限 5 的倍數。</p></div>
+ <div class="card stack"><div class="cap">結束得太晚（只提醒，不擋）</div>
+  <div class="alert a-warn"><span class="ico">!</span><div><b>第 3 節結束於 19:10，比一般考試日晚。</b><br>確定的話可以不理它，不影響下載。</div><span></span></div>
+  <p class="small muted">門檻 18:00。跨午夜（結束超過 24:00）直接當格式錯誤擋下。</p></div>
+ <div class="card stack"><div class="cap">只填一部分（只提醒）</div>
+  <div class="alert a-info"><span class="ico">i</span><div><b>第 2 天只填了第 1 節。</b>沒填的節會「沿用共用設定」的時間；共用設定也沒有的話，那一節統計表就不顯示時間。</div><span></span></div>
+  <p class="small muted">方案 B 因為自動接上，幾乎不會出現；方案 A 才常見。</p></div>
+ <div class="card stack"><div class="cap">日期沒填</div>
+  <p>考試日期：<span class="badge b-warn">未填日期</span></p>
+  <p class="small muted">時間照樣能填；星期、日期欄顯示「—」。填了日期以後星期自動出現（不另外填）。沒有日期時不做「日期已過」之類的檢查。</p></div>
+ <div class="card stack"><div class="cap">改了科目時長／節次</div>
+  <p class="small muted">共用設定改時長或增刪考科：本場的開始時間不動，結束時間重算，重疊的檢查重跑。新增的節沒有自己的時間，就沿用共用設定。</p></div>
+</div>
+</section>
+
+<section class="sec" id="s3"><header><h2>3　窄螢幕（375／390）：同一張表，卡片化（沿用 D168，不新增版型）</h2></header>
+<div class="cols">
+ <div class="phone"><div class="cap">375 寬　狀態 B</div>
+  <div class="card stack">
+   <div><div class="lab">考試日期與各節時間</div><p>2026-12-14（一）～ 12-15（二）　<span class="badge b-acc">本場自訂</span></p></div>
+   <div class="row"><button class="btn" type="button">修改考試日期</button><button class="btn" type="button">收合 ▴</button></div>
+   <div class="tmcard"><h4>第 1 天　12/14（一）</h4>
+    <div class="tmset"><div class="field"><label>第一節開始</label><div class="input">08:30</div></div><div class="field"><label>節間休息（分）</label><div class="input">10</div></div></div>
+    <div class="rtw m"><table class="t tm-t"><tbody>
+     <tr><td data-label="節" class="ti">第 1 節　國綜</td><td data-label="時長">70 分</td><td data-label="開始">08:30</td><td data-label="結束">09:40</td></tr>
+     <tr><td data-label="節" class="ti">第 2 節　數學A</td><td data-label="時長">100 分</td><td data-label="開始">09:50</td><td data-label="結束">11:30</td></tr>
+     <tr><td data-label="節" class="ti">第 3 節　英文</td><td data-label="時長">100 分</td><td data-label="開始">13:00 <span class="badge b-warn">手動</span></td><td data-label="結束">14:40</td></tr>
+    </tbody></table></div></div>
+  </div></div>
+ <div class="phone"><div class="cap">375 寬　防呆（重疊）</div>
+  <div class="card stack"><div class="tmcard"><h4>第 1 天　12/14（一）</h4>
+   <div class="rtw m"><table class="t tm-t"><tbody>
+     <tr><td data-label="節" class="ti">第 1 節　國綜</td><td data-label="時長">70 分</td><td data-label="開始">08:30</td><td data-label="結束">09:40</td></tr>
+     <tr class="bad"><td data-label="節" class="ti">第 2 節　數學A</td><td data-label="時長">100 分</td><td data-label="開始"><b style="color:var(--danger-ink)">09:30 ✕</b></td><td data-label="結束">11:10</td></tr></tbody></table></div>
+   <div class="alert a-err"><span class="ico">✕</span><div><b>第 2 節比第 1 節的結束（09:40）早開始。</b></div><span></span></div></div></div></div>
+</div>
+<p class="small muted">每格最小 44px 高；時間輸入框 `height:40px` 沿用 `.input`，手機加 `min-height:44px`（既有輸入框規則，不新增）。卡片內「開始」格就是可點的輸入欄，列順序：節＋科目（標題）→ 時長 → 開始 → 結束。</p>
+</section>
+
+<section class="sec" id="s4"><header><h2>4　列表卡片「修改日期」入口</h2></header>
+<div class="say">D169 的「修改日期」（沒日期時「填寫日期」）目前直接開「修改基本資料」小視窗。<b>建議</b>：入口名稱不變，但改成「到第 1 步並對準這個區塊」，因為使用者要改的常常是日期＋時間一起；日期小視窗仍在區塊的「修改考試日期」。卡片副標多一個「08:30 起」。<span class="badge b-acc">需使用者確認</span></div>
+<div class="cols">
+ <div><div class="cap">列表卡片（桌面）</div>
+  <div class="exam"><div><b>115 學年度學期模擬考 第四次</b><div class="k-note">2026-12-14（一）08:30 ～ 12-15（二）　<span class="badge b-acc">本場自訂時間</span></div></div><div class="k-note">高三　學測</div><span style="display:flex;gap:8px"><button class="btn btn-sm" type="button">修改日期 ›</button><button class="btn btn-sm" type="button">查看／設定</button></span></div>
+  <div class="exam" style="margin-top:8px"><div><b>115 學年度學期模擬考 第三次</b><div class="k-note">2026-10-12（一）～ 10-13（二）　沿用共用時間</div></div><div class="k-note">高三　學測</div><span style="display:flex;gap:8px"><button class="btn btn-sm" type="button">修改日期 ›</button><button class="btn btn-sm" type="button">查看／設定</button></span></div>
+  <div class="exam" style="margin-top:8px"><div><b>115 學年度學期模擬考 第五次</b><div class="k-note"><span class="badge b-warn">未填日期</span></div></div><div class="k-note">高三　學測</div><span style="display:flex;gap:8px"><button class="btn btn-sm" type="button">填寫日期 ›</button><button class="btn btn-sm" type="button">查看／設定</button></span></div>
+ </div>
+</div>
+<p class="small muted">按鈕文字用 §10.40 的「到 ○○ ›」寫法（跳到別頁）。沒有新元件、沒有新樣式。</p>
+</section>
+
+<section class="sec" id="s5"><header><h2>5　對統計表與標籤的影響（只標出，不實作；待使用者裁示）</h2></header>
+<table class="t"><thead><tr><th>輸出</th><th>現況</th><th>本稿建議</th><th>理由</th></tr></thead><tbody>
+ <tr><td><b>統計表</b>（稿 v2.76 §10.43 已逐列加日期、星期）</td><td>時段欄只有「第N節」或節名</td><td><b>時段欄第二行小字加「08:30–09:40」</b>；沒填也沒有共用時間就不顯示這行。</td><td>日期、星期已經在同一列，補上起訖最自然；使用者原話「後面會用到」。</td></tr>
+ <tr><td><b>座位表</b>頁首／各時段說明</td><td>「第 1 天　時段 X　科目」</td><td>頁首加日期星期（已定，DESIGN 節次設定列「用在座位表頁首與各時段說明」）；各時段說明多「08:30–09:40」。</td><td>與統計表一致。</td></tr>
+ <tr><td><b>標籤</b></td><td>不印開始時間（D92／D94）</td><td><b>仍不印</b>。</td><td>D92 使用者 2026-11-09 否決「印開始時間」；D177 只推翻 D167b，沒推翻這條。若使用者要印要另行裁示。</td></tr>
+ <tr><td><b>抽離自習名單</b>（#219）</td><td>標題下「第N天　時段X　科目」，不新增日期欄</td><td>不動。</td><td>DESIGN 已寫「不新增考試日期欄位」。</td></tr>
+ <tr><td><b>對帳卡、補考</b></td><td>—</td><td>不涉及。</td><td>只是顯示用時間，不進對帳數字；補考有自己的考日與開始時間（S-2 ①）。</td></tr>
+</tbody></table>
+<p class="small muted">所有時間只在「顯示」用到，改時間不會讓名單、座位、教室用途、對帳數字有任何變化；所以不需要「改了要重新排座」的提示。已下載的舊檔要重新下載才會有新時間（第 6 步下載時一律用目前的時間）。</p>
+</section>
+
+<section class="sec" id="s6"><header><h2>6　規則對照（逐條：符合／不涉及）</h2></header>
+<table class="t"><thead><tr><th>規則</th><th>結果</th><th>說明</th></tr></thead><tbody>
+ <tr><td>D135（考生與自習生）</td><td>不涉及</td><td>只設時間，不碰排座、容量、教室用途。①～⑧ 的任何一條都不因本稿改變；自習生與考生同一時段的時間相同；稿中沒有任何被 D135⑧ 取代的說法。</td></tr>
+ <tr><td>D167（列表與設定包三項延後）</td><td>b 被 D177 取代；a、c 符合</td><td>a「每天新增考科只能挑既有」不動（本稿不新增科目）；c「座位表跨兩天區間寫法」不動（本稿只影響頁首時間行，不拆檔）。</td></tr>
+ <tr><td>D169（日期入口）</td><td>符合並延伸</td><td>區塊標題、位置、「修改考試日期」照舊；「修改各節開始時間」由「導向共用設定」改為就地展開（D177 明示要銜接）；列表卡片「修改日期」入口保留，建議改為對準區塊（待確認）。</td></tr>
+ <tr><td>D177（每場考試各自開始時間）</td><td>符合</td><td>①先出稿、升版號、發成品頁，使用者審過才施工；②沒設定時沿用共用節次表、不影響已建立的考試（狀態 A，資料欄位為選填、舊檔讀入不變）；③輸入方式與標籤／統計表顯示是 D177 寫的「尚未決定」，本稿給建議並列入待裁示。</td></tr>
+ <tr><td>D165（確認視窗）／D168（表格卡片化）／D146（用詞）</td><td>符合</td><td>還原用 ConfirmButton；表格沿用容器寬度卡片化，無橫向捲軸；沒有新用詞。</td></tr>
+</tbody></table></section>
+
+<section class="sec" id="s7"><header><h2>7　設計系統擴充（逐項寫明；沒有新色、沒有新字級）</h2></header>
+<table class="t"><thead><tr><th>項</th><th>內容</th></tr></thead><tbody>
+ <tr><td>全部沿用</td><td>`Button`、`Badge`、`Alert`、`ConfirmButton`、輸入框 `.input`／`.field`、`.rtw .rt-t` 表格卡片化、`basicbar` 區塊樣式。</td></tr>
+ <tr><td>新增一：時間欄</td><td>「開始」格是 `type=time` 的輸入框，寬 120px、靠左，等寬數字（`font-variant-numeric:tabular-nums`）；唯讀的「結束」格同寬同字型。需補進設計系統「時間輸入」一列。</td></tr>
+ <tr><td>新增二：每天一張小卡</td><td>`.tmcard`：`--surface` 底、1px `--line`、圓角 `--r-md`、padding 12px，等同現有的 `.psec` 內分區，不另造陰影。</td></tr>
+ <tr><td>新增三：手動徽章</td><td>用現有 `Badge`（warn 色）寫「手動」，不新增徽章樣式。</td></tr>
+</tbody></table>
+<p class="small muted">施工時若「新增一」要新 class，先回稿登記，不可繞過。</p></section>
+
+<section class="sec" id="s8"><header><h2>8　待使用者裁示（調度員轉問）</h2></header>
+<div class="q-opt rec"><b>Q1　各節時間怎麼輸入？</b>　<span class="badge b-ok">建議 B</span><br>A：每節各填一格。B：填「每天第一節開始＋節間休息」自動接上，單節可手動改（建議）。</div>
+<div class="q-opt rec"><b>Q2　統計表、座位表時段說明要不要加「起–訖」時間？</b>　<span class="badge b-ok">建議要</span><br>要（時段欄第二行小字；沒設定就不顯示）／不要（只存著，等以後用）。</div>
+<div class="q-opt rec"><b>Q3　標籤要不要印時間？</b>　<span class="badge b-ok">建議不印</span><br>D92 使用者否決過；若要改，需另裁示並重審標籤版面。</div>
+<div class="q-opt rec"><b>Q4　列表卡片「修改日期」要不要改成「到第 1 步的日期與時間區塊」？</b>　<span class="badge b-ok">建議改</span><br>改（一次看到日期＋時間）／維持開基本資料小視窗（只改日期）。</div>
+<div class="q-opt"><b>Q5　結束時間晚於幾點要提醒？</b>　建議 18:00，只提醒不擋；也可以不提醒。</div>
+</section>
+</div>
+</body></html>
