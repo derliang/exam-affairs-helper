@@ -1,7 +1,6 @@
 import { renderToString } from 'preact-render-to-string';
 import { describe, expect, it } from 'vitest';
 import { RoomList } from '../components/RoomList';
-import { makeupEnabled } from './gate';
 import { cardInfo, daysText, MakeupList } from './pages/MakeupList';
 import { MakeupNew } from './pages/MakeupNew';
 import { MakeupWorkspace } from './pages/MakeupWorkspace';
@@ -123,19 +122,5 @@ describe('教室清單接全站元件（RoomList flat）', () => {
     const empty = renderToString(<RoomList flat rooms={[]} paper="B4" division="senior" track="none" reserveName="教室" addLabel="＋ 新增教室" onChange={noop} />);
     expect(empty).toContain('還沒有教室');
     expect(empty).not.toContain('依名冊帶出');
-  });
-});
-
-describe('入口開關（K5 前的暫時作法）', () => {
-  const w = (search: string, hash = '') => ({ location: { search, hash } });
-  it('預設關；?makeup 或 #makeup 開；?makeup=off 關；不碰任何瀏覽器儲存', () => {
-    expect(makeupEnabled(w(''), false)).toBe(false);
-    expect(makeupEnabled(undefined)).toBe(false);
-    expect(makeupEnabled(w('?makeup'), false)).toBe(true);
-    expect(makeupEnabled(w('', '#makeup'), false)).toBe(true);
-    expect(makeupEnabled(w('?makeup'))).toBe(true);
-    expect(makeupEnabled(w(''))).toBe(true); // 本次開啟期間記在記憶體
-    expect(makeupEnabled(w('?makeup=off'))).toBe(false);
-    expect(makeupEnabled(w(''))).toBe(false);
   });
 });
