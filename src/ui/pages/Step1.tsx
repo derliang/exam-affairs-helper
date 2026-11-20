@@ -1,8 +1,9 @@
-import { useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import type { ExamConfig, Semester, Subject } from '../../data';
 import { Alert, Badge, Button, ConfirmButton, Modal, More, Seg, StepHead } from '../components';
 import { ExamDatesFields, packDates } from './ExamDatesFields';
-import { dateRangeText } from '../examDates';
+import { ExamTimesBlock } from './ExamTimesBlock';
+import { scheduleKeyOf, scheduleOf } from '../../core/periods';
 import { carryMode, carryRows, carrySource, resumeCarry, stopCarry } from '../carry';
 import { confirmCopy } from '../flow';
 import { updateExam, examLabel, examYear, KIND_LABEL, type Doc } from '../store';
@@ -11,11 +12,12 @@ import { defaultSubjects, isCustomized, mathSplit, removeSubject, saveSubject, s
 const CN = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
 
 /** ① 考試設定：基本資料卡、考科表卡（含「誰要考」）、沿用上次設定卡（原型 v1） */
-export function Step1(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => void; openBasic?: boolean; onToSched?: () => void }) {
+export function Step1(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => void; openBasic?: boolean; openTimes?: boolean; onToSched?: () => void }) {
   const { exam, doc } = p;
   const [err, setErr] = useState('');
   const [editing, setEditing] = useState<{ id: string | null } | null>(null);
   const [basic, setBasic] = useState(!!p.openBasic);
+  useEffect(() => { if (p.openTimes) document.getElementById('x-times')?.scrollIntoView?.({ block: 'start' }); }, []);
   const set = (patch: Partial<ExamConfig>) => {
     const r = updateExam(doc, exam.id, patch);
     if (r.ok) { setErr(''); p.onChange(r.doc); } else setErr(r.error);
@@ -41,18 +43,8 @@ export function Step1(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
           </div>
           <Button onClick={() => setBasic(true)}>修改基本資料</Button>
         </div>
-        {/* #473：考試日期與各節時間的入口放在第 1 步最上面，不藏在「修改基本資料」裡讓人找不到 */}
-        <div class="row basicbar" style="justify-content:space-between">
-          <div>
-            <div class="lab">考試日期與各節時間</div>
-            <p id="x-dates">考試日期：{dateRangeText(exam) || <Badge tone="info">未填日期</Badge>}</p>
-            <p class="small muted">各節開始時間是全部模擬考共用的，在「共用設定」的「節次與時長」修改。</p>
-          </div>
-          <div class="row">
-            <Button onClick={() => setBasic(true)}>修改考試日期</Button>
-            {p.onToSched && <Button onClick={p.onToSched}>修改各節開始時間</Button>}
-          </div>
-        </div>
+        {/* #473、D177：考試日期與各節時間放在第 1 步最上面；各節時間就地展開設定（稿 v2.79） */}
+        <ExamTimesBlock exam={exam} table={scheduleOf(doc.settings, scheduleKeyOf(exam.kind, exam.round))} open={!!p.openTimes} onChange={(dayTimes) => set({ dayTimes })} onEditDates={() => setBasic(true)} />
         {err && <Alert tone="danger">{err}</Alert>}
 
       {/* 稿 v2.31：三張卡合成一張卡，區塊內上下分區：基本資料（含次別）／考科表／沿用上次 */}

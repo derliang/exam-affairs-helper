@@ -125,6 +125,12 @@ export interface PeriodTable {
   /** 一天一欄，目前畫面是兩天 */
   days: PeriodRow[][];
 }
+/** 一天的各節時間（D177）：first＝第一節開始（HH:MM）、breakMin＝節間休息（預設 10）、manual＝個別時段手動覆寫（鍵＝當天時段，1 起） */
+export interface DayTimes {
+  first?: string;
+  breakMin?: number;
+  manual?: Record<string, string>;
+}
 /** 節次表的種類：學測第 1、2 次／第 3、4 次、分科、會考 */
 export type ScheduleKey = 'g12' | 'g34' | 'ast' | 'bcct';
 
@@ -173,6 +179,11 @@ export interface ExamConfig {
   archived?: boolean;
   /** 考試日期（#389、D164 H）：'YYYY-MM-DD'，第 1 天、第 2 天…；沒填＝沒有欄位。星期由日期算出（examDates.ts），不另存 */
   examDates?: string[];
+  /**
+   * 這場考試自己的各節開始時間（#389、D177；稿 v2.79）：一天一筆，index＝天別（0 起）。只存使用者填過的；
+   * 沒填就沿用共用設定節次表的選填開始時間，舊存檔都沒有。只影響顯示，不影響排座。見 core/examTimes.ts
+   */
+  dayTimes?: DayTimes[];
   kind: ExamKind;
   division: Division;
   semester: Semester;
