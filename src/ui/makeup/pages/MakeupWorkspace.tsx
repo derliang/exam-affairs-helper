@@ -2,6 +2,7 @@
 import { useEffect } from 'preact/hooks';
 import { Button, StepNav } from '../../components';
 import { scrollPageTop } from '../../nav';
+import { withSnapshot } from '../dashboard';
 import { baseOf, outputsOf, scheduleOf } from '../pipeline';
 import type { MakeupSession } from '../session';
 import { MAKEUP_STEP_NAMES, makeupStepTitle, stepStates, type MakeupStepNo } from '../steps';
@@ -43,6 +44,8 @@ export function MakeupWorkspace(p: {
   s: MakeupSession; step: MakeupStepNo; onChange: (s: MakeupSession) => void; onStep: (n: MakeupStepNo) => void; onList: () => void;
 }) {
   const { s, step } = p;
+  // 規格 6.1：每次變更都把當下的對帳結果一起存進場次（結果沒變就不多記一筆）
+  const change = (n: MakeupSession) => p.onChange(withSnapshot(n));
   useEffect(() => { scrollPageTop(); }, [s.id, step]);
   const prev = step > 1 ? ((step - 1) as MakeupStepNo) : undefined;
   const next = step < 7 ? ((step + 1) as MakeupStepNo) : undefined;
@@ -51,13 +54,13 @@ export function MakeupWorkspace(p: {
       <aside class="side"><StepNav steps={stepStates(s, step)} onGo={(n) => p.onStep(n as MakeupStepNo)} /></aside>
       <div class="stack" style="min-width:0">
         <MakeupSummaryBar s={s} onStep={p.onStep} />
-        {step === 1 ? <MkStep1 s={s} onChange={p.onChange} />
-          : step === 2 ? <MkStep2 s={s} onChange={p.onChange} />
-          : step === 3 ? <MkStep3 s={s} onChange={p.onChange} />
-          : step === 4 ? <MkStep4 s={s} onChange={p.onChange} />
-          : step === 5 ? <MkStep5 s={s} onChange={p.onChange} onStep={p.onStep} />
+        {step === 1 ? <MkStep1 s={s} onChange={change} />
+          : step === 2 ? <MkStep2 s={s} onChange={change} />
+          : step === 3 ? <MkStep3 s={s} onChange={change} />
+          : step === 4 ? <MkStep4 s={s} onChange={change} />
+          : step === 5 ? <MkStep5 s={s} onChange={change} onStep={p.onStep} />
           : step === 6 ? <MkStep6 s={s} onStep={p.onStep} />
-          : <MkStep7 s={s} onStep={p.onStep} />}
+          : <MkStep7 s={s} onStep={p.onStep} onChange={change} />}
         <div class="row" style="justify-content:space-between">
           {prev ? <Button onClick={() => p.onStep(prev)}>‹ 上一步<small class="muted">　{MAKEUP_STEP_NAMES[prev - 1]}</small></Button> : <Button onClick={p.onList}>‹ 補考列表</Button>}
           {next ? <Button kind="primary" onClick={() => p.onStep(next)}>下一步 ›<small>　{MAKEUP_STEP_NAMES[next - 1]}</small></Button> : <span />}

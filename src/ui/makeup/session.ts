@@ -71,6 +71,19 @@ export interface MakeupSession {
   plan?: MakeupPlan;
   /** 沿用自哪一個場次（F-6），只作紀錄 */
   carriedFrom?: string;
+  /** 規格 6.1：最近一次檢核的 C 項目數字與時間，隨場次存檔（查核軌跡）；每次變更與每次下載後重記 */
+  snapshot?: ReconcileSnapshot;
+}
+
+/** 對帳快照：一次檢核的 C-1～C-15 結果（只存數字與狀態，不含學生資料） */
+export interface ReconcileSnapshot {
+  /** 檢核時間，ISO */
+  at: string;
+  /** 當時的資料版本碼 */
+  version: string;
+  /** 閘門：none 沒名單、ok、warn（有警示）、blocked（有紅燈） */
+  gate: 'none' | 'ok' | 'warn' | 'blocked';
+  rows: { id: string; title: string; status: 'green' | 'amber' | 'red' | 'pending'; expected: number; actual: number; diff: number }[];
 }
 
 export const makeupsOf = (doc: Pick<Doc, 'makeups'>): MakeupSession[] => doc.makeups ?? [];

@@ -33,7 +33,6 @@ import { Step5 } from './pages/Step5';
 import { Step6 } from './pages/Step6';
 import { AstStep6 } from './ast/AstStep6';
 import { ReservePage } from './pages/ReservePage';
-import { makeupEnabled } from './makeup/gate';
 import { MakeupList } from './makeup/pages/MakeupList';
 import { MakeupNew } from './makeup/pages/MakeupNew';
 import { MakeupWorkspace } from './makeup/pages/MakeupWorkspace';
@@ -149,9 +148,7 @@ export function App() {
   const go = (r: Route) => setNav((s) => goTo(s, r));
   const go2 = (r: Route, from: { route: Route; label: string }) => setNav((s) => pushTo(s, r, from));
   const lookupOn = enabledNav({ settings: hist.present.settings }).some((n) => n.route.page === 'lookup');
-  // 補考（K2）：品牌列入口由 K5 處理，這裡先用網址參數開關（?makeup）讓畫面可進入；沒開時補考頁一律擋回列表
-  const makeupOn = makeupEnabled();
-  const allowed = (rt: Route) => (rt.page !== 'lookup' || lookupOn) && (!rt.page.startsWith('makeup') || makeupOn);
+  const allowed = (rt: Route) => rt.page !== 'lookup' || lookupOn;
   const gnav = guardNav(nav, allowed);
   const back = () => setNav(goBack(gnav));
   const r = gnav.route;
@@ -187,7 +184,7 @@ export function App() {
   const barItems: AppBarItem[] = [
     { id: 'init', label: '資料夾設定', current: r.page === 'init', onClick: () => go({ page: 'init' }) },
     { id: 'exams', label: '模擬考列表', current: ['exams', 'new', 'wizard', 'step', 'reconcile', 'override', 'reserve'].includes(r.page), disabled: !hasFolder, onClick: () => go({ page: 'exams' }) },
-    ...(makeupOn ? [{ id: 'makeup', label: '補考', current: r.page.startsWith('makeup'), disabled: !hasFolder, onClick: () => go({ page: 'makeup' }) }] : []),
+    { id: 'makeup', label: '補考', current: r.page.startsWith('makeup'), disabled: !hasFolder, onClick: () => go({ page: 'makeup' }) },
     ...(hasFolder ? enabledNav({ settings: hist.present.settings }).map((n) => ({ id: n.id, label: n.label, current: r.page === n.route.page, onClick: () => go2(n.route, barFrom) })) : []),
     { id: 'features', label: '選用功能', current: inSettings && r.tab === 'features', disabled: !hasFolder, onClick: () => toSettings({ page: 'settings', tab: 'features' }) },
     { id: 'settings', label: '共用設定', current: inSettings && r.tab !== 'features', disabled: !hasFolder, onClick: () => toSettings({ page: 'settings', ...(lastExam && r.page === 'step' ? { division: lastExam.division } : {}) }) },
@@ -233,7 +230,7 @@ export function App() {
         {saveErr && !folderMissing && <div style="margin-bottom:12px"><Alert tone="danger" action={<Button small onClick={retrySave}>重試存檔</Button>}>最新的修改還沒有存進資料夾（{saveErr}）。請確認資料夾仍可寫入後按「重試存檔」；在存妥之前請不要關閉頁面。</Alert></div>}
         {warning && r.page !== 'init' && <div style="margin-bottom:12px"><Alert tone="warn">{warning}</Alert></div>}
         {r.page === 'exams' && <Exams doc={hist.present} folder={repo.folderName?.()} onEnv={() => go({ page: 'wizard', step: 1 })} onOpen={(examId) => { openExam(examId); go({ page: 'step', examId, step: 1 }); }} onEditDates={(examId) => { openExam(examId); go({ page: 'step', examId, step: 1, edit: 'basic' }); }} onNew={() => { newDraft.current = undefined; go({ page: 'new' }); }} onSettings={() => go2({ page: 'settings' }, { route: r, label: pageName(r, hist.present) })} onChangeFolder={() => go2({ page: 'init' }, { route: r, label: pageName(r, hist.present) })} {...(folderMissing ? { listError: <FolderListError onRelink={() => openFolderDlg('relink')} /> } : {})} onDelete={removeExam} onDeleteMany={removeExams} />}
-        {r.page === 'new' && <NewExam doc={hist.present} draft={newDraft.current} onDraft={(d) => { newDraft.current = d; }} onCancel={() => { newDraft.current = undefined; go({ page: 'exams' }); }} onCreate={(d, examId) => { newDraft.current = undefined; edit(d); go({ page: 'step', examId, step: 1 }); }} onEnv={edit} onGoSettings={(tab, division) => go2({ page: 'settings', tab, division }, { route: r, label: pageName(r, hist.present) })} />}
+        {r.page === 'new' && <NewExam doc={hist.present} onMakeup={() => { newDraft.current = undefined; go({ page: 'makeupNew' }); }} draft={newDraft.current} onDraft={(d) => { newDraft.current = d; }} onCancel={() => { newDraft.current = undefined; go({ page: 'exams' }); }} onCreate={(d, examId) => { newDraft.current = undefined; edit(d); go({ page: 'step', examId, step: 1 }); }} onEnv={edit} onGoSettings={(tab, division) => go2({ page: 'settings', tab, division }, { route: r, label: pageName(r, hist.present) })} />}
         {r.page === 'wizard' && <EnvWizard doc={hist.present} step={r.step ?? 1} onStep={(step) => { setNav((s) => ({ ...s, route: { page: 'wizard', step } })); scrollPageTop(); }} onChange={edit} onGoSettings={(tab, division) => go2({ page: 'settings', tab, division }, { route: r, label: pageName(r, hist.present) })} onFinish={() => go({ page: 'exams' })} />}
         {r.page === 'lookup' && <Lookup doc={hist.present} examId={r.examId} crumbs={pathCrumbs} onGoStep={(examId, step) => go({ page: 'step', examId, step })} onExams={() => go({ page: 'exams' })} />}
         {r.page === 'settings' && <Settings doc={hist.present} onChange={edit} tab={r.tab} onTab={(tab) => setNav((s) => (s.route.page === 'settings' ? { ...s, route: { ...s.route, tab } } : s))} {...(r.division ? { division: r.division } : {})} />}

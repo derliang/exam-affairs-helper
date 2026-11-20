@@ -28,7 +28,7 @@ const KIND_TEXT: Record<MakeupDocKind, { name: string; desc: string }> = {
 type Sel = Record<MakeupDocKind, boolean>;
 const allOn = (): Sel => Object.fromEntries(MAKEUP_DOC_KINDS.map((k) => [k, true])) as Sel;
 
-export function MkStep7(p: { s: MakeupSession; onStep: (n: MakeupStepNo) => void; /** 測試用：換掉字型載入 */ loadFonts?: () => Promise<{ fonts: Parameters<typeof produceFiles>[1]['fonts'] }>; /** 測試用：換掉實際下載動作 */ deliver?: (files: OutputFile[]) => void }) {
+export function MkStep7(p: { s: MakeupSession; onStep: (n: MakeupStepNo) => void; /** 下載並回讀後，把對帳快照記進場次 */ onChange?: (s: MakeupSession) => void; /** 測試用：換掉字型載入 */ loadFonts?: () => Promise<{ fonts: Parameters<typeof produceFiles>[1]['fonts'] }>; /** 測試用：換掉實際下載動作 */ deliver?: (files: OutputFile[]) => void }) {
   const { s } = p;
   const [sel, setSel] = useState<Sel>(allOn());
   const [dayId, setDayId] = useState('all');
@@ -61,6 +61,7 @@ export function MkStep7(p: { s: MakeupSession; onStep: (n: MakeupStepNo) => void
       if (dayId === 'all') {
         const rec: RunRecord = { version: out.version, readback: out.readback, produced: out.produced, ok: out.ok, at, problems: probs, fileNames: out.files.map((f) => f.name) };
         setRun(s.id, rec);
+        p.onChange?.(s);
       }
       if (!out.ok) { setProblems(probs); bump((n) => n + 1); return; }
       const files: OutputFile[] = out.files.map((f) => ({ name: f.name, mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', data: f.docx, desc: KIND_TEXT[f.kind].name, pages: 0 }));
