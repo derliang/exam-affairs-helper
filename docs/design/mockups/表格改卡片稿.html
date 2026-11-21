@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>表格改卡片稿 稿 v2.75</title>
+<title>表格改卡片稿 稿 v2.90</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700&display=swap">
@@ -462,7 +462,7 @@ pre.code{margin:0;padding:12px 14px;background:var(--sunken);border:1px solid va
 
 </style>
 <style id="cbx-v275">
-/* 稿 v2.75 選取方塊（使用者 2026-11-20：不可用黑色）：淺色底框＋藍色打勾；已選＝淡藍底＋藍框＋藍勾。Switch（.sw／.swx／.swrow）不受影響 */
+/* 稿 v2.90 選取方塊（使用者 2026-11-20：不可用黑色）：淺色底框＋藍色打勾；已選＝淡藍底＋藍框＋藍勾。Switch（.sw／.swx／.swrow）不受影響 */
 :root{--cbx-bg:#FFFDF8;--cbx-line:#7B91CC;--cbx-on-bg:#E8EDF8;--cbx-on-line:#2A5FD6;--cbx-tick:#2A5FD6}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--cbx-bg:#1C1A15;--cbx-line:#5470B8;--cbx-on-bg:#1B2540;--cbx-on-line:#8FAAF0;--cbx-tick:#8FAAF0}}
 :root[data-theme="dark"]{--cbx-bg:#1C1A15;--cbx-line:#5470B8;--cbx-on-bg:#1B2540;--cbx-on-line:#8FAAF0;--cbx-tick:#8FAAF0}
@@ -555,7 +555,7 @@ td.on{background:var(--accent-soft)}
 <tr><td class="noL" data-label="#">11</td><td data-label="位置"><code>pages/ReservePage.tsx:102</code></td><td data-label="畫面">預備教室自習名單：序｜考生編號｜班級｜姓名（4）</td><td data-label="畫法">A 窄表＋長清單</td><td data-label="備註">拿掉 <code>max-height:220px</code> 內捲，改「前 10 筆＋顯示全部 N 筆 ▾」（見 §6）</td></tr>
 <tr><td class="noL" data-label="#">12</td><td data-label="位置"><code>pages/RosterIO.tsx:93</code></td><td data-label="畫面">下載名單範本視窗內的範例：班級｜座號｜姓名｜學號（4）</td><td data-label="畫法">A 窄表</td><td data-label="備註">Modal 內；只有 2 列範例</td></tr>
 <tr><td class="noL" data-label="#">13</td><td data-label="位置"><code>pages/Settings.tsx:177</code></td><td data-label="畫面">學生名單：班級｜座號｜考生編號｜姓名｜學號｜組別｜特殊生需求｜（編輯）（7～8）</td><td data-label="畫法">B 卡片＋長清單</td><td data-label="備註">標題＝「座號 姓名」；缺號列＝虛線卡；拿掉 <code>max-height:520px</code>（見 §6）</td></tr>
-<tr><td class="noL" data-label="#">14</td><td data-label="位置"><code>pages/Settings.tsx:276</code></td><td data-label="畫面">班級資料：班級｜名稱｜文理組｜班級色（12 色）｜操作（4～5）</td><td data-label="畫法">B 卡片</td><td data-label="備註">標題＝班級名稱；班級色色票列在卡片內可換行</td></tr>
+<tr><td class="noL" data-label="#">14</td><td data-label="位置"><code>pages/Settings.tsx:276</code></td><td data-label="畫面">班級資料：班級｜名稱｜文理組｜班級色（12 色）｜順序（1.27.0 新增）｜操作（4～5）</td><td data-label="畫法">B 卡片（<b>容器 ≤900px 就換，用 <code>rt-wide</code>，同 ⑥ 總帳；不是 ≤480</b>，#553）</td><td data-label="備註">標題＝班級名稱；班級色色票列在卡片內可換行；「班上有 N 人，不能刪除」兩段各不可拆（<code>.nb</code>）。原本 ≤480 才換，640～860 寬 12 色票被擠成直排（列高 420px）</td></tr>
 <tr><td class="noL" data-label="#">15</td><td data-label="位置"><code>pages/Step1.tsx:59</code></td><td data-label="畫面">考科表：科目｜誰要考｜（操作）（3）</td><td data-label="畫法">A 窄表</td><td data-label="備註">科目欄的標記徽章可換行；操作鈕欄靠右不換行</td></tr>
 <tr><td class="noL" data-label="#">16</td><td data-label="位置"><code>pages/Step1.tsx:92</code></td><td data-label="畫面">沿用內容（在 <code>More</code> 內）：步驟｜狀態｜內容（3）</td><td data-label="畫法">B 卡片</td><td data-label="備註">「內容」是長句，3 欄也走卡片</td></tr>
 <tr><td class="noL" data-label="#">17</td><td data-label="位置"><code>pages/Step2.tsx:167</code></td><td data-label="畫面">對帳明細（在 <code>details</code> 內）：班級座號｜考試名單｜學生名單（3）</td><td data-label="畫法">A 窄表</td><td data-label="備註">每格都是短字</td></tr>
