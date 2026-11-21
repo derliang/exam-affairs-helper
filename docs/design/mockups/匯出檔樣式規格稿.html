@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>匯出檔樣式規格 稿 v2.69</title>
+<title>匯出檔樣式規格 稿 v2.80</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700&display=swap">
@@ -500,8 +500,8 @@ span.chk.on{background:var(--cbx-on-bg);border-color:var(--cbx-on-line);color:va
 </style>
 </head>
 <body>
-<div class="hd"><b>匯出檔樣式規格　稿 v2.69</b><button class="btn btn-sm" data-theme-btn type="button">深色／淺色</button></div>
-<div class="main"><div class="hero"><h1>匯出檔樣式規格　稿 v2.69</h1><p>解 #390～#393、#395、#396、#408、#409（已裁示分兩種）。<b>稿 v2.69、2026-11-19：使用者已裁示 7 題（全採建議，D147）；依 D135 拿掉「原班自習虛線格」的引述；圖例加「X 不參加」（D146）。</b>（v2.63 原稿 2026-11-18。）這份只寫規格與紙面樣子（假資料）；施工等使用者審稿。已定：對位測試頁不動。（#386 談的「學測原班自習虛線格」已被 D135⑥／D137 取代：同一間教室不可以同時有人考試、有人自習，原班座位表沒有自習格；不參加的人標一個「X 不參加」，D146。）使用者 2026-11-19 已用問題卡裁示，結果在最下面（D147）。</p></div>
+<div class="hd"><b>匯出檔樣式規格　稿 v2.80</b><button class="btn btn-sm" data-theme-btn type="button">深色／淺色</button></div>
+<div class="main"><div class="hero"><h1>匯出檔樣式規格　稿 v2.80</h1><p>解 #390～#393、#395、#396、#408、#409（已裁示分兩種）。<b>稿 v2.80、2026-11-19：使用者已裁示 7 題（全採建議，D147）；依 D135 拿掉「原班自習虛線格」的引述；圖例加「X 不參加」（D146）。</b>（v2.63 原稿 2026-11-18。）這份只寫規格與紙面樣子（假資料）；施工等使用者審稿。已定：對位測試頁不動。（#386 談的「學測原班自習虛線格」已被 D135⑥／D137 取代：同一間教室不可以同時有人考試、有人自習，原班座位表沒有自習格；不參加的人標一個「X 不參加」，D146。）使用者 2026-11-19 已用問題卡裁示，結果在最下面（D147）。</p></div>
 
 <section class="sec"><header><h2>1　三種標示（#390、#393、#409）</h2></header>
 <div class="say"><b>規則</b>：標示分<b>三種、三個寫法</b>，座位表、標籤、圖例一致：<br>① <b>不考</b>：黑底白字小牌，<b>每一科都帶 X</b>——「X 社」「X 數B　X 社」（#390：「社」會被誤讀成要考；X＝不考）。<br>② <b>加考（原教室考）</b>：<b>沿用現有的加考小牌</b>（白底黑框，SeatChart 的 mk-add）「＋ 數A」（使用者 #409 已裁示：在原教室考場考試的用「＋ 科目」）。<br>③ <b>抽離考試（到別處考）</b>：<b>同一種現有小牌框</b>（mk-add 的白底黑框，不另發明新框型），只換成完整字樣「抽離 自然 考試」（#393、#409；使用者原話「抽離科目考試」）；字多時小牌允許兩行，多科寫「抽離 自然、數A 考試」。<br>三種仍同一個淡黃格底（D39 的「三種不另分色」不變），不考用現有黑底小牌，加考與抽離用現有白底黑框小牌，<b>只靠字樣區分</b>（黑白列印也分得出）。沒有新增任何新框型或新色。<b>D39 的「加考／抽離考試共用＋科目」作廢，改為本條。</b></div>
@@ -534,6 +534,10 @@ span.chk.on{background:var(--cbx-on-bg);border-color:var(--cbx-on-line);color:va
 <div class="say"><b>規則</b>：「合併標籤（範例）」等所有<b>標籤範例框</b>，高度由<b>量內容</b>決定（框的高度＝內容高度），完整顯示 3 張，<b>不出現垂直或水平捲軸</b>；寬度不夠時整張等比例縮小，不裁切。程式現在是手算高度（見 DF-39 觀察），改成量內容；全站所有標籤範例框（預備教室、標示範例、StepSide 等）一併改。</div>
 </section>
 
+<section class="sec"><header><h2>5　標籤外框與長標示（#504；稿 v2.80，2026-11-21）</h2></header>
+<div class="say"><b>外框</b>：標籤表每一格（<b>含空位格</b>）都畫 0.35mm 灰褐細框（色 #8E8670），整張標籤表的上下左右輪廓完整；空位格只是白底沒有文字，不是沒有框。兩倍寬的整合標籤，空位是一張（中間不畫線）。PDF 與 Word 一致。</div>
+<div class="say"><b>長標示不蓋住姓名</b>：標籤格內由上到下是「座標 → 大字編號 → 班級｜姓名 → 標示帶」。標示帶（右下角的黑底「X 科目」、白底「＋ 科目」、「抽離 科目 考試」）<b>佔實際高度、不浮動</b>：有標示的格子，編號與姓名整塊置在標示帶上方；標示字多（例如「抽離 數A、自然 考試」）放不進一行就分兩行，帶高跟著加高，編號字級先縮（31／33pt → 最小 14pt），<b>姓名字級不動</b>。標示帶字級固定 11pt。沒有標示的格子排法不變（整塊垂直置中）。</div>
+<div class="say"><b>同步檢查</b>：座位表格（D170 標示帶，v2.76）已是同一做法；分科整合標籤與預備教室標籤（人員格、合併標籤）沒有角標，不涉及；補考標籤只檢查樣式一致（沿用同一外框規則，不動補考引擎）。</div></section>
 <section class="sec"><header><h2>使用者已裁示（2026-11-19 問題卡，全部採建議項；D147）</h2></header>
 <div class="q-opt rec"><b>1. 不考多科的寫法</b>（#390）建議：每科都帶 X（「X 數B　X 社」）。備案：只在最前面加一個 X（「X 數B、社」）。</div>
 <div class="q-opt rec"><b>2. 抽離小牌字樣</b>（#393、#409）建議：「抽離 自然 考試」（完整字樣、可兩行）。備案：縮成「抽 自然」（省空間，但使用者要的是「標示抽離科目考試」）。</div>

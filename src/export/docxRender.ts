@@ -35,6 +35,7 @@ import {
   roomShown,
   titleOf,
   cornerLayout,
+  labelCornerFit,
   labelTitleOf,
   labelGrid,
   labelGridSize,
@@ -307,14 +308,21 @@ function cellParas(
     cLines.map((tags, i) => line(cornerRuns(tags, g.markPt, mode), { h: i === 0 ? h / nCl : h / nCl, align: AlignmentType.RIGHT, before: i === 0 ? before : 0, right: 0.6 }));
   if (g.codeAtBottom) {
     // 標籤：編號與「班級｜姓名」整塊在格內垂直置中，不留空行（#218）；角標貼右下角
-    const block = codeH + g.codeGap + nameH;
-    const before = Math.max(0, (g.h - block) / 2 - g.topPad);
-    const used = g.topPad + before + codeH + g.codeGap + nameH;
+    // #504：有角標時角標帶佔實際高度，編號先縮、姓名不動，整塊置中在「角標帶以上」，不蓋住姓名（與 PDF 共用 model.labelCornerFit）
+    const lf = hasCorner ? labelCornerFit(c, g.innerW + 2.2, g.h, g.codePt, g.markPt) : null;
+    const cp = lf ? lf.codePt : g.codePt;
+    const cH = cp * 0.3528;
+    const block = cH + g.codeGap + nameH;
+    const floor = g.topPad;
+    const room = lf ? g.h - lf.bandMm - 0.6 : g.h;
+    const before = Math.max(0, (lf ? floor + (room - floor - block) / 2 : (g.h - block) / 2) - g.topPad);
+    const used = g.topPad + before + cH + g.codeGap + nameH;
+    const cornerHh = lf ? lf.bandMm : cornerH * nCl;
     return [
       top,
-      line([run2(c.code, { size: g.codePt, bold: true, color: INK, spacing: g.codePt * 0.02 }, mode)], { h: codeH, before, after: g.codeGap }),
+      line([run2(c.code, { size: cp, bold: true, color: INK, spacing: cp * 0.02 }, mode)], { h: cH, before, after: g.codeGap }),
       nameLine,
-      ...(hasCorner ? corner(Math.max(0, g.h - used - cornerH * nCl - 0.6), cornerH * nCl) : []),
+      ...(hasCorner ? corner(Math.max(0, g.h - used - cornerHh - 0.6), cornerHh) : []),
     ];
   }
   const region = g.h - g.topPad - nameH - g.markArea - g.bottomPad;
@@ -393,7 +401,8 @@ function wideUnit(m: CellModel | undefined, o: { w: number; h: number; cellTw: n
       children,
     });
   if (!m) {
-    return [0, 1].map(() => new TableCell({ width: { size: o.cellTw, type: WidthType.DXA }, verticalAlign: VerticalAlign.TOP, margins: { top: 0, bottom: 0, left: tw(1), right: tw(1) }, borders: { top: none, bottom: none, left: none, right: none }, children: [line([], { h: 0.35 })] }));
+    // #504：空位也畫外框（兩倍寬的空位是一張，中間不畫線），整張標籤表輪廓完整
+    return [0, 1].map((i) => new TableCell({ width: { size: o.cellTw, type: WidthType.DXA }, verticalAlign: VerticalAlign.TOP, margins: { top: 0, bottom: 0, left: tw(1), right: tw(1) }, borders: { top: b, bottom: b, left: i === 0 ? b : none, right: i === 1 ? b : none }, children: [line([], { h: 0.35 })] }));
   }
   const g = { topPad: 5, codePt: o.isB4 ? 33 : 31, nameMax: 18, subjMax: o.isB4 ? 20 : 16 };
   const lay = wideLayout(m, o.w - 2, o.h, g);
@@ -673,7 +682,7 @@ function labelSection(page: LabelPageModel, opts: DocxOptions): ISectionOptions 
           verticalAlign: VerticalAlign.TOP,
           margins: { top: 0, bottom: 0, left: tw(1), right: tw(1) },
           shading: m ? { type: ShadingType.CLEAR, fill: marked ? 'FFE08A' : 'FFFFFF', color: 'auto' } : undefined,
-          borders: m ? { top: b, bottom: b, left: b, right: b } : { top: none, bottom: none, left: none, right: none },
+          borders: { top: b, bottom: b, left: b, right: b }, // #504：空位也有外框
           children: m ? (m.persons ? personParas(m, box.w - 2, box.h, { topPad: 5, coordPt: g.coordPt, codePt: isB4 ? 33 : 31, nameMax: 18, schedMax: 11 }, mode) : m.periodLines ? periodParas(m, box.w - 2, box.h, g.coordPt, mode) : cellParas(m, g, INK, mode)) : [line([], { h: 0.35 })],
         }),
       );
