@@ -96,19 +96,24 @@ export function SeatChart(p: { model: ChartModel; title: string; sub: string; pu
   );
 }
 
+/** 圖例一項＝小牌＋說明綁在一起（#稿 v2.88：小牌不與說明拆在兩行；手機寬度一項一行） */
+function LegendItem(p: { cls: string; mk: string; children: string }) {
+  return <span class="lg-i"><span class={`cell ${p.cls}`}><span class="mk">{p.mk}</span></span><span>{p.children}</span></span>;
+}
+
 /** 圖例（標示式樣，D39） */
 export function ChartLegend(p: { override?: boolean; marks?: boolean }) {
   return (
     <div class="legend">
       <span><b>圖例</b></span>
       {p.marks !== false && <>
-        <span class="cell mk-x"><span class="mk">X 科目</span></span> 這位考生不考這一科（該節改到自習地點）
-        <span class="cell mk-add"><span class="mk">＋ 科目</span></span> 這位考生加考這一科，在原教室考
-        <span class="cell mk-add"><span class="mk">抽離 科目 考試</span></span> 這位考生這一科到別的教室考（預備教室）
-        <span class="cell mk-x"><span class="mk">X 不參加</span></span> 這位考生這次不參加，每一節都到自習教室（不印標籤）
+        <LegendItem cls="mk-x" mk="X 科目">這位考生不考這一科（該節改到自習地點）</LegendItem>
+        <LegendItem cls="mk-add" mk="＋ 科目">這位考生加考這一科，在原教室考</LegendItem>
+        <LegendItem cls="mk-add" mk="抽離 科目 考試">這位考生這一科到別的教室考（預備教室）</LegendItem>
+        <LegendItem cls="mk-x" mk="X 不參加">這位考生這次不參加，每一節都到自習教室（不印標籤）</LegendItem>
       </>}
-      {p.override && <><span class="cell mk-add"><span class="mk">→地點</span></span> 個別覆寫（不是換座位）：被標示的那幾節改去該地點</>}
-      <span class="cell empty-seat" style="width:28px;height:16px" /> 空位（只在最後）
+      {p.override && <LegendItem cls="mk-add" mk="→地點">個別覆寫（不是換座位）：被標示的那幾節改去該地點</LegendItem>}
+      <span class="lg-i"><span class="cell empty-seat" style="width:28px;height:16px" /><span>空位（只在最後）</span></span>
     </div>
   );
 }

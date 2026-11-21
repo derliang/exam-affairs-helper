@@ -99,3 +99,11 @@ describe('#250 列表人數口徑', () => {
     expect(html2).not.toContain('不排座');
   });
 });
+describe('座位表圖例（稿 v2.88）：小牌與說明綁成一項', () => {
+  it('每個小牌和它的說明在同一個 lg-i 裡，不再各自散在列上', async () => {
+    const { ChartLegend } = await import('../components/SeatChart');
+    const html = renderToString(<ChartLegend override marks />);
+    expect((html.match(/class="lg-i"/g) ?? []).length).toBe(6);
+    expect(html).toMatch(/class="lg-i"><span class="cell mk-x"><span class="mk">X 科目<\/span><\/span><span>這位考生不考這一科/);
+  });
+});
