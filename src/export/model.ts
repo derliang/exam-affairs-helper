@@ -865,7 +865,7 @@ function studyReferencePages(input: ExportInput, ctx: Ctx, rooms: Map<string, Cl
     const room = rooms.get(ref.roomId);
     if (!room) continue;
     const g = groups[ref.group]!;
-    const when = [...new Set(g.subjectIds.flatMap((id) => (periods.get(id) ?? []).map((sp) => (sp.slot ? `${dayTag(sp.day ?? 0)} ${slotName(sp.slot)}` : `第 ${sp.period} 節`))))].join('、');
+    const when = [...new Set(g.subjectIds.flatMap((id) => (periods.get(id) ?? []).map((sp) => (sp.slot ? `${dayTag(sp.day ?? 0, input.exam.examDates?.[sp.day ?? 0])} ${slotName(sp.slot)}` : `第 ${sp.period} 節`))))].join('、');
     const subj = ref.subjectIds.map((id) => ctx.subjectName.get(id) ?? id).join('、');
     const cells = new Map<string, CellModel>();
     const per = new Map<number, number>();
@@ -1042,7 +1042,7 @@ export function buildStudyLists(input: ExportInput): ListPageModel[] {
   // #219：標題下加「第N天　時段X　科目」（沒有日期欄，不新增）
   const periods = examSubjectPeriods(input.exam, input.settings);
   const whenOf = (subId: string, name: string): string => {
-    const heads = [...new Set((periods.get(subId) ?? []).filter((p) => p.slot).map((p) => `${dayName(p.day ?? 0)}　${slotName(p.slot!)}`))];
+    const heads = [...new Set((periods.get(subId) ?? []).filter((p) => p.slot).map((p) => `${dayName(p.day ?? 0)}${dateTag(input.exam.examDates?.[p.day ?? 0]) ? ` ${dateTag(input.exam.examDates?.[p.day ?? 0])}` : ''}　${slotName(p.slot!)}`))];
     return heads.length ? `${heads.join('、')}　${name}` : name;
   };
   return input.exam.subjects
