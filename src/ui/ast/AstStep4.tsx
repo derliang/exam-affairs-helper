@@ -59,7 +59,7 @@ export function AstStep4(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
     return (
       <tr key={r.label}>
         <td class="ti" data-label="指標"><div>{r.label}{r.note && <><br /><span class="small muted">{r.note}</span></>}</div></td>
-        <td data-label="少教室優先" class={`n${ca}${mode === 'fewest-rooms' ? ' on' : ''}`}>{a ? (r.show ? r.show(a) : va) : '—'}</td>
+        <td data-label="少教室優先" class={`n nb${ca}${mode === 'fewest-rooms' ? ' on' : ''}`}>{a ? (r.show ? r.show(a) : va) : '—'}</td>
         <td data-label="少移動優先" class={`n${cb}${mode === 'least-movement' ? ' on' : ''}`}>{b ? (r.show ? r.show(b) : vb) : '—'}</td>
       </tr>
     );
@@ -125,7 +125,7 @@ export function AstStep4(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
           <table class="t compact cmpt rt-t">
             <thead><tr>
               <th>指標</th>
-              <th class={mode === 'fewest-rooms' ? 'selc' : ''}>少教室優先{mode === 'fewest-rooms' ? '（使用中）' : ''}</th>
+              <th class={mode === 'fewest-rooms' ? 'selc' : ''}>少教室優先{mode === 'fewest-rooms' ? <span class="nb">（使用中）</span> : ''}</th>
               <th class={mode === 'least-movement' ? 'selc' : ''}>少移動優先{mode === 'least-movement' ? '（使用中）' : ''}</th>
             </tr></thead>
             <tbody>
