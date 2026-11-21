@@ -1184,6 +1184,9 @@ details[open]:not(.moremenu)>summary::after{content:" ▴"}
 .tm-t tr.bad td{background:var(--danger-soft)}
 .tm-t .tm-in,.tmset .input[type=time]{width:120px;min-width:0;font-variant-numeric:tabular-nums}
 
+/* #513：工作區內的短標籤、小標題、表頭、提示句只在標點處換行，不在詞中間腰斬（「最多一個時段考／生」）；整行真的放不下才逐字折（overflow-wrap），不會撐出橫向捲動 */
+.ws .main :is(small,.small,.sub,.hint,th,label,h3,h4,.lab,.badge,td[data-label]){word-break:keep-all;line-break:strict;overflow-wrap:break-word}
+
 /* 稿 v2.81 Drawer（DESIGN §10.44.3）：≥768px 右側滑出，<768px 底部面板；只用 token，不橫向捲動（D168） */
 .dscrim{position:fixed;inset:0;z-index:50;background:rgba(20,18,12,.45);display:flex;justify-content:flex-end;align-items:stretch}
 .drawer-p{display:flex;flex-direction:column;gap:10px;background:var(--surface);border-left:1px solid var(--line-2);box-shadow:var(--shadow-3);padding:14px;width:min(420px,92vw);height:100%;min-width:0;animation:dr-in .2s ease-out}
