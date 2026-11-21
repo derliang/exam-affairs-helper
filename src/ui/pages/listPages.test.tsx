@@ -33,6 +33,14 @@ describe('模擬考列表頁', () => {
     const html = renderToString(<Exams doc={demoDoc()} onOpen={noop} onNew={noop} onSettings={noop} onChangeFolder={noop} />);
     expect(html).toContain('還沒有模擬考');
     expect(html).toContain('按「新增模擬考」開始。');
+    // #531：空白時只有一顆「新增模擬考」（卡內大鈕），頁首不放
+    expect((html.match(/新增模擬考<\/button>/g) ?? []).length).toBe(1);
+    expect(html).toContain('btn-lg');
+  });
+  it('有考試時新增鈕回頁首右上，只有一顆、不是大鈕', () => {
+    const html = renderToString(<Exams doc={docWith()} onOpen={noop} onNew={noop} onSettings={noop} onChangeFolder={noop} />);
+    expect((html.match(/新增模擬考<\/button>/g) ?? []).length).toBe(1);
+    expect(html).not.toContain('btn-lg');
   });
 });
 
