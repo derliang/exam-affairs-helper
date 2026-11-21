@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>模擬考設計系統 稿 v2.75</title>
+<title>模擬考設計系統 稿 v2.81</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -489,6 +489,21 @@ details.more{font-size:14px;color:var(--text-2)}details.more summary{cursor:poin
 .avseg{display:flex;max-width:100%;overflow-x:auto}
 .avseg button{flex:0 0 auto}
 .card.stack .stack{grid-template-columns:minmax(0,1fr)}
+
+/* 稿 v2.81 Drawer（DESIGN §10.44.3）：與 src/styles/app.css 同值 */
+.dscrim{position:fixed;inset:0;z-index:50;background:rgba(20,18,12,.45);display:flex;justify-content:flex-end;align-items:stretch}
+.drawer-p{display:flex;flex-direction:column;gap:10px;background:var(--surface);border-left:1px solid var(--line-2);box-shadow:var(--shadow-3);padding:14px;width:min(420px,92vw);height:100%;min-width:0}
+.drawer-p .dr-grab{display:none}
+.drawer-p .dr-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.drawer-p .dr-head h3{margin:0;font-size:17px}
+.drawer-p .dr-body{flex:1;min-height:0;min-width:0;overflow-y:auto;overflow-x:hidden}
+.drfr{position:relative;height:300px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--sunken);overflow:hidden}
+.drfr .dscrim{position:absolute}
+.drfr:not(.sheet) .drawer-p{width:72%}
+.drfr.sheet .dscrim{align-items:flex-end;justify-content:stretch}
+.drfr.sheet .drawer-p{width:100%;height:auto;max-height:85%;border-left:0;border-top:1px solid var(--line-2);border-radius:var(--r-xl) var(--r-xl) 0 0}
+.drfr.sheet .drawer-p .dr-grab{display:block;width:44px;height:5px;border-radius:3px;background:var(--line-2);align-self:center}
+@media (max-width:767px){#drdemo .dscrim{align-items:flex-end;justify-content:stretch}#drdemo .drawer-p{width:100%;height:auto;max-height:85vh;border-left:0;border-top:1px solid var(--line-2);border-radius:var(--r-xl) var(--r-xl) 0 0}#drdemo .drawer-p .dr-grab{display:block;width:44px;height:5px;border-radius:3px;background:var(--line-2);align-self:center}}
 </style>
 <style id="v275ds">
 .btn-ao{border-color:var(--accent);color:var(--accent-ink);font-weight:700}
@@ -521,7 +536,7 @@ span.chk.on{background:var(--cbx-on-bg);border-color:var(--cbx-on-line);color:va
 </style>
 
 <div class="top">
-  <span class="brand">模擬考小幫手 設計系統 <span class="badge b-acc">稿 v2.75・2026-11-20</span></span>
+  <span class="brand">模擬考小幫手 設計系統 <span class="badge b-acc">稿 v2.81・2026-11-21</span></span>
   <nav class="toc" aria-label="目錄">
     <a href="#color">色彩</a><a href="#type">字型</a><a href="#base">間距圓角</a><a href="#comp">元件</a><a href="#steps">步驟導覽</a><a href="#special">專屬元件</a><a href="#ast">分科新模型</a><a href="#ast2">分科下一批</a><a href="#paper">座位表與標籤</a><a href="#paper36">輸出補強 v2.36</a><a href="#paper36b">名單與教室 v2.36</a><a href="#brandbar">品牌列</a><a href="#footer">頁尾</a><a href="#align">對位測試頁</a><a href="#v275">v2.75 納入</a><a href="#open">待確認</a>
   </nav>
@@ -1644,6 +1659,20 @@ span.chk.on{background:var(--cbx-on-bg);border-color:var(--cbx-on-line);color:va
           <p class="small muted"><b>淺色底框＋藍色打勾</b>：未選＝<code>--cbx-bg</code> 底、<code>--cbx-line</code> 1.5px 框；已選＝<code>--cbx-on-bg</code> 淡藍底、<code>--cbx-on-line</code> 藍框、<code>--cbx-tick</code> 藍勾；<b>不再使用實心深色填滿、不用瀏覽器預設樣式</b>（<code>accent-color:var(--accent)</code> 的深藍填滿看起來近黑）。22×22、圓角 6px、焦點 3px 外框；Switch（開關）不受影響。tokens 已加進 <code>tokens.css</code>（亮暗各一組）。</p></div></div>
       <div class="card"><div class="lab">⑦ 表格↔卡片（.rt-t）</div>
         <p class="small muted">窄表、卡片、矩陣三種畫法與 23 處逐頁定稿見 <code>mockups/表格改卡片稿.html</code>（稿 v2.75）與 DESIGN §10.42。通則：全站不出現橫向捲軸、<code>table.t</code> 無 <code>min-width</code>、容器 ≤640px 才變卡片（<code>rc-pcard</code> 長相）。</p></div>
+    </div>
+  </section>
+  <section id="v281">
+    <header><h2>稿 v2.81　Drawer 側滑面板（D176④、DESIGN §10.44.3）</h2><p>元件 <code>src/ui/components/Drawer.tsx</code>，<b>只用在補考儀表板「看儀表板」一處</b>；其他確認、表單一律 Modal／ConfirmModal（D165）。不可兩層疊；Drawer 內要確認用 ConfirmModal。全部假資料、只用 tokens。</p></header>
+    <div class="grid">
+      <div class="card"><div class="lab">① ≥768px：右側滑出（寬 min(420px, 92vw)、滿高）</div>
+        <div class="drfr"><div class="dscrim"><div class="drawer-p" role="dialog" aria-label="示範"><div class="dr-grab"></div><div class="dr-head"><h3>補考儀表板</h3><button class="btn btn-sm" type="button">關閉</button></div><div class="dr-body"><p class="small muted">內容區自己垂直捲動，不橫向捲動；表格用 <code>.rtw</code>＋<code>.rt-t</code>。</p><div class="stats"><div class="ok"><small>應補考人次</small><strong>12 人</strong></div><div class="ok"><small>已排座</small><strong>9 人</strong></div></div></div></div></div></div></div>
+      <div class="card"><div class="lab">② &lt;768px：底部面板（高度最多 85vh、上緣圓角 --r-xl、44×5 把手）</div>
+        <div class="drfr sheet"><div class="dscrim"><div class="drawer-p" role="dialog" aria-label="示範"><div class="dr-grab"></div><div class="dr-head"><h3>補考儀表板</h3><button class="btn btn-sm" type="button">關閉</button></div><div class="dr-body"><p class="small muted">同一個元件，窄視窗自動改貼底。</p></div></div></div></div></div>
+      <div class="card"><div class="lab">③ 行為與可操作示範</div>
+        <ul class="small" style="margin:0 0 10px;padding-left:18px;display:grid;gap:4px"><li>遮罩 <code>rgba(20,18,12,.45)</code>；點遮罩、按 Esc、按標題列「關閉」都會關閉，<b>焦點回到開啟它的按鈕</b>；開啟時焦點進面板、Tab 不跑出面板。</li><li>滑入 ≤200ms；系統設定「減少動態」時不動畫。</li><li>與 Modal 的分工：Modal＝需要使用者決定的對話；Drawer＝看資料的側邊面板。</li></ul>
+        <button class="btn" type="button" id="drbtn">開啟 Drawer 示範</button>
+        <div id="drdemo" hidden><div class="dscrim" id="drsc"><div class="drawer-p" role="dialog" aria-modal="true" aria-label="示範"><div class="dr-grab"></div><div class="dr-head"><h3>補考儀表板（示範）</h3><button class="btn btn-sm" type="button" id="drx">關閉</button></div><div class="dr-body"><p class="small muted">假資料示範。按 Esc 或點右側以外的遮罩也能關閉。</p></div></div></div></div>
+        <script>(function(){var b=document.getElementById('drbtn'),d=document.getElementById('drdemo'),sc=document.getElementById('drsc'),x=document.getElementById('drx');function o(){d.hidden=false;x.focus()}function c(){d.hidden=true;b.focus()}b.onclick=o;x.onclick=c;sc.onclick=function(e){if(e.target===sc)c()};document.addEventListener('keydown',function(e){if(!d.hidden&&e.key==='Escape')c()})})();</script></div>
     </div>
   </section>
   <section id="open">
