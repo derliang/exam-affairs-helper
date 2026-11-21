@@ -15,6 +15,7 @@ import {
   type ReadbackSummary,
 } from '../../core/makeup';
 import type { Check, Light } from '../reconcile';
+import { rowWhere } from './importOps';
 import { baseOf, outputsOf, planOf, scheduleOf } from './pipeline';
 import type { MakeupSession, ReconcileSnapshot } from './session';
 import type { MakeupStepNo } from './steps';
@@ -108,7 +109,7 @@ function compute(s: MakeupSession, run: RunRecord | undefined): Dashboard {
   const { schedule, peak } = scheduleOf(s);
 
   const missing: MissItem[] = [
-    ...b.roster.unresolved.map((u) => ({ text: `匯入第 ${u.srcRow} 列還沒處理：${u.message}`, step: 2 as MakeupStepNo })),
+    ...b.roster.unresolved.map((u) => ({ text: `匯入${rowWhere(s.parse, u.draft)}還沒處理：${u.message}`, step: 2 as MakeupStepNo })),
     ...schedule.unplaced.map((u) => ({ text: `${u.studentId}　${u.subject}：${u.reason}`, step: 5 as MakeupStepNo })),
   ];
 

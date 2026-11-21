@@ -4,7 +4,7 @@
  */
 import { useRef, useState } from 'preact/hooks';
 import { Alert, Badge, Button, EmptyState, Modal, More, StatsBar } from '../../components';
-import { readXlsx, readFiles, groupByKey, resolveConflicts, XlsError, type ConflictChoice, type FileRead } from '../../../import';
+import { readXlsx, readFiles, groupByKey, resolveConflicts, xlsxReadErrorText, type ConflictChoice, type FileRead } from '../../../import';
 import { ConflictList, FileResults, filesOfDrop, filesOfInput } from '../../pages/FileResults';
 import {
   SKIP_REASON_TEXT,
@@ -16,7 +16,7 @@ import {
   type MakeupRow,
   type SkipReason,
 } from '../../../core/makeup';
-import { MAPPING_FIELDS, clearResolution, diffImport, isEmptyBook, isRequiredField, mergeImport, mergeImportWith, overlapKeys, overlapRows, parseWithMapping, pickSheets, replaceImport, rowKey, setResolution, type ImportDiff, type SheetPick } from '../importOps';
+import { MAPPING_FIELDS, clearResolution, diffImport, isEmptyBook, isRequiredField, mergeImport, mergeImportWith, overlapKeys, overlapRows, parseWithMapping, pickSheets, replaceImport, rowKey, rowWhere, setResolution, type ImportDiff, type SheetPick } from '../importOps';
 import { baseOf } from '../pipeline';
 import type { MakeupSession } from '../session';
 
@@ -55,7 +55,7 @@ export function MkStep2(p: { s: MakeupSession; onChange: (s: MakeupSession) => v
       if (/\.xls$/i.test(file.name)) throw new Error('這是舊版 .xls 檔，請用 Excel 開啟後「另存新檔」成 .xlsx，再匯入。');
       let sheets;
       try { sheets = await readXlsx(await file.arrayBuffer()); } catch (e) {
-        throw new Error(e instanceof XlsError ? e.message : `讀不了這個檔案：${e instanceof Error ? e.message : String(e)}。請確認是 .xlsx 檔`);
+        throw new Error(xlsxReadErrorText(e));
       }
       if (sheets.length === 0 || isEmptyBook(sheets)) throw new Error('檔案是空的，沒有任何資料列。');
       return sheets;
@@ -146,7 +146,7 @@ export function MkStep2(p: { s: MakeupSession; onChange: (s: MakeupSession) => v
     <section class="stack">
       <div class="card stephead"><div><h2>② 匯入名單</h2><p class="small muted">匯入教務系統的不及格名單。每一列都要有去處：納入、另行通知，或有紀錄的略過。</p></div></div>
       {err && <Alert tone="danger"><b>{err.title}</b>：{err.text}</Alert>}
-      {batch && batch.files.length > 1 && <Alert tone="info">一次匯入 {batch.files.length} 個檔案，目前是第 {batch.i + 1} 個：<b>{batch.files[batch.i]?.name}</b>。每個檔案各自確認欄位對應；與目前名單同一位學生同一科重複的列會逐筆問你。「換檔案」會放棄整批。</Alert>}
+      {batch && batch.files.length > 1 && <Alert tone="info">一次匯入 {batch.files.length} 個檔案，目前是第 {batch.i + 1} 個：<b>{batch.files[batch.i]?.name}</b>。每個檔案各自確認欄位對應；與目前名單同一位學生同一科重複的列會逐筆問你。每個檔案確認後就寫入名單；按「換檔案」只放棄還沒確認的檔案，已確認的會保留（要退回可按頁首「↶ 復原」）。</Alert>}
       <FileResults results={fileResults} hideSingleOk />
 
       {draft ? <MappingCard d={draft} onChange={setDraft} onConfirm={confirmMapping} onCancel={abortBatch} />
@@ -182,7 +182,7 @@ export function MkStep2(p: { s: MakeupSession; onChange: (s: MakeupSession) => v
             {r.unresolved.length > 0 && (
               <div class="card stack">
                 <div class="lab">問題列　{r.unresolved.length} 筆待處理</div>
-                {r.unresolved.map((prob) => <ProblemCard key={prob.rowId} prob={prob} onFix={(row) => p.onChange(setResolution(s, { rowId: prob.rowId, action: 'fix', row }))}
+                {r.unresolved.map((prob) => <ProblemCard key={prob.rowId} prob={prob} parse={s.parse} onFix={(row) => p.onChange(setResolution(s, { rowId: prob.rowId, action: 'fix', row }))}
                   onSkip={(reason, note) => p.onChange(setResolution(s, { rowId: prob.rowId, action: 'skip', reason, ...(note ? { note } : {}) }))} />)}
               </div>
             )}
@@ -288,7 +288,7 @@ function SkipForm(p: { onSkip: (reason: SkipReason, note?: string) => void; onCa
   );
 }
 
-function ProblemCard(p: { prob: MakeupProblem; onFix: (row: MakeupRow) => void; onSkip: (reason: SkipReason, note?: string) => void }) {
+function ProblemCard(p: { prob: MakeupProblem; parse: MakeupParseResult | undefined; onFix: (row: MakeupRow) => void; onSkip: (reason: SkipReason, note?: string) => void }) {
   const { prob } = p;
   const d = prob.draft;
   const [mode, setMode] = useState<'none' | 'edit' | 'skip'>('none');
@@ -298,7 +298,7 @@ function ProblemCard(p: { prob: MakeupProblem; onFix: (row: MakeupRow) => void; 
   const noName = prob.kind === 'no-name';
   return (
     <div class="psec stack">
-      <div class="row"><b>第 {prob.srcRow} 列　{problemKindText(prob.kind)}</b><Badge tone="danger">待處理</Badge></div>
+      <div class="row"><b>{rowWhere(p.parse, prob.draft)}　{problemKindText(prob.kind)}</b><Badge tone="danger">待處理</Badge></div>
       <p class="small muted">{prob.message}</p>
       <div class="rtw"><table class="t compact rt-t">
         <thead><tr><th>學號</th><th>舊班－舊號</th><th>姓名</th><th>科目</th><th>科屬性</th></tr></thead>

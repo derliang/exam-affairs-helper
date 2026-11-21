@@ -117,11 +117,25 @@ export function diffImport(current: MakeupParseResult | undefined, next: MakeupP
   return { same, added, updated, removed, removedScheduled, hasCurrent: cur.size > 0 };
 }
 
+/** 每一列、每個問題列記下來自哪個檔（#566）；已有檔名的不改 */
+const withFile = (parse: MakeupParseResult, file: string): MakeupParseResult => {
+  const tag = <T extends MakeupRow>(r: T): T => (r.file ? r : { ...r, file });
+  return { ...parse, rows: parse.rows.map(tag), problems: parse.problems.map((x) => ({ ...x, draft: tag(x.draft) })) };
+};
+
+/** 名單裡出現過幾個不同的匯入檔（舊存檔沒有檔名＝0） */
+export const importFileCount = (parse: MakeupParseResult | undefined): number =>
+  parse ? new Set(allRows(parse).flatMap((r) => (r.file ? [r.file] : []))).size : 0;
+
+/** 問題列的位置文字：名單來自多個檔案時帶檔名，否則只有列號（沿用 D187 學生名單「檔案、第幾列」的寫法） */
+export const rowWhere = (parse: MakeupParseResult | undefined, row: Pick<MakeupRow, 'file' | 'srcRow'>): string =>
+  importFileCount(parse) > 1 && row.file ? `「${row.file}」第 ${row.srcRow} 列` : `第 ${row.srcRow} 列`;
+
 const stampSource = (s: MakeupSession, fileName: string, now: Date): MakeupSession => ({ ...s, source: { fileName, importedAt: now.toISOString() } });
 
 /** 取代：整份換掉；先前的問題列處理與略過紀錄跟著作廢（列號對不上新檔）；已排好的考程保留但會被對齊 */
 export function replaceImport(s: MakeupSession, parse: MakeupParseResult, fileName: string, now: Date): MakeupSession {
-  return stampSource({ ...s, parse, resolutions: [] }, fileName, now);
+  return stampSource({ ...s, parse: withFile(parse, fileName), resolutions: [] }, fileName, now);
 }
 
 /** 合併：保留目前的，只加入新檔多出來的列（新列的列號加前綴避免撞號） */
@@ -130,7 +144,7 @@ export function mergeImport(s: MakeupSession, parse: MakeupParseResult, fileName
   if (!cur) return replaceImport(s, parse, fileName, now);
   const have = new Set(allRows(cur).map(rowKey));
   const tag = `m${now.getTime().toString(36)}:`;
-  const re = <T extends MakeupRow>(r: T): T => ({ ...r, rowId: `${tag}${r.rowId}` });
+  const re = <T extends MakeupRow>(r: T): T => ({ ...r, rowId: `${tag}${r.rowId}`, file: r.file ?? fileName });
   const rows = parse.rows.filter((r) => !have.has(rowKey(r))).map(re);
   const problems = parse.problems.filter((p) => !have.has(rowKey(p.draft))).map((p) => ({ ...p, rowId: `${tag}${p.rowId}`, draft: re(p.draft) }));
   const merged: MakeupParseResult = {
@@ -159,7 +173,7 @@ export function mergeImportWith(s: MakeupSession, parse: MakeupParseResult, file
   if (!cur) return replaceImport(s, parse, fileName, now);
   const have = new Set(allRows(cur).map(rowKey));
   const tag = `m${now.getTime().toString(36)}:`;
-  const re = <T extends MakeupRow>(r: T): T => ({ ...r, rowId: `${tag}${r.rowId}` });
+  const re = <T extends MakeupRow>(r: T): T => ({ ...r, rowId: `${tag}${r.rowId}`, file: r.file ?? fileName });
   const take = (k: string): boolean => !have.has(k) || useNew.has(k);
   const dropped = new Set<string>([...cur.rows.filter((r) => useNew.has(rowKey(r))).map((r) => r.rowId), ...cur.problems.filter((x) => useNew.has(rowKey(x.draft))).map((x) => x.rowId)]);
   const curRows = cur.rows.filter((r) => !dropped.has(r.rowId));

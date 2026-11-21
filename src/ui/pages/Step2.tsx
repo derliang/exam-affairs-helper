@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { ExamConfig, ExamEntry, RosterDiff, RosterDiffChoice } from '../../data';
-import { hasPua, puaCodes, showPua, allResolved, applyDiffs, applyGroupChoice, compareRosters, groupDiffs, manyDiffs, type DiffGroup, diffsStale, isResolved, readXlsx, XlsError, refreshDiffs, validateResolved, groupByKey, okFiles, readFiles, resolveConflicts, type Candidate, type Conflict, type ConflictChoice, type FileRead, type SavedMarkMap, type Sheet } from '../../import';
+import { hasPua, puaCodes, showPua, allResolved, applyDiffs, applyGroupChoice, compareRosters, groupDiffs, manyDiffs, type DiffGroup, diffsStale, isResolved, readXlsx, xlsxReadErrorText, refreshDiffs, validateResolved, groupByKey, okFiles, readFiles, resolveConflicts, type Candidate, type Conflict, type ConflictChoice, type FileRead, type SavedMarkMap, type Sheet } from '../../import';
 import { Alert, Badge, Button, Modal, ClassChip, ConfirmButton, More, PageHead, Seg, StatsBar, StepHead } from '../components';
 import { confirmCopy } from '../flow';
 import { addClass, diffOptions, examYear, rosterName, syncDiffs, updateExam, type Doc } from '../store';
@@ -72,7 +72,7 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
     const reads = await readFiles(fs, async (file) => {
       let s: Sheet[];
       try { s = await readXlsx(await file.arrayBuffer()); } catch (e) {
-        throw new Error(e instanceof XlsError ? e.message : `讀不了這個檔案：${e instanceof Error ? e.message : String(e)}。請確認是 .xlsx 檔`);
+        throw new Error(xlsxReadErrorText(e));
       }
       if (s.length === 0) throw new Error('檔案裡沒有工作表');
       return s;

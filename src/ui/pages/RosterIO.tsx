@@ -1,6 +1,6 @@
 import { useRef, useState } from 'preact/hooks';
 import type { Division, Track } from '../../data';
-import { mergeRosterFiles, okFiles, readFiles, readXlsx, writeXlsx, XlsError, type FileRead, type RosterProblem } from '../../import';
+import { mergeRosterFiles, okFiles, readFiles, readXlsx, writeXlsx, xlsxReadErrorText, type FileRead, type RosterProblem } from '../../import';
 import { Alert, Button, ConfirmModal, FormatButton, Modal } from '../components';
 import { downloadBytes, XLSX_MIME } from '../download';
 import { applyImport, clearRoster, examsAffectedByClear, examsMadeStale, exportRows, importOutcome, planImport, templateRows, type UnknownClassAction } from '../rosterIO';
@@ -51,7 +51,7 @@ export function RosterIO(p: { doc: Doc; division: Division; onChange: (d: Doc) =
       try {
         r = parseRosterWorkbook(await readXlsx(await file.arrayBuffer()), classNames);
       } catch (e) {
-        throw new Error(e instanceof XlsError ? e.message : `讀不了這個檔案：${e instanceof Error ? e.message : String(e)}。請確認是 .xlsx 檔`);
+        throw new Error(xlsxReadErrorText(e));
       }
       if (r.students.length === 0 && r.problems.length === 0) throw new Error(r.issues[0]?.message ?? '檔案裡沒有讀到學生，請確認表頭有「座號」「姓名」');
       return r;
