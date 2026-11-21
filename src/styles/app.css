@@ -362,6 +362,8 @@ section>header p{color:var(--text-2);max-width:72ch}
 .toasts{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:60;display:grid;gap:8px;justify-items:center;max-width:calc(100vw - 32px)}
 .t .badge{white-space:nowrap}
 @media (max-width:560px){.alert{grid-template-columns:auto 1fr}.alert>.btn,.alert>.row{grid-column:2;justify-self:start}}
+/* #564：提示卡內文（檔名、錯誤原文、長網址）可在任何位置換行，1fr 欄不撐出頁面（375 寬不橫向捲動，D168） */
+.alert>div{min-width:0;overflow-wrap:anywhere}
 @media (max-width:760px){.ws .side{position:static}.pbar .seg button,.pbar .badge{white-space:nowrap;padding-inline:8px}.pbar .badge{display:none}.pbar .spacer{display:none}}
 .t.nw td,.t.nw th{white-space:nowrap}
 .stack>*,.grid>*,.grid2>*{min-width:0}.row{min-width:0}.seg{max-width:100%;justify-self:start;width:fit-content}.seg button{flex:none}

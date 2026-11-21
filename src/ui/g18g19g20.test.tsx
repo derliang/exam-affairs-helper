@@ -107,3 +107,22 @@ describe('G20 匯入預覽統計一行、用詞統一', () => {
     });
   }
 });
+
+describe('匯入預覽名單：應試編號、特殊需求（todo L76、D101③）', () => {
+  const head = ['班級', '座號', '姓名', '組別'];
+  it('名單有應試編號與特殊需求欄才顯示那兩欄；沒有就不出現', () => {
+    const { exam } = withExam('ast', fake(2));
+    const both = [{ name: '考試名單', rows: [[...head, '應試編號', '特殊需求'], ['01', '1', '假生1', '2', '15000001', '延長時間'], ['01', '2', '假生2', '2', '15000002', '']] }];
+    const h1 = renderToString(<ImportWizard sheets={both} exam={exam} classNames={['甲']} saved={{}} onCancel={noop} onDone={noop} />);
+    expect(h1).toContain('data-preview="entries"');
+    expect(h1).toContain('<th>應試編號</th>');
+    expect(h1).toContain('<th>特殊需求</th>');
+    expect(h1).toContain('15000001');
+    expect(h1).toContain('延長時間');
+    const none = [{ name: '考試名單', rows: [head, ['01', '1', '假生1', '2']] }];
+    const h2 = renderToString(<ImportWizard sheets={none} exam={exam} classNames={['甲']} saved={{}} onCancel={noop} onDone={noop} />);
+    expect(h2).toContain('data-preview="entries"');
+    expect(h2).not.toContain('<th>應試編號</th>');
+    expect(h2).not.toContain('<th>特殊需求</th>');
+  });
+});
