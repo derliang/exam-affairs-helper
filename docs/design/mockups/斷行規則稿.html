@@ -1,0 +1,34 @@
+<title>斷行規則</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+:root{--bg:#f6f4ee;--fg:#24221c;--mut:#6b675a;--line:#d9d4c4;--card:#fffdf8;--acc:#264a8a;--bad:#a5301f;--ok:#2d6a3e}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#16150f;--fg:#ece8da;--mut:#a39f8f;--line:#3a372c;--card:#1f1d15;--acc:#8fb0ee;--bad:#ee8f7e;--ok:#8fd2a1;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#16150f;--fg:#ece8da;--mut:#a39f8f;--line:#3a372c;--card:#1f1d15;--acc:#8fb0ee;--bad:#ee8f7e;--ok:#8fd2a1;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font:15px/1.7 "Noto Sans TC",system-ui,sans-serif;padding-block:24px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));text-wrap:pretty}
+main{max-width:860px;margin:auto;display:grid;gap:20px}
+h1{font-size:26px;margin:0;text-wrap:balance}h2{font-size:18px;margin:0 0 6px;text-wrap:balance}
+.badge{display:inline-block;border:1px solid var(--acc);color:var(--acc);border-radius:99px;padding:0 10px;font-size:13px;font-weight:700}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+table{border-collapse:collapse;width:100%}th,td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top;font-size:14px}
+.pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.box{border:1px dashed var(--line);border-radius:8px;padding:10px;font-size:14px;min-width:0}
+.box b.l{display:block;font-size:12px;margin-bottom:4px}.bad b.l{color:var(--bad)}.ok b.l{color:var(--ok)}
+.narrow{width:230px;max-width:100%}.nb{white-space:nowrap}
+code{background:var(--line);padding:0 4px;border-radius:4px;font-size:13px}
+</style>
+<main>
+<div><h1>斷行規則 <span class="badge">稿 v2.86</span></h1><p style="color:var(--mut);margin:4px 0 0">解 Issue 511、512、514、515、516（2026-11-21，設計員施工包 D）。數值已定，實作在程式 1.27.3。</p></div>
+<section class="card"><h2>規則</h2><table>
+<tr><th>#</th><th>規則</th><th>數值</th></tr>
+<tr><td>R1</td><td>全站段落避免結尾孤字（1～2 字單獨一行）</td><td><code>body{text-wrap:pretty}</code>；標題沿用 balance</td></tr>
+<tr><td>R2</td><td>不可拆的單位（進度「進行中：下載」、日期範圍、最後修改時間、選項名「最少排數」、「3 分鐘」）一律不在字中斷行，單位之間可換行</td><td>工具類別 <code>.nb</code>（nowrap）</td></tr>
+<tr><td>R3</td><td>模擬考列表卡：三欄（名稱／進度／按鈕）只在寬度夠時用；960px 以下改單欄，進度、日期各自一行</td><td>斷點 700 → 960px</td></tr>
+<tr><td>R4</td><td>步驟欄加寬，副標只在頓號後換行且兩行等長</td><td>欄寬 208／230 → 248px；副標 balance；900px 以下步驟欄移到內容上方（原 760）</td></tr>
+<tr><td>R5</td><td>班級名稱序列、說明句尾由 R1 處理，不逐頁加規則</td><td>—</td></tr>
+</table></section>
+<section class="card"><h2>示範（欄寬 230px 模擬手機）</h2><div class="pair">
+<div class="box bad"><b class="l">舊</b><div class="narrow">5／6 步完成・進行中：下載　最後修改 2026-11-05 16:00</div></div>
+<div class="box ok"><b class="l">新</b><div class="narrow"><span class="nb">5／6 步完成</span><span class="nb">・進行中：下載</span>　最後修改 <span class="nb">2026-11-05 16:00</span></div></div>
+</div></section>
+<p style="color:var(--mut);font-size:13px">三寬度（375／768／1280）前後截圖在 PR 描述與完工記錄。</p>
+</main>
