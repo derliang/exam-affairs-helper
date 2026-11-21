@@ -1,4 +1,4 @@
-/** H0：更名「考務小幫手」、補考佔位卡、舊備份檔與本機資料庫名稱不變；全部假資料 */
+/** H0：更名「考務小幫手」、舊備份檔與本機資料庫名稱不變；全部假資料 */
 import { readFileSync } from 'node:fs';
 import { renderToString } from 'preact-render-to-string';
 import { describe, expect, it } from 'vitest';
@@ -54,18 +54,15 @@ describe('H0 舊備份檔照常可匯入', () => {
   });
 });
 
-describe('K5 考試種類的補考卡', () => {
-  const html = renderToString(<NewExam doc={demoDoc()} onCancel={noop} onMakeup={noop} onCreate={noop} now={() => new Date('2026-09-01T02:00:00Z')} />);
+describe('D186 新增模擬考沒有補考卡（補考入口只在頁首導覽列）', () => {
+  const html = renderToString(<NewExam doc={demoDoc()} onCancel={noop} onCreate={noop} now={() => new Date('2026-09-01T02:00:00Z')} />);
   const cards = html.split('<button').filter((x) => x.includes('class="tcard"'));
-  it('有四張類型卡，補考可按（不再停用、不再有「即將推出」）', () => {
-    expect(cards.length).toBe(4);
-    const mk = cards.find((c) => c.includes('<strong>補考</strong>'))!;
-    expect(mk).not.toContain('disabled');
-    expect(mk).not.toContain('aria-describedby');
-    expect(mk).not.toContain('aria-pressed');
-    expect(mk).toContain('高中部、國中部');
+  it('只有學測、分科、會考三張類型卡，沒有補考卡', () => {
+    expect(cards.length).toBe(3);
+    expect(cards.some((c) => c.includes('<strong>補考</strong>'))).toBe(false);
     expect(html).not.toContain('即將推出');
     expect(html).not.toContain('soon-note');
+    expect(html).toContain('補考請從頁首導覽列的「補考」進入');
   });
   it('學測、分科、會考仍可選', () => {
     for (const t of ['學測模擬考', '分科模擬考', '會考模擬考']) {
@@ -75,3 +72,5 @@ describe('K5 考試種類的補考卡', () => {
     }
   });
 });
+
+
