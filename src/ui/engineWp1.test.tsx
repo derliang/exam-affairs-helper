@@ -175,10 +175,10 @@ describe('WP-4 容量數字：第 2、3、5 步、流程摘要、對帳、自習
       const s2 = /考生 (\d+) 人，不參加 (\d+) 人/.exec(renderToString(<Step2 doc={doc} exam={exam} onChange={noop} onToRoster={noop} />));
       if (examEntries(doc, exam).length !== n || exam.kind !== 'bcct') expect(s2 && Number(s2[1]) + Number(s2[2])).toBe(n);
       const s3 = renderToString(<Step3 doc={doc} exam={exam} onChange={noop} />);
-      const sum3 = [...s3.matchAll(/class="sub">考生 (\d+)</g)].reduce((m, x) => m + Number(x[1]), 0);
+      const sum3 = [...s3.matchAll(/class="sub">學生 (\d+)</g)].reduce((m, x) => m + Number(x[1]), 0);
       expect(sum3).toBe(n);
       const s5 = renderToString(<Step5 doc={doc} exam={exam} onChange={noop} onStep={noop} />);
-      expect(s5).toMatch(new RegExp(`考生</[^>]+>\\s*<[^>]+>${n}<|考生[^0-9<]*<[^>]*>${n}<`));
+      expect(s5).toMatch(new RegExp(`學生</[^>]+>\\s*<[^>]+>${n}<|學生[^0-9<]*<[^>]*>${n}<`));
     });
   }
 

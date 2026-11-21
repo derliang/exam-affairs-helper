@@ -22,6 +22,7 @@ import {
   type DetachResult,
 } from '../core';
 import { examSubjectPeriods } from '../core/periods';
+import { isListeningSubject } from '../core/marks';
 import { examYear, type Doc, type Result } from './store';
 import { rosterFor, viewForYear } from './rosterYears';
 import { roomsMissingTrack } from './rooms';
@@ -62,13 +63,23 @@ export function examRooms(doc: Doc, exam: ExamConfig): Classroom[] {
 export const hasImportedList = (doc: Doc, exam: ExamConfig): boolean => !!filesOf(doc, exam.id).entries?.length;
 
 /**
+ * 英聽人人都考（D67、D195）：大考中心名單的組別沒有英聽，匯入後每位有考任何科的考生都補上本次的英聽科目；
+ * 全科缺考者（沒有任何科目）不補。已匯入的舊存檔在這裡讀取時補，不必重匯。
+ */
+const withListening = (entries: ExamEntry[], exam: ExamConfig): ExamEntry[] => {
+  const ids = exam.subjects.filter(isListeningSubject).map((x) => x.id);
+  if (!ids.length) return entries;
+  return entries.map((e) => (e.subjectIds.length && ids.some((id) => !e.subjectIds.includes(id)) ? { ...e, subjectIds: [...e.subjectIds, ...ids.filter((id) => !e.subjectIds.includes(id))] } : e));
+};
+
+/**
  * 本次考試的考生。已匯入考試名單就用名單；
  * 會考（國中部）全員參加、每科都考，沒匯入時學生名單就是考試名單（每人考全部七科），不必匯入（D82 修訂）。
  * 各處（摘要列、③、④、⑤、⑥、排座輸入）都從這裡取考生，口徑只有一個。
  */
 export const examEntries = (doc: Doc, exam: ExamConfig): ExamEntry[] => {
   const imported = filesOf(doc, exam.id).entries;
-  if (imported?.length || exam.kind !== 'bcct') return imported ?? [];
+  if (imported?.length || exam.kind !== 'bcct') return withListening(imported ?? [], exam);
   const subjectIds = exam.subjects.map((x) => x.id);
   // #264：會考沒匯入名單時用「該考試學年度」的名單，不是目前作用中的學年度
   return (rosterFor(doc, exam)[exam.division] ?? []).map((s) => ({
