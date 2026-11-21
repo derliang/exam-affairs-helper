@@ -9,9 +9,9 @@ import type { StepNo } from '../seating';
 type BtnKind = 'primary' | 'danger' | 'ghost' | 'default' | 'accent-outline';
 
 export function Button(p: {
-  kind?: BtnKind; small?: boolean; disabled?: boolean; onClick?: () => void; children: ComponentChildren; title?: string;
+  kind?: BtnKind; small?: boolean; /** 大鈕（btn-lg）：空白狀態的唯一主要動作 */ large?: boolean; disabled?: boolean; onClick?: () => void; children: ComponentChildren; title?: string;
 }) {
-  const cls = ['btn', p.kind && p.kind !== 'default' ? `btn-${p.kind}` : '', p.small ? 'btn-sm' : ''].filter(Boolean).join(' ');
+  const cls = ['btn', p.kind && p.kind !== 'default' ? `btn-${p.kind}` : '', p.small ? 'btn-sm' : '', p.large ? 'btn-lg' : ''].filter(Boolean).join(' ');
   return <button type="button" class={cls} disabled={p.disabled} onClick={p.onClick} title={p.title}>{p.children}</button>;
 }
 
@@ -204,12 +204,13 @@ export function ConfirmButton(p: { copy: ConfirmCopy; onConfirm: () => void; kin
 }
 
 /** 空狀態：告訴使用者「這裡還沒有東西、為什麼、下一步按哪裡」 */
-export function EmptyState(p: { title: string; children?: ComponentChildren; action?: ComponentChildren }) {
+export function EmptyState(p: { title: string; children?: ComponentChildren; action?: ComponentChildren; /** 按鈕下方的一行小字（例：補考的流程說明） */ hint?: ComponentChildren }) {
   return (
     <div class="empty">
       <strong>{p.title}</strong>
       {p.children && <p class="muted">{p.children}</p>}
       {p.action && <div class="btnrow">{p.action}</div>}
+      {p.hint && <p class="hint">{p.hint}</p>}
     </div>
   );
 }

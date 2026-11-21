@@ -59,20 +59,15 @@ export function MakeupList(p: {
   const sorted = [...p.sessions].sort((a, b) => b.modifiedAt.localeCompare(a.modifiedAt));
   return (
     <section>
-      <PageHead title="補考" badge="補考模式">
-        <Button kind="primary" onClick={p.onNew}>＋ 新增補考場次</Button>
-      </PageHead>
+      {/* #505、稿 v2.85：沒有場次時頁首只放標題與徽章，唯一的新增鈕在空白卡中央；有場次時新增鈕回頁首右上 */}
+      {sorted.length === 0 && !p.listError
+        ? <PageHead title="補考" badge="補考模式" />
+        : <PageHead title="補考" badge="補考模式"><Button kind="primary" onClick={p.onNew}>＋ 新增補考場次</Button></PageHead>}
       {p.listError ? p.listError : sorted.length === 0 ? (
-        <>
-          <EmptyState title="還沒有補考場次" action={<Button kind="primary" onClick={p.onNew}>＋ 新增補考場次</Button>}>
-            把教務系統匯出的不及格名單丟進來，系統會統計人數、排考程與教室，並逐項對帳，確保沒有任何一位補考學生被漏掉。
-          </EmptyState>
-          <div class="card stack" style="margin-top:12px">
-            <div class="lab">七個步驟</div>
-            <p class="small">① 補考設定　② 匯入名單　③ 教室設定　④ 人數統計　⑤ 考程編排　⑥ 檢核與對帳　⑦ 下載</p>
-            <p class="small muted">前面還沒做完也能跳著點；⑥ 全部對上才能下載。</p>
-          </div>
-        </>
+        <EmptyState title="還沒有補考場次" action={<Button kind="primary" large onClick={p.onNew}>＋ 新增補考場次</Button>}
+          hint="流程：① 補考設定 → ② 匯入名單 → ③ 教室設定 → ④ 人數統計 → ⑤ 考程編排 → ⑥ 檢核與對帳 → ⑦ 下載。前面還沒做完也能跳著點；⑥ 全部對上才能下載。">
+          把教務系統匯出的不及格名單丟進來，系統會統計人數、排考程與教室，並逐項對帳，確保沒有任何一位補考學生被漏掉。
+        </EmptyState>
       ) : (
         <div class="exam-list" style="margin-top:12px">
           {sorted.map((s) => {
@@ -108,7 +103,7 @@ export function MakeupList(p: {
           })}
         </div>
       )}
-      <p class="small muted" style="margin-top:12px">進度點：綠＝完成、藍＝目前、灰＝尚未做。左邊的粗線：紅＝有不通過項目、琥珀＝有待確認項目、綠＝全數對上。</p>
+      {sorted.length > 0 && !p.listError && <p class="small muted" style="margin-top:12px">進度點：綠＝完成、藍＝目前、灰＝尚未做。左邊的粗線：紅＝有不通過項目、琥珀＝有待確認項目、綠＝全數對上。</p>}
       {del && (
         <ConfirmModal
           copy={{ title: `刪除補考場次「${del.name}」？`, body: '會刪掉這個場次的設定、匯入的名單與教室（只刪 App 內的資料，不碰已下載的檔案）。', confirm: '刪除' }}

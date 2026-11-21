@@ -63,10 +63,22 @@ describe('補考畫面（伺服器端渲染煙霧測試＋文案）', () => {
 });
 
 describe('補考列表與新增', () => {
-  it('空：第一次畫面、七個步驟說明', () => {
+  it('空：第一次畫面只有一顆新增鈕（在空白卡中央、大鈕），七步驟改成卡內一行流程，沒有進度點圖例（#505、稿 v2.85）', () => {
     const html = renderToString(<MakeupList sessions={[]} onNew={noop} onOpen={noop} onDelete={noop} />);
     expect(html).toContain('還沒有補考場次');
-    expect(html).toContain('七個步驟');
+    expect(html.split('＋ 新增補考場次').length - 1).toBe(1);
+    expect(html).toContain('btn btn-primary btn-lg');
+    expect(html).toContain('流程：① 補考設定');
+    expect(html).not.toContain('七個步驟');
+    expect(html).not.toContain('進度點：');
+  });
+  it('有場次：新增鈕回頁首右上（只有一顆、不是大鈕），進度點圖例出現', () => {
+    const s = fakeSession({ rooms: rooms(4) });
+    const html = renderToString(<MakeupList sessions={[s]} onNew={noop} onOpen={noop} onDelete={noop} today="2026-11-20" />);
+    expect(html.split('＋ 新增補考場次').length - 1).toBe(1);
+    expect(html).not.toContain('btn-lg');
+    expect(html).not.toContain('流程：① 補考設定');
+    expect(html).toContain('進度點：');
   });
   it('有場次：考日、人次、學生、進度、對帳徽章；沒有名單不顯示紅燈', () => {
     const s = { ...fakeSession({ rooms: rooms(6) }), days: [{ id: 'd1', date: '2027-01-16', start: 480 }] };
