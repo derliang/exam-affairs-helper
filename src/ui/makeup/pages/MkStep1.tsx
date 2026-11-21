@@ -105,10 +105,9 @@ export function MkStep1(p: { s: MakeupSession; onChange: (s: MakeupSession) => v
       </div>
 
       <div class="card stack">
-        <div><div class="lab">要產生哪些參考文件 <Badge tone="warn">暫定 U-5</Badge></div><p class="small muted">座位表預設產生（用於檢核）、標籤預設不產生。</p></div>
+        <div><div class="lab">要產生哪些參考文件 <Badge tone="warn">暫定 U-5</Badge></div><p class="small muted">座位表預設產生（用於檢核）；座位標籤（O-6）這一版尚未提供。</p></div>
         <div class="row">
           <Switch label="座位表（O-5）" ariaLabel="產生座位表" checked={s.options.seatChart} onText="產生" offText="不產生" onChange={(v) => set({ options: { ...s.options, seatChart: v } })} />
-          <Switch label="座位標籤（O-6）" ariaLabel="產生座位標籤" checked={s.options.labels} onText="產生" offText="不產生" onChange={(v) => set({ options: { ...s.options, labels: v } })} />
         </div>
         <p class="small muted">其他文件（O-1～O-4、O-7）固定產生，不在這裡選。</p>
       </div>
