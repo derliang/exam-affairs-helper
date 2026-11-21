@@ -269,6 +269,7 @@ export function reviveSession(s: MakeupSession): MakeupSession {
     ...(parse ? { parse } : {}),
     resolutions: (s.resolutions ?? []).map((r) => (r.action === 'fix' ? { ...r, row: reviveRow(r.row) } : r)),
     roomOff: s.roomOff ?? [],
-    rooms: s.rooms ?? [],
+    // D180：不再有手動標記的「混班」教室，舊存檔的 mixed 當一般教室
+    rooms: (s.rooms ?? []).map((r) => (r.use === 'mixed' ? { ...r, use: 'class' as const } : r)),
   };
 }

@@ -1,6 +1,6 @@
 /**
  * S-4 ③ 教室設定：教室清單（用全站同一個 RoomList，D138／CLAUDE.md〈UI 一律用設計系統與共用元件〉）、
- * 類型（班級／混班／特別）、本次使用開關、狀態檢核（F-15：最擁擠時段的同時在考人數 vs 可用座位）。
+ * 類型（一般／特別；混班由系統自動挑，D180）、本次使用開關、狀態檢核（F-15：最擁擠時段的同時在考人數 vs 可用座位）。
  * 座位上限沿用 D160：橫排、深位各 ≤8、總座位 ≤56（稿寫 7×7 是舊的 G14，已被 D160 取代）。
  */
 import { Alert, Badge, Seg, Switch } from '../../components';
@@ -10,10 +10,10 @@ import { fmtTime, type MakeupRoom, type MakeupRoomUse } from '../../../core/make
 import { roomCheckOf } from '../pipeline';
 import type { MakeupSession } from '../session';
 
-export const USE_TEXT: Record<MakeupRoomUse, string> = { class: '班級', mixed: '混班', special: '特別' };
+export const USE_TEXT: Record<MakeupRoomUse, string> = { class: '一般', mixed: '一般', special: '特別' };
 const USE_HINT: Record<MakeupRoomUse, string> = {
-  class: '同班同科盡量在自己班的教室，避免跑錯。',
-  mixed: '放不下整班時，整班搬過來；同節可有不同年級、不同科目的整班。',
+  class: '同班同科盡量同一間；放不下整班時，系統會自動把整班搬到還有空位的教室（混班），不用自己標記。',
+  mixed: '',
   special: '提前開考的學生在這裡第一節就開考，單獨管理離場。',
 };
 
@@ -81,8 +81,8 @@ export function MkStep3(p: { s: MakeupSession; onChange: (s: MakeupSession) => v
       </div>
 
       <div class="card stack">
-        <div class="lab">教室清單 <Badge tone="warn">暫定 U-4</Badge></div>
-        <p class="small muted">混班教室由你在這裡標記，系統只在有標記的教室中分配（不自己挑）。</p>
+        <div class="lab">教室清單</div>
+        <p class="small muted">混班教室由系統自動挑，你只要設定哪些是特別教室（提前開考用）。</p>
         <RoomList flat rooms={s.rooms.map(toClassroom)} paper="B4" division="senior" track="none" reserveName="教室" addLabel="＋ 新增教室"
           onAdd={() => setRooms([...s.rooms, newRoom(s.rooms)])}
           onChange={(list) => setRooms(fromClassrooms(list, s.rooms))}
@@ -92,16 +92,16 @@ export function MkStep3(p: { s: MakeupSession; onChange: (s: MakeupSession) => v
             return (
               <div class="stack" style="gap:6px">
                 <Switch label="本次使用" ariaLabel={`本次使用：${room.name}`} checked={!s.roomOff.includes(room.id)} onText="使用" offText="未使用" onChange={(v) => toggle(room.id, v)} />
-                <Seg<MakeupRoomUse> label={`${room.name}類型`} value={room.use} options={(['class', 'mixed', 'special'] as const).map((u) => ({ value: u, label: USE_TEXT[u] }))} onChange={(u) => setUse(room.id, u)} />
+                <Seg<MakeupRoomUse> label={`${room.name}類型`} value={room.use} options={(['class', 'special'] as const).map((u) => ({ value: u, label: USE_TEXT[u] }))} onChange={(u) => setUse(room.id, u)} />
               </div>
             );
           }} />
       </div>
 
       <div class="card stack">
-        <div class="lab">三種類型</div>
+        <div class="lab">兩種類型</div>
         <ul class="small stack" style="gap:6px;padding-left:18px;margin:0">
-          {(['class', 'mixed', 'special'] as const).map((u) => <li key={u}><b>{USE_TEXT[u]}教室</b>　{USE_HINT[u]}</li>)}
+          {(['class', 'special'] as const).map((u) => <li key={u}><b>{USE_TEXT[u]}教室</b>　{USE_HINT[u]}</li>)}
         </ul>
       </div>
     </section>
