@@ -10,7 +10,7 @@ import { codeOf } from '../../core/astD99/contract';
 import { AstStep6, runAstExport } from './AstStep6';
 import { astInput, astPlan } from './model';
 import { AstStep4 } from './AstStep4';
-import { landscapeFit, textEm } from '../../export/model';
+import { landscapeFit, statMerge, textEm } from '../../export/model';
 import { astOutputBlockers, astOutputs } from './output';
 
 const noop = () => undefined;
@@ -316,7 +316,11 @@ describe('分科輸出：綜合教室座位表（#220）', () => {
     expect(o.seat).toHaveLength(new Set(inReserve.map((e) => e.roomId)).size);
     const p = o.seat[0]!;
     expect(p.slotMode).toBe(true);
-    expect(p.stats.table.headLabel).toBe('時段');
+    // #581：欄位比照學測（D170），同天同時段垂直合併，不再逐列重複「第一天 時段一」
+    expect(p.stats.table.leadHeads).toEqual(['第幾天', '時段', '科目']);
+    expect(p.stats.table.headLabel).toBeUndefined();
+    const mg = statMerge(p);
+    p.stats.table.rows.slice(0, -1).forEach((r, i) => { if (i > 0 && r.lead![0] === p.stats.table.rows[i - 1]!.lead![0]) expect(mg[i]!.span[0]).toBe(0); });
     const rows = p.stats.table.rows;
     expect(rows[rows.length - 1]!.label).toBe('使用人數（不重複）');
     expect(rows[rows.length - 1]!.total).toBe(p.stats.total);
