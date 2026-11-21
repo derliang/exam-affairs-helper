@@ -140,7 +140,7 @@ export function Step5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
 
   const statsBar = (
     <StatsBar items={[
-        { label: '考生', value: seatableEntries(doc, exam).length },
+        { label: '學生', value: seatableEntries(doc, exam).length },
         { label: '座位', value: seats },
         { label: '禁用', value: classRooms.reduce((a, r) => a + roomCapacity(r) - r.seatCount, 0) },
         { label: '教室', value: `${classRooms.length} 間` },
