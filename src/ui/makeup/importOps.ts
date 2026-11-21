@@ -143,6 +143,46 @@ export function mergeImport(s: MakeupSession, parse: MakeupParseResult, fileName
   return stampSource({ ...s, parse: merged }, fileName, now);
 }
 
+/** 多檔匯入（#506、D187）：新檔與目前名單「同學號同科」重疊的鍵（內容相同也算，要問使用者，不靜默略過） */
+export function overlapKeys(current: MakeupParseResult | undefined, next: MakeupParseResult): string[] {
+  if (!current) return [];
+  const have = new Set(allRows(current).map(rowKey));
+  return [...new Set(allRows(next).map(rowKey))].filter((k) => have.has(k));
+}
+
+/**
+ * 依使用者逐筆的決定合併：不重疊的新列直接加入；重疊的鍵在 useNew 裡就改用新檔那一列（目前那列連同它的處理紀錄拿掉），否則保留目前的。
+ * 新列的列號加前綴避免撞號。
+ */
+export function mergeImportWith(s: MakeupSession, parse: MakeupParseResult, fileName: string, now: Date, useNew: ReadonlySet<string>): MakeupSession {
+  const cur = s.parse;
+  if (!cur) return replaceImport(s, parse, fileName, now);
+  const have = new Set(allRows(cur).map(rowKey));
+  const tag = `m${now.getTime().toString(36)}:`;
+  const re = <T extends MakeupRow>(r: T): T => ({ ...r, rowId: `${tag}${r.rowId}` });
+  const take = (k: string): boolean => !have.has(k) || useNew.has(k);
+  const dropped = new Set<string>([...cur.rows.filter((r) => useNew.has(rowKey(r))).map((r) => r.rowId), ...cur.problems.filter((x) => useNew.has(rowKey(x.draft))).map((x) => x.rowId)]);
+  const curRows = cur.rows.filter((r) => !dropped.has(r.rowId));
+  const curProblems = cur.problems.filter((x) => !dropped.has(x.rowId));
+  const rows = parse.rows.filter((r) => take(rowKey(r))).map(re);
+  const problems = parse.problems.filter((x) => take(rowKey(x.draft))).map((x) => ({ ...x, rowId: `${tag}${x.rowId}`, draft: re(x.draft) }));
+  const merged: MakeupParseResult = {
+    ...cur,
+    rawCount: cur.rawCount - dropped.size + rows.length + problems.length,
+    rows: [...curRows, ...rows],
+    problems: [...curProblems, ...problems],
+    warnings: [...cur.warnings, ...parse.warnings],
+  };
+  return stampSource({ ...s, parse: merged, resolutions: s.resolutions.filter((r) => !dropped.has(r.rowId)) }, fileName, now);
+}
+
+/** 重疊鍵對應的目前列與新列（畫面逐筆詢問用） */
+export function overlapRows(current: MakeupParseResult, next: MakeupParseResult, keys: readonly string[]): { key: string; cur: MakeupRow; nxt: MakeupRow }[] {
+  const c = new Map(allRows(current).map((r) => [rowKey(r), r]));
+  const n = new Map(allRows(next).map((r) => [rowKey(r), r]));
+  return keys.flatMap((key) => { const a = c.get(key); const b = n.get(key); return a && b ? [{ key, cur: a, nxt: b }] : []; });
+}
+
 // ───────────── 問題列處理（F-10） ─────────────
 
 export function setResolution(s: MakeupSession, res: MakeupResolution): MakeupSession {

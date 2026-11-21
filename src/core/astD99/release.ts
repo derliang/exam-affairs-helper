@@ -163,11 +163,11 @@ export function parseVersions(text: string): { ok: true; versions: AstVersion[];
  * 版本清單匯入能不能套用到這場考試（#276）：已公告的不能直接覆寫（先解除定案）；檔案要是這場考試匯出的（來源考試編號相符；舊檔沒有編號時，
  * 目前已有版本紀錄就不收）；不能讓現有的版本紀錄變少。回傳擋下的原因，空字串＝可以套用。
  */
-export function versionsImportBlock(exam: ExamConfig, r: { versions: readonly AstVersion[]; examId?: string }): string {
+export function versionsImportBlock(exam: ExamConfig, r: { versions: readonly AstVersion[]; examId?: string }, opts: { /** 多檔匯入（#506）：逐檔只查來源，版本數不能變少留到合併後再查 */ skipCount?: boolean } = {}): string {
   if (phaseOf(exam) === 'announced') return '已公告的版本清單不能被匯入覆寫。要還原請先「解除定案、修正」並填理由。';
   const have = exam.astVersions ?? [];
   if (r.examId !== undefined && r.examId !== exam.id) return '這個檔案是別場考試匯出的，不能匯入到這場。';
   if (r.examId === undefined && have.length > 0) return '這個舊版檔案沒有記錄來源考試，無法確認是這一場；目前已有版本紀錄，不能用它覆寫。';
-  if (r.versions.length < have.length) return `檔案只有 ${r.versions.length} 個版本，比目前的 ${have.length} 個少，匯入會讓公告紀錄消失，已擋下。`;
+  if (!opts.skipCount && r.versions.length < have.length) return `檔案只有 ${r.versions.length} 個版本，比目前的 ${have.length} 個少，匯入會讓公告紀錄消失，已擋下。`;
   return '';
 }
