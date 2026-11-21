@@ -9,6 +9,12 @@ import { LIGHT_ICON, LIGHT_TEXT, ledgerWant, type Check, type Gate, type Reconci
 
 const STEP_NAME: Record<2 | 3 | 5, string> = { 2: '② 考試名單', 3: '③ 教室設定', 5: '⑤ 排座與預覽' };
 const LABELS: Record<'tri' | 'cap', [string, string, string]> = { tri: ['應有', '實有', '差異'], cap: ['上限', '使用', '餘額'] };
+/** 稿 v2.78（G35）每項檢核的三格標籤；補考等不在表內的項目沿用 tri／cap 的通用標籤（#502 ③） */
+const M_LABELS: Record<string, [string, string, string]> = {
+  'M-1': ['名冊', '報名＋不參加', '差異'], 'M-2': ['名冊人次', '座位表人次', '差異'], 'M-3': ['應有去處', '實有去處', '差異'],
+  'M-4': ['可用座位', '使用人數', '餘額'], 'M-5': ['自習位置', '自習人數', '餘額'], 'M-6': ['畫面人次', '檔案資料人次', '差異'],
+  'M-7': ['畫面版本', '排座結果版本', '差異'], 'M-8': ['應有重疊', '實有重疊', '差異'],
+};
 
 export const Lamp = (p: { light: Check['light'] }) => <span class={`rc-lamp rc-${p.light}`}><span aria-hidden="true">{LIGHT_ICON[p.light]}</span> {LIGHT_TEXT[p.light]}</span>;
 
@@ -17,13 +23,13 @@ export function CheckRow(p: { c: Check; onGo: (n: 2 | 3 | 5) => void }) {
   const { c } = p;
   // 紅、琥珀列預設展開；通過與不適用預設收起
   const [open, setOpen] = useState(c.light === 'fail' || c.light === 'warn');
-  const [x, y, z] = LABELS[c.cap ? 'cap' : 'tri'];
+  const [x, y, z] = M_LABELS[c.id] ?? LABELS[c.cap ? 'cap' : 'tri'];
   return (
     <div class={`rc-row rc-row-${c.light}`} data-check={c.id} data-light={c.light}>
-      <div class="rc-name"><b>{c.id}</b>　{c.title}<Lamp light={c.light} /></div>
+      <span class={`rc-ico rc-i-${c.light}`} aria-hidden="true">{LIGHT_ICON[c.light]}</span>
+      <div class="rc-name"><b>{c.id}　{c.title}</b><Lamp light={c.light} /></div>
       {c.light === 'na' && <div class="rc-val small muted">{c.summary}</div>}
       {/* D171①②：通過列只顯示燈號、項目與「通過」；應有／實有／差異與說明都收進明細，收起時不留「差異 0」。不通過、警示直接展開 */}
-      {c.light === 'pass' && <div class="rc-val" />}
       {c.light !== 'na' && <button type="button" class="rc-more" aria-expanded={open} onClick={() => setOpen(!open)}>明細 {open ? '▴' : '▾'}</button>}
       {open && c.light !== 'na' && (
         <div class="rc-detail">
@@ -83,7 +89,7 @@ export function ReconcilePanel(p: {
       <div class="small">名單範圍 {r.scope.total} 人 ＝ 報名 {r.scope.enrolled} ＋ 不參加 {r.scope.absent}{r.hasAbsent ? '' : '（不參加的人就是自習，座位表上有他們的座位）'}</div>
       {/* #480：原本 10 欄表格有最小寬度又包 .scroll，在兩欄版面溢出卡片。改 D168 的容器寬度表格：寬時是表格、容器 ≤640px 變一列一張卡，不橫向捲動 */}
       <div class="rtw">
-        <table class="t compact rt-t">
+        <table class="t compact rt-t rt-wide">
           <thead><tr><th>時段</th><th>科目</th><th>名單範圍</th><th>＝ 考試</th>{r.hasStudy && <th>＋ 自習</th>}{r.hasAbsent && <th>＋ 不參加</th>}<th>座位表</th><th>標籤</th><th>教室加總</th><th>帳</th></tr></thead>
           <tbody>{r.ledger.map((l) => (
             <tr key={l.key} data-ledger-ok={l.ok} class={l.ok ? '' : 'bad rc-bad'}>

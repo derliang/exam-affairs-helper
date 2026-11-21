@@ -10,8 +10,7 @@ import { prepareExport } from '../exportInput';
 import { defaultOptions } from '../../export/plan';
 import {
   afterOverrideChange, autoSeat, chartModel, detachChartModel, seatableEntries, detachSummary, nameMapOf, examClasses, examEntries, examOverrides, examResult, examRooms,
-  isStale, overrideNotes, removeOverride, reseat, roomStatTable, seatingBlockers, setOverride, validationChecks, type StepNo,
-} from '../seating';
+  isStale, overrideNotes, removeOverride, reseat, roomStatTable, seatingBlockers, setOverride, validationChecks, classOrderOf, sortRoomsByClassOrder, type StepNo } from '../seating';
 import { roomCapacity } from '../rooms';
 import { studyCapacity } from '../capacity';
 import { shortText, StudyNeedDetail, StudySlotTable } from './StudyCapacityView';
@@ -109,7 +108,7 @@ export function Step5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
   const senior = exam.division === 'senior'; // 會考沒有標示、抽離、個別覆寫（單人特例）
   const trackOf = (t?: string) => (senior && t ? (t === 'science' ? '（理）' : '（文）') : '');
   const rooms = examRooms(doc, exam);
-  const classRooms = rooms.filter((r) => r.kind === 'class');
+  const classRooms = sortRoomsByClassOrder(doc, exam, rooms.filter((r) => r.kind === 'class'));
   const reserveRooms = rooms.filter((r) => r.kind === 'reserve');
   const resSel = reserveRooms.find((r) => r.id === roomId);
   const room = resSel ? undefined : (classRooms.find((r) => r.id === roomId) ?? classRooms[0]);
@@ -126,6 +125,7 @@ export function Step5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
   const pass = checks?.filter((c) => c.ok).length ?? 0;
   const allPass = !!checks && pass === checks.length;
   const classes = examClasses(doc, exam);
+  const classOrder = classOrderOf(doc, exam);
   const seats = classRooms.reduce((a, r) => a + r.seatCount, 0);
   const notes = overrideNotes(doc, exam, result);
   const overrides = examOverrides(doc, exam);
@@ -133,7 +133,7 @@ export function Step5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
   const summary = detachSummary(exam, result);
   const pulls = summary.flatMap((s) => s.examRooms.map((r) => ({ key: `${s.subjectId}|${r.roomId}`, subjectId: s.subjectId, name: s.name, roomId: r.roomId })));
   const model = room ? chartModel(doc, exam, result, room) : null;
-  const present = model ? [...new Set(model.lines.flat().flatMap((c) => (c.kind === 'student' ? [c.classNo] : [])))].sort((a, b) => a - b) : [];
+  const present = model ? [...new Set(model.lines.flat().flatMap((c) => (c.kind === 'student' ? [c.classNo] : [])))].sort((a, b) => classOrder(a) - classOrder(b)) : [];
   const stat = room ? roomStatTable(doc, exam, result, room.id) : null;
   const classLabel = (no: number) => classes.find((c) => c.no === no)?.name ?? `第${no}班`;
   const vcode = <div class="vcode">產生 {taipei(result.generatedAt)}　資料版本 {result.dataVersion}（名單或設定改了，版本碼就會變）</div>;
@@ -212,7 +212,7 @@ export function Step5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
             <div>
               <div class="lab">本教室各科應考人數</div>
               <div class="rtw">
-                <table class="t compact rt-t rt-mx">
+                <table class="t compact rt-t rt-a rt-mx">
                   <thead><tr><th>項目</th>{stat.classes.map((c) => <th key={c.no}>{c.name}</th>)}<th>合計</th></tr></thead>
                   <tbody>{stat.rows.map((r) => <tr key={r.label}><td class="ti" data-label="項目">{r.label}</td>{r.per.map((n, i) => <td class="n" key={i} data-label={stat.classes[i]?.name ?? ''}>{n}</td>)}<td class="n tot" data-label="合計"><b>{r.total}</b></td></tr>)}</tbody>
                 </table>

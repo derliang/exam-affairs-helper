@@ -39,6 +39,19 @@ const filesOf = (doc: Doc, examId: string) => doc.examFiles?.[examId] ?? {};
 export const examClasses = (doc: Doc, exam: ExamConfig): ClassInfo[] =>
   doc.settings.classes.filter((c) => c.division === exam.division);
 
+/** #503：班級顯示順序＝共用設定「班級資料」清單的順序（使用者可自訂，store.moveClass）；不在清單的排最後。只影響畫面排列，不影響排座引擎 */
+export function classOrderOf(doc: Doc, exam: ExamConfig): (classNo: number) => number {
+  const idx = new Map(examClasses(doc, exam).map((c, i) => [c.no, i]));
+  return (no) => idx.get(no) ?? Number.MAX_SAFE_INTEGER;
+}
+
+/** 班級教室（名稱＝班級名稱）依班級清單順序排；非班級教室與找不到班級的維持原順序、排在後面 */
+export function sortRoomsByClassOrder<T extends { name: string; kind: string }>(doc: Doc, exam: ExamConfig, rooms: T[]): T[] {
+  const idx = new Map(examClasses(doc, exam).map((c, i) => [c.name, i]));
+  const at = (r: T): number => (r.kind === 'class' ? idx.get(r.name) ?? Number.MAX_SAFE_INTEGER : Number.MAX_SAFE_INTEGER);
+  return rooms.map((r, i) => ({ r, i })).sort((a, b) => at(a.r) - at(b.r) || a.i - b.i).map((x) => x.r);
+}
+
 /** 本次勾選的教室，依 classroomIds 順序（D65） */
 export function examRooms(doc: Doc, exam: ExamConfig): Classroom[] {
   const byId = new Map(effectiveRooms(exam, doc.settings.classrooms).map((c) => [c.id, c]));
@@ -425,7 +438,8 @@ export function detachSummary(exam: ExamConfig, result: SeatingResult): { subjec
 export function roomStatTable(doc: Doc, exam: ExamConfig, result: SeatingResult, roomId: string): { classes: { no: number; name: string }[]; rows: { label: string; per: number[]; total: number }[] } {
   const st = roomStats(roomId, result.assignments, seatableEntries(doc, exam), exam.subjects, result.detaches, specialOf(result));
   const names = new Map(examClasses(doc, exam).map((c) => [c.no, c.name]));
-  const classes = st.perClass.map((c) => ({ no: c.classNo, name: names.get(c.classNo) ?? String(c.classNo) }));
+  const ord = classOrderOf(doc, exam);
+  const classes = st.perClass.map((c) => ({ no: c.classNo, name: names.get(c.classNo) ?? String(c.classNo) })).sort((a, b) => ord(a.no) - ord(b.no));
   const pick = (l: { classNo: number; count: number }[]) => classes.map((c) => l.find((x) => x.classNo === c.no)?.count ?? 0);
   const subjName = new Map(exam.subjects.map((s) => [s.id, s.name]));
   return {
