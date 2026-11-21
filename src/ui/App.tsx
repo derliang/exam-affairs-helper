@@ -46,7 +46,8 @@ import { deleteExam, examLabel, stampModified, type Doc } from './store';
 import { activateForExam, migrateRosterYear } from './rosterYears';
 import { APP_VERSION, formatVersion } from './version';
 import { describeChange } from './describeChange';
-import { canUndo, commit, newHistory, nextUndoLabel, undo, undoSteps, undoTo, type History } from './undo';
+import { canUndoIn, commit, newHistory, nextUndoLabelIn, undoIn, undoStepsIn, undoSteps, undoToIn, type History } from './undo';
+import { docScopes, scopeOfPage, sliceDoc, UNDO_SCOPES } from './undoScope';
 
 // 支援資料夾授權的瀏覽器用真實存檔；不支援（非 Chrome）時用記憶體實作，並在初始化頁提示
 const fsSupported = isFsAccessSupported();
@@ -106,7 +107,7 @@ export function App() {
   const afterLoad = (fresh: boolean) => go(fresh ? { page: 'wizard', step: 1 } : { page: 'exams' });
   const edit = (d0: Doc) => {
     const d = stampModified(hist.present, d0, new Date());
-    setHist((h) => commit(h, d, describeChange(h.present, d))); setStaleNote(undefined); void repo.save(d);
+    setHist((h) => commit(h, d, describeChange(h.present, d), undefined, docScopes(h.present, d))); setStaleNote(undefined); void repo.save(d);
   };
   // 更換／重新連結／搬到新位置（G16、G24）完成：需要時讀入新資料夾；帶著暫存修改過去的不重讀（重讀會蓋掉畫面上的修改）
   const folderDone = async (res: { carried: boolean; reload: boolean }) => {
@@ -128,10 +129,10 @@ export function App() {
     for (const id of ids) { const r = deleteExam(d, id); if (r.ok) d = r.doc; }
     if (d !== hist.present) edit(d);
   };
-  const onUndo = () => setHist((h) => { const n = undo(h); void repo.save(n.present); return n; });
+  const onUndo = () => setHist((h) => { const n = undoIn(h, undoScope, sliceDoc, UNDO_SCOPES); void repo.save(n.present); return n; });
   const [staleNote, setStaleNote] = useState<string | undefined>();
   const onUndoTo = (index: number) => {
-    const r = undoTo(hist, index);
+    const r = undoToIn(hist, undoScope, index, sliceDoc);
     setHist(r.history); void repo.save(r.history.present);
     // 比選中那步更新的動作一併退掉，標為過期（D47），讓使用者知道要重做哪些
     setStaleNote(r.dropped.length > 1 ? `已回到「${r.dropped[r.dropped.length - 1]}」之前。後面 ${r.dropped.length - 1} 步已過期，需要時請重做：${r.dropped.slice(0, -1).reverse().join('、')}。` : undefined);
@@ -152,6 +153,7 @@ export function App() {
   const gnav = guardNav(nav, allowed);
   const back = () => setNav(goBack(gnav));
   const r = gnav.route;
+  const undoScope = scopeOfPage(r.page);
   // 記住最近開啟的模擬考，導覽列才能在任何頁面一鍵跳到它的步驟
   const [lastExamId, setLastExamId] = useState<string | undefined>();
   // #344：新增模擬考頁的草稿；去共用設定再「← 回到」時帶回，從列表重新按「新增」、取消或建立後清掉
@@ -194,12 +196,12 @@ export function App() {
   const retStep = r.page === 'step' && lastBack?.page === 'step' && lastBack.examId === r.examId && lastBack.step !== r.step ? lastBack.step : undefined;
   const lastEntry = gnav.back[gnav.back.length - 1];
   const retBar = lastEntry && ['settings', 'lookup', 'reconcile', 'override', 'reserve', 'wizard', 'new'].includes(r.page) && lastEntry.route.page !== 'exams' ? lastEntry : undefined;
-  const undoCtl = <UndoGroup undoLabel={nextUndoLabel(hist)} onUndo={() => { setStaleNote(undefined); onUndo(); }} steps={undoSteps(hist)} onUndoTo={onUndoTo} />;
+  const undoCtl = <UndoGroup undoLabel={nextUndoLabelIn(hist, undoScope)} onUndo={() => { setStaleNote(undefined); onUndo(); }} steps={undoStepsIn(hist, undoScope)} onUndoTo={onUndoTo} />;
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !(t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) && canUndo(hist)) { e.preventDefault(); onUndo(); }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !(t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) && canUndoIn(hist, undoScope)) { e.preventDefault(); onUndo(); }
     };
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
