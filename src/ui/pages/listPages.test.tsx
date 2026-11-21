@@ -107,3 +107,14 @@ describe('座位表圖例（稿 v2.88）：小牌與說明綁成一項', () => {
     expect(html).toMatch(/class="lg-i"><span class="cell mk-x"><span class="mk">X 科目<\/span><\/span><span>這位考生不考這一科/);
   });
 });
+
+describe('共用設定表格窄寬（稿 v2.90，#553 #515）', () => {
+  it('班級表容器 ≤900 換小卡（rt-wide）、名單表頭不換行（rt-mx）、「不能刪除」不拆', async () => {
+    const { Settings } = await import('./Settings');
+    const cls = renderToString(<Settings doc={demoDoc()} onChange={noop} tab="classes" division="senior" />);
+    expect(cls).toContain('rt-t rt-wide rt-mx');
+    const ros = renderToString(<Settings doc={demoDoc()} onChange={noop} tab="roster" division="senior" />);
+    expect(ros).toContain('rt-t rt-mx');
+    expect(ros).toContain('<span class="nb">未填</span>');
+  });
+});

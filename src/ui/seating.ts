@@ -63,7 +63,7 @@ export function examRooms(doc: Doc, exam: ExamConfig): Classroom[] {
 export const hasImportedList = (doc: Doc, exam: ExamConfig): boolean => !!filesOf(doc, exam.id).entries?.length;
 
 /**
- * 英聽人人都考（D67、D192）：大考中心名單的組別沒有英聽，匯入後每位有考任何科的考生都補上本次的英聽科目；
+ * 英聽人人都考（D67、D194）：大考中心名單的組別沒有英聽，匯入後每位有考任何科的考生都補上本次的英聽科目；
  * 全科缺考者（沒有任何科目）不補。已匯入的舊存檔在這裡讀取時補，不必重匯。
  */
 const withListening = (entries: ExamEntry[], exam: ExamConfig): ExamEntry[] => {

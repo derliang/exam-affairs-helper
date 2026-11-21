@@ -224,7 +224,7 @@ export function SummaryBar(p: { flow: Flow; onGo: (step: StepNo) => void }) {
   return (
     <div class={`sumbar${issues.length ? ' has-iss' : ''}`} role="region" aria-label="本次考試摘要">
       <div class="sstats">
-        {none ? <div class="sc dim"><span class="sl">考生</span><b>尚未匯入考試名單</b></div> : <div class="sc"><span class="sl">考生</span><b>{s.students}</b></div>}
+        {none ? <div class="sc dim"><span class="sl">學生</span><b>尚未匯入考試名單</b></div> : <div class="sc"><span class="sl">學生</span><b>{s.students}</b></div>}
         <div class="sc"><span class="sl">座位</span><b>{s.seats}</b></div>
         {noSeat ? <div class="sc dim"><span class="sl">空位</span><b>—</b></div>
           : lack ? <div class="sc bad"><span class="sl">缺位</span><b>{-s.spare}</b></div>

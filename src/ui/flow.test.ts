@@ -237,7 +237,7 @@ describe('施工N：D82 考生人數、TODO-17 下一步不擋人', () => {
     expect(html).not.toMatch(/考生 <b>0<\/b>/);
     expect(html).toContain('待處理');
     const ok = renderToString(SummaryBar({ flow: flowOf(doc(e, true), e, 2), onGo: () => undefined }));
-    expect(ok).toContain('<span class="sl">考生</span><b>7</b>');
+    expect(ok).toContain('<span class="sl">學生</span><b>7</b>');
   });
   it('TODO-17：下一步按鈕不停用，只標示原因；按鈕在頁面上方元件（StepNextBar）', async () => {
     const { renderToString } = await import('preact-render-to-string');
