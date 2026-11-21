@@ -287,8 +287,24 @@ export function addClass(doc: Doc, division: Division, input: NewClassInput = {}
   const bad = validateClassName(doc, division, name);
   if (bad) return fail(bad);
   const c: ClassInfo = { no, name, division, colorIndex: leastUsedColor(classesOf(doc, division)), ...(division === 'senior' ? { track: input.track ?? 'science' } : {}) };
-  const classes = [...doc.settings.classes, c].sort((a, b) => (a.division === b.division ? a.no - b.no : a.division === 'senior' ? -1 : 1));
+  // #503：保留使用者自訂的清單順序，新班級接在同部別最後面（高中部在前、國中部在後）
+  const last = doc.settings.classes.reduce((m, x, i) => (x.division === division ? i : m), -1);
+  const at = last >= 0 ? last + 1 : division === 'senior' ? 0 : doc.settings.classes.length;
+  const classes = [...doc.settings.classes.slice(0, at), c, ...doc.settings.classes.slice(at)];
   return { ok: true, doc: { ...doc, settings: { ...doc.settings, classes } } };
+}
+
+/** #503：班級清單順序上移（-1）或下移（1）一格，只在同部別內換位；已在頭尾就原樣回傳。順序是班級的顯示順序（教室頁籤、班級篩選、統計欄） */
+export function moveClass(doc: Doc, division: Division, no: number, dir: -1 | 1): Doc {
+  const all = doc.settings.classes;
+  const from = all.findIndex((c) => c.division === division && c.no === no);
+  if (from < 0) return doc;
+  let to = from + dir;
+  while (to >= 0 && to < all.length && all[to]!.division !== division) to += dir;
+  if (to < 0 || to >= all.length) return doc;
+  const classes = [...all];
+  [classes[from], classes[to]] = [classes[to]!, classes[from]!];
+  return { ...doc, settings: { ...doc.settings, classes } };
 }
 
 /** 這個班級目前有多少東西用到它（名單人數、各次考試名單人數） */

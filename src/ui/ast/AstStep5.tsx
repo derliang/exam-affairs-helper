@@ -102,7 +102,11 @@ export function AstStep5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
   const used = (r: PlanRoom) => r.kind === 'class' || slots.some((s) => usageCell(plan, s, r).kind !== 'none');
   const rooms = planRooms.filter(used);
   const slot = slots[Math.min(sel.slot, slots.length - 1)]!;
-  const examRoomIds = planRooms.filter((r) => plan.out.usage[slot.id]?.[r.id] === 'exam').map((r) => r.id);
+  // #503：班級教室依「班級資料」清單順序、預備教室等維持原順序排後面；班級篩選也照清單順序
+  const classIdx = new Map(doc.settings.classes.filter((c) => c.division === 'senior').map((c, i) => [c.no, i]));
+  const classRank = (no: number): number => classIdx.get(no) ?? Number.MAX_SAFE_INTEGER;
+  const roomRank = (id: string): number => { const nm = roomData.get(id); const i = nm && nm.kind === 'class' ? [...doc.settings.classes.filter((c) => c.division === 'senior')].findIndex((c) => c.name === nm.name) : -1; return i < 0 ? Number.MAX_SAFE_INTEGER : i; };
+  const examRoomIds = planRooms.filter((r) => plan.out.usage[slot.id]?.[r.id] === 'exam').map((r) => r.id).map((id, i) => ({ id, i })).sort((a, b) => roomRank(a.id) - roomRank(b.id) || a.i - b.i).map((x) => x.id);
   const roomId = sel.room && examRoomIds.includes(sel.room) ? sel.room : examRoomIds[0];
   const roster = slotRoster(plan, slot.id);
   const classes = new Map(doc.settings.classes.filter((c) => c.division === 'senior').map((c) => [c.no, c.name]));
@@ -240,7 +244,7 @@ export function AstStep5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
           <>
             <div class="seg" role="group" aria-label="檢視班級">
               <button type="button" aria-pressed={only === 0} onClick={() => setOnly(0)}>全部班級</button>
-              {[...new Set(plan.out.exams.filter((e) => e.slotId === slot.id && e.roomId === roomId).map((e) => Number(e.code.slice(0, 2))))].sort((a, b) => a - b).map((c) => (
+              {[...new Set(plan.out.exams.filter((e) => e.slotId === slot.id && e.roomId === roomId).map((e) => Number(e.code.slice(0, 2))))].sort((a, b) => classRank(a) - classRank(b)).map((c) => (
                 <button type="button" key={c} aria-pressed={only === c} onClick={() => setOnly(c)}>只看{classes.get(c) ?? c}</button>
               ))}
             </div>

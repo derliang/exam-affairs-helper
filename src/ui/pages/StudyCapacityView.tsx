@@ -46,7 +46,7 @@ export function StudyNeedDetail(p: { sc: StudyCapacity; compact?: boolean; /** �
               <tbody>
                 {act.map((g) => (
                   <tr key={g.key} class={g.ok ? '' : 'bad'}>
-                    <td class="ti" data-label="時段">{g.when}</td><td class="ti" data-label="科目">{g.label}</td><td class="n" data-label="抽離考試">{g.examCount}</td><td class="n" data-label="抽離自習">{g.studyCount}</td>
+                    <td class="ti" data-label="時段">{g.when}</td><td data-label="科目">{g.label}</td><td class="n" data-label="抽離考試">{g.examCount}</td><td class="n" data-label="抽離自習">{g.studyCount}</td>
                     <td class="n" data-label="需要教室">{g.examRooms + g.studyRooms} 間</td><td class="n" data-label="至少座位">{g.seatsNeed}</td>
                     <td data-label="結果"><Badge tone={g.ok ? 'ok' : 'danger'}>{g.ok ? '夠用' : `缺 ${g.short}`}</Badge></td>
                   </tr>
@@ -68,21 +68,21 @@ export function StudySlotTable(p: { sc: StudyCapacity; classNames: Map<number, s
   if (rows.length === 0) return <EmptyState title="每個時段所有人都考，沒有自習的人" />;
   return (
     <div class="rtw">
-      <table class="t compact rt-t">
+      <table class="t compact rt-t rt-wide">
         <thead><tr><th>時段</th><th>科目</th><th>自習人數</th><th>自習地點</th><th>可用座位</th><th>夠不夠</th></tr></thead>
         <tbody>
           {rows.map((g) => {
             const home = g.stayByClass.map((c) => `${p.classNames.get(c.classNo) ?? c.classNo} ${c.count}`).join('、');
             return (
               <tr key={g.key} class={(g.studyCount > 0 && !g.ok) || (g.stay > 0 && !sc.homeOk) ? 'bad' : ''}>
-                <td class="ti" data-label="時段">{g.when}</td><td class="ti" data-label="科目">{g.label}</td>
-                <td data-label="自習人數">
+                <td class="ti" data-label="時段">{g.when}</td><td data-label="科目">{g.label}</td>
+                <td data-label="自習人數" class="wide">
                   {g.studyCount > 0 && <div>抽離 {g.studyCount} 人</div>}
                   {g.stay > 0 && <div>留原班 {g.stay} 人{home && <span class="muted small">（{home}）</span>}</div>}
                   {g.studyCount + g.stay === 0 && <span class="muted">—</span>}
                 </td>
                 <td data-label="自習地點">{g.studyCount > 0 && <div>預備教室{g.studyRooms > 0 ? ` ${g.studyRooms} 間` : ''}</div>}{g.stay > 0 && <div>原班教室</div>}</td>
-                <td data-label="可用座位">{g.studyCount > 0 && <div>預備教室 {g.avail}{g.examCount > 0 && `（考試 ${g.examCount} 人先用整間）`}</div>}{g.stay > 0 && <div>{sc.homeOk ? '班級教室座位足夠' : '班級教室座位不足'}</div>}</td>
+                <td data-label="可用座位" class="wide">{g.studyCount > 0 && <div>預備教室 {g.avail}{g.examCount > 0 && `（考試 ${g.examCount} 人先用整間）`}</div>}{g.stay > 0 && <div>{sc.homeOk ? '班級教室座位足夠' : '班級教室座位不足'}</div>}</td>
                 <td data-label="夠不夠">
                   {g.studyCount > 0 && <div><Badge tone={g.ok ? 'ok' : 'danger'}>{g.ok ? '抽離自習夠' : `缺 ${g.short}`}</Badge></div>}
                   {g.stay > 0 && <div><Badge tone={sc.homeOk ? 'ok' : 'danger'}>{sc.homeOk ? '原班夠' : '原班不足'}</Badge></div>}
