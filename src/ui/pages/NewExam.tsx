@@ -115,7 +115,7 @@ export function NewExam(p: {
               );
             })}
           </div>
-          <p class="small muted">高中部：學測、分科；國中部：會考。補考請從頁首導覽列的「補考」進入。</p>
+          <p class="small muted">高中部：學測、分科；國中部：會考。補考不在這裡新增，請從上方導覽列的「補考」進入。</p>
 
         <div class="psec"><div class="lab">2　基本資料</div>
           {/* G17：兩欄對齊——「學年度｜學期」「名稱｜對象」各一列，「次別」整列、說明在格子下方跨整行；手機單欄 */}

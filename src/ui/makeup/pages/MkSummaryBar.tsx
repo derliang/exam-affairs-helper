@@ -1,9 +1,10 @@
 /**
  * S-10 常駐摘要列：每個步驟頁最上面一條（沿用考試的 .sumbar 黏頂樣式），學生、人次、已排程、遺漏、紅／琥珀／綠計數；
- * 「看儀表板」開抽屜（沿用 Modal，不離開目前步驟），完整版在步驟 ⑥。原則：沒算完不顯示通過；算不出來視同不通過。
+ * 「看儀表板」開側滑面板（Drawer，D176④、D188；不離開目前步驟），完整版在步驟 ⑥。原則：沒算完不顯示通過；算不出來視同不通過。
  */
 import { useState } from 'preact/hooks';
-import { Button, Modal } from '../../components';
+import { Button } from '../../components';
+import { Drawer } from '../../components/Drawer';
 import { dashboardOf } from '../dashboard';
 import type { MakeupSession } from '../session';
 import type { MakeupStepNo } from '../steps';
@@ -34,14 +35,15 @@ export function MakeupSummaryBar(p: { s: MakeupSession; onStep: (n: MakeupStepNo
         <Button small onClick={() => setOpen(true)}>看儀表板</Button>
       </div>
       {open && (
-        <Modal title="檢核與對帳儀表板" onClose={() => setOpen(false)} actions={<Button kind="primary" onClick={() => go(6)}>到 ⑥ 完整版 ›</Button>}>
+        <Drawer title="檢核與對帳儀表板" onClose={() => setOpen(false)}>
           <div class="stack">
+            <div class="row"><Button kind="primary" onClick={() => go(6)}>到 ⑥ 完整版 ›</Button></div>
             <GateBanner d={d} onStep={go} onDownload={() => go(7)} />
             <MissCard d={d} onStep={go} />
             <OverviewCard d={d} />
             <ChecksCard d={d} onStep={go} onlyIssues />
           </div>
-        </Modal>
+        </Drawer>
       )}
     </div>
   );
