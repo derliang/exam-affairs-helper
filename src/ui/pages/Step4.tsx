@@ -102,7 +102,7 @@ export function Step4(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
           ? <Alert tone="ok">每一組每一科都是全考或全不考，不用標示，也沒有人要抽離。</Alert>
           : (
             <div class="rtw">
-              <table class="t compact rt-t">
+              <table class="t compact rt-t rt-wide">
                 <thead><tr><th>組</th><th>科目</th><th>考</th><th>不考</th><th>標示方式</th><th>座位表標示與狀態</th></tr></thead>
                 <tbody>
                   {shown.map((r) => (

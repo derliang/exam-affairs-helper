@@ -1034,18 +1034,30 @@ ul.plain{margin:4px 0 0;padding-left:1.2em}
 .rc-na,.rc-wait{background:var(--sunken);color:var(--text-2)}
 .rc-wait{border-style:dashed}
 .rc-legend{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.rc-list{display:grid;gap:8px}
-.rc-row{display:grid;grid-template-columns:minmax(150px,1.1fr) 2fr auto;gap:8px 14px;align-items:start;padding:10px 12px;border:1px solid var(--line);border-left-width:5px;border-radius:var(--r-md);background:var(--surface)}
-.rc-row-pass{border-left-color:var(--ok-bar)}.rc-row-warn{border-left-color:var(--warn-bar)}.rc-row-fail{border-left-color:var(--danger)}.rc-row-na,.rc-row-wait{border-left-style:dashed}
-.rc-name{display:flex;flex-direction:column;gap:4px;align-items:flex-start}
-.rc-tri{display:flex;gap:18px;flex-wrap:wrap}
-.rc-tri>div{display:flex;flex-direction:column}.rc-tri b{font-size:18px}
-.rc-more{background:none;border:0;color:var(--accent);font-weight:700;cursor:pointer;padding:4px 6px}
-.rc-detail{grid-column:1/-1;display:grid;gap:6px;padding-top:6px;border-top:1px dashed var(--line)}
+.rc-list{display:grid;border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;background:var(--surface);container-type:inline-size;min-width:0}
+/* #502：對齊 G35 稿 .cr——燈號圖示｜項目名（一行，燈號徽章在下）｜說明｜明細鈕；窄時換行，不把項目名拆開 */
+.rc-row{display:grid;grid-template-columns:28px minmax(0,1.1fr) minmax(0,1.5fr) auto;gap:6px 12px;align-items:center;padding:10px 12px;border-top:1px solid var(--line)}
+.rc-row:first-child{border-top:0}
+.rc-row-warn{background:var(--warn-soft);box-shadow:inset 4px 0 0 var(--warn-bar)}.rc-row-fail{background:var(--danger-soft);box-shadow:inset 4px 0 0 var(--danger)}
+.rc-row-na .rc-name,.rc-row-na .rc-val{opacity:.75}
+.rc-ico{grid-column:1;grid-row:1;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;color:var(--surface);background:var(--text-3)}
+.rc-i-pass{background:var(--ok-bar)}.rc-i-warn{background:var(--warn-bar)}.rc-i-fail{background:var(--danger)}
+.rc-name{grid-column:2;grid-row:1;display:grid;gap:3px;justify-items:start;min-width:0}
+.rc-name b{display:block}
+.rc-tri{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.rc-tri>div{display:grid;padding:3px 8px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm)}.rc-tri b{font-size:17px;font-variant-numeric:tabular-nums}
+.rc-more{grid-column:-2;grid-row:1;white-space:nowrap;background:none;border:0;color:var(--accent);font-weight:700;cursor:pointer;padding:4px 6px}
+.rc-detail{grid-column:2/-1;grid-row:auto;display:grid;gap:6px;padding-top:6px;border-top:1px dashed var(--line)}
 .rc-issue{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .rc-bad td{background:var(--danger-soft)}
-@media (max-width:640px){
-  .rc-row{grid-template-columns:1fr}
+@container (max-width:820px){
+  .rc-row{grid-template-columns:28px minmax(0,1fr) auto}
+  .rc-val{grid-column:2/-1;grid-row:2}
+}
+@container (max-width:420px){
+  .rc-row{grid-template-columns:28px minmax(0,1fr)}
+  .rc-more{grid-column:2;grid-row:2;justify-self:start}
+  .rc-val{grid-row:3}
 }
 
 
@@ -1078,19 +1090,43 @@ details[open]:not(.moremenu)>summary::after{content:" ▴"}
 .t.rt-t td,.t.rt-t th{white-space:normal}
 .t.rt-t td:first-child,.t.rt-t.compact td:first-child{white-space:normal;min-width:0}
 .t.rt-t td.ti>div{min-width:0}
-@container (max-width:640px){
+.t.rt-mx th{white-space:nowrap}
+/* #501：⑥ 總帳 10 欄，容器 ≤900px 就換成並排小卡（同上畫法，只是切換點較寬）；其餘表格 ≤480px 才換 */
+@container (max-width:900px){
+  .rt-t.rt-wide thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  .rt-t.rt-wide,.rt-t.rt-wide tbody,.rt-t.rt-wide tr,.rt-t.rt-wide td{display:block;width:auto}
+  .rt-t.rt-wide tr{display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:6px 12px;border:1px solid var(--line);border-radius:var(--r-md);padding:10px 12px;margin-bottom:8px;background:var(--surface)}
+  .rt-t.rt-wide tr.bad{background:var(--danger-soft);border-color:var(--danger-line)}
+  .rt-t.rt-wide tr.gap{border-style:dashed;background:var(--sunken)}
+  .rt-t.rt-wide td{display:block;min-width:0;padding:0;border:0;text-align:left;background:transparent}
+  .rt-t.rt-wide td::before{content:attr(data-label);display:block;color:var(--text-3);font-size:12px;font-weight:700;line-height:1.3}
+  .rt-t.rt-wide td.ti,.rt-t.rt-wide td.wide,.rt-t.rt-wide td.act{grid-column:1/-1}
+  .rt-t.rt-wide td[data-label="座位表"]{grid-column-start:1}
+  .rt-t.rt-wide td.ti{font-size:16px;font-weight:700}
+  .rt-t.rt-wide td.ti{order:-1}
+  .rt-t.rt-wide td.ti::before,.rt-t.rt-wide td.noL::before{content:none}
+  .rt-t.rt-wide td.hid{display:none}
+  .rt-t.rt-wide td.act{text-align:right;padding-top:4px}
+  .rt-t.rt-wide td.act::before{content:none}
+  .rt-t.rt-wide tr.grp{border:0;background:transparent;padding:6px 0 0;margin-bottom:0}
+  .rt-t.rt-wide tr.grp td{font-size:13px;color:var(--text-2);font-weight:700}
+  .rt-t.rt-wide td.on{padding:4px 8px;border-radius:var(--r-sm)}
+  }
+@container (max-width:480px){
   .rt-t:not(.rt-a) thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
   .rt-t:not(.rt-a),.rt-t:not(.rt-a) tbody,.rt-t:not(.rt-a) tr,.rt-t:not(.rt-a) td{display:block;width:auto}
-  .rt-t:not(.rt-a) tr{display:grid;gap:5px;border:1px solid var(--line);border-radius:var(--r-md);padding:10px 12px;margin-bottom:8px;background:var(--surface)}
+  /* #501：卡片內欄位兩欄並排、標籤在數字正上方（不再一欄一行、標籤與數字分兩端），卡片高度減半；標題列、長內容、操作鈕整列 */
+  .rt-t:not(.rt-a) tr{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:6px 12px;border:1px solid var(--line);border-radius:var(--r-md);padding:10px 12px;margin-bottom:8px;background:var(--surface)}
   .rt-t:not(.rt-a) tr.bad{background:var(--danger-soft);border-color:var(--danger-line)}
   .rt-t:not(.rt-a) tr.gap{border-style:dashed;background:var(--sunken)}
-  .rt-t:not(.rt-a) td{display:flex;gap:12px;justify-content:space-between;align-items:baseline;padding:0;border:0;text-align:right;background:transparent}
-  .rt-t:not(.rt-a) td::before{content:attr(data-label);color:var(--text-3);font-size:13px;font-weight:700;text-align:left;flex:none}
-  .rt-t:not(.rt-a) td.ti{justify-content:flex-start;text-align:left;font-size:16px;font-weight:700}
+  .rt-t:not(.rt-a) td{display:block;min-width:0;padding:0;border:0;text-align:left;background:transparent}
+  .rt-t:not(.rt-a) td::before{content:attr(data-label);display:block;color:var(--text-3);font-size:12px;font-weight:700;line-height:1.3}
+  .rt-t:not(.rt-a) td.ti,.rt-t:not(.rt-a) td.wide,.rt-t:not(.rt-a) td.act,.rt-t:not(.rt-a) td[data-label="座位表"]{grid-column:1/-1}
+  .rt-t:not(.rt-a) td.ti{font-size:16px;font-weight:700}
   .rt-t:not(.rt-a) td.ti{order:-1}
   .rt-t:not(.rt-a) td.ti::before,.rt-t:not(.rt-a) td.noL::before{content:none}
   .rt-t:not(.rt-a) td.hid{display:none}
-  .rt-t:not(.rt-a) td.act{justify-content:flex-end;padding-top:4px}
+  .rt-t:not(.rt-a) td.act{text-align:right;padding-top:4px}
   .rt-t:not(.rt-a) td.act::before{content:none}
   .rt-t:not(.rt-a) tr.grp{border:0;background:transparent;padding:6px 0 0;margin-bottom:0}
   .rt-t:not(.rt-a) tr.grp td{font-size:13px;color:var(--text-2);font-weight:700}
@@ -1110,7 +1146,6 @@ details[open]:not(.moremenu)>summary::after{content:" ▴"}
   .ut td.rn{flex:1 1 100%;position:static;padding:0;background:transparent}
   .ut td.rn::before{content:none}
   .ut td button{width:100%;min-height:44px}
-  .rt-t:not(.rt-a) td.wide{flex-direction:column;align-items:stretch;text-align:left;gap:4px}
 }
 /* 分段鈕：換行、不橫向捲動（稿 v2.75 §3 #378①，全站 .seg） */
 .seg{flex-wrap:wrap;overflow:clip;max-width:100%}
@@ -1148,6 +1183,9 @@ details[open]:not(.moremenu)>summary::after{content:" ▴"}
 .tm-t td,.tm-t th{font-variant-numeric:tabular-nums}
 .tm-t tr.bad td{background:var(--danger-soft)}
 .tm-t .tm-in,.tmset .input[type=time]{width:120px;min-width:0;font-variant-numeric:tabular-nums}
+
+/* #513：工作區內的短標籤、小標題、表頭、提示句只在標點處換行，不在詞中間腰斬（「最多一個時段考／生」）；整行真的放不下才逐字折（overflow-wrap），不會撐出橫向捲動 */
+.ws .main :is(small,.small,.sub,.hint,th,label,h3,h4,.lab,.badge,td[data-label]){word-break:keep-all;line-break:strict;overflow-wrap:break-word}
 
 /* 稿 v2.81 Drawer（DESIGN §10.44.3）：≥768px 右側滑出，<768px 底部面板；只用 token，不橫向捲動（D168） */
 .dscrim{position:fixed;inset:0;z-index:50;background:rgba(20,18,12,.45);display:flex;justify-content:flex-end;align-items:stretch}
