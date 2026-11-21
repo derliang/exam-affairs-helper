@@ -26,7 +26,7 @@ const SECTIONS: Section[] = [
     body: (
       <>
         <p>第三方套件、素材、程式碼、字型及其他著作依其各自授權使用。本文件不主張超出著作權人實際擁有或可授權之權利，亦不溯及撤銷此前已有效授出的授權。</p>
-        <p>本站目前內嵌的字型：<b data-k="fonts">{EMBEDDED_FONTS.join('、')}</b>（Noto Sans TC），依 SIL Open Font License 1.1 授權，全文見下方，亦同於本儲存庫 <code>src/export/fonts/OFL.txt</code>。</p>
+        <p>本站目前內嵌的字型：<b data-k="fonts">{EMBEDDED_FONTS.join('、')}</b>（Noto Sans TC），依 SIL Open Font License 1.1 授權，全文見下方，亦同於本儲存庫 <span class="nb"><code>src/export/fonts/OFL.txt</code>。</span></p>
         <details class="lic-ofl">
           <summary>SIL Open Font License 1.1 全文</summary>
           <pre>{oflText}</pre>

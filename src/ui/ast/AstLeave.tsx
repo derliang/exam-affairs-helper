@@ -43,7 +43,7 @@ export function LeaveCard(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) =>
           </div>
         )}
       <div class="rtw">
-        <table class="t compact rt-t rt-a">
+        <table class="t compact rt-t rt-a rt-mx">
           <thead><tr><th>班級</th><th>報名人數</th><th>請假人數</th></tr></thead>
           <tbody>
             {classes.map((c) => (
