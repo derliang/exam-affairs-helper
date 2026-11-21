@@ -17,6 +17,7 @@
 |---|---|
 | 使用者原始需求 | [requirements.md](requirements.md) |
 | 決定記錄（D 編號：已定、暫定、退役、未決） | [decisions.md](decisions.md) |
+| 決定取代鏈對照表（新決定取代哪些舊決定、現行結論、殘留舊說法的文件位置） | [decisions-取代鏈.md](decisions-取代鏈.md) |
 | 範例檔歸納的規則 | [sample-analysis.md](sample-analysis.md) |
 | 補考擴充：功能、流程、需求、檢核與對帳、給設計員的畫面清單（2026-11-17） | [makeup-spec.md](makeup-spec.md)；決定 D113～D122；原話見 [requirements.md](requirements.md)〈七〉；待辦 [todo.md](todo.md) H 區 |
 | 補考調度計畫（施工包、順序）與交接（現況、K1 開工令） | [dispatch/補考調度計畫.md](dispatch/補考調度計畫.md)、[dispatch/補考調度交接-2026-11-17.md](dispatch/補考調度交接-2026-11-17.md) |
