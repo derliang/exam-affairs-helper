@@ -73,7 +73,7 @@ export function Step3(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
               return (
                 <div key={l.label} class={`chk${l.ok ? (extra > 0 && hasList ? ' warnc' : '') : ' bad'}`}>
                   <small>{l.label}座位</small><strong>{l.seats}</strong>
-                  {hasList && <span class="sub">考生 {l.students}</span>}
+                  {hasList && <span class="sub">學生 {l.students}</span>}
                   {hasList && <Badge tone={l.ok ? (extra > 0 ? 'warn' : 'ok') : 'danger'}>{l.ok ? (extra > 0 ? `多 ${extra}` : '剛好') : `不足 ${l.students - l.seats}`}</Badge>}
                 </div>
               );
