@@ -294,15 +294,14 @@ describe('分科輸出：整合標籤兩倍寬（#216／D107）', () => {
 });
 
 describe('分科輸出：頁數預估（#269）', () => {
-  it('座位表的預估頁數含輪流座位清單跨頁；橫式表一頁、直式長表依列數估', async () => {
+  it('座位表的預估頁數＝座位表頁數（D204 起無輪流清單）；橫式表一頁、直式長表依列數估', async () => {
     const { estimatePages, tablePages } = await import('./output');
     const rows = Array.from({ length: 100 }, () => ['a']);
     const o = {
       label: [], ann: [], use: [], reg: [], study: [], version: 'x',
-      seat: [{ rotation: { heads: ['h'], rows } }, {}],
+      seat: [{}, {}, {}],
     } as never as import('./output').AstOutputs;
-    // 第一間：1 頁座位圖＋輪流清單 100 列；第二間：1 頁
-    expect(estimatePages(o, 'seat')).toBe(1 + tablePages(100) + 1);
+    expect(estimatePages(o, 'seat')).toBe(3);
     // Word 實測（2026-11-18，#269）：120 列＝6 頁、338 列＝15 頁；估計不得少於實測
     expect(tablePages(120)).toBeGreaterThanOrEqual(6);
     expect(tablePages(338)).toBeGreaterThanOrEqual(15);

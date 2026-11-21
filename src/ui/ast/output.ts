@@ -20,7 +20,7 @@ export type AstOutputKey = 'label' | 'seat' | 'ann' | 'use' | 'reg' | 'study';
 export interface AstOutputItem { key: AstOutputKey; title: string; sub: string }
 export const AST_OUTPUT_ITEMS: AstOutputItem[] = [
   { key: 'label', title: '整合標籤（合併標籤）', sub: '每個座位一張、每張兩格寬：左半編號與姓名、右半科目（放不下只列科目）；名單有應試編號才印；考場比一張紙大就分張' },
-  { key: 'seat', title: '綜合教室座位表', sub: '每間綜合教室一頁（A4）：座位圖格內每人一區，下方各時段各班人數統計（每時段一列＋不重複人數）；3 人以上輪流的座位多一頁清單' },
+  { key: 'seat', title: '綜合教室座位表', sub: '每間綜合教室一頁（A4）：座位圖格內每人一區，下方各時段各班人數統計（每時段一列＋不重複人數）；3 人以上輪流的教室改一個時段一張' },
   { key: 'ann', title: '班級公告', sub: 'A4 橫式、一班一頁貼在班上；考試＝粗體座位（教室同本班就省略），自習＝灰底＋教室' },
   { key: 'use', title: '每節教室用途表', sub: '哪間教室哪個時段是考場或自習，附方案指標' },
   { key: 'reg', title: '每科試務清冊', sub: '每科：考場總表，加每間考場一頁簽到名冊' },
@@ -50,13 +50,13 @@ export const TABLE_ROWS_PER_PAGE = 23;
 export const tablePages = (n: number): number => (n <= TABLE_FIRST_PAGE_ROWS ? 1 : 1 + Math.ceil((n - TABLE_FIRST_PAGE_ROWS) / TABLE_ROWS_PER_PAGE));
 
 /**
- * 某一類輸出實際會印出幾頁（#269）：標籤一張紙一頁；座位表＝每間一頁，加上 3 人以上輪流的座位清單（長表會跨頁）；
+ * 某一類輸出實際會印出幾頁（#269）：標籤一張紙一頁；座位表＝每頁一張（3 人以上輪流的教室一個時段一張，D204）；
  * 其他表格 A4 橫式一頁，直式依列數估頁（原本一個表一律算 1 頁，輪流清單 13 頁卻只算 3 頁）
  */
 export function estimatePages(o: AstOutputs, k: 'label' | 'seat' | 'ann' | 'use' | 'reg' | 'study'): number {
   const tbl = (t: TablePageModel): number => (t.landscape ? 1 : tablePages(t.rows.length));
   if (k === 'label') return o.label.length;
-  if (k === 'seat') return o.seat.reduce((n, p) => n + 1 + (p.rotation ? tablePages(p.rotation.rows.length) : 0), 0);
+  if (k === 'seat') return o.seat.length;
   return o[k].reduce((n, t) => n + tbl(t), 0);
 }
 
@@ -176,46 +176,58 @@ function seatPages(c: Ctx): SeatPageModel[] {
   for (const room of c.plan.input.rooms) {
     const seats = byRoom.get(room.id);
     if (room.kind !== 'reserve' || !seats) continue;
-    const cells = new Map<string, CellModel>();
-    const rotation: string[][] = [];
-    const everyone = new Set<string>();
-    for (const [k, list] of [...seats].sort((a, b) => a[1][0]!.row - b[1][0]!.row || a[1][0]!.depth - b[1][0]!.depth)) {
-      const first = list[0]!;
-      const persons = personsOfSeat(c, list);
-      persons.forEach((p) => everyone.add(p.code));
-      cells.set(k, {
-        coord: seatText(first.row, first.depth), seat: { row: first.row, depth: first.depth },
-        code: '', classLabel: '', name: '', colorBg: 'FFFFFF', colorLine: '222222', colorFg: '22201B', tags: [], marks: [],
-        periodLines: [...list].sort((a, b) => a.slot - b.slot).map((x) => ({ head: slotShort(c.slots[x.slot]!), text: `${sub(c, x.subjectId)} ${x.code} ${c.nameOf.get(x.code) ?? ''}`.trim() })),
-        persons,
+    type SeatItem = { slot: number; slotId: string; code: string; subjectId: string; row: number; depth: number };
+    // #579（D204）：有任何座位 3 人以上輪流且不只一個時段 → 一個時段一張座位表，不再翻下一頁對照
+    const rotating = [...seats.values()].some((list) => personsOfSeat(c, list).length >= 3);
+    const usedSlots = c.slots.filter((s) => [...seats.values()].some((l) => l.some((x) => x.slotId === s.id)));
+    const parts: { slotId?: string; head?: string; seats: Map<string, SeatItem[]> }[] =
+      rotating && usedSlots.length >= 2
+        ? usedSlots.map((s) => ({
+            slotId: s.id,
+            head: slotHead(c, s),
+            seats: new Map([...seats].flatMap(([k, l]) => { const ls = l.filter((x) => x.slotId === s.id); return ls.length ? [[k, ls] as [string, SeatItem[]]] : []; })),
+          }))
+        : [{ seats }];
+    for (const part of parts) {
+      const here = part.seats;
+      const cells = new Map<string, CellModel>();
+      const everyone = new Set<string>();
+      for (const [k, list] of [...here].sort((x, y) => x[1][0]!.row - y[1][0]!.row || x[1][0]!.depth - y[1][0]!.depth)) {
+        const first = list[0]!;
+        const persons = personsOfSeat(c, list);
+        persons.forEach((p) => everyone.add(p.code));
+        cells.set(k, {
+          coord: seatText(first.row, first.depth), seat: { row: first.row, depth: first.depth },
+          code: '', classLabel: '', name: '', colorBg: 'FFFFFF', colorLine: '222222', colorFg: '22201B', tags: [], marks: [],
+          periodLines: [...list].sort((x, y) => x.slot - y.slot).map((x) => ({ head: slotShort(c.slots[x.slot]!), text: `${sub(c, x.subjectId)} ${x.code} ${c.nameOf.get(x.code) ?? ''}`.trim() })),
+          persons,
+        });
+      }
+      // 統計：每個時段一列（各班人數＋合計），最後「不重複人數」
+      const classNos = [...new Set([...here.values()].flat().map((x) => Number(x.code.slice(0, 2))))].sort((x, y) => x - y);
+      const per = (codes: Iterable<string>) => { const a = [...codes]; return classNos.map((n) => a.filter((x) => Number(x.slice(0, 2)) === n).length); };
+      // #581：比照學測統計表（D170／D174）：日期（有填才有）｜第幾天｜時段｜科目｜各班｜總計，逐「日期＋時段＋科目」一列，同天同時段由 statMerge 垂直合併
+      const dates = c.exam.examDates;
+      const hasDate = c.slots.some((s) => !!dateTag(dates?.[s.day]));
+      const rows: { label: string; foot?: boolean; lead?: string[]; per: number[]; total: number }[] = c.slots.flatMap((s) => {
+        const inSlot = [...here.values()].flat().filter((x) => x.slotId === s.id);
+        return s.subjectIds.flatMap((sid) => {
+          const codes = new Set(inSlot.filter((x) => x.subjectId === sid).map((x) => x.code));
+          if (!codes.size) return [];
+          const lead = [dayTag(s.day), s.label.split(' ').pop()!, sub(c, sid)];
+          return [{ label: sub(c, sid), lead: hasDate ? [dateTag(dates?.[s.day]), ...lead] : lead, per: per(codes), total: codes.size }];
+        });
       });
-      if (persons.length >= 3) for (const p of persons) for (const s of p.sched) rotation.push([seatText(first.row, first.depth), s, p.classLabel, p.code.slice(2), p.name]);
+      rows.push({ label: '使用人數（不重複）', lead: ['使用人數（不重複）'], foot: true, per: per(everyone), total: everyone.size });
+      pages.push({
+        kind: 'seat', title: `${c.exam.name}　${rn(c, room.id)}${part.head ? `　${part.head}` : ''}　座位表`, examName: c.exam.name, roomName: part.head ? `${rn(c, room.id)}　${part.head}` : rn(c, room.id),
+        chips: [...(part.head ? [part.head] : []), `共 ${everyone.size} 人`, ...(part.head ? [] : [`${new Set(rows.filter((r) => !r.foot).map((r) => r.lead!.slice(0, -1).join('|'))).size} 個時段`]), '綜合教室'],
+        detachStyle: false, slotMode: true,
+        rows: Math.max(...room.seats.map((x) => x.row)), depth: Math.max(...room.seats.map((x) => x.depth)),
+        cells, usable: new Set(room.seats.map((x) => `${x.row}-${x.depth}`)),
+        stats: { perClass: [], total: everyone.size, perSubject: [], table: { leadHeads: hasDate ? ['日期', '第幾天', '時段', '科目'] : ['第幾天', '時段', '科目'], classes: classNos.map((n) => c.className(n)), rows } },
+      });
     }
-    // 統計：每個時段一列（各班人數＋合計），最後「不重複人數」
-    const classNos = [...new Set([...seats.values()].flat().map((x) => Number(x.code.slice(0, 2))))].sort((a, b) => a - b);
-    const per = (codes: Iterable<string>) => { const a = [...codes]; return classNos.map((n) => a.filter((x) => Number(x.slice(0, 2)) === n).length); };
-    // #581：比照學測統計表（D170／D174）：日期（有填才有）｜第幾天｜時段｜科目｜各班｜總計，逐「日期＋時段＋科目」一列，同天同時段由 statMerge 垂直合併
-    const dates = c.exam.examDates;
-    const hasDate = c.slots.some((s) => !!dateTag(dates?.[s.day]));
-    const rows: { label: string; foot?: boolean; lead?: string[]; per: number[]; total: number }[] = c.slots.flatMap((s) => {
-      const here = [...seats.values()].flat().filter((x) => x.slotId === s.id);
-      return s.subjectIds.flatMap((sid) => {
-        const codes = new Set(here.filter((x) => x.subjectId === sid).map((x) => x.code));
-        if (!codes.size) return [];
-        const lead = [dayTag(s.day), s.label.split(' ').pop()!, sub(c, sid)];
-        return [{ label: sub(c, sid), lead: hasDate ? [dateTag(dates?.[s.day]), ...lead] : lead, per: per(codes), total: codes.size }];
-      });
-    });
-    rows.push({ label: '使用人數（不重複）', lead: ['使用人數（不重複）'], foot: true, per: per(everyone), total: everyone.size });
-    pages.push({
-      kind: 'seat', title: `${c.exam.name}　${rn(c, room.id)}　座位表`, examName: c.exam.name, roomName: rn(c, room.id),
-      chips: [`共 ${everyone.size} 人`, `${new Set(rows.filter((r) => !r.foot).map((r) => r.lead!.slice(0, -1).join('|'))).size} 個時段`, '綜合教室'],
-      detachStyle: false, slotMode: true,
-      rows: Math.max(...room.seats.map((s) => s.row)), depth: Math.max(...room.seats.map((s) => s.depth)),
-      cells, usable: new Set(room.seats.map((s) => `${s.row}-${s.depth}`)),
-      stats: { perClass: [], total: everyone.size, perSubject: [], table: { leadHeads: hasDate ? ['日期', '第幾天', '時段', '科目'] : ['第幾天', '時段', '科目'], classes: classNos.map((n) => c.className(n)), rows } },
-      ...(rotation.length ? { rotation: { heads: ['座位', '天與科目', '班級', '座號', '姓名'], rows: rotation } } : {}),
-    });
   }
   return pages;
 }

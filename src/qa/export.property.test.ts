@@ -94,13 +94,13 @@ describe('輸出版面模型與排座結果逐筆一致', () => {
           expect(c.tags.length, `seed=${seed} ${c.code}`).toBe(n);
         }
 
-      // INV-15 預備教室時段版（稿 v2.28）：每間有抽離考試的預備教室一頁；每個抽離考試座位都有格子且格內至少一行
+      // INV-15 預備教室時段版（稿 v2.28）：每間有抽離考試的預備教室至少一頁（3 人以上輪流的教室一時段一頁，D204）；每個抽離考試座位都有格子且格內至少一行
       const examDetach = input.result.detaches.filter((d) => d.purpose === 'exam');
       const detachPages = seatPages.filter((p) => p.slotMode);
       const examRoomIds = new Set(examDetach.map((d) => d.roomId));
-      expect(detachPages.length, `seed=${seed}`).toBe(examRoomIds.size);
+      expect(detachPages.length, `seed=${seed}`).toBeGreaterThanOrEqual(examRoomIds.size);
       for (const d of examDetach) {
-        const hit = detachPages.some((p) => (p.cells.get(seatLabel(d.seat!))?.periodLines?.length ?? 0) > 0 && p.roomName === input.settings.classrooms.find((c) => c.id === d.roomId)!.name);
+        const hit = detachPages.some((p) => (p.cells.get(seatLabel(d.seat!))?.periodLines?.length ?? 0) > 0 && p.roomName.startsWith(input.settings.classrooms.find((c) => c.id === d.roomId)!.name));
         expect(hit, `seed=${seed} 抽離 ${d.code}`).toBe(true);
       }
 
@@ -137,9 +137,9 @@ describe('輸出版面模型與排座結果逐筆一致', () => {
       const list = buildDetachList(input);
       const expected = new Map<string, number>();
       const bump = (n: string) => n && expected.set(n, (expected.get(n) ?? 0) + 1);
-      // 人員格（預備教室等）：2 人以內各印一區；3 人以上格內只印座位，姓名在「輪流座位」頁
+      // 人員格（預備教室等）：2 人以內各印一區；3 人以上的預備教室座位表已改一個時段一張（D204），每格不超過 2 人
       const bumpCell = (c: { name: string; persons?: { name: string }[] }) => (c.persons ? (c.persons.length <= 2 ? c.persons.forEach((q) => bump(q.name)) : undefined) : bump(c.name));
-      for (const p of seat) { for (const c of p.cells.values()) bumpCell(c); for (const r of p.rotation?.rows ?? []) bump(r[4]!); }
+      for (const p of seat) { for (const c of p.cells.values()) bumpCell(c); }
       for (const p of label) for (const c of p.cells) bumpCell(c);
       for (const r of list.rows) bump(r.name);
 
