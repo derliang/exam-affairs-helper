@@ -1183,3 +1183,6 @@ details[open]:not(.moremenu)>summary::after{content:" ▴"}
 .tm-t td,.tm-t th{font-variant-numeric:tabular-nums}
 .tm-t tr.bad td{background:var(--danger-soft)}
 .tm-t .tm-in,.tmset .input[type=time]{width:120px;min-width:0;font-variant-numeric:tabular-nums}
+
+/* #513：工作區內的短標籤、小標題、表頭、提示句只在標點處換行，不在詞中間腰斬（「最多一個時段考／生」）；整行真的放不下才逐字折（overflow-wrap），不會撐出橫向捲動 */
+.ws .main :is(small,.small,.sub,.hint,th,label,h3,h4,.lab,.badge,td[data-label]){word-break:keep-all;line-break:strict;overflow-wrap:break-word}
