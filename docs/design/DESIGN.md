@@ -913,7 +913,7 @@ D49、D50 座位稱呼與座標、講臺在下；D51 學期；D52 考科表；D5
 **規格要點**
 - 名稱：「考務小幫手」是程式（品牌）名稱；畫面中「模擬考」是考試類型，不改。套用處（分頁標題、品牌列與無障礙文字、首頁大標、`APP_NAME`、匯出檔作者與標題、備份檔名、README、套件名、repo 與 Vite base）見稿 §一；舊 Pages 網址不自動轉址，需公告；舊備份檔照常可匯入。
 - 圖示：沿用品牌列已有的 3×3 座位格（對角線一排亮、其餘 55% 透明），深藍底 `#274690`、米白格 `#FFFDF8`；一張圖示淺色、深色分頁都用。`favicon.svg` 圓角底板；`icon-maskable.svg` 滿版底板、格子縮在中央 50% 安全區。PNG 由整合者從 SVG 輸出：`favicon.ico`（16/32/48）、`apple-touch-icon.png` 180、`icon-192.png`、`icon-512.png`、`icon-maskable-512.png`，放 `public/`；`index.html` 用 `%BASE_URL%` 連結；`manifest.webmanifest` 選配。
-- 補考佔位：新增模擬考頁 1 選類型第 4 張卡，沿用 `.typegrid`、`.tcard:disabled`、`.b-soon`；標題「補考」、等級字「高中部、國中部」；徽章文字「即將推出」（只這張卡）；不能選、不進 tab 順序、`aria-describedby` 說明；步驟 1 下方說明句補「補考即將推出，現在還不能選」。程式只在 `NewExam.tsx` 的 `TYPES` 加一筆 `soon: true`。
+- **【D186（2026-11-21）取代：補考卡已從新增模擬考頁拿掉，補考入口只在頁首導覽列；以下為歷史說明】** 補考佔位：新增模擬考頁 1 選類型第 4 張卡，沿用 `.typegrid`、`.tcard:disabled`、`.b-soon`；標題「補考」、等級字「高中部、國中部」；徽章文字「即將推出」（只這張卡）；不能選、不進 tab 順序、`aria-describedby` 說明；步驟 1 下方說明句補「補考即將推出，現在還不能選」。程式只在 `NewExam.tsx` 的 `TYPES` 加一筆 `soon: true`。
 - 設計員假設 Q1～Q5 列在稿 §四，待使用者確認。
 
 **修訂紀錄**
