@@ -156,6 +156,8 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
 .podium-bar{grid-column:2;text-align:center;font-weight:700;border:2px solid var(--text);border-radius:4px;padding:3px;font-size:13px;letter-spacing:.3em}
 .legend{display:flex;gap:8px 14px;flex-wrap:wrap;align-items:center;font-size:13px;color:var(--text-2)}
 .legend .cell{width:auto;height:auto;display:inline-flex;padding:1px 8px;border-radius:3px}
+.legend .lg-i{display:inline-flex;gap:6px;align-items:baseline;max-width:100%}.legend .lg-i>.cell{flex:none}
+@media (max-width:600px){.legend{flex-direction:column;align-items:flex-start}}
 .sheet .cell{grid-template-rows:1fr auto auto;padding:4px 2px 5px}
 .sheet .cell .tag-c{font-size:14px;font-weight:700;color:var(--cx);margin-right:10px;padding-right:10px;border-right:1.5px solid var(--cx)}
 .sheet .cell .co{right:5px;top:4px;font-size:14px;color:var(--text)}
