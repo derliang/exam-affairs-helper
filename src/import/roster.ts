@@ -18,6 +18,9 @@ export interface RosterProblem {
   cells: string[];
   /** 讀得到的內容；讀不到的欄位留空，讓使用者補 */
   draft: { classNo?: number; seatNo?: number; name: string; schoolId?: string };
+  /** 多檔匯入（#506）：這一列來自哪個檔案、哪張工作表（單檔時由合併步驟補上） */
+  file?: string;
+  sheet?: string;
 }
 
 export interface RosterResult {
@@ -40,6 +43,8 @@ export interface RosterOptions {
 
 /** 每位學生來自原始檔的哪一列（用來回報學號重複） */
 const origin = new WeakMap<Student, { row: number; cells: readonly string[] }>();
+/** 這位學生來自原始檔的哪一列（多檔合併回報跨檔重複用） */
+export const originOf = (s: Student): { row: number; cells: readonly string[] } | undefined => origin.get(s);
 const nonEmpty = (cells: readonly string[]): string[] => cells.map((c) => c.trim()).filter(Boolean);
 
 type Sink = { issues: RosterResult['issues']; problems: RosterProblem[] };

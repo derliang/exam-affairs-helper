@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { ExamConfig, ExamEntry, RosterDiff, RosterDiffChoice } from '../../data';
-import { hasPua, puaCodes, showPua, allResolved, applyDiffs, applyGroupChoice, compareRosters, groupDiffs, manyDiffs, type DiffGroup, diffsStale, isResolved, readXlsx, XlsError, refreshDiffs, validateResolved, type Sheet } from '../../import';
-import { Alert, Badge, Button, ClassChip, ConfirmButton, More, PageHead, Seg, StatsBar, StepHead } from '../components';
+import { hasPua, puaCodes, showPua, allResolved, applyDiffs, applyGroupChoice, compareRosters, groupDiffs, manyDiffs, type DiffGroup, diffsStale, isResolved, readXlsx, XlsError, refreshDiffs, validateResolved, groupByKey, okFiles, readFiles, resolveConflicts, type Candidate, type Conflict, type ConflictChoice, type FileRead, type SavedMarkMap, type Sheet } from '../../import';
+import { Alert, Badge, Button, Modal, ClassChip, ConfirmButton, More, PageHead, Seg, StatsBar, StepHead } from '../components';
 import { confirmCopy } from '../flow';
 import { addClass, diffOptions, examYear, rosterName, syncDiffs, updateExam, type Doc } from '../store';
 import { rosterYearMismatch, rosterYearOf } from '../rosterYears';
 import { previewChoice } from '../step2';
 import { ImportWizard, scanOptionsFor } from './ImportWizard';
 import { RosterIO } from './RosterIO';
+import { ConflictList, FileResults, filesOfInput } from './FileResults';
 
 /** 差異卡標題（稿 v2.34 H-6 的 7 種情形；「班級或座號不同」「姓名不同」由兩邊內容判斷） */
 export const titleOf = (d: RosterDiff): string => {
@@ -42,10 +43,14 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
   /** 考試名單與比對結果存在 doc.examFiles，隨整份快照復原 */
   const save = (patch: Partial<NonNullable<Doc['examFiles']>[string]>, extra: Partial<Doc> = {}) =>
     p.onChange({ ...doc, ...extra, examFiles: { ...doc.examFiles, [exam.id]: { ...files, ...patch } } });
-  const [sheets, setSheets] = useState<Sheet[] | null>(null);
+  /** 多檔匯入（#506、D184）：逐檔過匯入精靈，最後合併；跨檔同一位學生逐筆問 */
+  interface Batch { files: { name: string; sheets: Sheet[] }[]; i: number; done: { file: string; entries: ExamEntry[] }[]; markMap: SavedMarkMap }
+  const [batch, setBatch] = useState<Batch | null>(null);
+  const [fileResults, setFileResults] = useState<FileRead<unknown>[]>([]);
+  const [conflict, setConflict] = useState<{ unique: Candidate<ExamEntry>[]; conflicts: Conflict<ExamEntry>[]; markMap: SavedMarkMap } | null>(null);
+  const [choices, setChoices] = useState<Record<string, ConflictChoice>>({});
   const [editing, setEditing] = useState<string | null>(null);
   const [showCmp, setShowCmp] = useState(false);
-  const [err, setErr] = useState('');
   const [applyErr, setApplyErr] = useState('');
   /** 套用後列出「以學生名單為準」而清掉考科與 X／＋ 標示的人（Q5 已知限制） */
   const [lost, setLost] = useState<string[]>([]);
@@ -62,23 +67,41 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
     if (entries && stale) save({ diffs: refreshDiffs(roster, entries, diffs, dopts) });
   }, [stale, roster, entries]);
 
-  const onFile = async (file: File) => {
-    setErr('');
-    try {
-      const s = await readXlsx(await file.arrayBuffer());
-      if (s.length === 0) setErr('檔案裡沒有工作表');
-      else setSheets(s);
-    } catch (e) {
-      setErr(e instanceof XlsError ? e.message : `讀不了這個檔案：${e instanceof Error ? e.message : String(e)}。請確認是 .xlsx 檔`);
-    }
+  const onFiles = async (fs: File[]) => {
+    if (fs.length === 0) return;
+    const reads = await readFiles(fs, async (file) => {
+      let s: Sheet[];
+      try { s = await readXlsx(await file.arrayBuffer()); } catch (e) {
+        throw new Error(e instanceof XlsError ? e.message : `讀不了這個檔案：${e instanceof Error ? e.message : String(e)}。請確認是 .xlsx 檔`);
+      }
+      if (s.length === 0) throw new Error('檔案裡沒有工作表');
+      return s;
+    });
+    setFileResults(reads);
+    const good = okFiles(reads);
+    if (good.length > 0) setBatch({ files: good.map((g) => ({ name: g.name, sheets: g.value })), i: 0, done: [], markMap: doc.settings.markMap ?? {} });
   };
+  const cancelBatch = () => { setBatch(null); setConflict(null); setChoices({}); setFileResults([]); };
+  /** 精靈完成一個檔案：還有下一個就換下一個；全部完成才合併（單檔照舊直接採用） */
+  const onWizardDone = (list: ExamEntry[], saved: SavedMarkMap) => {
+    if (!batch) return;
+    const done = [...batch.done, { file: batch.files[batch.i]?.name ?? '', entries: list }];
+    if (batch.i + 1 < batch.files.length) { setBatch({ ...batch, i: batch.i + 1, done, markMap: saved }); return; }
+    if (done.length === 1) { adopt(list, saved); return; }
+    const g = groupByKey(done.map((d) => ({ file: d.file, items: d.entries })), (e) => `${e.classNo}-${e.seatNo}`);
+    if (g.conflicts.length === 0) { adopt(resolveConflicts(g.unique, [], {}).items, saved); return; }
+    setBatch(null);
+    setChoices({});
+    setConflict({ ...g, markMap: saved });
+  };
+  const conflictRes = conflict ? resolveConflicts(conflict.unique, conflict.conflicts, choices) : null;
 
   const adopt = (list: ExamEntry[], markMap: Record<string, string>) => {
     const settings = { ...doc.settings, markMap };
     const d = compare(list).diffs;
     save({ entries: list, diffs: d }, { settings });
     setLost([]);
-    setSheets(null);
+    setBatch(null); setConflict(null); setChoices({}); setFileResults([]);
     setShowCmp(d.length > 0); // 有差異就直接進逐筆比對（原型：匯入並比對）
   };
 
@@ -127,9 +150,31 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
     gtext((side === 'exam' ? (entries ?? []).find((e) => sameId(x, e))?.groupCode : roster.find((s) => sameId(x, s))?.groupCode) || key);
   const clsLabel = (no: number) => `第${String(no).padStart(2, '0')}班`;
   const perClass = classes.map((c) => ({ c, n: roster.filter((s) => s.classNo === c.no).length }));
+  const multi = !!batch && batch.files.length > 1;
+  const wizardNode = (<>
+    {batch && (
+      <ImportWizard key={batch.i} sheets={batch.files[batch.i]?.sheets ?? []} exam={exam} classNames={classNames} trackOf={(n) => doc.settings.classes.find((c) => c.division === exam.division && c.no === n)?.track}
+        previous={batch.i === 0 ? (entries ?? undefined) : undefined} saved={batch.markMap}
+        {...(multi && batch.i + 1 < batch.files.length ? { confirmLabel: '這個檔案沒問題，讀下一個檔案' } : {})}
+        onCancel={cancelBatch} onDone={onWizardDone} />
+    )}
+    {conflict && conflictRes && (
+      <Modal title="不同檔案出現同一位考生" onClose={cancelBatch}
+        actions={<><Button onClick={cancelBatch}>取消匯入</Button><Button kind="primary" disabled={!conflictRes.ready} onClick={() => adopt(conflictRes.items, conflict.markMap)}>確認匯入 {conflictRes.items.length} 人</Button></>}>
+        <ConflictList conflicts={conflict.conflicts} choices={choices} onChoose={(k, c) => setChoices((m) => { const n = { ...m }; if (c === null) delete n[k]; else n[k] = c; return n; })}
+          describe={(e) => `${e.name}${e.groupCode ? `、組別 ${e.groupCode}` : ''}、${e.subjectIds.length} 科`}
+          titleOf={(k) => { const [c, s] = k.split('-'); return `${c} 班 ${s} 號`; }} />
+        {!conflictRes.ready && <Alert tone="warn"><b>還不能確認：</b>還有 {conflictRes.pending.length} 筆沒有決定。</Alert>}
+      </Modal>
+    )}
+  </>);
+  const fileNote = (<>
+    {multi && batch && <Alert tone="info">一次匯入 {batch.files.length} 個檔案，目前是第 {batch.i + 1} 個：<b>{batch.files[batch.i]?.name}</b>。每個檔案各自確認，最後合併；跨檔同一位考生會逐筆問你。「取消匯入」會放棄整批。</Alert>}
+    <FileResults results={batch || conflict ? fileResults : fileResults.filter((r) => !r.ok)} hideSingleOk />
+  </>);
   const filePick = (
-    <input ref={input} type="file" accept=".xlsx" hidden aria-label="選擇考試名單 Excel 檔"
-      onChange={(e) => { const f = e.currentTarget.files?.[0]; e.currentTarget.value = ''; if (f) void onFile(f); }} />
+    <input ref={input} type="file" accept=".xlsx" multiple hidden aria-label="選擇考試名單 Excel 檔（可多選）"
+      onChange={(e) => { const fs = filesOfInput(e.currentTarget); e.currentTarget.value = ''; void onFiles(fs); }} />
   );
 
   // 名單比對：獨立的逐筆處理畫面；「先不處理」回到總覽，已選的先留著
@@ -311,11 +356,8 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
         {rosterCard}
         {!rosterEmpty && status}
         {filePick}
-        {err && <Alert tone="danger">{err}</Alert>}
-        {sheets && (
-          <ImportWizard sheets={sheets} exam={exam} classNames={classNames} trackOf={(n) => doc.settings.classes.find((c) => c.division === exam.division && c.no === n)?.track} previous={entries ?? undefined} saved={doc.settings.markMap ?? {}}
-            onCancel={() => setSheets(null)} onDone={adopt} />
-        )}
+        {fileNote}
+        {wizardNode}
       </section>
     );
   }
@@ -338,7 +380,7 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
           </Alert>
         )}
         {filePick}
-        {err && <Alert tone="danger">{err}</Alert>}
+        {fileNote}
         <div class="row" style="gap:12px;justify-content:space-between">
           <div class="row" style="gap:10px">
             <Badge>考試名單.xlsx</Badge>
@@ -361,10 +403,7 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
             <details><summary class="small">列出是誰</summary><ul>{notJoinList.map((e) => <li key={`${e.classNo}-${e.seatNo}`}>{who(e).replace(/　.*$/, '')}</li>)}</ul></details>
           </Alert>
         )}
-        {sheets && (
-          <ImportWizard sheets={sheets} exam={exam} classNames={classNames} trackOf={(n) => doc.settings.classes.find((c) => c.division === exam.division && c.no === n)?.track} previous={entries ?? undefined} saved={doc.settings.markMap ?? {}}
-            onCancel={() => setSheets(null)} onDone={adopt} />
-        )}
+        {wizardNode}
         {entries && <div class="small muted">考生 {entries.length - fullyAbsent} 人，不參加 {notJoin} 人</div>}
       </div>
     </section>

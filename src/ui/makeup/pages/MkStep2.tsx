@@ -4,7 +4,8 @@
  */
 import { useRef, useState } from 'preact/hooks';
 import { Alert, Badge, Button, EmptyState, Modal, More, StatsBar } from '../../components';
-import { readXlsx, XlsError } from '../../../import';
+import { readXlsx, readFiles, groupByKey, resolveConflicts, XlsError, type ConflictChoice, type FileRead } from '../../../import';
+import { ConflictList, FileResults, filesOfDrop, filesOfInput } from '../../pages/FileResults';
 import {
   SKIP_REASON_TEXT,
   problemKindText,
@@ -15,12 +16,15 @@ import {
   type MakeupRow,
   type SkipReason,
 } from '../../../core/makeup';
-import { MAPPING_FIELDS, clearResolution, diffImport, isEmptyBook, isRequiredField, mergeImport, parseWithMapping, pickSheets, replaceImport, rowKey, setResolution, type ImportDiff, type SheetPick } from '../importOps';
+import { MAPPING_FIELDS, clearResolution, diffImport, isEmptyBook, isRequiredField, mergeImport, mergeImportWith, overlapKeys, overlapRows, parseWithMapping, pickSheets, replaceImport, rowKey, setResolution, type ImportDiff, type SheetPick } from '../importOps';
 import { baseOf } from '../pipeline';
 import type { MakeupSession } from '../session';
 
 interface Draft { fileName: string; sheets: { name: string; rows: string[][] }[]; picks: SheetPick[]; sel: number; header: number; columns: MakeupColumnMap }
 interface Pending { parse: MakeupParseResult; fileName: string; diff: ImportDiff }
+/** 多檔匯入（#506、D184）：一批檔案依序過欄位對應；新檔與目前名單同學號同科重疊時逐筆問 */
+interface Batch { files: { name: string; sheets: { name: string; rows: string[][] }[] }[]; i: number }
+interface MergeAsk { parse: MakeupParseResult; fileName: string; keys: string[] }
 
 const cellOf = (r: string[] | undefined, i: number | undefined): string => (i === undefined ? '' : (r?.[i] ?? '').trim());
 
@@ -32,21 +36,56 @@ export function MkStep2(p: { s: MakeupSession; onChange: (s: MakeupSession) => v
   const [err, setErr] = useState<{ title: string; text: string } | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [pending, setPending] = useState<Pending | null>(null);
+  const [batch, setBatch] = useState<Batch | null>(null);
+  const [fileResults, setFileResults] = useState<FileRead<unknown>[]>([]);
+  const [ask, setAsk] = useState<MergeAsk | null>(null);
+  const [choices, setChoices] = useState<Record<string, ConflictChoice>>({});
   const now = () => p.now ?? new Date();
 
-  const onFile = async (file: File) => {
-    setErr(null);
-    if (/\.xls$/i.test(file.name)) { setErr({ title: '這是舊版 .xls 檔', text: '請用 Excel 開啟後「另存新檔」成 .xlsx，再匯入。' }); return; }
-    try {
-      const sheets = await readXlsx(await file.arrayBuffer());
-      if (sheets.length === 0 || isEmptyBook(sheets)) { setErr({ title: '檔案是空的', text: '沒有任何資料列。' }); return; }
-      const { picks, main } = pickSheets(sheets);
-      const pk = picks[main]!;
-      setDraft({ fileName: file.name, sheets, picks, sel: main, header: pk.header, columns: pk.columns });
-    } catch (e) {
-      setErr({ title: '這個檔案讀不進來', text: e instanceof XlsError ? e.message : `讀不了這個檔案：${e instanceof Error ? e.message : String(e)}。請確認是 .xlsx 檔，拖入其他檔案或重新選擇。` });
-    }
+  const draftOf = (name: string, sheets: { name: string; rows: string[][] }[]): Draft => {
+    const { picks, main } = pickSheets(sheets);
+    const pk = picks[main]!;
+    return { fileName: name, sheets, picks, sel: main, header: pk.header, columns: pk.columns };
   };
+  /** 一次選多個檔案：逐檔讀取，壞檔只影響它自己；讀得進來的依序進欄位對應 */
+  const onFiles = async (files: File[]) => {
+    if (files.length === 0) return;
+    setErr(null);
+    const reads = await readFiles(files, async (file) => {
+      if (/\.xls$/i.test(file.name)) throw new Error('這是舊版 .xls 檔，請用 Excel 開啟後「另存新檔」成 .xlsx，再匯入。');
+      let sheets;
+      try { sheets = await readXlsx(await file.arrayBuffer()); } catch (e) {
+        throw new Error(e instanceof XlsError ? e.message : `讀不了這個檔案：${e instanceof Error ? e.message : String(e)}。請確認是 .xlsx 檔`);
+      }
+      if (sheets.length === 0 || isEmptyBook(sheets)) throw new Error('檔案是空的，沒有任何資料列。');
+      return sheets;
+    });
+    setFileResults(reads);
+    const good = reads.flatMap((r) => (r.ok ? [{ name: r.name, sheets: r.value }] : []));
+    if (good.length === 0) return;
+    setBatch({ files: good, i: 0 });
+    setDraft(draftOf(good[0]!.name, good[0]!.sheets));
+  };
+  /** 這一檔處理完：還有下一檔就換下一檔，否則收尾 */
+  const nextFile = () => {
+    if (batch && batch.i + 1 < batch.files.length) {
+      const f = batch.files[batch.i + 1]!;
+      setBatch({ ...batch, i: batch.i + 1 });
+      setDraft(draftOf(f.name, f.sheets));
+      return;
+    }
+    setDraft(null); setBatch(null); setFileResults([]);
+  };
+  const abortBatch = () => { setDraft(null); setErr(null); setBatch(null); setFileResults([]); setAsk(null); setChoices({}); setPending(null); };
+  /** 合併：沒有重疊就直接併；有重疊（內容相同也算）逐筆問，不靜默略過 */
+  const startMerge = (parse: MakeupParseResult, fileName: string) => {
+    const keys = overlapKeys(s.parse, parse);
+    if (keys.length === 0) { p.onChange(mergeImport(s, parse, fileName, now())); nextFile(); return; }
+    setChoices({}); setAsk({ parse, fileName, keys });
+  };
+  const askRows = ask && s.parse ? overlapRows(s.parse, ask.parse, ask.keys) : [];
+  const askGroups = groupByKey([{ file: '目前的名單', items: askRows.map((x) => ({ key: x.key, row: x.cur })) }, { file: ask?.fileName ?? '', items: askRows.map((x) => ({ key: x.key, row: x.nxt })) }], (x) => x.key);
+  const askRes = ask ? resolveConflicts(askGroups.unique, askGroups.conflicts, choices) : null;
 
   const confirmMapping = () => {
     if (!draft) return;
@@ -61,15 +100,27 @@ export function MkStep2(p: { s: MakeupSession; onChange: (s: MakeupSession) => v
     if (parse.rawCount === 0) { setErr({ title: '檔案是空的', text: '表頭以下沒有任何資料列。' }); return; }
     const scheduled = new Set(b.roster.included.map(rowKey));
     const diff = diffImport(s.parse, parse, scheduled);
+    const later = !!batch && batch.i > 0;
+    if (diff.hasCurrent && later) { startMerge(parse, draft.fileName); return; }
     if (diff.hasCurrent) { setPending({ parse, fileName: draft.fileName, diff }); return; }
     p.onChange(replaceImport(s, parse, draft.fileName, now()));
-    setDraft(null);
+    nextFile();
   };
 
   const apply = (mode: 'replace' | 'merge') => {
     if (!pending) return;
-    p.onChange(mode === 'replace' ? replaceImport(s, pending.parse, pending.fileName, now()) : mergeImport(s, pending.parse, pending.fileName, now()));
-    setPending(null); setDraft(null);
+    const { parse, fileName } = pending;
+    setPending(null);
+    if (mode === 'merge') { startMerge(parse, fileName); return; }
+    p.onChange(replaceImport(s, parse, fileName, now()));
+    nextFile();
+  };
+  const applyAsk = () => {
+    if (!ask || !askRes?.ready) return;
+    const useNew = new Set(askGroups.conflicts.filter((c) => choices[c.key] === 1).map((c) => c.key));
+    p.onChange(mergeImportWith(s, ask.parse, ask.fileName, now(), useNew));
+    setAsk(null); setChoices({});
+    nextFile();
   };
 
   const r = b.roster;
@@ -82,12 +133,12 @@ export function MkStep2(p: { s: MakeupSession; onChange: (s: MakeupSession) => v
       <div class={`dropzone${over ? ' over' : ''}`} tabIndex={0} role="button" aria-label="選擇補考名單檔案"
         onClick={() => input.current?.click()} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.current?.click(); } }}
         onDragOver={(e) => { e.preventDefault(); setOver(true); }} onDragLeave={() => setOver(false)}
-        onDrop={(e) => { e.preventDefault(); setOver(false); const f = e.dataTransfer?.files?.[0]; if (f) void onFile(f); }}>
-        <strong>把教務系統匯出的不及格名單拖到這裡，或選擇檔案</strong>
+        onDrop={(e) => { e.preventDefault(); setOver(false); void onFiles(filesOfDrop(e)); }}>
+        <strong>把教務系統匯出的不及格名單拖到這裡，或選擇檔案（可一次多個）</strong>
         <span class="small">支援 .xlsx；.xls 請先另存為 .xlsx。一人一科一列、班級以舊班舊號為準。</span>
         <span class="small muted">這份檔案只在你的電腦上讀取，不會上傳。</span>
       </div>
-      <input ref={input} type="file" accept=".xlsx,.xls" hidden onChange={(e) => { const f = e.currentTarget.files?.[0]; if (f) void onFile(f); e.currentTarget.value = ''; }} />
+      <input ref={input} type="file" accept=".xlsx,.xls" multiple hidden aria-label="選擇補考名單檔案（可多選）" onChange={(e) => { const fs = filesOfInput(e.currentTarget); e.currentTarget.value = ''; void onFiles(fs); }} />
     </>
   );
 
@@ -95,8 +146,10 @@ export function MkStep2(p: { s: MakeupSession; onChange: (s: MakeupSession) => v
     <section class="stack">
       <div class="card stephead"><div><h2>② 匯入名單</h2><p class="small muted">匯入教務系統的不及格名單。每一列都要有去處：納入、另行通知，或有紀錄的略過。</p></div></div>
       {err && <Alert tone="danger"><b>{err.title}</b>：{err.text}</Alert>}
+      {batch && batch.files.length > 1 && <Alert tone="info">一次匯入 {batch.files.length} 個檔案，目前是第 {batch.i + 1} 個：<b>{batch.files[batch.i]?.name}</b>。每個檔案各自確認欄位對應；與目前名單同一位學生同一科重複的列會逐筆問你。「換檔案」會放棄整批。</Alert>}
+      <FileResults results={fileResults} hideSingleOk />
 
-      {draft ? <MappingCard d={draft} onChange={setDraft} onConfirm={confirmMapping} onCancel={() => { setDraft(null); setErr(null); }} />
+      {draft ? <MappingCard d={draft} onChange={setDraft} onConfirm={confirmMapping} onCancel={abortBatch} />
         : !s.parse ? (
           <>
             {picker}
@@ -108,7 +161,7 @@ export function MkStep2(p: { s: MakeupSession; onChange: (s: MakeupSession) => v
               <div class="row" style="justify-content:space-between">
                 <div><div class="lab">{s.source?.fileName ?? '補考名單'}</div><p class="small muted">{r.rawCount} 列・{Object.keys(s.parse.columns).length} 欄對應{s.parse.warnings.length ? '' : '・無異常'}</p></div>
                 <Button onClick={() => input.current?.click()}>換檔案</Button>
-                <input ref={input} type="file" accept=".xlsx,.xls" hidden onChange={(e) => { const f = e.currentTarget.files?.[0]; if (f) void onFile(f); e.currentTarget.value = ''; }} />
+                <input ref={input} type="file" accept=".xlsx,.xls" multiple hidden aria-label="選擇補考名單檔案（可多選）" onChange={(e) => { const fs = filesOfInput(e.currentTarget); e.currentTarget.value = ''; void onFiles(fs); }} />
               </div>
               <Alert tone={ok ? 'ok' : 'danger'}>
                 <b>{ok ? '✓ 匯入對帳：對上了（差異 0）' : r.unresolved.length > 0 ? `✕ 匯入對帳：還有 ${r.unresolved.length} 筆沒處理，對不上不通過` : '✕ 匯入對帳：列數對不上'}</b>　C-1
@@ -139,7 +192,17 @@ export function MkStep2(p: { s: MakeupSession; onChange: (s: MakeupSession) => v
           </>
         )}
 
-      {pending && <DupModal d={pending} onApply={apply} onClose={() => setPending(null)} />}
+      {pending && <DupModal d={pending} onApply={apply} onClose={abortBatch} />}
+      {ask && askRes && (
+        <Modal title="不同檔案出現同一位學生同一科" onClose={abortBatch}
+          actions={<><Button onClick={abortBatch}>取消匯入</Button><Button kind="primary" disabled={!askRes.ready} onClick={applyAsk}>確認合併</Button></>}>
+          <ConflictList allowSkip={false} conflicts={askGroups.conflicts} choices={choices}
+            onChoose={(k, c) => setChoices((m) => { const n = { ...m }; if (c === null) delete n[k]; else n[k] = c; return n; })}
+            describe={(x) => `${x.row.name}　${x.row.subjectName}　${x.row.oldClass}-${x.row.oldSeat}　分數 ${x.row.score || '—'}`}
+            titleOf={(k) => k.replace('|', '　')} />
+          {!askRes.ready && <Alert tone="warn"><b>還不能確認：</b>還有 {askRes.pending.length} 筆沒有決定。</Alert>}
+        </Modal>
+      )}
     </section>
   );
 }
