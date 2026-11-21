@@ -35,7 +35,7 @@ const best = (scans: ExamScan[]): number => scans.reduce((b, s, i) => (s.rows.le
  */
 export function ImportWizard(p: {
   sheets: readonly Sheet[]; exam: ExamConfig; classNames: readonly string[]; trackOf?: (classNo: number) => Track | undefined; previous?: readonly ExamEntry[];
-  saved: SavedMarkMap; onCancel: () => void; onDone: (entries: ExamEntry[], saved: SavedMarkMap) => void;
+  saved: SavedMarkMap; /** 多檔匯入（#506）：這一檔的按鈕文字，例「這個檔案沒問題，讀下一個」 */ confirmLabel?: string; onCancel: () => void; onDone: (entries: ExamEntry[], saved: SavedMarkMap) => void;
 }) {
   const opts = useMemo(() => scanOptionsFor(p.exam, p.classNames, p.trackOf), [p.exam, p.classNames, p.trackOf]);
   const scans = useMemo(() => p.sheets.map((s) => scanExamSheet(s.rows, opts)), [p.sheets, opts]);
@@ -186,7 +186,7 @@ export function ImportWizard(p: {
 
       <div class="btnrow" style="margin-top:12px">
         <Button onClick={p.onCancel}>取消匯入</Button>
-        <Button kind="primary" disabled={!res.ready} onClick={() => p.onDone(res.entries, remember ? rememberMapping(scan.groups, mapping, p.saved) : p.saved)}>確認匯入 {res.entries.length} 人</Button>
+        <Button kind="primary" disabled={!res.ready} onClick={() => p.onDone(res.entries, remember ? rememberMapping(scan.groups, mapping, p.saved) : p.saved)}>{p.confirmLabel ?? `確認匯入 ${res.entries.length} 人`}</Button>
         {reasons.length > 0 && <span class="hint">尚有待處理項目：{reasons.join('；')}</span>}
       </div>
     </div>
