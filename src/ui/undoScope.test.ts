@@ -3,6 +3,7 @@ import { commit, newHistory, canUndoIn, nextUndoLabelIn, undoIn, undoStepsIn, un
 import { docScopes, sliceDoc, scopeOfPage, UNDO_SCOPES } from './undoScope';
 import { emptyDoc } from './repository';
 import type { Doc } from './store';
+import type { Route } from './nav';
 
 const mk = (id: string) => ({ id }) as unknown as NonNullable<Doc['makeups']>[number];
 const exam = (doc: Doc, name: string): Doc => ({ ...doc, exams: [{ id: 'e1', name } as unknown as Doc['exams'][number]] });
@@ -117,5 +118,28 @@ describe('#568 復原領域化', () => {
     expect(n.present).toEqual(d0);
     expect(n.past).toEqual([]);
     expect(commit(newHistory(d0), d0, 'x').past).toEqual([]); // 沒變不記一步
+  });
+});
+
+describe('#583 scopeOfPage：每個補考頁面都對到 makeup，其餘不受影響', () => {
+  const MAKEUP_PAGES = ['makeup', 'makeupNew', 'makeupStep'] satisfies Route['page'][];
+  const OTHER_PAGES = ['init', 'exams', 'new', 'wizard', 'copyright', 'privacy', 'lookup', 'step', 'reconcile', 'override', 'reserve'] satisfies Route['page'][];
+  it('補考列表、新增場次、場次工作區都是 makeup', () => {
+    for (const p of MAKEUP_PAGES) expect(scopeOfPage(p)).toBe('makeup');
+  });
+  it('窮舉：Route 的每個 page 不是在補考清單就是在其他清單（新增補考頁面時這裡會提醒）', () => {
+    const all: Route['page'][] = ['settings', ...MAKEUP_PAGES, ...OTHER_PAGES];
+    const probe: Record<Route['page'], true> = { init: true, exams: true, new: true, wizard: true, copyright: true, privacy: true, lookup: true, settings: true, step: true, reconcile: true, override: true, reserve: true, makeup: true, makeupNew: true, makeupStep: true };
+    expect(new Set(all)).toEqual(new Set(Object.keys(probe)));
+  });
+  it('反向：模擬考各頁是 exam、共用設定是 settings（模擬考頁看不到補考步驟）', () => {
+    for (const p of OTHER_PAGES) expect(scopeOfPage(p)).toBe('exam');
+    expect(scopeOfPage('settings')).toBe('settings');
+    let h = newHistory(emptyDoc());
+    h = apply(h, makeup(h.present, 'm1'), '修改補考教室');
+    h = apply(h, exam(h.present, 'A'), '改模擬考');
+    expect(nextUndoLabelIn(h, scopeOfPage('makeupStep'))).toBe('修改補考教室');
+    expect(nextUndoLabelIn(h, scopeOfPage('step'))).toBe('改模擬考');
+    expect(un(h, scopeOfPage('makeupStep')).present.exams).toEqual(h.present.exams);
   });
 });
