@@ -1,0 +1,310 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>全站各頁成品稿總覽 稿 v2.83</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700&display=swap"><style>
+/* 模擬考小幫手 design tokens（M1 定案）。沿用座位小幫手 v3.4.0，只加班級六色與標示色。只用十六進位色碼（匯出函式庫不吃 oklch）。 */
+:root{
+  --bg:#F5F2EA; --surface:#FFFDF8; --sunken:#F1EDE3;
+  --line:#E4DECF; --line-2:#CFC7B2;
+  --text:#22201B; --text-2:#4F493D; --text-3:#6F6858;
+  --accent:#274690; --accent-on:#FFFFFF; --accent-soft:#E8EDF8; --accent-ink:#1F3877; --accent-line:#B9C6E6;
+  --danger:#C81E45; --danger-soft:#FDECEF; --danger-ink:#9B1237; --danger-line:#F3B4C1;
+  --warn-soft:#FBF0D5; --warn-ink:#6B4300; --warn-line:#E3C07A; --warn-bar:#C98A12;
+  --ok-soft:#E3F2E0; --ok-ink:#1F5A1A; --ok-line:#A5D39D; --ok-bar:#3C8B34;
+  --att-fill:#22201B; --att-on:#FFFDF8;
+  --cut:#8E8670;
+  --cbx-bg:#FFFDF8; --cbx-line:#7B91CC; --cbx-on-bg:#E8EDF8; --cbx-on-line:#2A5FD6; --cbx-tick:#2A5FD6;
+  --c1-bg:#E7DCF5; --c1-line:#B39DD9; --c1-ink:#4A2E80;
+  --c2-bg:#F6D6EC; --c2-line:#D98ABF; --c2-ink:#7A1C5E;
+  --c3-bg:#CDEDE9; --c3-line:#6FC0B6; --c3-ink:#0F5A52;
+  --c4-bg:#EBDCCB; --c4-line:#C09A72; --c4-ink:#5C3A17;
+  --c5-bg:#DFE3E8; --c5-line:#9AA5B1; --c5-ink:#2F3B48;
+  --c6-bg:#EBD9E3; --c6-line:#C79BB5; --c6-ink:#5E2D49;
+  --c7-bg:#CDB6EA; --c7-line:#8F6FC4; --c7-ink:#35205F;
+  --c8-bg:#EFB6DC; --c8-line:#C4569F; --c8-ink:#5F0F46;
+  --c9-bg:#A9DDD6; --c9-line:#3E9E92; --c9-ink:#093F39;
+  --c10-bg:#D9BE9F; --c10-line:#A4743F; --c10-ink:#432810;
+  --c11-bg:#BCC5CF; --c11-line:#6C7B8B; --c11-ink:#1E2833;
+  --c12-bg:#D9B6CB; --c12-line:#A5668A; --c12-ink:#46172F;
+  --fmt-word:#2A6AC8; --fmt-pdf:#B8423A; --fmt-xls:#1F7A47;
+  --fmt-word-soft:#E6EEFB; --fmt-pdf-soft:#FBEAE8; --fmt-xls-soft:#E3F2E8;
+  --shadow-1:0 1px 2px rgba(34,32,27,.07),0 2px 6px -2px rgba(34,32,27,.06);
+  --shadow-2:0 2px 4px rgba(34,32,27,.06),0 10px 24px -8px rgba(34,32,27,.16);
+  --shadow-3:0 4px 8px rgba(34,32,27,.08),0 24px 48px -12px rgba(34,32,27,.30);
+  --shadow-accent:0 1px 2px rgba(39,70,144,.35),0 5px 12px -5px rgba(39,70,144,.50);
+  --shadow-inset:inset 0 1px 2px rgba(34,32,27,.08);
+  --shadow-bar:0 8px 14px -12px rgba(34,32,27,.40);
+  --ease:cubic-bezier(.2,.7,.2,1); --dur:.16s;
+  --r-sm:8px; --r-md:12px; --r-lg:16px; --r-xl:24px;
+  --f-ui:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+  --f-head:"Noto Serif TC","Noto Sans TC","PMingLiU",serif;
+  --f-no:"Noto Sans TC","Microsoft JhengHei",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#13120E; --surface:#1C1A15; --sunken:#17150F;
+  --line:#302D24; --line-2:#433F33;
+  --text:#F1EDE2; --text-2:#CFC8B6; --text-3:#A0987F;
+  --accent:#3F63C4; --accent-on:#FFFFFF; --accent-soft:#1B2540; --accent-ink:#AFC2F5; --accent-line:#33467E;
+  --danger:#F0617F; --danger-soft:#3A1A22; --danger-ink:#F7B2C0; --danger-line:#6B2B3B;
+  --warn-soft:#3A2E12; --warn-ink:#F3D690; --warn-line:#6F5620; --warn-bar:#E0A832;
+  --ok-soft:#1C3220; --ok-ink:#B9E3B2; --ok-line:#3B6B3C; --ok-bar:#5DB257;
+  --att-fill:#F1EDE2; --att-on:#13120E;
+  --cut:#7C755F;
+  --cbx-bg:#1C1A15; --cbx-line:#5470B8; --cbx-on-bg:#1B2540; --cbx-on-line:#8FAAF0; --cbx-tick:#8FAAF0;
+  --c1-bg:#2E2347; --c1-line:#6B568F; --c1-ink:#E0D2F5;
+  --c2-bg:#43203A; --c2-line:#8C4478; --c2-ink:#F5C3E4;
+  --c3-bg:#12332F; --c3-line:#3F8078; --c3-ink:#BEEAE4;
+  --c4-bg:#3A2D1F; --c4-line:#7C5E3C; --c4-ink:#EBD6BC;
+  --c5-bg:#26292E; --c5-line:#566170; --c5-ink:#D3D9E0;
+  --c6-bg:#3A2230; --c6-line:#8A5A75; --c6-ink:#EBD0DE;
+  --c7-bg:#3C2E5C; --c7-line:#8468B8; --c7-ink:#E8DBFA;
+  --c8-bg:#52294A; --c8-line:#A8558F; --c8-ink:#FAD0EB;
+  --c9-bg:#1A423D; --c9-line:#4F9B91; --c9-ink:#C9F0EA;
+  --c10-bg:#4A3826; --c10-line:#92704A; --c10-ink:#F0DEC8;
+  --c11-bg:#343A42; --c11-line:#6C7886; --c11-ink:#E2E7EC;
+  --c12-bg:#4A2D3E; --c12-line:#9C6B88; --c12-ink:#F2DCE8;
+  --fmt-word:#5B93E6; --fmt-pdf:#E0766E; --fmt-xls:#4DB57A;
+  --fmt-word-soft:#1B2740; --fmt-pdf-soft:#3A1F1D; --fmt-xls-soft:#1A3326;
+  --shadow-1:0 1px 2px rgba(0,0,0,.55),0 2px 8px -2px rgba(0,0,0,.40),inset 0 1px 0 rgba(255,255,255,.03); --shadow-2:0 2px 4px rgba(0,0,0,.5),0 10px 24px -8px rgba(0,0,0,.6); --shadow-3:0 4px 8px rgba(0,0,0,.5),0 24px 48px -12px rgba(0,0,0,.75);
+  --shadow-accent:0 1px 2px rgba(0,0,0,.5),0 5px 12px -5px rgba(63,99,196,.55); --shadow-inset:inset 0 1px 2px rgba(0,0,0,.35); --shadow-bar:0 8px 14px -12px rgba(0,0,0,.8);
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#13120E; --surface:#1C1A15; --sunken:#17150F;
+  --line:#302D24; --line-2:#433F33;
+  --text:#F1EDE2; --text-2:#CFC8B6; --text-3:#A0987F;
+  --accent:#3F63C4; --accent-on:#FFFFFF; --accent-soft:#1B2540; --accent-ink:#AFC2F5; --accent-line:#33467E;
+  --danger:#F0617F; --danger-soft:#3A1A22; --danger-ink:#F7B2C0; --danger-line:#6B2B3B;
+  --warn-soft:#3A2E12; --warn-ink:#F3D690; --warn-line:#6F5620; --warn-bar:#E0A832;
+  --ok-soft:#1C3220; --ok-ink:#B9E3B2; --ok-line:#3B6B3C; --ok-bar:#5DB257;
+  --att-fill:#F1EDE2; --att-on:#13120E;
+  --cut:#7C755F;
+  --cbx-bg:#1C1A15; --cbx-line:#5470B8; --cbx-on-bg:#1B2540; --cbx-on-line:#8FAAF0; --cbx-tick:#8FAAF0;
+  --c1-bg:#2E2347; --c1-line:#6B568F; --c1-ink:#E0D2F5;
+  --c2-bg:#43203A; --c2-line:#8C4478; --c2-ink:#F5C3E4;
+  --c3-bg:#12332F; --c3-line:#3F8078; --c3-ink:#BEEAE4;
+  --c4-bg:#3A2D1F; --c4-line:#7C5E3C; --c4-ink:#EBD6BC;
+  --c5-bg:#26292E; --c5-line:#566170; --c5-ink:#D3D9E0;
+  --c6-bg:#3A2230; --c6-line:#8A5A75; --c6-ink:#EBD0DE;
+  --c7-bg:#3C2E5C; --c7-line:#8468B8; --c7-ink:#E8DBFA;
+  --c8-bg:#52294A; --c8-line:#A8558F; --c8-ink:#FAD0EB;
+  --c9-bg:#1A423D; --c9-line:#4F9B91; --c9-ink:#C9F0EA;
+  --c10-bg:#4A3826; --c10-line:#92704A; --c10-ink:#F0DEC8;
+  --c11-bg:#343A42; --c11-line:#6C7886; --c11-ink:#E2E7EC;
+  --c12-bg:#4A2D3E; --c12-line:#9C6B88; --c12-ink:#F2DCE8;
+  --fmt-word:#5B93E6; --fmt-pdf:#E0766E; --fmt-xls:#4DB57A;
+  --fmt-word-soft:#1B2740; --fmt-pdf-soft:#3A1F1D; --fmt-xls-soft:#1A3326;
+  --shadow-1:0 1px 2px rgba(0,0,0,.55),0 2px 8px -2px rgba(0,0,0,.40),inset 0 1px 0 rgba(255,255,255,.03); --shadow-2:0 2px 4px rgba(0,0,0,.5),0 10px 24px -8px rgba(0,0,0,.6); --shadow-3:0 4px 8px rgba(0,0,0,.5),0 24px 48px -12px rgba(0,0,0,.75);
+  --shadow-accent:0 1px 2px rgba(0,0,0,.5),0 5px 12px -5px rgba(63,99,196,.55); --shadow-inset:inset 0 1px 2px rgba(0,0,0,.35); --shadow-bar:0 8px 14px -12px rgba(0,0,0,.8);
+  color-scheme:dark}
+
+
+
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.6 "Noto Sans TC",system-ui,sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:16px}
+h1{font-family:"Noto Serif TC",serif;font-size:26px;margin:8px 0}h2{font-size:19px;margin:0 0 8px}
+.badge{display:inline-block;padding:2px 10px;border-radius:99px;background:var(--sunken);color:var(--text);font-size:12px;font-weight:700;border:1px solid var(--line-2)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:16px;margin:0 0 14px}
+.muted{color:var(--text-2)}.small{font-size:13px}
+nav.toc{position:sticky;top:0;background:var(--bg);padding:8px 0;z-index:5;display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+nav.toc a{padding:3px 9px;border:1px solid var(--line-2);border-radius:8px;font-size:12px;font-weight:700;color:var(--text);text-decoration:none;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:13px}th,td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top;overflow-wrap:anywhere}th{background:var(--sunken)}
+.pg{scroll-margin-top:52px}.pg header{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px}
+.no{font-family:ui-monospace,monospace;font-weight:700;background:var(--text);color:var(--bg);padding:2px 8px;border-radius:6px;font-size:13px}
+.shots{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start;margin:8px 0}.shot{margin:0;max-width:100%}.shot img{display:block;max-width:100%;height:auto;border:1px solid var(--line-2);border-radius:var(--r-md);background:#fff}.shot.m img{width:260px}.shot.d img{width:min(560px,100%)}
+.shot figcaption{font-size:12px;color:var(--text-2);margin-top:3px}
+.kv{display:grid;grid-template-columns:90px 1fr;gap:4px 10px;font-size:13px}.kv b{color:var(--text-2)}
+.diff{background:var(--warn-soft,#FFF4D6);border:1px solid var(--warn,#E0B84A);border-radius:var(--r-sm);padding:6px 10px;font-size:13px}
+.none{border:1px dashed var(--line-2);border-radius:var(--r-md);padding:14px;color:var(--text-2);font-size:13px;min-width:200px}
+.flow{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:13px}.flow span{padding:4px 10px;border:1px solid var(--line-2);border-radius:8px;background:var(--surface);font-weight:700}.flow i{font-style:normal;color:var(--text-2)}
+@media (max-width:640px){.wrap{padding:12px}.kv{grid-template-columns:1fr}.shot.d img{width:100%}}
+
+</style></head><body><div class="wrap">
+<h1>全站各頁成品稿總覽 <span class="badge">稿 v2.83・2026-11-21</span></h1>
+<p class="muted">一頁看完整個網站：依實際流程排好每一頁，每頁有<b>標號</b>（P01、P02…；全站共用元件 G1…），標注時只要講標號。畫面是<b>現行已實作的畫面</b>（程式 1.26.39）的真實截圖，全部假資料；沒截到的狀態寫明原因並列出對應的設計稿，不用稿補圖。公開 repo，不含任何真實學生資料。</p>
+<div class="card"><h2>怎麼標注</h2><ul class="small" style="margin:0;padding-left:18px"><li>用標號回報：例「P09 手機版，待處理清單太擠」「P04 補考卡」。</li><li>每頁有「現行畫面」（截圖）、「狀態」（這頁有哪些畫面）、「對應稿」（哪份設計稿、版號）、「與稿不一致」。</li><li>截圖寬度：1280＝桌機、375＝手機。平板 768 本版未截（見文末〈本版限制〉）。</li></ul></div>
+<div class="card"><h2>使用流程</h2><div class="flow"><span>P01 資料夾設定</span><i>→</i><span>P02 首次設定</span><i>→</i><span>P03 模擬考列表</span><i>→</i><span>P04 新增模擬考</span><i>→</i><span>P05～P10 六步驟</span><i>→</i><span>P03</span></div><div class="flow" style="margin-top:6px"><span>P03</span><i>→</i><span>P14～P19 共用設定</span><i>｜</i><span>P20～P22 補考</span><i>｜</i><span>P23 授權</span><span>P24 隱私</span></div></div>
+<nav class="toc"><a href="#P01">P01</a><a href="#P02">P02</a><a href="#P03">P03</a><a href="#P04">P04</a><a href="#P05">P05</a><a href="#P06">P06</a><a href="#P07">P07</a><a href="#P08">P08</a><a href="#P09">P09</a><a href="#P10">P10</a><a href="#P11">P11</a><a href="#P12">P12</a><a href="#P13">P13</a><a href="#P14">P14</a><a href="#P15">P15</a><a href="#P16">P16</a><a href="#P17">P17</a><a href="#P18">P18</a><a href="#P19">P19</a><a href="#P20">P20</a><a href="#P21">P21</a><a href="#P22">P22</a><a href="#P23">P23</a><a href="#P24">P24</a><a href="#G1">G1</a><a href="#G2">G2</a><a href="#G3">G3</a><a href="#idx">總表</a><a href="#lim">限制</a></nav>
+<div class="card" id="idx"><h2>頁面總表</h2><div style="overflow-x:auto"><table><thead><tr><th>標號</th><th>頁面</th><th>現行截圖</th><th>對應稿</th></tr></thead><tbody>
+<tr><td><a href="#P01">P01</a></td><td>資料夾設定</td><td>有 1 張</td><td>不支援瀏覽器提示稿 v2.65；G16-G34介面總稿 G16・G24；G37首次使用精靈稿</td></tr>
+<tr><td><a href="#P02">P02</a></td><td>首次設定（6 步精靈）</td><td>有 1 張</td><td>G37首次使用精靈稿 v2.50；D157</td></tr>
+<tr><td><a href="#P03">P03</a></td><td>模擬考列表</td><td>有 2 張</td><td>模擬考列表與設定畫面包稿 v2.74；D163、D166</td></tr>
+<tr><td><a href="#P04">P04</a></td><td>新增模擬考</td><td>有 1 張</td><td>H0品牌與補考佔位稿 v2.81；每場考試開始時間稿 v2.79（日期欄）；模擬考列表與設定畫面包稿 v2.74</td></tr>
+<tr><td><a href="#P05">P05</a></td><td>考試步驟 ① 考試設定</td><td>有 1 張</td><td>原型.html；每場考試開始時間稿 v2.79；G修正總稿</td></tr>
+<tr><td><a href="#P06">P06</a></td><td>考試步驟 ② 考試名單</td><td>有 2 張</td><td>原型.html；G16-G34介面總稿；對稿-I-2a與I-3.md</td></tr>
+<tr><td><a href="#P07">P07</a></td><td>考試步驟 ③ 教室設定</td><td>有 1 張</td><td>G16-G34介面總稿；G修正總稿；設計員改稿包小稿 v2.70（座位上限）</td></tr>
+<tr><td><a href="#P08">P08</a></td><td>考試步驟 ④ 標示與抽離規則</td><td>有 1 張</td><td>座位表標示與統計表稿 v2.76；原型.html</td></tr>
+<tr><td><a href="#P09">P09</a></td><td>考試步驟 ⑤ 排座與預覽</td><td>有 2 張</td><td>原型.html；座位表標示與統計表稿 v2.76；對帳與預覽小稿 v2.77</td></tr>
+<tr><td><a href="#P10">P10</a></td><td>考試步驟 ⑥ 下載（含考前對帳）</td><td>有 1 張</td><td>G35考前對帳稿 v2.78；對帳與預覽小稿 v2.77；匯出檔樣式規格稿</td></tr>
+<tr><td><a href="#P11">P11</a></td><td>分科考試步驟 ③④⑤（教室與自習空間、排座模式與方案、時段教室與座位）</td><td>未截</td><td>G16-G34介面總稿；G36自習參考座位稿 v2.68；DESIGN §10.14</td></tr>
+<tr><td><a href="#P12">P12</a></td><td>預備教室與抽離</td><td>未截</td><td>G16-G34介面總稿；原型.html</td></tr>
+<tr><td><a href="#P13">P13</a></td><td>考生查詢（選用）</td><td>未截</td><td>原型.html（選用功能設定頁 C 區）</td></tr>
+<tr><td><a href="#P14">P14</a></td><td>共用設定 · 學生名單</td><td>有 2 張</td><td>模擬考列表與設定畫面包稿 v2.74</td></tr>
+<tr><td><a href="#P15">P15</a></td><td>共用設定 · 班級資料</td><td>有 1 張</td><td>模擬考列表與設定畫面包稿 v2.74</td></tr>
+<tr><td><a href="#P16">P16</a></td><td>共用設定 · 學校與表頭</td><td>有 1 張</td><td>原型.html；G修正總稿</td></tr>
+<tr><td><a href="#P17">P17</a></td><td>共用設定 · 教室清單</td><td>有 1 張</td><td>設計員改稿包小稿 v2.70；G16-G34介面總稿</td></tr>
+<tr><td><a href="#P18">P18</a></td><td>共用設定 · 節次與時長</td><td>有 1 張</td><td>原型.html（v2.18 時間表式）；設計員改稿包小稿 v2.70（還原預設）</td></tr>
+<tr><td><a href="#P19">P19</a></td><td>選用功能</td><td>有 1 張</td><td>原型.html（C 區）</td></tr>
+<tr><td><a href="#P20">P20</a></td><td>補考 · 場次列表</td><td>有 1 張</td><td>補考稿 v2.81（S-1、S-2）</td></tr>
+<tr><td><a href="#P21">P21</a></td><td>補考 · 新增補考場次</td><td>有 1 張</td><td>補考稿 v2.81（S-2）</td></tr>
+<tr><td><a href="#P22">P22</a></td><td>補考 · 七步驟工作區與儀表板</td><td>未截</td><td>補考稿 v2.81（S-3～S-9）；D176、D180</td></tr>
+<tr><td><a href="#P23">P23</a></td><td>使用授權</td><td>有 1 張</td><td>（無專屬稿）</td></tr>
+<tr><td><a href="#P24">P24</a></td><td>隱私權政策</td><td>有 1 張</td><td>不支援瀏覽器提示稿 v2.65（D53 例外）；（無專屬稿）</td></tr>
+</tbody></table></div></div>
+<section class="card pg" id="P01"><header><span class="no">P01</span><h2>資料夾設定</h2><span class="small muted">route: init</span></header>
+<div class="shots">
+<figure class="shot d"><img src="overview-shots/d-unsupported.jpg" alt="P01 不支援的瀏覽器（桌機 1280）" loading="lazy"><figcaption>P01　不支援的瀏覽器（桌機 1280）</figcaption></figure>
+</div>
+<div class="kv"><b>狀態</b><span>未選資料夾／找不到上次資料夾（重新連結、搬到新位置）／拖放中／不支援的瀏覽器（本張）／更換資料夾對話</span><b>對應稿</b><span>不支援瀏覽器提示稿 v2.65；G16-G34介面總稿 G16・G24；G37首次使用精靈稿</span></div>
+<div class="small muted" style="margin-top:6px"><b>與稿不一致／備註：</b>未逐項核對。本張是記憶體模式截的「不支援」狀態；一般 Chrome 的「選擇資料夾」畫面未截（需真實資料夾授權）。</div></section>
+<section class="card pg" id="P02"><header><span class="no">P02</span><h2>首次設定（6 步精靈）</h2><span class="small muted">route: wizard</span></header>
+<div class="shots">
+<figure class="shot d"><img src="overview-shots/d-wizard.jpg" alt="P02 步驟 1 學年度與部別" loading="lazy"><figcaption>P02　步驟 1 學年度與部別</figcaption></figure>
+</div>
+<div class="kv"><b>狀態</b><span>步驟 1 學年度與部別／2 班級與名單／3 節次與時段／4 教室／5 學校表頭與標籤紙／6 總覽與完成；稍後再說</span><b>對應稿</b><span>G37首次使用精靈稿 v2.50；D157</span></div>
+<div class="small muted" style="margin-top:6px"><b>與稿不一致／備註：</b>只截步驟 1，2～6 未截。</div></section>
+<section class="card pg" id="P03"><header><span class="no">P03</span><h2>模擬考列表</h2><span class="small muted">route: exams</span></header>
+<div class="shots">
+<figure class="shot d"><img src="overview-shots/d-list.jpg" alt="P03 空列表＋未確認環境黃條（1280）" loading="lazy"><figcaption>P03　空列表＋未確認環境黃條（1280）</figcaption></figure>
+<figure class="shot m"><img src="overview-shots/m-list.jpg" alt="P03 有一場考試（375）" loading="lazy"><figcaption>P03　有一場考試（375）</figcaption></figure>
+</div>
+<div class="kv"><b>狀態</b><span>空／有考試（還沒開始、進行中、已經結束）／批次選取與刪除／資料夾找不到錯誤條／環境未確認黃條</span><b>對應稿</b><span>模擬考列表與設定畫面包稿 v2.74；D163、D166</span></div>
+<div class="small muted" style="margin-top:6px"><b>與稿不一致／備註：</b>未逐項核對（375 無橫向捲軸，已量 scrollWidth＝375）。</div></section>
+<section class="card pg" id="P04"><header><span class="no">P04</span><h2>新增模擬考</h2><span class="small muted">route: new</span></header>
+<div class="shots">
+<figure class="shot d"><img src="overview-shots/d-new.jpg" alt="P04 選類型（1280，首屏）" loading="lazy"><figcaption>P04　選類型（1280，首屏）</figcaption></figure>
+</div>
+<div class="kv"><b>狀態</b><span>選類型（學測／分科／會考／補考）→ 基本資料（學年度、學期、次別、名稱、各考日）→ 本次使用的環境（節次表、班級人數、教室、學校標籤；缺項時「建立並開始」停用，需先「確認使用」）→ 預設設定</span><b>對應稿</b><span>H0品牌與補考佔位稿 v2.81；每場考試開始時間稿 v2.79（日期欄）；模擬考列表與設定畫面包稿 v2.74</span></div>
+<div class="diff" style="margin-top:6px"><b>與稿不一致／備註：</b>【已知不一致】①補考卡說明：程式現為「為不及格的學生另排補考場次、教室與座位，匯入教務系統名單」，稿 H0 v2.81 已依使用者裁示改為「為缺考或不及格的學生另排場次、教室、座位與標籤，由教務系統名單匯入」→ 程式（NewExam.tsx）待施工改。②H0 稿仍把補考卡畫成停用＋「即將推出」，現行已可按 → 稿過時，待設計員裁示是否改稿。</div></section>
+<section class="card pg" id="P05"><header><span class="no">P05</span><h2>考試步驟 ① 考試設定</h2><span class="small muted">route: step 1</span></header>
+<div class="shots">
+<figure class="shot d"><img src="overview-shots/d-step1.jpg" alt="P05 學測第一次（1280）" loading="lazy"><figcaption>P05　學測第一次（1280）</figcaption></figure>
+</div>
+<div class="kv"><b>狀態</b><span>基本資料／考試日期與各節時間（沿用共用設定、各節時間設定、修改考試日期）／考科表（新增、編輯、刪除）／本次摘要卡</span><b>對應稿</b><span>原型.html；每場考試開始時間稿 v2.79；G修正總稿</span></div>
+<div class="small muted" style="margin-top:6px"><b>與稿不一致／備註：</b>未逐項核對；展開「設定各節時間」的面板未截。</div></section>
+<section class="card pg" id="P06"><header><span class="no">P06</span><h2>考試步驟 ② 考試名單</h2><span class="small muted">route: step 2</span></header>
+<div class="shots">
+<figure class="shot d"><img src="overview-shots/d-step2.jpg" alt="P06 尚未匯入（1280）" loading="lazy"><figcaption>P06　尚未匯入（1280）</figcaption></figure>
+<figure class="shot m"><img src="overview-shots/m-step2.jpg" alt="P06 尚未匯入（375）" loading="lazy"><figcaption>P06　尚未匯入（375）</figcaption></figure>
+</div>
+<div class="kv"><b>狀態</b><span>尚未匯入／欄位對應／匯入預覽與比對結果／問題列與已處理／重複匯入／錯誤／各班人數／再匯入確認</span><b>對應稿</b><span>原型.html；G16-G34介面總稿；對稿-I-2a與I-3.md</span></div>
+<div class="small muted" style="margin-top:6px"><b>與稿不一致／備註：</b>只截「尚未匯入」。匯入需選 Excel 檔，瀏覽器自動化無法選檔，其餘狀態未截。375 步驟導覽佔滿首屏，內容要下捲（觀察，非缺陷判定）。</div></section>
+<section class="card pg" id="P07"><header><span class="no">P07</span><h2>考試步驟 ③ 教室設定</h2><span class="small muted">route: step 3</span></header>
+<div class="shots">
+<figure class="shot d"><img src="overview-shots/d-step3.jpg" alt="P07 尚未匯入名單時（1280）" loading="lazy"><figcaption>P07　尚未匯入名單時（1280）</figcaption></figure>
+</div>
+<div class="kv"><b>狀態</b><span>狀態檢核／班級教室（橫排、深位、座位編輯）／預備教室／預備教室排座方式／座位上限提示</span><b>對應稿</b><span>G16-G34介面總稿；G修正總稿；設計員改稿包小稿 v2.70（座位上限）</span></div>
+<div class="small muted" style="margin-top:6px"><b>與稿不一致／備註：</b>只截未匯入名單的狀態；座位編輯面板、容量不足、預備教室未截。</div></section>
+<section class="card pg" id="P08"><header><span class="no">P08</span><h2>考試步驟 ④ 標示與抽離規則</h2><span class="small muted">route: step 4</span></header>
+<div class="shots">
+<figure class="shot d"><img src="overview-shots/d-step4.jpg" alt="P08 尚未匯入名單時（1280）" loading="lazy"><figcaption>P08　尚未匯入名單時（1280）</figcaption></figure>
+</div>
+<div class="kv"><b>狀態</b><span>組別對照表／各科標示／抽離規則／範例標示（右欄）</span><b>對應稿</b><span>座位表標示與統計表稿 v2.76；原型.html</span></div>
+<div class="small muted" style="margin-top:6px"><b>與稿不一致／備註：</b>只截未匯入名單狀態。</div></section>
+<section class="card pg" id="P09"><header><span class="no">P09</span><h2>考試步驟 ⑤ 排座與預覽</h2><span class="small muted">route: step 5</span></header>
+<div class="shots">
+<figure class="shot d"><img src="overview-shots/d-step5.jpg" alt="P09 還不能排座（1280）" loading="lazy"><figcaption>P09　還不能排座（1280）</figcaption></figure>
+<figure class="shot m"><img src="overview-shots/m-step5.jpg" alt="P09 還不能排座（375）" loading="lazy"><figcaption>P09　還不能排座（375）</figcaption></figure>
+</div>
+<div class="kv"><b>狀態</b><span>還不能排座（待處理清單）／班級色／驗證／座位表預覽（班級教室、預備教室）／統計</span><b>對應稿</b><span>原型.html；座位表標示與統計表稿 v2.76；對帳與預覽小稿 v2.77</span></div>
+<div class="small muted" style="margin-top:6px"><b>與稿不一致／備註：</b>只截擋下狀態；排好座位的預覽未截。</div></section>
+<section class="card pg" id="P10"><header><span class="no">P10</span><h2>考試步驟 ⑥ 下載（含考前對帳）</h2><span class="small muted">route: step 6</span></header>
+<div class="shots">
+<figure class="shot d"><img src="overview-shots/d-step6.jpg" alt="P10 還沒有名單、無法對帳（1280）" loading="lazy"><figcaption>P10　還沒有名單、無法對帳（1280）</figcaption></figure>
+</div>
+<div class="kv"><b>狀態</b><span>考前對帳（逐項通過／警示展開／總帳）／下載 Word、PDF／標籤預覽</span><b>對應稿</b><span>G35考前對帳稿 v2.78；對帳與預覽小稿 v2.77；匯出檔樣式規格稿</span></div>
+<div class="small muted" style="margin-top:6px"><b>與稿不一致／備註：</b>只截未匯入名單狀態；對帳明細與下載完成未截。</div></section>
+<section class="card pg" id="P11"><header><span class="no">P11</span><h2>分科考試步驟 ③④⑤（教室與自習空間、排座模式與方案、時段教室與座位）</h2><span class="small muted">route: step 3–5（分科）</span></header>
+<div class="shots">
+<div class="none">本版未截現行畫面（原因見下方備註）</div>
+</div>
+<div class="kv"><b>狀態</b><span>教室與自習空間／少教室優先、少移動優先方案比較／時段教室與座位／自習參考座位</span><b>對應稿</b><span>G16-G34介面總稿；G36自習參考座位稿 v2.68；DESIGN §10.14</span></div>
+<div class="small muted" style="margin-top:6px"><b>與稿不一致／備註：</b>未截（分科需名單與報名資料）。D135：考生與自習生不同室。</div></section>
+<section class="card pg" id="P12"><header><span class="no">P12</span><h2>預備教室與抽離</h2><span class="small muted">route: reserve</span></header>
+<div class="shots">
+<div class="none">本版未截現行畫面（原因見下方備註）</div>
+</div>
+<div class="kv"><b>狀態</b><span>預備教室名單／抽離考試與抽離自習</span><b>對應稿</b><span>G16-G34介面總稿；原型.html</span></div>
+<div class="small muted" style="margin-top:6px"><b>與稿不一致／備註：</b>未截（需已排座的考試）。</div></section>
+<section class="card pg" id="P13"><header><span class="no">P13</span><h2>考生查詢（選用）</h2><span class="small muted">route: lookup</span></header>
+<div class="shots">
+<div class="none">本版未截現行畫面（原因見下方備註）</div>
+</div>
+<div class="kv"><b>狀態</b><span>輸入條件／查詢結果</span><b>對應稿</b><span>原型.html（選用功能設定頁 C 區）</span></div>
+<div class="small muted" style="margin-top:6px"><b>與稿不一致／備註：</b>未截（需先在選用功能啟用，且要有考試資料）。</div></section>
+<section class="card pg" id="P14"><header><span class="no">P14</span><h2>共用設定 · 學生名單</h2><span class="small muted">route: settings roster</span></header>
+<div class="shots">
+<figure class="shot d"><img src="overview-shots/d-set-roster.jpg" alt="P14 1280" loading="lazy"><figcaption>P14　1280</figcaption></figure>
+<figure class="shot m"><img src="overview-shots/m-settings.jpg" alt="P14 375" loading="lazy"><figcaption>P14　375</figcaption></figure>
+</div>
+<div class="kv"><b>狀態</b><span>學年度／部別／名單表／匯入、匯出、下載範本／刪除全部／新增學年度</span><b>對應稿</b><span>模擬考列表與設定畫面包稿 v2.74</span></div>
+<div class="small muted" style="margin-top:6px"><b>與稿不一致／備註：</b>未逐項核對。</div></section>
+<section class="card pg" id="P15"><header><span class="no">P15</span><h2>共用設定 · 班級資料</h2><span class="small muted">route: settings classes</span></header>
+<div class="shots">
+<figure class="shot d"><img src="overview-shots/d-set-classes.jpg" alt="P15 1280" loading="lazy"><figcaption>P15　1280</figcaption></figure>
+</div>
+<div class="kv"><b>狀態</b><span>班級表／新增班級／班級色／危險操作區（重置）</span><b>對應稿</b><span>模擬考列表與設定畫面包稿 v2.74</span></div>
+<div class="small muted" style="margin-top:6px"><b>與稿不一致／備註：</b>未逐項核對。</div></section>
+<section class="card pg" id="P16"><header><span class="no">P16</span><h2>共用設定 · 學校與表頭</h2><span class="small muted">route: settings school</span></header>
+<div class="shots">
+<figure class="shot d"><img src="overview-shots/d-set-school.jpg" alt="P16 1280" loading="lazy"><figcaption>P16　1280</figcaption></figure>
+</div>
+<div class="kv"><b>狀態</b><span>學校名稱／座位表表頭／標籤表頭／標籤注意事項／預設紙張</span><b>對應稿</b><span>原型.html；G修正總稿</span></div>
+<div class="small muted" style="margin-top:6px"><b>與稿不一致／備註：</b>未逐項核對。</div></section>
+<section class="card pg" id="P17"><header><span class="no">P17</span><h2>共用設定 · 教室清單</h2><span class="small muted">route: settings rooms</span></header>
+<div class="shots">
+<figure class="shot d"><img src="overview-shots/d-set-rooms.jpg" alt="P17 1280（沒有名單時）" loading="lazy"><figcaption>P17　1280（沒有名單時）</figcaption></figure>
+</div>
+<div class="kv"><b>狀態</b><span>沒名單的提示／班級教室列／預備教室／座位編輯</span><b>對應稿</b><span>設計員改稿包小稿 v2.70；G16-G34介面總稿</span></div>
+<div class="small muted" style="margin-top:6px"><b>與稿不一致／備註：</b>未逐項核對。</div></section>
+<section class="card pg" id="P18"><header><span class="no">P18</span><h2>共用設定 · 節次與時長</h2><span class="small muted">route: settings sched</span></header>
+<div class="shots">
+<figure class="shot d"><img src="overview-shots/d-set-sched.jpg" alt="P18 1280" loading="lazy"><figcaption>P18　1280</figcaption></figure>
+</div>
+<div class="kv"><b>狀態</b><span>學測第 1、2 次／第 3、4 次／分科／會考四份；每天一欄、時段拖拉與 ↑↓；還原預設</span><b>對應稿</b><span>原型.html（v2.18 時間表式）；設計員改稿包小稿 v2.70（還原預設）</span></div>
+<div class="small muted" style="margin-top:6px"><b>與稿不一致／備註：</b>未逐項核對。</div></section>
+<section class="card pg" id="P19"><header><span class="no">P19</span><h2>選用功能</h2><span class="small muted">route: settings features</span></header>
+<div class="shots">
+<figure class="shot d"><img src="overview-shots/d-set-features.jpg" alt="P19 1280" loading="lazy"><figcaption>P19　1280</figcaption></figure>
+</div>
+<div class="kv"><b>狀態</b><span>領卷清單／考生查詢／出缺席記錄表／會考快速模式等的啟用開關</span><b>對應稿</b><span>原型.html（C 區）</span></div>
+<div class="small muted" style="margin-top:6px"><b>與稿不一致／備註：</b>未逐項核對。</div></section>
+<section class="card pg" id="P20"><header><span class="no">P20</span><h2>補考 · 場次列表</h2><span class="small muted">route: makeup</span></header>
+<div class="shots">
+<figure class="shot d"><img src="overview-shots/d-makeup.jpg" alt="P20 空列表（1280）" loading="lazy"><figcaption>P20　空列表（1280）</figcaption></figure>
+</div>
+<div class="kv"><b>狀態</b><span>空列表／有場次（卡片：紅、琥珀、綠進度）／刪除</span><b>對應稿</b><span>補考稿 v2.81（S-1、S-2）</span></div>
+<div class="small muted" style="margin-top:6px"><b>與稿不一致／備註：</b>未逐項核對；有場次的狀態未截。</div></section>
+<section class="card pg" id="P21"><header><span class="no">P21</span><h2>補考 · 新增補考場次</h2><span class="small muted">route: makeupNew</span></header>
+<div class="shots">
+<figure class="shot d"><img src="overview-shots/d-makeup-new.jpg" alt="P21 1280" loading="lazy"><figcaption>P21　1280</figcaption></figure>
+</div>
+<div class="kv"><b>狀態</b><span>場次名稱／學年度／學期／第一個補考場次提示</span><b>對應稿</b><span>補考稿 v2.81（S-2）</span></div>
+<div class="small muted" style="margin-top:6px"><b>與稿不一致／備註：</b>未逐項核對。</div></section>
+<section class="card pg" id="P22"><header><span class="no">P22</span><h2>補考 · 七步驟工作區與儀表板</h2><span class="small muted">route: makeupStep</span></header>
+<div class="shots">
+<div class="none">本版未截現行畫面（原因見下方備註）</div>
+</div>
+<div class="kv"><b>狀態</b><span>① 補考設定／② 匯入名單／③ 教室設定（型別按鈕：一般／特別，D180）／④ 人數統計／⑤ 考程編排／⑥ 核對與對帳／⑦ 下載；儀表板（改用 Drawer 側滑，D176④）</span><b>對應稿</b><span>補考稿 v2.81（S-3～S-9）；D176、D180</span></div>
+<div class="small muted" style="margin-top:6px"><b>與稿不一致／備註：</b>未截（需補考場次與教務系統名單）。③ 型別按鈕稿已改「一般／特別」，程式要等 PR #499 併入；儀表板目前用 Modal，Drawer 元件已做好，等 PR #499 後另包換上。</div></section>
+<section class="card pg" id="P23"><header><span class="no">P23</span><h2>使用授權</h2><span class="small muted">route: copyright</span></header>
+<div class="shots">
+<figure class="shot d"><img src="overview-shots/d-copyright.jpg" alt="P23 1280" loading="lazy"><figcaption>P23　1280</figcaption></figure>
+</div>
+<div class="kv"><b>狀態</b><span>全文（內捲）／回上頁</span><b>對應稿</b><span>（無專屬稿）</span></div>
+<div class="small muted" style="margin-top:6px"><b>與稿不一致／備註：</b>—</div></section>
+<section class="card pg" id="P24"><header><span class="no">P24</span><h2>隱私權政策</h2><span class="small muted">route: privacy</span></header>
+<div class="shots">
+<figure class="shot d"><img src="overview-shots/d-privacy.jpg" alt="P24 1280" loading="lazy"><figcaption>P24　1280</figcaption></figure>
+</div>
+<div class="kv"><b>狀態</b><span>中文／English version／回上頁</span><b>對應稿</b><span>不支援瀏覽器提示稿 v2.65（D53 例外）；（無專屬稿）</span></div>
+<div class="small muted" style="margin-top:6px"><b>與稿不一致／備註：</b>—</div></section>
+<div class="card"><h2>全站共用元件（每頁都會出現）</h2><table><thead><tr><th>標號</th><th>元件</th><th>說明</th><th>對應稿</th></tr></thead><tbody>
+<tr id="G1"><td><span class="no">G1</span></td><td>全站頁首與頁尾（AppBar、導覽、外觀切換、版號、版權、隱私）</td><td>每頁頂端／底端，含手機的「選單」與外觀切換鈕</td><td>頁首方案-v2.29；DESIGN §10.7</td></tr>
+<tr id="G2"><td><span class="no">G2</span></td><td>對話框 Modal／ConfirmModal</td><td>刪除確認、重置確認、關於本程式等（全站只一種畫法，D165）</td><td>設計系統.html（元件章）</td></tr>
+<tr id="G3"><td><span class="no">G3</span></td><td>Drawer 側滑面板（新，稿 v2.81）</td><td>只用在補考儀表板；≥768 右側滑出，&lt;768 底部面板</td><td>設計系統.html #v281；DESIGN §10.44.3</td></tr>
+</tbody></table></div>
+<div class="card" id="lim"><h2>本版限制（誠實列出）</h2><ul class="small" style="margin:0;padding-left:18px;display:grid;gap:4px">
+<li><b>只有「首屏」截圖</b>：截圖工具只截目前視窗，不是整頁長圖；長頁（共用設定、步驟頁）下半部要看請開實際網站，標注時請講標號加「下半部」。</li>
+<li><b>寬度只有 1280 與 375</b>；平板 768 未截。</li>
+<li><b>沒有匯入名單的狀態都未截</b>：匯入要選 Excel 檔，瀏覽器自動化無法選檔；因此步驟 ②～⑥ 只有「尚未匯入／被擋下」的狀態，排好座位、對帳明細、下載完成等未截，已在各頁備註。</li>
+<li><b>「與稿不一致」只列已確認的項目</b>（P04 補考卡兩項）；其餘頁寫「未逐項核對」，不假裝比對過。若要逐項核對，請在上面標注想看的頁，下一輪針對該頁做對稿。</li>
+<li>截圖用本機開發站的「記憶體示範模式」（暫時修改、已還原、沒有進版控），資料是虛構的示範生與範例高中。</li></ul></div>
+</div></body></html>
