@@ -14,7 +14,7 @@ describe('補考 O-6 座位標籤（#552、D193）', () => {
     expect(h).toContain('座位標籤（O-6）這一版尚未提供');
   });
   it('⑦ 維持「這一版尚未提供」', () => {
-    const h = renderToString(<MkStep7 s={fakeSession({ rooms: rooms(6), id: 'mk-552' })} onChange={noop} />);
+    const h = renderToString(<MkStep7 s={fakeSession({ rooms: rooms(6), id: 'mk-552' })} onStep={noop} />);
     expect(h).toContain('這一版尚未提供');
   });
 });
