@@ -221,8 +221,8 @@ export function wideLabelLayout(paper: LabelPaper): LabelLayout {
  */
 export const LABEL_ROOM_MAX = 8;
 export const PREP_TAG = '預備教室';
-/** 自習座位頁圖例（G36 補做項④、稿 v2.68 圖例列）：虛線格＝自習座位、斜紋＝停用；與頁首「非考試座位」小標籤並列，黑白列印也分得出 */
-export const STUDY_LEGEND = '圖例：虛線格＋「自習」＝自習座位（不印標籤）；斜紋格＝停用';
+/** 自習座位頁圖例（G36 補做項④、稿 v2.68 圖例列）：此頁座位都是自習座位、斜紋＝停用（#550：自習頁格子不畫虛線與「自習」字，D147 匯出樣式不自訂）；與頁首「非考試座位」小標籤並列，黑白列印也分得出 */
+export const STUDY_LEGEND = '圖例：此頁座位都是自習座位（不印標籤）；斜紋格＝停用';
 
 /**
  * 標籤頁的列印邊距（D136，使用者 2026-11-18 裁示 #387「標籤與紙張邊緣沒有間距，列印會有問題」）：
