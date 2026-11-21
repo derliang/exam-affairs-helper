@@ -1473,8 +1473,8 @@ span.chk.on{background:var(--cbx-on-bg);border-color:var(--cbx-on-line);color:va
         <li><b>A3 格數（設計員定案，待審）</b>：A3 舊版是 7×7、每格 35mm 正方（沿用舊標籤，D74）。兩倍寬要成對，7 欄是奇數，只能每列放 3 張、浪費一欄（49→21 張）。改 <b>8 欄×7 列</b>：35mm 正方不變、兩格併一張＝70×35mm，每列 4 張、一張紙 28 張；寬度 280mm，左右各留約 8.5mm（大於一般印表機不可印邊界約 5mm）。B4 維持扣 10mm 邊界均分、6 欄併成 3 欄＝3×8＝24 張。</li>
         <li><b>被否決</b>：①只放大字、格數不變（使用者先選後改，改為兩倍寬）；②A3 維持 7 欄、每列 3 張（浪費整欄）；③一人一格不併格、但把科目改兩欄（B4 格寬 38mm，兩欄後每欄不到 19mm，字反而更小）。</li>
         <li><b>代價</b>：張數增加（座位 48 個時，B4 由 1 張紙變 2 張）；這是使用者要的取捨，列印前下載畫面要寫明「整合標籤每張兩格寬、共 N 張紙」。</li></ul></div>
-    <div class="card" id="v297" style="margin-top:16px"><div class="lab">④-3 分科整合標籤：單人回一般大小、多人編號放大（#586，<b>稿 v2.97；待使用者審稿，核可前不實作</b>；修訂 D107，D108 保留）</div>
-      <p class="small muted">使用者原話（2026-11-22）：「多人坐一個位置的，考生編號要放大且明顯；單人坐一個位置的，維持正常的標籤大小，不需要兩倍寬，為了排版的話，可以有空白格」。以下是設計員<b>提案</b>（見下方「待你裁示」）；B4 示意，1mm＝4px，全部假資料。</p>
+    <div class="card" id="v297" style="margin-top:16px"><div class="lab">④-3 分科整合標籤：單人回一般大小、多人編號放大（#586，<b>稿 v2.97；使用者已核可（全採建議），已實作於 1.27.21</b>；修訂 D107，D108 保留）</div>
+      <p class="small muted">使用者原話（2026-11-22）：「多人坐一個位置的，考生編號要放大且明顯；單人坐一個位置的，維持正常的標籤大小，不需要兩倍寬，為了排版的話，可以有空白格」。使用者已裁示全採設計員建議；B4 示意，1mm＝4px，全部假資料。</p>
       <div class="v36 g" style="grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr))">
         <div><div class="small"><b>單人座位</b>：<b>一般大小一格</b>（與學測、會考標籤同版式：座標、大字編號、班級｜姓名、科目行），右邊那一格<b>留空白（不印、不裁）</b>，座位位置與座位表對齊不變</div>
           <div style="display:flex"><div class="cell" style="width:154px;height:165px;display:flex;flex-direction:column;justify-content:center"><i class="co">1-1</i><b class="no" style="font-size:44px">0101</b><span class="nm" style="font-size:20px;margin-top:4px"><em>溫</em>王小明</span><span style="font-size:13px;font-weight:700;line-height:1.35;margin-top:6px">物理、化學<br>數甲、生物</span></div><div style="width:154px;height:165px;border:1px dashed #C8C2AE;display:flex;align-items:center;justify-content:center;color:#A09A86;font-size:13px">空白格</div></div></div>
@@ -1491,9 +1491,9 @@ span.chk.on{background:var(--cbx-on-bg);border-color:var(--cbx-on-line);color:va
       </div>
       <ul class="sp">
         <li><b>規則（提案）</b>：①單人座位 1 格（與學測標籤同尺寸與版式）、右格空白；②2 人以上輪流座位 2 格寬；③多人每人一區，區內順序＝<b>大字編號</b>、班級｜姓名、科目（依時間順序，只列科目名）；編號字級優先、最小 12pt，放不下先縮姓名與科目，再縮到下限 5pt；④座位 x－y 小字在左上角；⑤座位對位、一張紙座位位置數（B4 24、A3 28）不變；⑥「共 N 人輪流」仍不寫（D108）。</li>
-        <li><b>待你裁示（調度員代問）</b>：Q1 單人格<b>留右格空白</b>（提案，位置與座位表對齊、貼標籤不會貼錯）或<b>單人格兩個一組緊密排列</b>（省紙但位置不再對應座位）？Q2 多人格是否仍兩倍寬（提案：是，才放得下每人編號）？Q3 空白格要不要印淡淡的「空」字或完全空白（提案：完全空白、不畫裁切線）？</li>
+        <li><b>使用者已裁示</b>：Q1 單人格<b>留右格空白</b>（位置與座位表對齊、貼標籤不會貼錯；不採兩個一組緊密排列）；Q2 多人格仍兩倍寬；Q3 空白格完全空白、不畫裁切線。<b>實作校正</b>：3 人以上編號與「班級｜姓名」同一行（編號＝姓名字級 1.5 倍），因為編號獨立一行時 5 人姓名只剩約 5.5pt。</li>
         <li><b>被否決</b>：單人與多人都放大成兩倍寬（使用者明說不要）；把多人座位拆成多張標籤（D108 否決理由不變：標籤依座位定位，且使用者說要手工貼）。</li>
-        <li><b>與程式現況的差異</b>：1.27.19 的 `wideLayout`（`model.ts`）、`wideHtml`、`wideUnit` 單人都排成左右半版；核可後單人改走一般格版式，多人編號放大。</li></ul></div>
+        <li><b>與程式現況的差異</b>：1.27.19 的 `wideLayout`（`model.ts`）、`wideHtml`、`wideUnit` 單人都排成左右半版；已改：單人走一般格版式，多人編號放大。</li></ul></div>
 
     <div class="card" id="v239" style="margin-top:16px"><div class="lab">④-3 預備／綜合教室 2 人輪流格改精簡版（#212 #220，<b>稿 v2.39，使用者已同意取捨</b>）</div>
       <p class="small muted">窄格（約 24mm）寫完整「第二天 時段一 公民與社會」只剩 5pt，還把姓名擠小。改成：每人「班級｜姓名」一行＋科目併一行（依時間順序）；<b>不印編號行、不寫「第N天」</b>。單人考 2 個以上時段放不下時，同樣把科目併一行。假資料、1mm＝約 4px。</p>

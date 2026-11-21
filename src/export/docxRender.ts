@@ -371,7 +371,7 @@ function personParas(c: CellModel, w: number, h: number, g: { topPad: number; co
   return [
     line([run2(c.coord, { size: g.coordPt, bold: true, color: '4A463A' }, mode)], { h: g.topPad, align: AlignmentType.RIGHT, right: 0.6 }),
     ...lines.map((l, i) =>
-      line(l.runs.map((r) => run2(r.text, { size: l.pt, bold: r.bold, color: INK }, mode)), { h: l.pt * 0.3528 * 1.15, before: l.gapBefore + (i === 0 ? first : 0) }),
+      line(l.runs.map((r) => run2(r.text, { size: r.pt ?? l.pt, bold: r.bold, color: INK }, mode)), { h: l.pt * 0.3528 * 1.15, before: l.gapBefore + (i === 0 ? first : 0) }),
     ),
   ];
 }
@@ -382,7 +382,7 @@ function sideParas(lines: PersonLine[], h: number, topPad: number, coord: string
   const first = top ? 0 : Math.max(0, (h - total) / 2 - topPad);
   return [
     line(coord ? [run2(coord, { size: 9, bold: true, color: '4A463A' }, mode)] : [], { h: topPad, align: AlignmentType.RIGHT, right: 0.6 }),
-    ...lines.map((l, i) => line(l.runs.map((r) => run2(r.text, { size: l.pt, bold: r.bold, color: INK }, mode)), { h: l.pt * 0.3528 * 1.15, before: l.gapBefore + (i === 0 ? first : 0), align, left })),
+    ...lines.map((l, i) => line(l.runs.map((r) => run2(r.text, { size: r.pt ?? l.pt, bold: r.bold, color: INK }, mode)), { h: l.pt * 0.3528 * 1.15, before: l.gapBefore + (i === 0 ? first : 0), align, left })),
   ];
 }
 
@@ -406,6 +406,13 @@ function wideUnit(m: CellModel | undefined, o: { w: number; h: number; cellTw: n
     return [0, 1].map((i) => new TableCell({ width: { size: o.cellTw, type: WidthType.DXA }, verticalAlign: VerticalAlign.TOP, margins: { top: 0, bottom: 0, left: tw(1), right: tw(1) }, borders: { top: b, bottom: b, left: i === 0 ? b : none, right: i === 1 ? b : none }, children: [line([], { h: 0.35 })] }));
   }
   const g = { topPad: 5, codePt: o.isB4 ? 33 : 31, nameMax: 18, subjMax: o.isB4 ? 20 : 16 };
+  if ((m.persons?.length ?? 0) === 1) {
+    // #586（D205）：單人座位回一般大小一格（同學測標籤版式），右格完全空白（無框線、無底色）
+    return [
+      mk(personParas(m, o.w - 2, o.h, { topPad: 5, coordPt: 9, codePt: g.codePt, nameMax: 18, schedMax: 11 }, o.mode), { top: b, bottom: b, left: b, right: b }),
+      new TableCell({ width: { size: o.cellTw, type: WidthType.DXA }, verticalAlign: VerticalAlign.TOP, margins: { top: 0, bottom: 0, left: tw(1), right: tw(1) }, borders: { top: none, bottom: none, left: none, right: none } as never, children: [new Paragraph({ spacing: { before: 0, after: 0 }, children: [] })] }),
+    ];
+  }
   const lay = wideLayout(m, o.w - 2, o.h, g);
   const n = m.persons?.length ?? 0;
   const two = n === 2;

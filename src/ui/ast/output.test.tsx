@@ -272,6 +272,25 @@ describe('分科輸出：整合標籤兩倍寬（#216／D107）', () => {
     expect(g.length).toBeGreaterThan(0);
     expect(g.every((w) => w.length <= 6)).toBe(true); // 一頁最多 3 張＝6 欄
   });
+  it('#586（D205）：單人座位一般大小一格＋右格完全空白，多人座位兩格寬且每人一區有大字編號', async () => {
+    const { doc, exam } = fixture();
+    const o = astOutputs(doc, exam, astPlan(doc, exam)!, 'B4');
+    const cells = o.label.flatMap((p) => p.cells);
+    const nOne = cells.filter((c) => c.persons?.length === 1).length;
+    expect(nOne).toBeGreaterThan(0);
+    expect(nOne + cells.filter((c) => (c.persons?.length ?? 0) > 1).length).toBe(cells.length);
+    const html = String((await runAstExport(o, ['label'], 'pdf', 'B4', '分科', async () => { throw new Error('x'); }))[0]!.data);
+    // 單人：每個單人座位一格空白（不畫線）；列印頁不再有「單人佔兩格」的寬格
+    expect((html.match(/border:0;background:transparent/g) ?? []).length).toBe(nOne);
+    const multi = cells.find((c) => (c.persons?.length ?? 0) >= 3);
+    const { wideLayout } = await import('../../export/model');
+    if (multi) {
+      const lay = wideLayout(multi, 36, 35, { topPad: 5, codePt: 33, nameMax: 18, subjMax: 20 });
+      const codes = [...lay.left, ...lay.right].filter((l) => /^\d{4}$/.test(l.runs[0]!.text));
+      expect(codes).toHaveLength(multi.persons!.length); // 每人一區都有編號
+      expect(codes.every((l) => l.runs[0]!.pt! > l.runs[2]!.pt!)).toBe(true); // 編號比姓名大
+    }
+  });
 });
 
 describe('分科輸出：頁數預估（#269）', () => {

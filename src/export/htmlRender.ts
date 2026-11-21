@@ -28,12 +28,14 @@ function cornersHtml(c: CellModel, w: number, pt: number, given?: ReturnType<typ
   return lines.length ? `<span class="pp-cn">${lines.map((l) => `<span class="pp-cl">${l.map((k) => `<span class="pp-mk ${k.kind === 'x' ? 'x' : 'add'}">${esc(k.text)}</span>`).join('')}</span>`).join('')}</span>` : '';
 }
 
-/** 兩倍寬整合標籤（稿 v2.37／D107）：一張佔兩格；單人左半編號姓名、右半科目；2 人左右各一人；3 人以上合併一格。排法同 Word（model.wideLayout） */
+/** 整合標籤（稿 v2.37／D107，#586／D205 修訂）：單人一般大小一格＋右格空白；2 人以上兩格寬（2 人左右各一人；3 人以上每人一區含大字編號）。排法同 Word（model.wideLayout） */
 function wideHtml(c: CellModel | undefined, w: number, h: number, b4: boolean): string {
   const size = `width:${mm(w * 2)};height:${mm(h)}`;
   if (!c) return `<div class="pp-c pp-bl" style="${size};grid-column:span 2"></div>`;
+  // #586（D205）：單人座位回一般大小一格（同學測標籤版式），右格留完全空白（不畫線）；位置與座位表對齊不變
+  if ((c.persons?.length ?? 0) === 1) return `${cellHtml(c, w, h, 'label', b4)}<div class="pp-c" style="width:${mm(w)};height:${mm(h)};border:0;background:transparent"></div>`;
   const lay = wideLayout(c, w - 1.5, h, { topPad: 5, codePt: b4 ? 33 : 31, nameMax: 18, subjMax: b4 ? 20 : 16 });
-  const spans = (ls: PersonLine[]): string => ls.map((l) => `<span class="pp-pr" style="font-size:${l.pt}pt;margin-top:${mm(l.gapBefore)}">${l.runs.map((r) => (r.bold ? `<b>${esc(r.text)}</b>` : esc(r.text))).join('')}</span>`).join('');
+  const spans = (ls: PersonLine[]): string => ls.map((l) => `<span class="pp-pr" style="font-size:${l.pt}pt;margin-top:${mm(l.gapBefore)}">${l.runs.map((r) => { const t = r.bold ? `<b>${esc(r.text)}</b>` : esc(r.text); return r.pt ? `<span style="font-size:${r.pt}pt">${t}</span>` : t; }).join('')}</span>`).join('');
   const co = `<i class="pp-co">${esc(c.coord)}</i>`;
   const n = c.persons?.length ?? 0;
   const two = n === 2;
@@ -50,7 +52,7 @@ function cellHtml(c: CellModel | undefined, w: number, h: number, mode: 'seat' |
     // 預備教室／綜合教室／整合標籤（v2.36）：版式同一般標籤，格內每人一區；排法同 Word（model.personLayout）
     const g = mode === 'label' ? { topPad: 5, codePt: b4 ? 33 : 31, nameMax: 18, schedMax: 11 } : { topPad: 4.5, codePt: 19, nameMax: 10.5, schedMax: 7, joinSched: true };
     const { lines } = personLayout(c, w - (mode === 'label' ? 2 : 1.3), h, g);
-    const ls = lines.map((l) => `<span class="pp-pr" style="font-size:${l.pt}pt;margin-top:${mm(l.gapBefore)}">${l.runs.map((r) => (r.bold ? `<b>${esc(r.text)}</b>` : esc(r.text))).join('')}</span>`).join('');
+    const ls = lines.map((l) => `<span class="pp-pr" style="font-size:${l.pt}pt;margin-top:${mm(l.gapBefore)}">${l.runs.map((r) => { const t = r.bold ? `<b>${esc(r.text)}</b>` : esc(r.text); return r.pt ? `<span style="font-size:${r.pt}pt">${t}</span>` : t; }).join('')}</span>`).join('');
     return `<div class="pp-c pp-pe" style="${size};background:#fff"><i class="pp-co">${esc(c.coord)}</i><span class="pp-prs">${ls}</span></div>`;
   }
   if (c.periodLines) {

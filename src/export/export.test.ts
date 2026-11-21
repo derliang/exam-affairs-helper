@@ -474,7 +474,13 @@ describe('座位表頁首標籤換行與兩時段格（#247、#212）', () => {
     expect(txt.join('')).not.toMatch(/輪流|下一頁/);
     expect(txt.filter((t) => t.includes('王小明'))).toHaveLength(5); // 5 人每人都有「班級｜姓名」
     expect(txt.join('')).toContain('物理、化學'); // 科目依時間順序併一行
-    expect(Math.min(...[...many.left!, ...many.right!].map((l) => l.pt))).toBeGreaterThanOrEqual(7.5); // 5 人時字仍夠大
+    // #586：每人一區都有大字編號（與「班級｜姓名」同一行，編號字級最大、整張最大的字），5 人時字仍夠大
+    const all5 = [...many.left!, ...many.right!];
+    const codeLines = all5.filter((l) => /^0\d{3}$/.test(l.runs[0]!.text));
+    expect(codeLines).toHaveLength(5);
+    for (const l of codeLines) expect(l.runs[0]!.pt!).toBeGreaterThan(l.runs[2]!.pt!);
+    expect(Math.max(...all5.map((l) => l.pt))).toBe(Math.max(...codeLines.map((l) => l.runs[0]!.pt!)));
+    expect(Math.min(...all5.map((l) => l.runs.length > 1 ? l.runs[2]!.pt! : l.pt))).toBeGreaterThanOrEqual(6);
     expect(many.left!.length).toBeGreaterThan(0); expect(many.right!.length).toBeGreaterThan(0);
   });
 
