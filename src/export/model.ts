@@ -1308,6 +1308,11 @@ export function labelNotePt(layout: LabelLayout, gridRows: number, noteLines: nu
   return labelFit(layout, gridRows, noteLines).notePt;
 }
 
+/** 橫式表列高能不能長高（#551）：列數少、列高已到上限 8mm（沒被擠壓）時，格內折成兩行不該被切掉，Word 列高用「至少」；列數多、為了一頁放得下被壓縮時才固定 */
+export function landscapeRowsFlex(nRows: number, nHead: number): boolean {
+  return (210 - 17 - 30) / (nRows + nHead) >= 8;
+}
+
 /** 估字寬（em）：中日韓全形 1、其他 0.55 */
 const emWidth = (t: string): number => [...t].reduce((w, ch) => w + (/[\u2E80-\uFFFF]/.test(ch) ? 1 : 0.55), 0);
 
