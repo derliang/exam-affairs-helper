@@ -6,6 +6,7 @@ import { MkStep6 } from './pages/MkStep6';
 import { MkStep7 } from './pages/MkStep7';
 import { outputsOf } from './pipeline';
 import { stepDone } from './steps';
+import { addDay } from './session';
 import { fakeSession, rooms } from './testKit';
 
 const noop = () => undefined;
@@ -138,5 +139,20 @@ describe('儀表板畫面', () => {
     void _p;
     expect(renderToString(<MakeupSummaryBar s={rest} onStep={noop} />)).toContain('尚未匯入補考名單');
     expect(renderToString(<MakeupSummaryBar s={bad()} onStep={noop} />)).toContain('✕');
+  });
+});
+
+describe('⑥ 依考日對帳（U-8、D184）', () => {
+  it('單一考日：不出現「依考日對帳」', () => {
+    expect(renderToString(<MkStep6 s={good()} onStep={noop} />)).not.toContain('依考日對帳');
+  });
+  it('兩個考日：出現「全場次／各日」切換與合計列，差異 0 ✓', () => {
+    const one = addDay(good());
+    const s = { ...one, gradeDay: { ...one.gradeDay, S2: 'd2' } };
+    const html = renderToString(<MkStep6 s={s} onStep={noop} />);
+    expect(html).toContain('依考日對帳');
+    expect(html).toContain('全場次');
+    expect(html).toContain('全場次合計');
+    expect(html).toContain('0 ✓');
   });
 });

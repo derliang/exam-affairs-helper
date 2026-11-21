@@ -3,8 +3,9 @@
  * 只用既有元件與樣式（Alert、Badge、Button、StatsBar、EmptyState、CheckRow、.rtw/.rt-t 容器表格）；不自寫樣式。
  * 規則：紅燈擋下載、必須修正；琥珀只提示（D153）；待執行（C-14）不假裝綠燈；遺漏為 0 時明確顯示「0 ✓」。
  */
-import { Alert, Badge, Button, EmptyState, StatsBar } from '../../components';
-import { fmtTime, roomSeats, type SlotInfo } from '../../../core/makeup';
+import { useState } from 'preact/hooks';
+import { Alert, Badge, Button, EmptyState, Seg, StatsBar } from '../../components';
+import { crossDayDuplicates, fmtTime, reconcileByDay, roomSeats, type SlotInfo } from '../../../core/makeup';
 import { CheckRow } from '../../pages/ReconcilePanel';
 import { fixTargets, stepLabel, toCheck, type Dashboard } from '../dashboard';
 import { baseOf, outputsOf, scheduleOf } from '../pipeline';
@@ -198,6 +199,44 @@ export function RiskCard(p: { s: MakeupSession }) {
           <b>被拆班（{schedule.splits.length} 班）</b>
           <ul class="plain">{schedule.splits.map((x) => <li key={`${x.slotId}-${x.oldClass}`}>{x.oldClass} 在 {slotOf.get(x.slotId) ? slotName(slotOf.get(x.slotId)!) : x.slotId} 被拆到 {x.rooms.map(roomName).join('、')}</li>)}</ul>
         </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * 依考日對帳（U-8、D184）：多考日場次才出現。「全場次／某一天」用既有 Seg 切換；
+ * 同一學生同一科出現在兩個考日只當警示，不擋下載。
+ */
+export function DayReconcileCard(p: { s: MakeupSession }) {
+  const [pick, setPick] = useState<string>('all');
+  const b = baseOf(p.s);
+  const { schedule } = scheduleOf(p.s);
+  if (b.settings.days.length < 2) return null;
+  const rows = reconcileByDay(b.entries, schedule, b.settings);
+  const dups = crossDayDuplicates(b.entries, b.settings);
+  const shown = pick === 'all' ? rows : rows.filter((r) => r.dayId === pick);
+  const sum = (f: (r: (typeof rows)[number]) => number): number => shown.reduce((n, r) => n + f(r), 0);
+  return (
+    <div class="card stack" data-day-reconcile>
+      <div class="lab">依考日對帳</div>
+      <Seg<string> label="對帳範圍" value={pick} options={[{ value: 'all', label: '全場次' }, ...rows.map((r) => ({ value: r.dayId, label: r.label }))]} onChange={setPick} />
+      {dups.length > 0 && (
+        <Alert tone="warn"><b>{dups.length} 筆同一學生同一科出現在兩個考日（僅供參考，不擋下載）</b>
+          <ul class="plain">{dups.map((x) => <li key={`${x.studentId}|${x.subject}`}>{x.studentId}　{x.subject}：{x.days.join('、')}</li>)}</ul>
+        </Alert>
+      )}
+      <div class="rtw"><table class="t compact rt-t">
+        <thead><tr><th>考日</th><th>學生</th><th>應有人次</th><th>實有人次</th><th>差異</th></tr></thead>
+        <tbody>
+          {shown.map((r) => <tr key={r.dayId}><td class="ti" data-label="考日">{r.label}</td><td data-label="學生">{r.students}</td><td data-label="應有人次">{r.expected}</td><td data-label="實有人次">{r.actual}</td><td data-label="差異">{r.diff === 0 ? '0 ✓' : `${r.diff > 0 ? '+' : ''}${r.diff} ✕`}</td></tr>)}
+          {pick === 'all' && <tr><td class="ti" data-label="考日"><b>全場次合計</b></td><td data-label="學生">—</td><td data-label="應有人次"><b>{sum((r) => r.expected)}</b></td><td data-label="實有人次"><b>{sum((r) => r.actual)}</b></td><td data-label="差異"><b>{sum((r) => r.diff) === 0 ? '0 ✓' : `${sum((r) => r.diff)} ✕`}</b></td></tr>}
+        </tbody>
+      </table></div>
+      {shown.some((r) => r.details.length > 0) && (
+        <Alert tone="danger"><b>這一天有人次對不上</b>
+          <ul class="plain">{shown.flatMap((r) => r.details).map((t) => <li key={t}>{t}</li>)}</ul>
+        </Alert>
       )}
     </div>
   );

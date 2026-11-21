@@ -4,7 +4,7 @@ import { dashboardOf } from '../dashboard';
 import { baseOf } from '../pipeline';
 import type { MakeupSession } from '../session';
 import type { MakeupStepNo } from '../steps';
-import { ChecksCard, GateBanner, MissCard, OverviewCard, PaperCard, RiskCard, SlotRoomCard, VersionCard } from './MkDashParts';
+import { ChecksCard, DayReconcileCard, GateBanner, MissCard, OverviewCard, PaperCard, RiskCard, SlotRoomCard, VersionCard } from './MkDashParts';
 import { Matrix } from './MkStep4';
 
 export function MkStep6(p: { s: MakeupSession; onStep: (n: MakeupStepNo) => void }) {
@@ -19,6 +19,7 @@ export function MkStep6(p: { s: MakeupSession; onStep: (n: MakeupStepNo) => void
           <MissCard d={d} onStep={p.onStep} />
           <OverviewCard d={d} />
           <ChecksCard d={d} onStep={p.onStep} />
+          <DayReconcileCard s={p.s} />
           <SlotRoomCard s={p.s} />
           {b.matrices.length === 0 ? <EmptyState title="沒有班級 × 科目資料">匯入名單後才會有。</EmptyState> : b.matrices.map((m) => <Matrix key={m.division} m={m} />)}
           <PaperCard s={p.s} />
