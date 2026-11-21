@@ -110,7 +110,7 @@ export function AstStep4(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
           })}
         </div>
         <div class="stack">
-          <div><h4>綜合教室的座位排法</h4><p class="small muted">只影響綜合教室：<b>最少深位（預設）</b>＝在教室排數上限內把人平均分到各排，每排只坐前幾個深位（例如 17 人排成 7 排、每排 2～3 人、3 個深位）；<b>最少排數</b>＝一排坐滿再坐下一排，用的排數最少。班級教室不受影響。</p></div>
+          <div><h4>綜合教室的座位排法</h4><p class="small muted">只影響綜合教室：<b class="nb">最少深位（預設）</b>＝在教室排數上限內把人平均分到各排，每排只坐前幾個深位（例如 17 人排成 7 排、每排 2～3 人、3 個深位）；<b class="nb">最少排數</b>＝一排坐滿再坐下一排，用的排數最少。班級教室不受影響。</p></div>
           <div class="row" role="group" aria-label="綜合教室的座位排法">
             <button type="button" class={`btn${layout === 'min-depth' ? ' btn-primary' : ''}`} aria-pressed={layout === 'min-depth'} onClick={() => chooseLayout('min-depth')}>最少深位（預設）</button>
             <button type="button" class={`btn${layout === 'min-rows' ? ' btn-primary' : ''}`} aria-pressed={layout === 'min-rows'} onClick={() => chooseLayout('min-rows')}>最少排數</button>

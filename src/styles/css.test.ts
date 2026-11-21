@@ -46,3 +46,20 @@ describe('版面溢出（fix-v3）', () => {
     expect(css).toMatch(/max-width:480px\)\{\.seg\{width:100%\}\.seg button\{[^}]*white-space:normal/);
   });
 });
+
+describe('斷行規則（#511～#516、DESIGN 10.45）', () => {
+  const css = readFileSync('src/styles/app.css', 'utf8');
+  it('全站段落避免孤字、有不可拆單位 .nb、步驟欄 248px、列表卡 960px 以下單欄', () => {
+    expect(css).toMatch(/body\{text-wrap:pretty\}/);
+    expect(css).toMatch(/\.nb\{white-space:nowrap\}/);
+    expect(css).toMatch(/\.ws\{grid-template-columns:248px minmax\(0,1fr\) 260px\}/);
+    expect(css).toMatch(/@media \(max-width:960px\)\{\.exam\{grid-template-columns:1fr\}\}/);
+    expect(css).not.toMatch(/max-width:700px\)\{\.exam/);
+  });
+  it('列表卡的進度、日期、最後修改時間都包 .nb，不在字中斷行', () => {
+    const src = readFileSync('src/ui/pages/Exams.tsx', 'utf8');
+    expect(src).toContain('<span class="nb">{pr.headline}</span>');
+    expect(src).toContain('<span class="nb">{dates}</span>');
+    expect(src).toContain('<span class="nb">{formatModified(lastModified(e))}</span>');
+  });
+});

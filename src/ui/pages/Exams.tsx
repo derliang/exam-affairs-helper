@@ -70,14 +70,14 @@ export function Exams(p: {
           <div class="meta">
             <Badge>{examLabel(e)}</Badge>
             <span>{examYear(e)} 學年・{examLevel(e)}・{examHeadcount(p.doc, e) > 0 ? `${examHeadcount(p.doc, e)} 人` : '尚未匯入名單'}</span>
-            {dates ? <span>{dates}</span> : <Badge tone="info">未填日期</Badge>}
+            {dates ? <span class="nb">{dates}</span> : <Badge tone="info">未填日期</Badge>}
             {rosterChanged(p.doc, e) && <Badge tone="warn">名單已更動</Badge>}
           </div>
         </div>
         <div>
           <div class="dots" aria-hidden="true">{pr.cells.map((c, i) => <i key={i} class={c} />)}</div>
-          <div class="prog">{pr.headline}<span class={pr.tone}>・{pr.detail}</span></div>
-          <div class="small muted" style="margin-top:4px">最後修改 {formatModified(lastModified(e))}</div>
+          <div class="prog"><span class="nb">{pr.headline}</span><span class={`nb ${pr.tone}`}>・{pr.detail}</span></div>
+          <div class="small muted" style="margin-top:4px">最後修改 <span class="nb">{formatModified(lastModified(e))}</span></div>
         </div>
         <div class="row" style="flex-wrap:wrap">
           <Button kind="primary" onClick={() => p.onOpen(e.id)}>查看／安排</Button>
@@ -106,7 +106,7 @@ export function Exams(p: {
           <Alert tone="warn" action={banner === 'changed'
             ? <span class="row"><Button small onClick={() => setEnvHide(true)}>知道了</Button><Button small kind="primary" onClick={p.onEnv}>查看環境設定</Button></span>
             : <Button kind="primary" onClick={p.onEnv}>{banner === 'skipped' ? '繼續首次設定' : '開始首次設定'}</Button>}>
-            {banner === 'never' && <><b>我們還沒確認過環境</b>：節次表、教室、班級、標籤紙張還是程式預設，先花 3 分鐘看過。</>}
+            {banner === 'never' && <><b>我們還沒確認過環境</b>：節次表、教室、班級、標籤紙張還是程式預設，先花 <span class="nb">3 分鐘</span>看過。</>}
             {banner === 'skipped' && <><b>你先略過了首次設定</b>：環境尚未確認；新增考試時仍會請你確認。</>}
             {banner === 'changed' && <><b>共用設定在上次確認後有變動</b>：下次新增考試時會請你重新確認。</>}
           </Alert>
