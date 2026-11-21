@@ -16,10 +16,10 @@ export const TRACK_NAME: Record<Track, string> = { science: '理組', liberal: '
 const line = (label: string, seats: number, students: number): CapacityLine => {
   const ok = seats >= students;
   const extra = seats - students;
-  const detail = `教室座位 ${seats}，考生 ${students}${extra > 0 ? `，多 ${extra} 個空位，空位留在最後面（由前往後連續排，中間不空位）。` : '，剛好排滿。'}`;
+  const detail = `教室座位 ${seats}，學生 ${students}${extra > 0 ? `，多 ${extra} 個空位，空位留在最後面（由前往後連續排，中間不空位）。` : '，剛好排滿。'}`;
   const message = ok
     ? `${label}：${detail}`
-    : `無法排座：${label}教室座位 ${seats}，考生 ${students}。座位不能比考生少，請增加 ${students - seats} 個座位。`;
+    : `無法排座：${label}教室座位 ${seats}，學生 ${students}。座位不能比學生少，請增加 ${students - seats} 個座位。`;
   return { label, seats, students, ok, detail, message };
 };
 

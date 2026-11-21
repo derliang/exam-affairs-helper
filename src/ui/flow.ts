@@ -86,7 +86,7 @@ export function flowOf(doc: Doc, exam: ExamConfig, current: StepNo): Flow {
     const classRooms = rooms.filter((r) => r.kind === 'class');
     if (classRooms.length === 0) add({ step: 3, text: '③ 還沒有選教室', fix: '到 ③ 勾選教室 ›', level: 'block' });
     else if (students > 0 && checkSeats(classSeats, students).level === 'block') {
-      add({ step: 3, text: `③ 座位 ${classSeats} 少於考生 ${students}，還差 ${students - classSeats} 個`, fix: '到 ③ 增加座位 ›', level: 'block', need: students, have: classSeats, lack: students - classSeats });
+      add({ step: 3, text: `③ 座位 ${classSeats} 少於學生 ${students}，還差 ${students - classSeats} 個`, fix: '到 ③ 增加座位 ›', level: 'block', need: students, have: classSeats, lack: students - classSeats });
     }
     const noTrack = roomsMissingTrack(classRooms, exam.division);
     if (noTrack.length) add({ step: 3, text: `③ 教室「${noTrack.map((r) => r.name).join('、')}」還沒指定理組／文組，排座時分不出誰坐哪間`, fix: '到 ③ 指定理組／文組 ›', level: 'block' });
