@@ -1,6 +1,8 @@
 import { renderToString } from 'preact-render-to-string';
 import { afterEach, describe, expect, it } from 'vitest';
 import { dashboardOf, fixTargets, setRun, toCheck, type RunRecord } from './dashboard';
+import { readFileSync } from 'node:fs';
+import { Drawer } from '../components/Drawer';
 import { MakeupSummaryBar } from './pages/MkSummaryBar';
 import { MkStep6 } from './pages/MkStep6';
 import { MkStep7 } from './pages/MkStep7';
@@ -139,6 +141,17 @@ describe('儀表板畫面', () => {
     void _p;
     expect(renderToString(<MakeupSummaryBar s={rest} onStep={noop} />)).toContain('尚未匯入補考名單');
     expect(renderToString(<MakeupSummaryBar s={bad()} onStep={noop} />)).toContain('✕');
+  });
+});
+
+describe('S-10 看儀表板用 Drawer（D176④、D188）', () => {
+  it('Drawer 輸出側滑面板結構（dialog、標題、關閉鈕），摘要列不再引用 Modal', () => {
+    const html = renderToString(<Drawer title="檢核與對帳儀表板" onClose={noop}><p>內容</p></Drawer>);
+    expect(html).toContain('drawer-p');
+    expect(html).toContain('role="dialog"');
+    expect(html).toContain('檢核與對帳儀表板');
+    expect(html).toContain('關閉');
+    expect(readFileSync('src/ui/makeup/pages/MkSummaryBar.tsx', 'utf8')).not.toContain('Modal');
   });
 });
 

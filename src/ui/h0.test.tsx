@@ -62,7 +62,7 @@ describe('D186 新增模擬考沒有補考卡（補考入口只在頁首導覽�
     expect(cards.some((c) => c.includes('<strong>補考</strong>'))).toBe(false);
     expect(html).not.toContain('即將推出');
     expect(html).not.toContain('soon-note');
-    expect(html).toContain('補考請從頁首導覽列的「補考」進入');
+    expect(html).toContain('補考不在這裡新增，請從上方導覽列的「補考」進入');
   });
   it('學測、分科、會考仍可選', () => {
     for (const t of ['學測模擬考', '分科模擬考', '會考模擬考']) {
