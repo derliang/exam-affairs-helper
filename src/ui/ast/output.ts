@@ -8,7 +8,7 @@
 import type { ExamConfig, LabelPaper } from '../../data';
 import { subjectShort } from '../../core/subjectShort';
 import { dataVersion } from '../../core/version';
-import { roomTooBigForLabel, splitLabelTiles, textEm, wideLabelLayout, type LabelPageModel, type TablePageModel, type CellModel, type PersonModel, type SeatPageModel } from '../../export/model';
+import { STUDY_LEGEND, roomTooBigForLabel, splitLabelTiles, textEm, wideLabelLayout, type LabelPageModel, type TablePageModel, type CellModel, type PersonModel, type SeatPageModel } from '../../export/model';
 import { examEntries } from '../seating';
 import type { Doc } from '../store';
 import { astSlots, awayStudy, usageCell, type AstPlan, type AstSlot } from './model';
@@ -243,7 +243,7 @@ function studyRefPages(c: Ctx): SeatPageModel[] {
       const miss = unseated.get(key(s.id, room.id)) ?? [];
       pages.push({
         kind: 'seat', title: `${c.exam.name}　${rn(c, room.id)}　自習座位（非考試座位）`, examName: c.exam.name, roomName: `${rn(c, room.id)}　自習座位`,
-        chips: ['自習座位，非考試座位', `自習 ${here.size} 人`, slotHead(c, s),
+        chips: ['自習座位，非考試座位', STUDY_LEGEND, `自習 ${here.size} 人`, slotHead(c, s),
           ...(miss.length ? [`座位不足：缺 ${miss.length} 座，未排入 ${miss.map((m) => `${c.className(Number(m.slice(0, 2)))}${m.slice(2)}`).join('、')}`] : [])],
         detachStyle: false,
         rows: Math.max(...room.seats.map((p) => p.row)), depth: Math.max(...room.seats.map((p) => p.depth)),

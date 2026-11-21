@@ -1,4 +1,5 @@
 /** 匯出樣式包（D147、DESIGN §10.33；Issue #390～#393、#395、#396、#408、#409）：七題裁示的文字與版面。全部匿名假資料。 */
+import { STUDY_LEGEND } from './model';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import JSZip from 'jszip';
@@ -119,6 +120,7 @@ describe('⑦ 自習座位（D147⑦、#396）：標題、小標籤、整份同�
     const p = seat.find((q) => q.roomName.includes('自習座位'))!;
     expect(p.title).toContain('自習座位');
     expect(p.chips[0]).toBe('自習座位，非考試座位');
+    expect(p.chips[1]).toBe(STUDY_LEGEND); // G36 補做項④：圖例列
     expect(p.dateText).toMatch(/^第 \d 天/);
     const html = renderPrintHtml({ seat }, meta);
     expect(html).toContain('自習座位，非考試座位');
