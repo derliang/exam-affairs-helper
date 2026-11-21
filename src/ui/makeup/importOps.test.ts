@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { fakeSheet } from '../../core/makeup/fixtures';
 import { parseMakeupWorkbook } from '../../core/makeup';
-import { diffImport, isEmptyBook, mergeImport, parseWithMapping, pickSheets, replaceImport, rowKey } from './importOps';
+import { diffImport, isEmptyBook, mergeImport, mergeImportWith, overlapKeys, overlapRows, parseWithMapping, pickSheets, replaceImport, rowKey } from './importOps';
 import { baseOf } from './pipeline';
 import { fakeParse, fakeSession, NOW } from './testKit';
 
@@ -65,5 +65,38 @@ describe('② 重複匯入（F-11）', () => {
     expect(m.resolutions).toEqual(s.resolutions);
     // 合併同一份＝沒有新增
     expect(mergeImport(s, s.parse!, 'a', NOW).parse!.rows).toHaveLength(s.parse!.rows.length);
+  });
+});
+
+describe('#506 補考多檔：重疊逐筆處理', () => {
+  const cur = fakeParse(5);
+  const base = { ...fakeSession(), parse: cur };
+  it('兩檔無重疊：沒有衝突鍵，直接合併、列數相加', () => {
+    const r0 = cur.rows[0]!;
+    const other = { ...cur, rows: [{ ...r0, rowId: 'z1', studentId: 'Z99999' }], problems: [], rawCount: 1, warnings: [] };
+    expect(overlapKeys(cur, other)).toEqual([]);
+    const m = mergeImportWith(base, other, 'b.xlsx', NOW, new Set());
+    expect(m.parse!.rawCount).toBe(cur.rawCount + 1);
+    expect(m.parse!.rows).toHaveLength(cur.rows.length + 1);
+  });
+  it('跨檔同學號同科（內容相同也算）：列為重疊；保留目前的＝不動；改用本檔＝換成新檔那一列', () => {
+    const r0 = cur.rows[0]!;
+    const next = { ...cur, rows: [{ ...r0, rowId: 'x1', score: '5' }], problems: [], rawCount: 1, warnings: [] };
+    const keys = overlapKeys(cur, next);
+    expect(keys).toEqual([rowKey(r0)]);
+    const keep = mergeImportWith(base, next, 'b.xlsx', NOW, new Set());
+    expect(keep.parse!.rows.find((r) => rowKey(r) === keys[0])!.score).toBe(r0.score);
+    expect(keep.parse!.rawCount).toBe(cur.rawCount);
+    const use = mergeImportWith(base, next, 'b.xlsx', NOW, new Set(keys));
+    expect(use.parse!.rows.filter((r) => rowKey(r) === keys[0])).toHaveLength(1);
+    expect(use.parse!.rows.find((r) => rowKey(r) === keys[0])!.score).toBe('5');
+    expect(use.parse!.rawCount).toBe(cur.rawCount);
+  });
+  it('overlapRows 回傳兩邊的列供畫面逐筆比對', () => {
+    const r0 = cur.rows[0]!;
+    const next = { ...cur, rows: [{ ...r0, rowId: 'x1', score: '5' }], problems: [] };
+    const o = overlapRows(cur, next, overlapKeys(cur, next));
+    expect(o).toHaveLength(1);
+    expect(o[0]!.nxt.score).toBe('5');
   });
 });

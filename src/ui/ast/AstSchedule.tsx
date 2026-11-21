@@ -2,9 +2,11 @@
 import { useState } from 'preact/hooks';
 import type { ExamConfig } from '../../data';
 import type { CandId, Candidate } from '../../core/astD99/schedule';
-import { parseVersions } from '../../core/astD99/release';
 import { Alert, Badge, Button, ConfirmModal, More } from '../components';
 import { examYear, updateExam, type Doc } from '../store';
+import { FileResults, filesOfInput } from '../pages/FileResults';
+import { finishJson, groupJsonFiles, JsonConflictModal, readJsonFiles, type JsonAsk } from './multiJson';
+import type { ConflictChoice, FileRead } from '../../import';
 import { astCandidates, astInvigilators, astPlan, carrySource } from './model';
 
 const VERDICT: Record<Candidate['verdict'], { tone?: 'ok' | 'warn' | 'danger' | 'info'; text: string }> = {
@@ -102,15 +104,26 @@ export function CarryCard(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) =>
   const c = plan?.carry;
   const [msg, setMsg] = useState('');
   const patch = (x: Partial<ExamConfig>): void => { const r = updateExam(doc, exam.id, x); if (r.ok) p.onChange(r.doc); };
-  const onFile = async (e: Event): Promise<void> => {
-    const f = (e.currentTarget as HTMLInputElement).files?.[0];
-    if (!f) return;
-    const r = parseVersions(await f.text());
-    if (!r.ok) { setMsg(r.error); return; }
-    if (r.seats.length === 0) { setMsg('這個檔案裡沒有定案座位。'); return; }
-    if (r.year !== undefined && r.year !== examYear(exam)) { setMsg(`這個檔案是 ${r.year} 學年度的，這場是 ${examYear(exam)} 學年度，不同學年度的班級座號不是同一批學生，不能沿用。`); return; }
-    setMsg(`已匯入 ${r.seats.length} 筆上次定案座位。`);
-    patch({ astCarry: { on: true, seats: r.seats } });
+  const [results, setResults] = useState<FileRead<unknown>[]>([]);
+  const [ask, setAsk] = useState<JsonAsk | null>(null);
+  const [choices, setChoices] = useState<Record<string, ConflictChoice>>({});
+  const apply = (seats: NonNullable<ExamConfig['astFinalSeats']>, nFiles: number): void => {
+    if (seats.length === 0) { setMsg('這些檔案裡沒有定案座位。'); return; }
+    setMsg(`已匯入 ${seats.length} 筆上次定案座位${nFiles > 1 ? `（合併 ${nFiles} 個檔案）` : ''}。`);
+    patch({ astCarry: { on: true, seats } });
+  };
+  /** 一次選多個檔案（#506）：逐檔檢查學年度，座位依考生代號合併；同一位考生在多檔座位不同逐筆問 */
+  const onFiles = async (fs: File[]): Promise<void> => {
+    if (fs.length === 0) return;
+    setMsg(''); setAsk(null); setChoices({});
+    const rs = await readJsonFiles(fs, (r) => r.seats.length === 0 ? '這個檔案裡沒有定案座位。'
+      : r.year !== undefined && r.year !== examYear(exam) ? `這個檔案是 ${r.year} 學年度的，這場是 ${examYear(exam)} 學年度，不同學年度的班級座號不是同一批學生，不能沿用。` : '');
+    setResults(rs);
+    const good = rs.flatMap((r) => (r.ok ? [{ name: r.name, value: { versions: [], seats: r.value.seats } }] : []));
+    if (good.length === 0) return;
+    const g = groupJsonFiles(good);
+    if (g.conflicts.length > 0) { setAsk(g); return; }
+    apply(finishJson(g, {}).seats, good.length);
   };
   const reasonGroups = new Map<string, number>();
   for (const r of c?.reasons ?? []) reasonGroups.set(r.reason.replace(/上次在 \S+，/, '上次在別間教室，'), (reasonGroups.get(r.reason.replace(/上次在 \S+，/, '上次在別間教室，')) ?? 0) + 1);
@@ -123,8 +136,13 @@ export function CarryCard(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) =>
       {!on && <Alert tone="info">沒有開啟：這次的座位完全依本次的規則排。</Alert>}
       {on && !src && <Alert tone="warn">找不到上次定案的座位：本機沒有「同一學年度」已定案的分科考試，也沒有匯入檔。請匯入上次匯出的版本清單檔，或等這次定案後下次再用。</Alert>}
       {on && src && <Alert tone="info"><b>上次定案：</b>{src.from}，共 {src.seats.length} 人；存在本機。{src.excluded ? `另有 ${src.excluded} 人姓名和上次不同（不是同一位學生），未沿用。` : ''}</Alert>}
+      <FileResults results={results} hideSingleOk />
+      {ask && <JsonConflictModal title="不同檔案同一位考生的座位不同" ask={ask} choices={choices} confirmText="確認匯入"
+        onChoose={(k, c) => setChoices((m) => { const n = { ...m }; if (c === null) delete n[k]; else n[k] = c; return n; })}
+        onCancel={() => { setAsk(null); setChoices({}); }}
+        onApply={() => { const m = finishJson(ask, choices); if (m.ready) { setAsk(null); setChoices({}); apply(m.seats, results.filter((r) => r.ok).length); } }} />}
       {on && (
-        <div class="row"><label class="btn btn-sm">匯入上次定案座位<input type="file" accept=".json,application/json" hidden onChange={onFile} /></label>{exam.astCarry?.seats && <Button small kind="ghost" onClick={() => patch({ astCarry: { on: true } })}>改用本機的上次定案</Button>}{msg && <span class="small muted">{msg}</span>}</div>
+        <div class="row"><label class="btn btn-sm">匯入上次定案座位<input type="file" accept=".json,application/json" multiple hidden aria-label="匯入上次定案座位（可多選）" onChange={(e) => { const fs = filesOfInput(e.currentTarget); e.currentTarget.value = ''; void onFiles(fs); }} /></label>{exam.astCarry?.seats && <Button small kind="ghost" onClick={() => patch({ astCarry: { on: true } })}>改用本機的上次定案</Button>}{msg && <span class="small muted">{msg}</span>}</div>
       )}
       {on && src && c && (
         <>

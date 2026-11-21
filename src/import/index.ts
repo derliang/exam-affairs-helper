@@ -9,3 +9,4 @@ export * from './smartHeader';
 export * from './marks';
 export * from './smartScan';
 export * from './pua';
+export * from './multiFile';

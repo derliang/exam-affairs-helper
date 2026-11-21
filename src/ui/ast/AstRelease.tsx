@@ -5,6 +5,9 @@ import type { ExamConfig } from '../../data';
 import { diffSnap, exportVersions, finalize, parseVersions, phaseOf, publish, unfinalize, versionsImportBlock } from '../../core/astD99/release';
 import { seatsOfPlan } from '../../core/astD99/refine';
 import { Alert, Badge, Button } from '../components';
+import { FileResults, filesOfInput } from '../pages/FileResults';
+import { finishJson, groupJsonFiles, JsonConflictModal, readJsonFiles, type JsonAsk } from './multiJson';
+import type { ConflictChoice, FileRead } from '../../import';
 import { download } from '../pages/Step6';
 import { updateExam, type Doc } from '../store';
 import { astFinalizeBlockers, astFingerprint, astPlan, astSnapshotMismatch } from './model';
@@ -88,15 +91,27 @@ export function VersionCard(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) 
   const vs = exam.astVersions ?? [];
   const [msg, setMsg] = useState<{ tone: 'ok' | 'danger'; text: string } | null>(null);
   const [open, setOpen] = useState<number | null>(null);
-  const onFile = async (e: Event): Promise<void> => {
-    const f = (e.currentTarget as HTMLInputElement).files?.[0];
-    if (!f) return;
-    const r = parseVersions(await f.text());
-    if (!r.ok) { setMsg({ tone: 'danger', text: r.error }); return; }
-    const why = versionsImportBlock(exam, r);
+  const [results, setResults] = useState<FileRead<unknown>[]>([]);
+  const [ask, setAsk] = useState<JsonAsk | null>(null);
+  const [choices, setChoices] = useState<Record<string, ConflictChoice>>({});
+  const apply = (versions: NonNullable<ExamConfig['astVersions']>, seats: NonNullable<ExamConfig['astFinalSeats']>, nFiles: number): void => {
+    const why = versionsImportBlock(exam, { versions, examId: exam.id });
     if (why) { setMsg({ tone: 'danger', text: why }); return; }
-    const u = updateExam(doc, exam.id, { astVersions: r.versions, astFinalSeats: r.seats });
-    if (u.ok) { setMsg({ tone: 'ok', text: `已匯入 ${r.versions.length} 個版本與 ${r.seats.length} 筆定案座位。` }); p.onChange(u.doc); }
+    const u = updateExam(doc, exam.id, { astVersions: versions, astFinalSeats: seats });
+    if (u.ok) { setMsg({ tone: 'ok', text: `已匯入 ${versions.length} 個版本與 ${seats.length} 筆定案座位${nFiles > 1 ? `（合併 ${nFiles} 個檔案）` : ''}。` }); p.onChange(u.doc); }
+  };
+  /** 一次選多個備份檔（#506）：逐檔檢查來源，合併；同版本號出現不只一次逐筆問 */
+  const onFiles = async (fs: File[]): Promise<void> => {
+    if (fs.length === 0) return;
+    setMsg(null); setAsk(null); setChoices({});
+    const rs = await readJsonFiles(fs, (r) => versionsImportBlock(exam, r, { skipCount: true }));
+    setResults(rs);
+    const good = rs.flatMap((r) => (r.ok ? [{ name: r.name, value: r.value }] : []));
+    if (good.length === 0) return;
+    const g = groupJsonFiles(good);
+    if (g.conflicts.length > 0) { setAsk(g); return; }
+    const m = finishJson(g, {});
+    apply(m.versions, m.seats, good.length);
   };
   return (
     <div class="card stack">
@@ -104,9 +119,14 @@ export function VersionCard(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) 
         <div><h3>版本清單</h3><p class="small muted">每次公告記一版：公告時間、修改項目、受影響的考生與教室、理由。<b>標籤與班級公告永遠用同一版，不會混用。</b>版本清單存在這台電腦（本機），可以匯出、匯入，與「上次定案座位」一併保存。</p></div>
         <div class="row">
           <Button small onClick={() => download({ name: `${exam.name}-分科版本清單.json`, mime: 'application/json', data: exportVersions(exam), desc: '', pages: 0 })}>匯出版本清單</Button>
-          <label class="btn btn-sm">匯入<input type="file" accept=".json,application/json" hidden onChange={onFile} /></label>
+          <label class="btn btn-sm">匯入<input type="file" accept=".json,application/json" multiple hidden aria-label="匯入版本清單備份（可多選）" onChange={(e) => { const fs = filesOfInput(e.currentTarget); e.currentTarget.value = ''; void onFiles(fs); }} /></label>
         </div>
       </div>
+      <FileResults results={results} hideSingleOk />
+      {ask && <JsonConflictModal title="不同檔案出現同一筆版本或座位" ask={ask} choices={choices} confirmText="確認匯入"
+        onChoose={(k, c) => setChoices((m) => { const n = { ...m }; if (c === null) delete n[k]; else n[k] = c; return n; })}
+        onCancel={() => { setAsk(null); setChoices({}); }}
+        onApply={() => { const m = finishJson(ask, choices); if (m.ready) { setAsk(null); setChoices({}); apply(m.versions, m.seats, results.filter((r) => r.ok).length); } }} />}
       {msg && <Alert tone={msg.tone}>{msg.text}</Alert>}
       <div class="rtw">
         <table class="t compact rt-t">

@@ -1,6 +1,6 @@
 import { useRef, useState } from 'preact/hooks';
 import type { Division, Track } from '../../data';
-import { readXlsx, writeXlsx, XlsError, type RosterProblem } from '../../import';
+import { mergeRosterFiles, okFiles, readFiles, readXlsx, writeXlsx, XlsError, type FileRead, type RosterProblem } from '../../import';
 import { Alert, Button, ConfirmModal, FormatButton, Modal } from '../components';
 import { downloadBytes, XLSX_MIME } from '../download';
 import { applyImport, clearRoster, examsAffectedByClear, examsMadeStale, exportRows, importOutcome, planImport, templateRows, type UnknownClassAction } from '../rosterIO';
@@ -10,6 +10,7 @@ import { rosterYearOf, switchRosterYear } from '../rosterYears';
 import type { Student } from '../../data';
 import { parseRosterWorkbook } from '../step2';
 import { RowFix } from './RowFix';
+import { FileResults, filesOfInput } from './FileResults';
 
 const DIV_NAME: Record<Division, string> = { senior: '高中部', junior: '國中部' };
 
@@ -34,30 +35,36 @@ export function RosterIO(p: { doc: Doc; division: Division; onChange: (d: Doc) =
   const target: Doc = switched && switched.ok ? switched.doc : p.doc;
   const resolution = parsed ? resolveProblems(parsed.students, parsed.problems, decisions) : null;
   const plan = parsed && resolution ? { ...planImport(target, p.division, resolution.students), layout: parsed.layout, issues: parsed.issues, ...(parsed.tracks ? { tracks: parsed.tracks } : {}) } : null;
-  const setPlan = (_: null) => { setParsed(null); setDecisions({}); };
+  const setPlan = (_: null) => { setParsed(null); setDecisions({}); setFileResults([]); };
   const [useTracks, setUseTracks] = useState(true);
   const [unk, setUnk] = useState<UnknownClassAction>('add');
-  const [err, setErr] = useState('');
+  /** 多檔匯入（#506）：每個檔案各自的讀取結果 */
+  const [fileResults, setFileResults] = useState<(FileRead<unknown> & { note?: string })[]>([]);
   const [tpl, setTpl] = useState(false);
   const classNames = p.doc.settings.classes.filter((c) => c.division === p.division).map((c) => c.name);
 
-  const onFile = async (file: File) => {
-    setErr('');
-    try {
-      const sheets = await readXlsx(await file.arrayBuffer());
-      const r = parseRosterWorkbook(sheets, classNames);
-      if (r.students.length === 0 && r.problems.length === 0) {
-        setErr(r.issues[0]?.message ?? '檔案裡沒有讀到學生，請確認表頭有「座號」「姓名」');
-        return;
+  /** 一次選多個檔案（#506）：逐檔讀取、單檔壞檔只影響它自己；成功的合併成一份預覽，跨檔衝突變成逐列問題 */
+  const onFiles = async (files: File[]) => {
+    if (files.length === 0) return;
+    const reads = await readFiles(files, async (file) => {
+      let r;
+      try {
+        r = parseRosterWorkbook(await readXlsx(await file.arrayBuffer()), classNames);
+      } catch (e) {
+        throw new Error(e instanceof XlsError ? e.message : `讀不了這個檔案：${e instanceof Error ? e.message : String(e)}。請確認是 .xlsx 檔`);
       }
-      setUnk('add');
-      setDecisions({});
-      setFileKey((k) => k + 1);
-      setYearText(String(rosterYearOf(p.doc)));
-      setParsed({ students: r.students, layout: r.layout, issues: r.issues.filter((i) => !i.problem).map((i) => i.message), problems: r.problems, sheetName: r.sheetName ?? '', ...(r.classTracks ? { tracks: r.classTracks } : {}) });
-    } catch (e) {
-      setErr(e instanceof XlsError ? e.message : `讀不了這個檔案：${e instanceof Error ? e.message : String(e)}。請確認是 .xlsx 檔`);
-    }
+      if (r.students.length === 0 && r.problems.length === 0) throw new Error(r.issues[0]?.message ?? '檔案裡沒有讀到學生，請確認表頭有「座號」「姓名」');
+      return r;
+    });
+    const good = okFiles(reads);
+    setFileResults(reads.map((r) => (r.ok ? { name: r.name, ok: true as const, value: null, note: `${r.value.students.length} 人${r.value.problems.length > 0 ? `、${r.value.problems.length} 列有問題` : ''}` } : r)));
+    if (good.length === 0) return;
+    const m = mergeRosterFiles(good.map((g) => ({ file: g.name, result: g.value })));
+    setUnk('add');
+    setDecisions({});
+    setFileKey((k) => k + 1);
+    setYearText(String(rosterYearOf(p.doc)));
+    setParsed({ students: m.students, layout: m.layout, issues: m.issues.map((i) => i.message), problems: m.problems, sheetName: '', ...(m.classTracks ? { tracks: m.classTracks } : {}) });
   };
 
   const outcome = plan ? importOutcome(target, p.division, plan, unk) : null;
@@ -83,9 +90,9 @@ export function RosterIO(p: { doc: Doc; division: Division; onChange: (d: Doc) =
         : <FormatButton kind="xls" onClick={() => input.current?.click()}>匯入學生名單</FormatButton>}
       {!zone && <FormatButton kind="xls" onClick={async () => downloadBytes(`${DIV_NAME[p.division]}學生名單.xlsx`, await writeXlsx(exportRows(p.doc.rosters[p.division]), '學生名單'), XLSX_MIME)}>匯出學生名單</FormatButton>}
       {!zone && <ClearRoster doc={p.doc} division={p.division} onChange={p.onChange} />}
-      <span class="small muted">匯入接受 .xlsx；舊版 .xls 請先另存成 .xlsx（程式不直接讀 .xls）</span>
-      <input ref={input} type="file" accept=".xlsx" hidden aria-label="選擇學生名單 Excel 檔"
-        onChange={(e) => { const f = e.currentTarget.files?.[0]; e.currentTarget.value = ''; if (f) void onFile(f); }} />
+      <span class="small muted">匯入接受 .xlsx，可一次選多個檔案；舊版 .xls 請先另存成 .xlsx（程式不直接讀 .xls）</span>
+      <input ref={input} type="file" accept=".xlsx" multiple hidden aria-label="選擇學生名單 Excel 檔（可多選）"
+        onChange={(e) => { const fs = filesOfInput(e.currentTarget); e.currentTarget.value = ''; void onFiles(fs); }} />
       {tpl && (
         <Modal title="下載名單範本" onClose={() => setTpl(false)}
           actions={<><Button onClick={() => setTpl(false)}>取消</Button><Button kind="primary" onClick={async () => { downloadBytes('學生名單範本.xlsx', await writeXlsx(templateRows(), '學生名單'), XLSX_MIME); setTpl(false); }}>下載範本</Button></>}>
@@ -101,10 +108,11 @@ export function RosterIO(p: { doc: Doc; division: Division; onChange: (d: Doc) =
           </ul>
         </Modal>
       )}
-      {err && <div style="flex-basis:100%"><Alert tone="danger">{err}</Alert></div>}
+      {!plan && fileResults.length > 0 && <div style="flex-basis:100%"><FileResults results={fileResults} hideSingleOk /></div>}
       {plan && parsed && resolution && (
         <Modal title={`匯入${DIV_NAME[p.division]}學生名單`} onClose={() => setPlan(null)}
           actions={<><Button onClick={() => setPlan(null)}>取消</Button><Button kind="primary" disabled={!yearOk || !outcome || outcome.count === 0 || !resolution.ready} onClick={confirm}>確認取代為 {outcome?.count ?? 0} 人名單</Button></>}>
+          <FileResults results={fileResults} hideSingleOk />
           <p>讀到 <strong>{parsed.students.length}</strong> 人{parsed.problems.length > 0 ? `，另有 ${parsed.problems.length} 列有問題要你決定` : ''}；實際會匯入 <strong>{outcome?.count ?? 0}</strong> 人{outcome && outcome.skipped > 0 ? `（未匯入 ${outcome.skipped} 人）` : ''}（目前 {plan.before} 人）。確定後會<strong>取代</strong>{DIV_NAME[p.division]}整份名單；之後可用「↶ 復原」回到匯入前。</p>
           {blockers.length > 0 && <Alert tone="warn"><b>還不能確認取代：</b>{blockers.join('；')}。每一列都要決定「手動補上」「修改內容」「確認無誤」或「不匯入這列」。</Alert>}
           <div class={`field${yearOk ? '' : ' err'}`} style="max-width:260px"><label for="roster-year">這份名單屬於哪個學年度</label>
@@ -136,7 +144,7 @@ export function RosterIO(p: { doc: Doc; division: Division; onChange: (d: Doc) =
               <h4 style="margin:8px 0 0">有問題的列（{parsed.problems.length} 列，已決定 {parsed.problems.length - resolution.pending.length} 列）</h4>
               <p class="small muted">這些列不會被默默略過。請逐列決定：<b>手動補上（新增）</b>＝補齊缺的欄位後新增進名單；<b>修改內容</b>＝改正班級、座號、姓名或學號後加入名單；<b>確認無誤</b>＝這一列本來就是正確的，照原樣匯入（缺姓名的列＝保留為空位、不建立學生；只有「缺少姓名」「學號重複」可以）；<b>不匯入這列</b>（下方文字連結）＝這一列不匯入。全部決定完才能確認取代。</p>
               {parsed.problems.map((pr, i) => (
-                <RowFix key={`${fileKey}-${i}`} where={`${parsed.sheetName ? `工作表「${parsed.sheetName}」` : ''}第 ${pr.row} 列`} kindText={PROBLEM_KIND_TEXT[pr.kind]} message={pr.message} cells={pr.cells} draft={pr.draft} withSchoolId classNames={classNames} {...(CONFIRMABLE.has(pr.kind) ? { confirmHint: pr.kind === 'no-name' ? '這一列保留為空位，不會建立學生。' : '這一列照原樣匯入，視為正確。' } : {})}
+                <RowFix key={`${fileKey}-${i}`} where={`${pr.file && fileResults.filter((f) => f.ok).length > 1 ? `檔案「${pr.file}」` : ''}${pr.sheet ? `工作表「${pr.sheet}」` : ''}第 ${pr.row} 列`} kindText={PROBLEM_KIND_TEXT[pr.kind]} message={pr.message} cells={pr.cells} draft={pr.draft} withSchoolId classNames={classNames} {...(CONFIRMABLE.has(pr.kind) ? { confirmHint: pr.kind === 'no-name' ? '這一列保留為空位，不會建立學生。' : '這一列照原樣匯入，視為正確。' } : {})}
                   error={resolution.invalid[i] ?? ''} onDecide={(d) => decide(i, d === null ? null : d.mode === 'skip' ? { action: 'skip' } : d.mode === 'confirm' ? { action: 'confirm' } : { action: d.mode, ...d.value })} />
               ))}
             </div>
