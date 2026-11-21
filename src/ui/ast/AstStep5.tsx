@@ -166,7 +166,7 @@ export function AstStep5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
                       <td class={cls} key={s.id} data-label={`${s.label} ${s.subjectLabel}`}>
                         <button type="button" aria-pressed={sel.slot === i && roomId === r.id} {...(lockedUse.has(`${s.id}|${r.id}`) ? { 'data-lock': '1' } : {})} aria-label={`${roomName(r.id)}，${s.label} ${s.subjectLabel}：${KIND_TEXT[c.kind]}${c.count ? ` ${c.count} 人` : ''}${lockedUse.has(`${s.id}|${r.id}`) ? '，已鎖定' : ''}`}
                           onClick={() => setSel({ slot: i, ...(c.kind === 'exam' ? { room: r.id } : {}) })}>
-                          <span>{c.kind === 'exam' ? `考 ${c.subjectLabel}` : KIND_TEXT[c.kind]}</span>{c.count > 0 && <b>{c.kind === 'pending' ? `+${c.count}` : c.count}</b>}
+                          <span class="nb">{c.kind === 'exam' ? `考 ${c.subjectLabel}` : KIND_TEXT[c.kind]}</span>{c.count > 0 && <b>{c.kind === 'pending' ? `+${c.count}` : c.count}</b>}
                         </button>
                       </td>
                     );

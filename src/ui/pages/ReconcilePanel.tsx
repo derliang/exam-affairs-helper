@@ -34,9 +34,9 @@ export function CheckRow(p: { c: Check; onGo: (n: 2 | 3 | 5) => void }) {
       {open && c.light !== 'na' && (
         <div class="rc-detail">
           <div class="rc-tri">
-            <div><span class="small muted">{x}</span><b>{c.a}</b></div>
-            <div><span class="small muted">{y}</span><b>{c.b}</b></div>
-            <div><span class="small muted">{z}</span><b>{c.d}</b></div>
+            <div><span class="small muted nb">{x}</span><b>{c.a}</b></div>
+            <div><span class="small muted nb">{y}</span><b>{c.b}</b></div>
+            <div><span class="small muted nb">{z}</span><b>{c.d}</b></div>
           </div>
           <div class="small">{c.summary}</div>
           {c.issues.map((i) => (
@@ -86,7 +86,7 @@ export function ReconcilePanel(p: {
       <div class="rc-list">{r.checks.map((c) => <CheckRow key={`${c.id}-${c.light}-${c.a}-${c.b}`} c={c} onGo={p.onGo} />)}</div>
 
       <div class="lab"><b>總帳：每個時段，名單範圍內每個人都在一個地方</b></div>
-      <div class="small">名單範圍 {r.scope.total} 人 ＝ 報名 {r.scope.enrolled} ＋ 不參加 {r.scope.absent}{r.hasAbsent ? '' : '（不參加的人就是自習，座位表上有他們的座位）'}</div>
+      <div class="small">名單範圍 <span class="nb">{r.scope.total} 人</span> ＝ <span class="nb">報名 {r.scope.enrolled}</span> ＋ <span class="nb">不參加 {r.scope.absent}</span>{r.hasAbsent ? '' : '（不參加的人就是自習，座位表上有他們的座位）'}</div>
       {/* #480：原本 10 欄表格有最小寬度又包 .scroll，在兩欄版面溢出卡片。改 D168 的容器寬度表格：寬時是表格、容器 ≤640px 變一列一張卡，不橫向捲動 */}
       <div class="rtw">
         <table class="t compact rt-t rt-wide">

@@ -118,3 +118,14 @@ describe('共用設定表格窄寬（稿 v2.90，#553 #515）', () => {
     expect(ros).toContain('<span class="nb">未填</span>');
   });
 });
+
+describe('窄寬斷行（稿 v2.91，B 包 #554 #513 #516 #547）', () => {
+  it('版權頁句號與程式碼塊綁在同一個不可拆單位；提示條多顆鈕的動作區 ≤560 換到文字下方', async () => {
+    const { Copyright } = await import('./Copyright');
+    expect(renderToString(<Copyright onBack={noop} />)).toContain('<span class="nb"><code>src/export/fonts/OFL.txt</code>。</span>');
+    const { readFileSync } = await import('node:fs');
+    const css = readFileSync('src/styles/app.css', 'utf8');
+    expect(css).toContain('.alert>.btn,.alert>.row{grid-column:2;justify-self:start}');
+    expect(css).toContain('.rc-tri{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr))');
+  });
+});
