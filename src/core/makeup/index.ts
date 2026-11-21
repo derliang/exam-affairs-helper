@@ -20,6 +20,7 @@ export * from './stats';
 export * from './schedule';
 export * from './outputs';
 export * from './checks';
+export * from './byDay';
 
 /** 補考資料版本碼（D66 同一套）：名單、設定、計畫任何一項變動就會變（C-15 過期判斷、檔案頁尾） */
 export function makeupVersion(roster: MakeupRoster, settings: MakeupSettings, plan: MakeupPlan): string {
