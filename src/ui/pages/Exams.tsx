@@ -99,7 +99,8 @@ export function Exams(p: {
       <PageHead title="模擬考" badge={p.folder && <span class="folder-chip" title="目前使用的資料夾">{p.folder}</span>}>
         <Button onClick={p.onChangeFolder}>更換資料夾</Button>
         <Button onClick={p.onSettings}>共用設定</Button>
-        <Button kind="primary" onClick={p.onNew}>新增模擬考</Button>
+        {/* #531、稿 v2.87：沒有任何考試時唯一的新增鈕在空白卡中央（比照 #505）；有考試時回頁首右上 */}
+        {(all.length > 0 || p.listError) && <Button kind="primary" onClick={p.onNew}>新增模擬考</Button>}
       </PageHead>
       {banner !== 'none' && !(banner === 'changed' && envHide) && (
         <div style="margin-bottom:12px" data-env-banner={banner}>
@@ -113,7 +114,7 @@ export function Exams(p: {
         </div>
       )}
       {p.listError ? p.listError : all.length === 0 ? (
-        <EmptyState title="還沒有模擬考" action={<Button kind="primary" onClick={p.onNew}>新增模擬考</Button>}>按「新增模擬考」開始。</EmptyState>
+        <EmptyState title="還沒有模擬考" action={<Button kind="primary" large onClick={p.onNew}>新增模擬考</Button>}>按「新增模擬考」開始。</EmptyState>
       ) : (
         <>
         {canDelete && sel.length > 0 && (
