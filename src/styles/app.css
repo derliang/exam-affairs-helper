@@ -333,7 +333,6 @@ section>header p{color:var(--text-2);max-width:72ch}
 .plegend i{width:16px;height:6px;border-radius:99px;background:var(--line-2);display:inline-block}
 .plegend i.d{background:var(--ok-bar)}.plegend i.s{background:var(--warn-bar)}.plegend i.c{background:var(--accent)}.plegend i.n{background:repeating-linear-gradient(135deg,var(--line) 0 3px,var(--line-2) 3px 6px)}
 .dots i.d{background:var(--ok-bar)} .dots i.s{background:var(--warn-bar)} .dots i.c{background:var(--accent)} .dots i.n{background:repeating-linear-gradient(135deg,var(--line) 0 3px,var(--line-2) 3px 6px)}
-@media (max-width:700px){.exam{grid-template-columns:1fr}}
 .typegrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:14px}
 .tcard{position:relative;text-align:left;font:inherit;color:var(--text);background:var(--surface);border:1.5px solid var(--line-2);border-radius:var(--r-lg);padding:16px;display:grid;gap:8px;cursor:pointer;min-width:0}
 .tcard:hover{border-color:var(--text-3)}
@@ -1202,3 +1201,12 @@ details[open]:not(.moremenu)>summary::after{content:" ▴"}
 }
 @keyframes dr-up{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
 @media (prefers-reduced-motion:reduce){.drawer-p{animation:none}}
+
+/* 斷行規則（Issue 511～516、DESIGN 10.49）：①全站段落避免孤字 ②不可拆的單位（進度、日期、時間、選項名）加 .nb ③步驟欄加寬、副標平衡斷行 ④列表卡在 960px 以下改單欄 */
+body{text-wrap:pretty}
+.nb{white-space:nowrap}
+.step small{text-wrap:balance}
+.ws{grid-template-columns:248px minmax(0,1fr) 260px}.ws.wide{grid-template-columns:248px minmax(0,1fr)}
+@media (max-width:1060px){.ws,.ws.wide{grid-template-columns:248px minmax(0,1fr)}.ws .side-r{grid-column:1/-1}}
+@media (max-width:900px){.ws,.ws.wide{grid-template-columns:minmax(0,1fr)}.ws .side{position:static}}
+@media (max-width:960px){.exam{grid-template-columns:1fr}}

@@ -40,7 +40,7 @@ export function PrepCard(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
         </div>
         <div>
           <h4 class="sh">座位排法</h4>
-          <p class="small muted">預備教室沒坐滿時：<b>最少深位（預設）</b>＝人數平均分到各排，每排只坐前幾個深位；<b>最少排數</b>＝一排坐滿再坐下一排。</p>
+          <p class="small muted">預備教室沒坐滿時：<b class="nb">最少深位（預設）</b>＝人數平均分到各排，每排只坐前幾個深位；<b class="nb">最少排數</b>＝一排坐滿再坐下一排。</p>
           <div class="row" role="group" aria-label="預備教室座位排法">
             <button type="button" class={`btn${layout === 'min-depth' ? ' btn-primary' : ''}`} aria-pressed={layout === 'min-depth'} onClick={() => setLayout('min-depth')}>最少深位（預設）</button>
             <button type="button" class={`btn${layout === 'min-rows' ? ' btn-primary' : ''}`} aria-pressed={layout === 'min-rows'} onClick={() => setLayout('min-rows')}>最少排數</button>
