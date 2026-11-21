@@ -30,4 +30,4 @@ export function sliceDoc(present: Doc, state: Doc, scopes: string[]): Doc {
 }
 
 /** 目前所在頁面的復原領域 */
-export const scopeOfPage = (page: string): UndoScope => (page === 'makeup' ? 'makeup' : page === 'settings' ? 'settings' : 'exam');
+export const scopeOfPage = (page: string): UndoScope => (page === 'makeup' || page.startsWith('makeup') ? 'makeup' : page === 'settings' ? 'settings' : 'exam');
