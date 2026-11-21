@@ -9,6 +9,7 @@ import type { ExamConfig, LabelPaper } from '../../data';
 import { subjectShort } from '../../core/subjectShort';
 import { dataVersion } from '../../core/version';
 import { STUDY_LEGEND, roomTooBigForLabel, splitLabelTiles, textEm, wideLabelLayout, type LabelPageModel, type TablePageModel, type CellModel, type PersonModel, type SeatPageModel } from '../../export/model';
+import { dateTag, dayTag } from '../../export/dayLabel';
 import { examEntries } from '../seating';
 import type { Doc } from '../store';
 import { astSlots, awayStudy, usageCell, type AstPlan, type AstSlot } from './model';
@@ -205,18 +206,26 @@ function seatPages(c: Ctx): SeatPageModel[] {
       // 統計：每個時段一列（各班人數＋合計），最後「不重複人數」
       const classNos = [...new Set([...here.values()].flat().map((x) => Number(x.code.slice(0, 2))))].sort((x, y) => x - y);
       const per = (codes: Iterable<string>) => { const a = [...codes]; return classNos.map((n) => a.filter((x) => Number(x.slice(0, 2)) === n).length); };
-      const rows: { label: string; foot?: boolean; per: number[]; total: number }[] = c.slots.flatMap((s) => {
-        const codes = new Set([...here.values()].flat().filter((x) => x.slotId === s.id).map((x) => x.code));
-        return codes.size ? [{ label: slotHead(c, s), per: per(codes), total: codes.size }] : [];
+      // #581：比照學測統計表（D170／D174）：日期（有填才有）｜第幾天｜時段｜科目｜各班｜總計，逐「日期＋時段＋科目」一列，同天同時段由 statMerge 垂直合併
+      const dates = c.exam.examDates;
+      const hasDate = c.slots.some((s) => !!dateTag(dates?.[s.day]));
+      const rows: { label: string; foot?: boolean; lead?: string[]; per: number[]; total: number }[] = c.slots.flatMap((s) => {
+        const inSlot = [...here.values()].flat().filter((x) => x.slotId === s.id);
+        return s.subjectIds.flatMap((sid) => {
+          const codes = new Set(inSlot.filter((x) => x.subjectId === sid).map((x) => x.code));
+          if (!codes.size) return [];
+          const lead = [dayTag(s.day), s.label.split(' ').pop()!, sub(c, sid)];
+          return [{ label: sub(c, sid), lead: hasDate ? [dateTag(dates?.[s.day]), ...lead] : lead, per: per(codes), total: codes.size }];
+        });
       });
-      rows.push({ label: '使用人數（不重複）', foot: true, per: per(everyone), total: everyone.size });
+      rows.push({ label: '使用人數（不重複）', lead: ['使用人數（不重複）'], foot: true, per: per(everyone), total: everyone.size });
       pages.push({
         kind: 'seat', title: `${c.exam.name}　${rn(c, room.id)}${part.head ? `　${part.head}` : ''}　座位表`, examName: c.exam.name, roomName: part.head ? `${rn(c, room.id)}　${part.head}` : rn(c, room.id),
-        chips: [...(part.head ? [part.head] : []), `共 ${everyone.size} 人`, ...(part.head ? [] : [`${rows.length - 1} 個時段`]), '綜合教室'],
+        chips: [...(part.head ? [part.head] : []), `共 ${everyone.size} 人`, ...(part.head ? [] : [`${new Set(rows.filter((r) => !r.foot).map((r) => r.lead!.slice(0, -1).join('|'))).size} 個時段`]), '綜合教室'],
         detachStyle: false, slotMode: true,
         rows: Math.max(...room.seats.map((x) => x.row)), depth: Math.max(...room.seats.map((x) => x.depth)),
         cells, usable: new Set(room.seats.map((x) => `${x.row}-${x.depth}`)),
-        stats: { perClass: [], total: everyone.size, perSubject: [], table: { headLabel: '時段', classes: classNos.map((n) => c.className(n)), rows } },
+        stats: { perClass: [], total: everyone.size, perSubject: [], table: { leadHeads: hasDate ? ['日期', '第幾天', '時段', '科目'] : ['第幾天', '時段', '科目'], classes: classNos.map((n) => c.className(n)), rows } },
       });
     }
   }

@@ -446,7 +446,7 @@ export function labelCornerFit(c: CellModel, w: number, h: number, codeMax: numb
 export const isSpecial = (c: CellModel): boolean => (c.corners?.length ?? 0) > 0;
 
 /** 人員格的一行：runs 依序畫，pt 為字級 */
-export interface PersonLine { runs: { text: string; bold?: boolean }[]; pt: number; gapBefore: number; /** 估計折成幾行（預設 1）；高度已含折行 */ n?: number; /** 優先保字級的行（#212：兩人格的「班級｜姓名」） */ pri?: boolean }
+export interface PersonLine { runs: { text: string; bold?: boolean; /** 這一段自己的字級（沒給＝整行的 pt；#586 編號與姓名同一行不同大小） */ pt?: number }[]; pt: number; gapBefore: number; /** 估計折成幾行（預設 1）；高度已含折行 */ n?: number; /** 優先保字級的行（#212：兩人格的「班級｜姓名」） */ pri?: boolean }
 
 /**
  * 預備教室／綜合教室／整合標籤的格內排法（v2.36）：1 人＝大字編號＋「班級｜姓名」＋時程行；
@@ -547,7 +547,7 @@ export function personLayout(
 }
 
 /**
- * 3 人以上輪流的整合標籤（#216，D108）：學生要看得到自己坐哪、哪個時段，所以每人一區「班級｜姓名」加科目（依時間順序，只列科目名），
+ * 3 人以上輪流的整合標籤（#216，D108；#586 D205 加大字編號）：學生要看得到自己坐哪、哪個時段，所以每人一區「大字編號、班級｜姓名」加科目（依時間順序，只列科目名），
  * 分左右兩半各排一欄，字級依空間放大或縮小（4～14pt，放不下才縮到 5pt 為底）。
  */
 function multiPersonCols(ps: PersonModel[], coord: string, wHalf: number, h: number, topPad: number): { left: PersonLine[]; right: PersonLine[]; pt: number } {
@@ -556,7 +556,7 @@ function multiPersonCols(ps: PersonModel[], coord: string, wHalf: number, h: num
   const w = wHalf * 0.94;
   const half = Math.ceil(ps.length / 2);
   const groups = [ps.slice(0, half), ps.slice(half)];
-  const headPt = 11;
+  const headPt = 8; // 座位小標比編號小，編號才是最明顯的（#586）
   const avail = h - topPad - 1 - headPt * LH - 0.8;
   const subjLines = (p: PersonModel, pt: number): string[] => {
     const items = p.schedShort && p.schedShort.length ? p.schedShort : p.sched;
@@ -568,16 +568,17 @@ function multiPersonCols(ps: PersonModel[], coord: string, wHalf: number, h: num
     }
     return out;
   };
+  // #586（D205）：每人一區「大字編號＋班級｜姓名」同一行（編號是整張最大的字：姓名字級的 1.5 倍、上限 24pt、最小 7pt），下面接科目；放不下整體一起縮
+  const codePtOf = (pt: number): number => Math.max(7, Math.min(24, Math.floor(pt * 1.5 * 2) / 2));
   const heightAt = (pt: number): number =>
-    Math.max(...groups.map((g) => g.reduce((a, p) => a + pt * LH + subjLines(p, pt * 0.9).length * pt * 0.9 * LH + 0.9, 0)));
+    Math.max(...groups.map((g) => g.reduce((a, p) => a + codePtOf(pt) * LH + subjLines(p, pt * 0.9).length * pt * 0.9 * LH + 0.9, 0)));
+  // 一行寬：編號（大）加「班級｜姓名」都要放得下
+  const lineW = (p: PersonModel, x: number) => textWidthMm(p.code, codePtOf(x), true) + textWidthMm(' ', x) + textWidthMm(p.classLabel, x, true) + textWidthMm(' | ' + p.name, x);
   let pt = 14;
-  while (pt > 5 && heightAt(pt) > avail) pt -= 0.5;
-  // 姓名行寬度：最長的「班級｜姓名」也要放得下
-  const nameW = (p: PersonModel, x: number) => textWidthMm(p.classLabel, x, true) + textWidthMm(' | ' + p.name, x);
-  while (pt > 5 && ps.some((p) => nameW(p, pt) > w)) pt -= 0.5;
+  while (pt > 4 && (heightAt(pt) > avail || ps.some((p) => lineW(p, pt) > w))) pt -= 0.5;
   const col = (g: PersonModel[]): PersonLine[] =>
     g.flatMap((p, i): PersonLine[] => [
-      { runs: [{ text: p.classLabel, bold: true }, { text: ' | ' }, { text: p.name }], pt, gapBefore: i === 0 ? 0.8 : 0.9, pri: true },
+      { runs: [{ text: p.code, bold: true, pt: codePtOf(pt) }, { text: ' ', pt }, { text: p.classLabel, bold: true, pt }, { text: ' | ', pt }, { text: p.name, pt }], pt: codePtOf(pt), gapBefore: i === 0 ? 0.8 : 0.9, pri: true },
       ...subjLines(p, pt * 0.9).map((t) => ({ runs: [{ text: t, bold: true }], pt: pt * 0.9, gapBefore: 0 })),
     ]);
   const head: PersonLine = { runs: [{ text: `座位 ${coord}`, bold: true }], pt: headPt, gapBefore: 0 };

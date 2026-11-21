@@ -10,7 +10,7 @@ import { codeOf } from '../../core/astD99/contract';
 import { AstStep6, runAstExport } from './AstStep6';
 import { astInput, astPlan } from './model';
 import { AstStep4 } from './AstStep4';
-import { landscapeFit, textEm } from '../../export/model';
+import { landscapeFit, statMerge, textEm } from '../../export/model';
 import { astOutputBlockers, astOutputs } from './output';
 
 const noop = () => undefined;
@@ -272,6 +272,25 @@ describe('分科輸出：整合標籤兩倍寬（#216／D107）', () => {
     expect(g.length).toBeGreaterThan(0);
     expect(g.every((w) => w.length <= 6)).toBe(true); // 一頁最多 3 張＝6 欄
   });
+  it('#586（D205）：單人座位一般大小一格＋右格完全空白，多人座位兩格寬且每人一區有大字編號', async () => {
+    const { doc, exam } = fixture();
+    const o = astOutputs(doc, exam, astPlan(doc, exam)!, 'B4');
+    const cells = o.label.flatMap((p) => p.cells);
+    const nOne = cells.filter((c) => c.persons?.length === 1).length;
+    expect(nOne).toBeGreaterThan(0);
+    expect(nOne + cells.filter((c) => (c.persons?.length ?? 0) > 1).length).toBe(cells.length);
+    const html = String((await runAstExport(o, ['label'], 'pdf', 'B4', '分科', async () => { throw new Error('x'); }))[0]!.data);
+    // 單人：每個單人座位一格空白（不畫線）；列印頁不再有「單人佔兩格」的寬格
+    expect((html.match(/border:0;background:transparent/g) ?? []).length).toBe(nOne);
+    const multi = cells.find((c) => (c.persons?.length ?? 0) >= 3);
+    const { wideLayout } = await import('../../export/model');
+    if (multi) {
+      const lay = wideLayout(multi, 36, 35, { topPad: 5, codePt: 33, nameMax: 18, subjMax: 20 });
+      const codes = [...lay.left, ...lay.right].filter((l) => /^\d{4}$/.test(l.runs[0]!.text));
+      expect(codes).toHaveLength(multi.persons!.length); // 每人一區都有編號
+      expect(codes.every((l) => l.runs[0]!.pt! > l.runs[2]!.pt!)).toBe(true); // 編號比姓名大
+    }
+  });
 });
 
 describe('分科輸出：頁數預估（#269）', () => {
@@ -315,7 +334,11 @@ describe('分科輸出：綜合教室座位表（#220）', () => {
     expect(o.seat).toHaveLength(new Set(inReserve.map((e) => e.roomId)).size);
     const p = o.seat[0]!;
     expect(p.slotMode).toBe(true);
-    expect(p.stats.table.headLabel).toBe('時段');
+    // #581：欄位比照學測（D170），同天同時段垂直合併，不再逐列重複「第一天 時段一」
+    expect(p.stats.table.leadHeads).toEqual(['第幾天', '時段', '科目']);
+    expect(p.stats.table.headLabel).toBeUndefined();
+    const mg = statMerge(p);
+    p.stats.table.rows.slice(0, -1).forEach((r, i) => { if (i > 0 && r.lead![0] === p.stats.table.rows[i - 1]!.lead![0]) expect(mg[i]!.span[0]).toBe(0); });
     const rows = p.stats.table.rows;
     expect(rows[rows.length - 1]!.label).toBe('使用人數（不重複）');
     expect(rows[rows.length - 1]!.total).toBe(p.stats.total);
