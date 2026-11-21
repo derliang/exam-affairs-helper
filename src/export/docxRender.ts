@@ -65,6 +65,7 @@ import {
   type SeatPageModel,
   rotationPage,
   landscapeFit,
+  landscapeRowsFlex,
 } from './model';
 
 export const FONT = 'Noto Sans TC';
@@ -796,11 +797,12 @@ function tableSection(page: TablePageModel, opts: DocxOptions): ISectionOptions 
   const columnWidths = page.widths.map((f) => Math.floor((contentW * f) / sum));
   const nHead = page.headGroups ? 2 : 1;
   const fit = land ? landscapeFit(page.rows.length + (page.totalRow ? 1 : 0), nHead, page.emWidths ? sum : undefined) : { rowMm: 9, pt: 10.5 };
+  const flex = land && landscapeRowsFlex(page.rows.length + (page.totalRow ? 1 : 0), nHead);
   const mk = (texts: string[], kind: 'head' | 'body' | 'total', kinds?: ('exam' | 'study' | 'multi' | undefined)[]) =>
     new TableRow({
       tableHeader: kind === 'head',
       cantSplit: true,
-      height: { value: mmToTwip(kind === 'head' && !land ? 0 : fit.rowMm), rule: kind === 'head' && !land ? HeightRule.AUTO : land ? HeightRule.EXACT : HeightRule.ATLEAST },
+      height: { value: mmToTwip(kind === 'head' && !land ? 0 : fit.rowMm), rule: kind === 'head' && !land ? HeightRule.AUTO : land && !flex ? HeightRule.EXACT : HeightRule.ATLEAST },
       children: texts.map(
         (t, i) =>
           new TableCell({
