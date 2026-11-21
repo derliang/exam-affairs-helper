@@ -121,6 +121,8 @@ describe('⑦ 自習座位（D147⑦、#396）：標題、小標籤、整份同�
     expect(p.title).toContain('自習座位');
     expect(p.chips[0]).toBe('自習座位，非考試座位');
     expect(p.chips[1]).toBe(STUDY_LEGEND); // G36 補做項④：圖例列
+    expect(STUDY_LEGEND).not.toMatch(/虛線|「自習」/); // #550：自習頁格子不畫虛線與「自習」字，圖例不得描述不存在的畫法
+    expect(p.chips.filter((c) => /^圖例/.test(c))).toHaveLength(1);
     expect(p.dateText).toMatch(/^第 \d 天/);
     const html = renderPrintHtml({ seat }, meta);
     expect(html).toContain('自習座位，非考試座位');

@@ -31,9 +31,9 @@ const out = (f: ExportInput) => ({ seat: sha(buildSeatPages(f, 'all')), label: s
 /** 在加每排步進器之前的程式（origin/main 5f9c0fe，core、export、data 本 PR 未改）算出的值 */
 const GOLDEN = {
   seating: 'f4be9b39512598f246f97ec8f554c2a78b6dd4683d62da2fb8a7ed63cd97a9e8',
-  // D182：自習座位頁多一枚圖例小標籤（STUDY_LEGEND），座位表雜湊由 7e37fce5… 更新；拿掉該小標籤後雜湊與舊值相同（已實測），其餘輸出不變
+  // D182：自習座位頁多一枚圖例小標籤（STUDY_LEGEND），座位表雜湊由 7e37fce5… 更新；拿掉該小標籤後雜湊與舊值相同（已實測），其餘輸出不變；#550 圖例文字改後 8fcf75d0… → 43be7d4c…（只有圖例字串變，排座與其他輸出不變）
   // 座位表、標籤的輸出模型因匯出樣式包（D147）改了文字與統計表欄位、D170 移除「本教室考生人數」列而重算；排座結果 seating 的值沒變（引擎沒動）
-  seat: '8fcf75d062e12abb6f4c49aec8631ee2f444984340ba2b68061964268798c6f9',
+  seat: '43be7d4cfcfef299aee92d5dd358d1d463038a79c8828b01a024422e3377fcf6',
   label: '26b25be27dbe8e739b28f68207d7635e296354393be022ac3788d8fffff0c6cb',
 };
 

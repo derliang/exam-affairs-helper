@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>G36 自習參考座位 稿 v2.77</title>
+<title>G36 自習參考座位 稿 v2.92</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700&display=swap">
@@ -454,7 +454,7 @@ span.chk.on{background:var(--cbx-on-bg);border-color:var(--cbx-on-line);color:va
 <tr><td class="dk">④ 第 6 步與檔案</td><td>座位表一個檔，參考座位頁集中放最後；多一個「含自習參考座位頁」勾選（預設勾）；標籤不含自習</td><td><a href="#out">第 6 步</a></td></tr>
 <tr><td class="dk">⑤ 會考</td><td>沒有抽離、沒有自習參考座位，畫面與檔案不變</td><td><a href="#bcct">會考</a></td></tr></tbody></table></div></section><section class="sec" id="rule"><header><h2>規則一頁看懂</h2><div class="gtag"><span class="badge b-acc">原則</span><span class="badge b-acc">三種類型</span></div></header><div class="stk">
 <div class="rule"><div class="n">1</div><div><b>不考的人＝自習生，一律進排座引擎排座位</b>（D135③）：只出現在座位表，<b>不印標籤</b>（D135⑤）。用途兩個：檢核座位與教室夠不夠；管秩序的老師要求按座位坐時可以照坐（不是強制）。<b>同一間教室同一時段只有考試或自習一種用途</b>（D135⑥）。</div></div>
-<div class="rule"><div class="n">2</div><div><b>自習座位與考試座位分得出來，黑白列印也行</b>：自習只出現在<b>自習教室的自習座位頁</b>（虛線格＋「自習」小牌，頁首虛線橫幅「自習座位，非考試座位」）；考試座位表不會有虛線自習格。原班表上不參加的人用黑底「X 不參加」小牌（不靠顏色）。</div></div>
+<div class="rule"><div class="n">2</div><div><b>自習座位與考試座位分得出來，黑白列印也行</b>：自習只出現在<b>自習教室的自習座位頁</b>（頁首小標籤「自習座位，非考試座位」；稿 v2.92 起圖例小標籤寫「此頁座位都是自習座位（不印標籤）；斜紋格＝停用」，格子不畫虛線與「自習」字，D147 匯出樣式不自訂）；考試座位表不會有虛線自習格。原班表上不參加的人用黑底「X 不參加」小牌（不靠顏色）。</div></div>
 <div class="rule"><div class="n">3</div><div><b>考生多數則自習生抽離，自習生多數則考生抽離</b>（D135⑥）：由排座引擎決定誰去哪間；自習教室的座位每個時段各自排（D141）。座位或教室不夠時<b>不硬排</b>，排座失敗並列出缺少的座位與教室，G35 對帳紅燈不通過（D135⑦：還要算教室夠不夠）。</div></div>
 <div class="rule"><div class="n">★</div><div><b>自習盡量同一地點，座位每節各自排（使用者 2026-11-18 裁示，D141）</b>：自習沒有標籤座位，<b>不需要每節同一個位子</b>，但盡量在<b>同一間教室</b>、同一班盡量同處；去考試的人<b>不保留座位</b>，參考座位每個時段只排這節在場的人。座位表格內一律寫<b>班級、座號、姓名</b>，才能點名。</div></div>
 <div class="rule"><div class="n">4</div><div><b>同一個計算來源</b>：自習人數與自習容量只算一次（沿用 <code>studyCapacity</code>，座位數＝預設容量，管理者可調低或調高，程式不自行調大），畫面、輸出、對帳只顯示、不另算。</div></div></div>
