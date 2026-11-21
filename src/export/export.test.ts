@@ -370,17 +370,18 @@ describe('v2.36 輸出紙面補強（B 類）', () => {
     expect(t.rows[t.rows.length - 1]!.total).toBe(p.stats.total);
   });
 
-  it('#221 3 人以上輪流：格內只印座位，其餘列在座位表下一頁（Word 與列印頁都多一頁）', async () => {
+  it('#579 D204 3 人以上輪流：改成一個時段一張座位表，不再有「輪流座位」清單頁，每格只印該時段的人', async () => {
     const f = makeFixture();
     f.result.detaches = ['0105', '0106', '0107'].map((code, i) => ({ code, subjectId: i === 0 ? 'zh' : 'en', purpose: 'exam' as const, roomId: 'rv', seat: { row: 1, depth: 1 } }));
-    const p = buildSeatPages(f).find((x) => x.slotMode)!;
-    expect(p.cells.get('1-1')!.persons).toHaveLength(3);
-    expect(p.rotation!.rows.length).toBeGreaterThanOrEqual(3);
-    const h = renderPrintHtml({ seat: [p] }, meta);
-    expect(h).toContain('輪流座位');
-    expect(h).toContain('共 3 人輪流');
-    const { text } = await unzip(await renderDocx({ seat: [p] }, { fonts, ...meta }));
-    expect(await text('word/document.xml')).toContain('輪流座位');
+    const ps = buildSeatPages(f).filter((x) => x.slotMode);
+    expect(ps.length).toBeGreaterThanOrEqual(2);
+    for (const p of ps) expect(p.cells.get('1-1')!.persons!.length).toBeLessThanOrEqual(2);
+    expect(new Set(ps.map((p) => p.chips[0])).size).toBe(ps.length); // 每張頁首第一個小標籤＝該時段，彼此不同
+    const h = renderPrintHtml({ seat: ps }, meta);
+    expect(h).not.toContain('輪流座位');
+    expect(h).not.toContain('共 3 人輪流');
+    const { text } = await unzip(await renderDocx({ seat: ps }, { fonts, ...meta }));
+    expect(await text('word/document.xml')).not.toContain('輪流座位');
   });
 
   it('#219 抽離自習名單：標題下一行「第N天　時段X　科目」，沒有日期欄', async () => {
