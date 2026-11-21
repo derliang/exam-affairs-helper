@@ -890,7 +890,7 @@ table.t{border-collapse:collapse;width:100%}
 .ab-tools{display:flex;gap:6px;align-items:center;margin-left:auto}
 .ab-menu{display:none}
 .sumbar{top:0}
-@media (max-width:600px){.appbar{min-height:52px}.ab-nav{display:none;position:absolute;left:0;right:0;top:100%;flex-direction:column;gap:2px;margin:0;padding:8px max(16px,env(safe-area-inset-left,0px));background:var(--surface);border-bottom:1px solid var(--line);box-shadow:var(--shadow-2);z-index:30}.appbar.open .ab-nav{display:flex}.ab-nav button{min-height:44px;text-align:left;font-size:15px}.ab-menu{display:inline-flex}.ab-ver{display:none}.ab-theme .t{display:none}.ab-theme{padding-inline:10px}}
+@media (max-width:720px){.appbar{min-height:52px}.ab-nav{display:none;position:absolute;left:0;right:0;top:100%;flex-direction:column;gap:2px;margin:0;padding:8px max(16px,env(safe-area-inset-left,0px));background:var(--surface);border-bottom:1px solid var(--line);box-shadow:var(--shadow-2);z-index:30}.appbar.open .ab-nav{display:flex}.ab-nav button{min-height:44px;text-align:left;font-size:15px}.ab-menu{display:inline-flex}.ab-ver{display:none}.ab-theme .t{display:none}.ab-theme{padding-inline:10px}}
 details.more{font-size:14px;color:var(--text-2)}details.more summary{cursor:pointer;font-weight:700;color:var(--accent-ink);min-height:32px;display:flex;align-items:center}details.more>div{padding:6px 0 2px}
 .wsret{margin-bottom:12px;gap:10px;align-items:center}
 /* 分科新模型（D99 核心批次，稿 v2.27） */

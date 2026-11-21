@@ -8,7 +8,7 @@ export interface AppBarItem { id: string; label: string; current?: boolean; disa
 
 /**
  * 全站品牌列（稿 v2.31，DESIGN 10.18）：左＝標誌＋名稱＋版本（回模擬考列表）；中＝主導覽；右＝外觀切換。
- * 目前所在頁：深色中性底＋底線（不用藍）。不黏頂；≤600px 導覽收進「選單」鈕，版本隱藏，外觀鈕只留圖示。
+ * 目前所在頁：深色中性底＋底線（不用藍）。不黏頂；≤720px 導覽收進「選單」鈕，版本隱藏，外觀鈕只留圖示。
  */
 export function AppBar(p: { version: string; items: AppBarItem[]; theme: Theme; onTheme: (t: Theme) => void; onHome: () => void; homeDisabled?: boolean }) {
   const [open, setOpen] = useState(false);
