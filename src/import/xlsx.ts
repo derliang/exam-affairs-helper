@@ -73,6 +73,10 @@ export function isLegacyXls(data: ArrayBuffer | Uint8Array): boolean {
 
 export class XlsError extends Error {}
 
+/** 讀 .xlsx 失敗時給使用者看的話（#564）：函式庫的英文原文與網址不外露；自己丟的 XlsError 本來就是中文，照用 */
+export const xlsxReadErrorText = (e: unknown): string =>
+  e instanceof XlsError ? e.message : '這個檔案打不開：可能已損壞，或不是真正的 .xlsx 檔（例如副檔名被改過、檔案是空的）。請用 Excel 開啟後另存成 .xlsx，再匯入。';
+
 export async function readXlsx(data: ArrayBuffer | Uint8Array): Promise<Sheet[]> {
   if (isLegacyXls(data)) throw new XlsError(XLS_MESSAGE);
   const zip = await JSZip.loadAsync(data);

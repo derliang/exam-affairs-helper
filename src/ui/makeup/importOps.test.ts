@@ -53,7 +53,8 @@ describe('② 重複匯入（F-11）', () => {
     const s = { ...fakeSession(), resolutions: [{ rowId: '3', action: 'skip' as const, reason: 'other' as const, note: 'x' }] };
     const next = parseMakeupWorkbook([{ name: 'S', rows: fakeSheet({ seed: 9, classes: [{ oldClass: '高三溫', students: 4 }] }) }]);
     const r = replaceImport(s, next, '新.xlsx', NOW);
-    expect(r.parse).toBe(next);
+    expect(r.parse!.rows.map((x) => x.rowId)).toEqual(next.rows.map((x) => x.rowId));
+    expect(r.parse!.rows.every((x) => x.file === '新.xlsx')).toBe(true); // #566：每列記來自哪個檔
     expect(r.resolutions).toEqual([]);
     expect(r.source?.fileName).toBe('新.xlsx');
     const m = mergeImport(s, next, '新.xlsx', NOW);

@@ -41,6 +41,8 @@ export interface MakeupRow {
   sheet: string;
   /** 工作表列號（1 起），對帳與問題列回溯用 */
   srcRow: number;
+  /** 來自哪個匯入檔（多檔匯入時問題列要標檔名，#566）；舊存檔與只有一個檔時沒有 */
+  file?: string;
   studentId: string;
   name: string;
   /** 舊班（D122：班級以舊班舊號為準），保留原文，例「101」「高一溫」 */
