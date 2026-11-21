@@ -159,7 +159,7 @@ export function MkStep2(p: { s: MakeupSession; onChange: (s: MakeupSession) => v
           <>
             <div class="card stack">
               <div class="row" style="justify-content:space-between">
-                <div><div class="lab">{s.source?.fileName ?? '補考名單'}</div><p class="small muted">{r.rawCount} 列・{Object.keys(s.parse.columns).length} 欄對應{s.parse.warnings.length ? '' : '・無異常'}</p></div>
+                <div><div class="lab">{s.source?.fileName ?? '補考名單'}</div><p class="small muted">{r.rawCount} 列・{Object.keys(s.parse.columns).length} 欄對應{s.parse.warnings.length === 0 && r.unresolved.length === 0 ? '・無異常' : r.unresolved.length > 0 ? `・${r.unresolved.length} 筆問題列待處理` : ''}</p></div>
                 <Button onClick={() => input.current?.click()}>換檔案</Button>
                 <input ref={input} type="file" accept=".xlsx,.xls" multiple hidden aria-label="選擇補考名單檔案（可多選）" onChange={(e) => { const fs = filesOfInput(e.currentTarget); e.currentTarget.value = ''; void onFiles(fs); }} />
               </div>
