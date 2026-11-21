@@ -175,7 +175,7 @@ function Roster({ doc, onChange, division }: Props) {
         <RosterIO doc={doc} division={division} onChange={onChange} />
       </div>
       <div class="rtw">
-        <table class="t compact nw rt-t">
+        <table class="t compact nw rt-t rt-mx">
           <thead><tr><th>班級</th><th>座號</th><th>考生編號</th><th>姓名</th><th>學號</th>{!isJ && <th>組別</th>}<th>特殊生需求</th><th /></tr></thead>
           <tbody>
             {rows.map((r) => {
@@ -193,7 +193,7 @@ function Roster({ doc, onChange, division }: Props) {
                 <tr key={`${s.classNo}-${s.seatNo}`}>
                   <td data-label="班級">{cls(s.classNo) ? <ClassChip colorIndex={cls(s.classNo)!.colorIndex}>{cls(s.classNo)!.name}</ClassChip> : s.classNo}</td>
                   <td class="num" data-label="座號">{s.seatNo}</td><td class="num" data-label="考生編號">{studentCode(s.classNo, s.seatNo)}</td><td class="ti" data-label="姓名">{s.name}</td>
-                  <td class="muted" data-label="學號">{s.schoolId ?? '未填'}</td>
+                  <td class="muted" data-label="學號"><span class="nb">{s.schoolId ?? '未填'}</span></td>
                   {!isJ && <td data-label="組別">{s.groupCode ?? '—'}</td>}
                   <td class="small muted" data-label="特殊生需求">{s.special ?? '—'}</td>
                   <td class="act"><div class="btnrow" style="flex-wrap:nowrap"><Button small onClick={() => setEditing(s)}>編輯</Button><ConfirmButton small copy={confirmCopy.deleteStudent(s.name, studentCode(s.classNo, s.seatNo))} onConfirm={() => onChange(removeStudent(doc, division, s))}>刪除</ConfirmButton></div></td>
@@ -274,7 +274,7 @@ function Classes({ doc, onChange, division }: Props) {
       {err && <Alert tone="danger">{err}</Alert>}
       {adding && <AddClassModal doc={doc} division={division} onClose={() => setAdding(false)} onAdd={(r) => { run(r); if (r.ok) setAdding(false); }} />}
       <div class="rtw">
-        <table class="t compact nw rt-t">
+        <table class="t compact nw rt-t rt-wide rt-mx">
           <thead><tr><th>班級</th><th>名稱</th>{!isJ && <th>文理組</th>}<th>班級色（{CLASS_COLOR_COUNT} 色）</th><th>順序</th><th></th></tr></thead>
           <tbody>
             {list.map((c, i) => {
@@ -302,7 +302,7 @@ function Classes({ doc, onChange, division }: Props) {
                   <td class="act">{(() => {
                     const u = classUsage(doc, division, c.no);
                     return u.roster + u.examEntries > 0
-                      ? <span class="hint">班上有 {u.roster || u.examEntries} 人，不能刪除</span>
+                      ? <span class="hint">班上有 <span class="nb">{u.roster || u.examEntries} 人</span>，<span class="nb">不能刪除</span></span>
                       : <ConfirmButton small copy={confirmCopy.deleteClass(c.name)} onConfirm={() => run(removeClass(doc, division, c.no))}>刪除</ConfirmButton>;
                   })()}</td>
                 </tr>
