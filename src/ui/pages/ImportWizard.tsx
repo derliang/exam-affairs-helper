@@ -9,6 +9,9 @@ import { Alert, Badge, Button } from '../components';
 import { FIELD_LABEL, SUBJECT_ID_MAP } from '../step2';
 import { RowFix } from './RowFix';
 
+/** 匯入預覽名單最多列幾筆（#L76；稿 原型.html 匯入預覽：組別／考科） */
+const PREVIEW_ROWS = 10;
+
 const KIND_TEXT: Record<ReviewItem['kind'], string> = { 'bad-id': '班級／座號無法辨識', 'no-name': '缺少姓名', dup: '班級與座號重複', 'bad-group': '未知組別代碼' };
 
 /** 本次考試的掃描設定：組別表換成考科表的 id；會考沒有組別欄，用固定科目 */
@@ -174,6 +177,20 @@ export function ImportWizard(p: {
           ...(res.markStats.total > 0 ? [{ label: '標示已套用', value: res.markStats.applied, bad: false }] : []),
         ].map((i) => <span key={i.label} class={i.bad ? 'bad' : ''} style={`white-space:nowrap${i.bad ? ';color:var(--danger-ink,#a33)' : ''}`}>{i.label} <strong style="font-size:20px">{i.value}</strong></span>)}
       </div>
+      {res.entries.length > 0 && (() => {
+        const sample = res.entries.slice(0, PREVIEW_ROWS);
+        const hasNo = res.entries.some((e) => e.examNo);
+        const hasNote = res.entries.some((e) => e.note);
+        return (
+          <div style="margin-top:12px" data-preview="entries">
+            <h5>名單預覽（前 {sample.length} 筆，共 {res.entries.length} 人）</h5>
+            <div class="rtw"><table class="t compact nw rt-t rt-a"><thead><tr><th>班級</th><th>座號</th><th>姓名</th>{hasNo && <th>應試編號</th>}<th>考科</th>{hasNote && <th>特殊需求</th>}</tr></thead><tbody>
+              {sample.map((e) => <tr key={`${e.classNo}-${e.seatNo}`}><td>{p.classNames[e.classNo - 1] ?? `第${e.classNo}班`}</td><td class="n">{String(e.seatNo).padStart(2, '0')}</td><td>{e.name}</td>{hasNo && <td class="n">{e.examNo || <span class="muted">—</span>}</td>}<td>{e.subjectIds.length ? e.subjectIds.map(name).join('、') : <span class="muted">（不參加）</span>}</td>{hasNote && <td>{e.note ? <span class="nb">{e.note}</span> : <span class="muted">—</span>}</td>}</tr>)}
+            </tbody></table></div>
+            {(hasNo || hasNote) && <p class="small muted">「應試編號」「特殊需求」是匯入時對應的選填欄位：<b>名單有這欄才顯示，沒匯入就不出現</b>；特殊需求只顯示、不影響排座。</p>}
+          </div>
+        );
+      })()}
       {p.previous && p.previous.length > 0 && <p class="muted small" style="margin-top:8px">和目前的考試名單（{p.previous.length} 人報名）相比。確認匯入後可用「復原」回到匯入前。</p>}
       {diff.changed.length > 0 && <details style="margin-top:8px"><summary>查看 {diff.changed.length} 筆改報名內容</summary>
         <table class="t"><thead><tr><th>班級-座號</th><th>姓名</th><th>變動</th><th>科目（前→後）</th></tr></thead><tbody>

@@ -127,5 +127,6 @@ describe('窄寬斷行（稿 v2.91，B 包 #554 #513 #516 #547）', () => {
     const css = readFileSync('src/styles/app.css', 'utf8');
     expect(css).toContain('.alert>.btn,.alert>.row{grid-column:2;justify-self:start}');
     expect(css).toContain('.rc-tri{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr))');
+    expect(css).toContain('.alert>div{min-width:0;overflow-wrap:anywhere}'); // #564
   });
 });
