@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>模擬考設計系統 稿 v2.81</title>
+<title>模擬考設計系統 稿 v2.96</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -538,7 +538,7 @@ span.chk.on{background:var(--cbx-on-bg);border-color:var(--cbx-on-line);color:va
 </style>
 
 <div class="top">
-  <span class="brand">模擬考小幫手 設計系統 <span class="badge b-acc">稿 v2.81・2026-11-21</span></span>
+  <span class="brand">模擬考小幫手 設計系統 <span class="badge b-acc">稿 v2.96・2026-11-22</span></span>
   <nav class="toc" aria-label="目錄">
     <a href="#color">色彩</a><a href="#type">字型</a><a href="#base">間距圓角</a><a href="#comp">元件</a><a href="#steps">步驟導覽</a><a href="#special">專屬元件</a><a href="#ast">分科新模型</a><a href="#ast2">分科下一批</a><a href="#paper">座位表與標籤</a><a href="#paper36">輸出補強 v2.36</a><a href="#paper36b">名單與教室 v2.36</a><a href="#brandbar">品牌列</a><a href="#footer">頁尾</a><a href="#align">對位測試頁</a><a href="#v275">v2.75 納入</a><a href="#open">待確認</a>
   </nav>
@@ -1430,10 +1430,14 @@ span.chk.on{background:var(--cbx-on-bg);border-color:var(--cbx-on-line);color:va
           <div class="cell" style="width:175px;height:175px;justify-content:space-evenly"><i class="co">1-2</i>
             <div style="line-height:1.15;margin-top:8px"><b class="no" style="font-size:30px">0102</b> <span class="nm" style="font-size:18px"><em>溫</em>李安仁</span><div style="font-size:14px;font-weight:700">第一天 自然</div></div>
             <div style="line-height:1.15"><b class="no" style="font-size:30px">0203</b> <span class="nm" style="font-size:18px"><em>良</em>陳大文</span><div style="font-size:14px;font-weight:700">第二天 數A</div></div></div></div>
-        <div><div class="small">3 人以上輪流：標籤只印座位，其餘列在座位表下一頁</div>
-          <div class="cell" style="width:175px;height:175px"><i class="co">2-1</i><b class="no" style="font-size:40px">2-1</b><span style="font-size:15px;margin-top:6px;font-weight:700">共 3 人輪流<br>見座位表下一頁</span></div></div>
-        <div><div class="small">座位表下一頁（A4）：座位 × 天 × 科目 × 人</div>
-          <div class="pap"><table class="t" style="font-size:11px"><tr><th>座位</th><th>第N天</th><th>科目</th><th>班級</th><th>座號</th><th>姓名</th></tr><tr><td>2-1</td><td>第一天</td><td>自然</td><td>溫</td><td>03</td><td>張一</td></tr><tr><td>2-1</td><td>第二天</td><td>數A</td><td>良</td><td>07</td><td>林二</td></tr><tr><td>2-1</td><td>第二天</td><td>英文</td><td>恭</td><td>12</td><td>黃三</td></tr></table></div></div>
+        <div><div class="small">3 人以上輪流的標籤（v2.38，D108）：每人一區，與整合標籤同法；座位表不再用「共 N 人輪流／見下一頁」（見下方一時段一張）</div></div>
+        <div id="v296" style="grid-column:1/-1"><div class="small muted"><b>稿 v2.96（#579、D204）預備教室座位表：有座位 3 人以上輪流 → 一個時段一張座位表</b>，不再翻下一頁對照。每張頁首第一個小標籤與右上教室名帶時段；每格只印該時段坐這格的一人（單人版式）；統計表只剩該時段列與「使用人數（不重複）」；沒人的時段不出該張。沒有 3 人以上輪流的教室仍一間一頁（格內每行一個時段，見上例）。取消「輪流座位」清單頁。</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:6px">
+            <div style="background:#fff;color:#22201B;border:1px solid var(--line-2);font-size:11px;line-height:1.3;padding:8px"><div style="display:flex;justify-content:space-between;font-weight:700;margin-bottom:6px"><span>座位表（時段版）</span><span>預備教室　備一　第1天 時段一</span></div><div style="margin-bottom:6px"><span class="badge b-acc">第1天 時段一</span> <span class="badge">共 3 人</span> <span class="badge">抽離考試</span></div><div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr))"><div style="padding:14px 6px 6px;border:1px solid #ddd;position:relative"><i style="position:absolute;right:4px;top:2px;font-style:normal;font-weight:700;font-size:10px">2-1</i><b>自然</b><br>溫 03 張一</div><div style="padding:14px 6px 6px;border:1px solid #ddd;position:relative"><i style="position:absolute;right:4px;top:2px;font-style:normal;font-weight:700;font-size:10px">1-1</i><b>物理</b><br>勇 12 林一</div><div style="border:1px solid #ddd;background:repeating-linear-gradient(135deg,#F1EDE0 0 4px,#E2DCC8 4px 8px)"></div></div></div>
+            <div style="background:#fff;color:#22201B;border:1px solid var(--line-2);font-size:11px;line-height:1.3;padding:8px"><div style="display:flex;justify-content:space-between;font-weight:700;margin-bottom:6px"><span>座位表（時段版）</span><span>預備教室　備一　第1天 時段二</span></div><div style="margin-bottom:6px"><span class="badge b-acc">第1天 時段二</span> <span class="badge">共 3 人</span> <span class="badge">抽離考試</span></div><div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr))"><div style="padding:14px 6px 6px;border:1px solid #ddd;position:relative"><i style="position:absolute;right:4px;top:2px;font-style:normal;font-weight:700;font-size:10px">2-1</i><b>數A</b><br>良 07 林二</div><div style="padding:14px 6px 6px;border:1px solid #ddd;position:relative"><i style="position:absolute;right:4px;top:2px;font-style:normal;font-weight:700;font-size:10px">1-1</i><b>化學</b><br>誠 03 王二</div><div style="border:1px solid #ddd;background:repeating-linear-gradient(135deg,#F1EDE0 0 4px,#E2DCC8 4px 8px)"></div></div></div>
+            <div style="background:#fff;color:#22201B;border:1px solid var(--line-2);font-size:11px;line-height:1.3;padding:8px"><div style="display:flex;justify-content:space-between;font-weight:700;margin-bottom:6px"><span>座位表（時段版）</span><span>預備教室　備一　第2天 時段一</span></div><div style="margin-bottom:6px"><span class="badge b-acc">第2天 時段一</span> <span class="badge">共 3 人</span> <span class="badge">抽離考試</span></div><div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr))"><div style="padding:14px 6px 6px;border:1px solid #ddd;position:relative"><i style="position:absolute;right:4px;top:2px;font-style:normal;font-weight:700;font-size:10px">2-1</i><b>英文</b><br>恭 12 黃三</div><div style="border:1px solid #ddd;background:repeating-linear-gradient(135deg,#F1EDE0 0 4px,#E2DCC8 4px 8px)"></div><div style="border:1px solid #ddd;background:repeating-linear-gradient(135deg,#F1EDE0 0 4px,#E2DCC8 4px 8px)"></div></div></div></div></div>
+        <div id="v296b" style="grid-column:1/-1"><div class="small muted"><b>稿 v2.96（#577、D204）匯出列印頁螢幕檢視：A4 表格頁套紙面寬</b>：頁面底灰，每頁白紙寬 210mm（橫式 297mm）置中、上下間距 6mm、內距＝列印邊距（直式 12mm）、細框加淡陰影；視窗比紙窄時縮到視窗寬。列印／存 PDF 不受影響。</div>
+          <div style="background:#ecebe7;padding:10px;border-radius:6px;margin-top:6px"><div style="background:#fff;max-width:300px;margin:0 auto;padding:16px;box-shadow:0 0 0 1px #d6d4ce,0 2px 8px rgba(0,0,0,.12);font-size:11px"><div style="text-align:center;font-weight:700;margin-bottom:6px">示範考試　預備教室</div><table class="t" style="font-size:11px;min-width:0"><tr><th>座位</th><th>班級</th><th>姓名</th></tr><tr><td>2-1</td><td>溫</td><td>張一</td></tr><tr><td>2-2</td><td>良</td><td>林二</td></tr></table></div></div></div>
       </div>
       <ul class="sp">
         <li>單人格＝一般教室標籤規格：大字編號 33pt（A3 31pt）、「班級｜姓名」放得下取最大，下方多一行「第○天 ○○科」（9～15pt，不寫時段）。A4 預備教室座位表的格子同一個排法，只是比標籤小。</li>

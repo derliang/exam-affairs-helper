@@ -63,7 +63,6 @@ import {
   type ListPageModel,
   type TablePageModel,
   type SeatPageModel,
-  rotationPage,
   landscapeFit,
   landscapeRowsFlex,
 } from './model';
@@ -869,11 +868,7 @@ export type DocxPages = { seat?: SeatPageModel[]; label?: LabelPageModel[]; list
 export async function renderDocx(pages: DocxPages, opts: DocxOptions): Promise<Uint8Array> {
   const mode = opts.boldMode ?? 'embed-bold';
   const sections: ISectionOptions[] = [];
-  for (const p of pages.seat ?? []) {
-    sections.push(seatSection(p, opts));
-    const rot = rotationPage(p);
-    if (rot) sections.push(tableSection(rot, opts));
-  }
+  for (const p of pages.seat ?? []) sections.push(seatSection(p, opts));
   for (const p of pages.label ?? []) sections.push(labelSection(p, opts));
   for (const l of [pages.list ?? []].flat()) sections.push(listSection(l, opts));
   for (const t of pages.table ?? []) sections.push(tableSection(t, opts));

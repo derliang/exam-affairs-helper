@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>模擬考原型 稿 v2.69</title>
+<title>模擬考原型 稿 v2.96</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -905,7 +905,7 @@ span.chk.on{background:var(--cbx-on-bg);border-color:var(--cbx-on-line);color:va
 </style>
 
 <div class="pbar">
-  <span class="brand">原型工具列</span><span class="badge b-warn">原型專用，實作沒有</span><span class="badge b-acc vbadge">稿 v2.69・2026-11-19</span>
+  <span class="brand">原型工具列</span><span class="badge b-warn">原型專用，實作沒有</span><span class="badge b-acc vbadge">稿 v2.96・2026-11-22</span>
   <nav class="nav" id="pnav" aria-label="原型導覽"></nav>
   <div class="seg" role="group" aria-label="深淺色">
     <button type="button" id="thSys" aria-pressed="true">跟隨系統</button>
@@ -1414,15 +1414,22 @@ span.chk.on{background:var(--cbx-on-bg);border-color:var(--cbx-on-line);color:va
     var want=sub==='國文'?['國綜','國寫']:[sub];
     for(var di=0;di<days.length;di++){var pos=0;for(var k=0;k<days[di].length;k++){var nm=days[di][k][0];pos++;if(want.indexOf(nm)>-1)return {day:di+1,slot:NUMS[pos]||pos,txt:'第'+(di+1)+'天 時段'+(NUMS[pos]||pos)}}}
     return {day:9,slot:'',txt:''}}
-  function prepSlotData(e,i){
+  function prepSlotData(e,i,only){
     var r=D().prep[i],cells={},subs=subjList(e),used={},slots={};
     subs.forEach(function(sub){var pl=prepPlan(e,sub);if(!pl.exCells)return;
       pl.exCells.forEach(function(ec){if(!ec.room||ec.room.name!==r.name)return;
-        Object.keys(ec.map).forEach(function(k){var sl=slotLab(e,sub);(cells[k]=cells[k]||[]).push({sub:sub,s:ec.map[k],sl:sl});used[ec.map[k].id]=1;slots[sl.txt]=1})})});
+        Object.keys(ec.map).forEach(function(k){var sl=slotLab(e,sub);if(only&&sl.txt!==only)return;(cells[k]=cells[k]||[]).push({sub:sub,s:ec.map[k],sl:sl});used[ec.map[k].id]=1;slots[sl.txt]=1})})});
     Object.keys(cells).forEach(function(k){cells[k].sort(function(a,b){return a.sl.day-b.sl.day||String(a.sl.slot).localeCompare(String(b.sl.slot))})});
     return {room:r,cells:cells,people:Object.keys(used).length,slots:Object.keys(slots).length}}
   function prepSlotPaperHTML(e,i){
-    var d=prepSlotData(e,i),room=d.room,cols=room.cols,rows=room.rows,cw=Math.min(24.79,+((210-30-6.5)/cols).toFixed(2)),ch=Math.min(26,+((297-24-95)/rows).toFixed(2)),g='<div class="pp-grid" style="grid-template-columns:repeat('+cols+','+cw+'mm)">',n=0;
+    /* v2.96（#579、D204）：有座位 3 人以上輪流 → 一個時段一張座位表（沒人的時段不出）；否則一間一頁 */
+    var all=prepSlotData(e,i),txts=[],rot=Object.keys(all.cells).some(function(k){var u={};all.cells[k].forEach(function(q){u[q.s.id]=1});return Object.keys(u).length>=3});
+    Object.keys(all.cells).forEach(function(k){all.cells[k].forEach(function(q){if(q.sl.txt&&txts.indexOf(q.sl.txt)<0)txts.push(q.sl.txt)})});
+    txts.sort();
+    if(rot&&txts.length>=2)return txts.map(function(t){return prepSlotPaperOne(e,i,t)}).join('');
+    return prepSlotPaperOne(e,i)}
+  function prepSlotPaperOne(e,i,only){
+    var d=prepSlotData(e,i,only),room=d.room,cols=room.cols,rows=room.rows,cw=Math.min(24.79,+((210-30-6.5)/cols).toFixed(2)),ch=Math.min(26,+((297-24-95)/rows).toFixed(2)),g='<div class="pp-grid" style="grid-template-columns:repeat('+cols+','+cw+'mm)">',n=0;
     for(var r=rows;r>=1;r--)for(var c=1;c<=cols;c++){var L=d.cells[c+','+r];
       if(!L){g+='<div class="pp-c pp-e" style="width:'+cw+'mm;height:'+ch+'mm"></div>';continue}
       n++;g+='<div class="pp-c pp-slots" style="width:'+cw+'mm;height:'+ch+'mm"><i class="pp-co">'+c+'-'+r+'</i>'+L.map(function(q){return '<span class="pp-sl"><small>'+q.sl.txt+'</small><b>'+q.sub+'</b> '+CNAME[q.s.c]+cc2(q.s)+'</span>'}).join('')+'</div>'}
@@ -1430,8 +1437,8 @@ span.chk.on{background:var(--cbx-on-bg);border-color:var(--cbx-on-line);color:va
     var ay='<div class="pp-ay" style="grid-template-rows:repeat('+rows+','+ch+'mm)">';for(var dd=rows;dd>=1;dd--)ay+='<span>'+dd+'</span>';ay+='</div>';
     var ax='<div class="pp-ax" style="grid-template-columns:repeat('+cols+','+cw+'mm)">';for(var c2=1;c2<=cols;c2++)ax+='<span>第'+c2+'排</span>';ax+='</div>';
     var page='<div class="pp pp-seat" style="width:210mm;height:297mm;padding:12mm 15mm">'+
-      '<div class="pp-hd"><div><div class="pp-h1">【'+e.year+'學年第'+CN[e.round]+'次'+e.type+'模擬考】</div><div class="pp-h2">座位表（時段版）</div></div><span class="pp-room">'+esc(room.name)+'</span></div>'+
-      '<div class="pp-chips"><span class="pp-chip s">共 '+d.people+' 人</span><span class="pp-chip">'+d.slots+' 個時段</span><span class="pp-chip">抽離考試</span></div>'+
+      '<div class="pp-hd"><div><div class="pp-h1">【'+e.year+'學年第'+CN[e.round]+'次'+e.type+'模擬考】</div><div class="pp-h2">座位表（時段版）</div></div><span class="pp-room">'+esc(room.name)+(only?' '+only:'')+'</span></div>'+
+      '<div class="pp-chips">'+(only?'<span class="pp-chip s">'+only+'</span>':'')+'<span class="pp-chip'+(only?'':' s')+'">共 '+d.people+' 人</span>'+(only?'':'<span class="pp-chip">'+d.slots+' 個時段</span>')+'<span class="pp-chip">抽離考試</span></div>'+
       '<div class="pp-wrapg" style="margin-top:4mm">'+ay+'<div>'+g+ax+'</div></div>'+
       '<div class="pp-bottom"><span class="l">已使用 '+n+' 格</span><span class="pp-pod">講臺</span><span></span></div>'+
       '<div class="pp-sltip">格內每一行是一個時段：「天・時段」「科目」「班級座號」。同一個人每個時段坐同一格時，各時段各列一行；不同的人輪流坐同一格時也各列一行。抽離自習不排座位，只出名單。</div>'+

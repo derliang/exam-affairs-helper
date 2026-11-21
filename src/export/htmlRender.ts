@@ -4,7 +4,7 @@
  * 座位表與標籤的樣式照設計系統成品頁「座位表與標籤」稿件（docs/design/mockups/設計系統.html #paper）：
  * 改這裡的版面要同步改稿件，反之亦然。
  */
-import { roomShown, cornerLayout, labelCornerFit, seatCellFit, statMerge, titleOf, labelTitleOf, footerText, isSpecial, LABEL_EDGE_MM, LABEL_FOOTER_MM, labelBoxMm, labelGrid, labelGridSize, labelNotePt, landscapeFit, namePtFit, PAPER_MM, periodLineFontPt, personLayout, rotationPage, wideLayout, type PersonLine, SEAT_PAGE, seatGeometry, statLayout, SLOT_TIP, type CellModel, type LabelPageModel, type ListPageModel, type SeatPageModel, type TablePageModel } from './model';
+import { roomShown, cornerLayout, labelCornerFit, seatCellFit, statMerge, titleOf, labelTitleOf, footerText, isSpecial, LABEL_EDGE_MM, LABEL_FOOTER_MM, labelBoxMm, labelGrid, labelGridSize, labelNotePt, landscapeFit, namePtFit, PAPER_MM, periodLineFontPt, personLayout, wideLayout, type PersonLine, SEAT_PAGE, seatGeometry, statLayout, SLOT_TIP, type CellModel, type LabelPageModel, type ListPageModel, type SeatPageModel, type TablePageModel } from './model';
 
 export interface HtmlOptions {
   generatedAt: string;
@@ -179,6 +179,12 @@ const CSS = `
 * { -webkit-print-color-adjust: exact; print-color-adjust: exact }
 body { margin: 0; font-family: 'Noto Sans TC', 'Microsoft JhengHei', sans-serif; color: #111 }
 .sheet { break-after: page; position: relative; box-sizing: border-box }
+/* 螢幕檢視（#577、D204）：A4 表格頁套紙面寬、置中、帶與列印相同的邊距，不再撐滿視窗；列印不受影響（@media screen 不套用） */
+@media screen {
+  body { background: #ecebe7 }
+  .sheet.a4 { width: 210mm; max-width: 100%; margin: 6mm auto; padding: 12mm; background: #fff; box-shadow: 0 0 0 1px #d6d4ce, 0 2px 8px rgba(0,0,0,.12) }
+  .sheet.a4.land { width: 297mm; padding: 8mm 12mm 9mm }
+}
 .sheet.a4 h1 { font-size: 16pt; text-align: center; margin: 0 0 4mm }
 table.list { border-collapse: collapse; width: 100% }
 table.list th, table.list td { border: 1px solid #808080; padding: 1mm 2mm; text-align: left; font-size: 10.5pt }
@@ -278,7 +284,7 @@ export type HtmlPages = { seat?: SeatPageModel[]; label?: LabelPageModel[]; list
 
 export function renderPrintHtml(pages: HtmlPages, o: HtmlOptions): string {
   const body = [
-    ...(pages.seat ?? []).flatMap((p) => { const r = rotationPage(p); return [seatHtml(p, o), ...(r ? [tableHtml(r, o)] : [])]; }),
+    ...(pages.seat ?? []).map((p) => seatHtml(p, o)),
     ...(pages.label ?? []).map((p) => labelHtml(p, o)),
     ...[pages.list ?? []].flat().map((l) => listHtml(l, o)),
     ...(pages.table ?? []).map((t) => tableHtml(t, o)),

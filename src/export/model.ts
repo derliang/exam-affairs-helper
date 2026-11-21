@@ -111,8 +111,6 @@ export interface SeatPageModel {
   stats: StatsModel;
   /** 該科不考人數超過一半時改標「有考」者的說明（頁首小標籤） */
   flipNotes?: string[];
-  /** 預備教室時段版：3 人以上輪流的座位，列在座位表下一頁（座位 × 天 × 科目 × 人） */
-  rotation?: { heads: string[]; rows: string[][] };
 }
 export interface LabelPageModel {
   kind: 'label';
@@ -633,7 +631,7 @@ export function wideLayout(
   return { left, right };
 }
 
-export const SLOT_TIP = '格內每個人一區：班級座號、姓名、第幾天考什麼科目；3 人以上輪流的座位列在座位表下一頁。抽離自習不排座位，只出名單。';
+export const SLOT_TIP = '格內每個人一區：班級座號、姓名、第幾天考什麼科目；3 人以上輪流的教室，一個時段一張座位表。抽離自習不排座位，只出名單。';
 
 /** 一個座位上的人（依最早的時段排序）：同一人各天的科目合併成「第一天 自然、數A」 */
 function personsOf(cell: MergedCell, ctx: ReturnType<typeof ctxOf>): PersonModel[] {
@@ -704,15 +702,19 @@ function slotSubjectChips(seats: Map<string, MergedCell>): string[] {
   return [...by.values()].sort((a, b) => a.day - b.day || a.period - b.period).map((e) => `${e.head ? `${e.day === 99 ? e.head : `${dayTag(e.day)} ${e.head.split(' ')[1] ?? ''}`}　` : ''}${e.subject} ${e.codes.size} 人`);
 }
 
-/** 3 人以上輪流的座位，列在座位表下一頁（座位 × 天 × 科目 × 人） */
-function rotationRows(seats: Map<string, MergedCell>, ctx: ReturnType<typeof ctxOf>): { heads: string[]; rows: string[][] } | undefined {
-  const rows: string[][] = [];
-  for (const m of [...seats.values()].sort((a, b) => a.seat.row - b.seat.row || a.seat.depth - b.seat.depth)) {
-    const ps = personsOf(m, ctx);
-    if (ps.length < 3) continue;
-    for (const p of ps) for (const s of p.sched) rows.push([seatLabel(m.seat), s, p.classLabel, String(parseCode(p.code).seatNo).padStart(2, '0'), p.name]);
-  }
-  return rows.length ? { heads: ['座位', '天與科目', '班級', '座號', '姓名'], rows } : undefined;
+/**
+ * 預備教室「一個時段一張」（#579、D204）：有任何座位 3 人以上輪流時回傳每個時段（依天、時段排）一份只含該時段的座位；
+ * 沒有 3 人以上輪流、只有一個時段、或有科目沒有時段資訊時回傳 undefined（維持一間一頁）。
+ */
+function slotSplit(seats: Map<string, MergedCell>, ctx: ReturnType<typeof ctxOf>): { head: string; seats: Map<string, MergedCell> }[] | undefined {
+  if (![...seats.values()].some((m) => personsOf(m, ctx).length >= 3)) return undefined;
+  const by = new Map<number, { head: string; day: number; subjects: Set<string> }>();
+  for (const m of seats.values()) for (const l of m.lines) { const e = by.get(l.period) ?? { head: l.head, day: l.day ?? 0, subjects: new Set<string>() }; e.subjects.add(l.subject); by.set(l.period, e); }
+  if (by.size < 2) return undefined;
+  return [...by].sort((x, y) => x[0] - y[0]).map(([period, e]) => ({
+    head: e.head || [...e.subjects].join('、'),
+    seats: new Map([...seats].flatMap(([k, m]) => { const ls = m.lines.filter((l) => l.period === period); return ls.length ? [[k, { seat: m.seat, lines: ls }] as [string, MergedCell]] : []; })),
+  }));
 }
 type MergedLine = { period: number; head: string; text: string; code: string; day: number | undefined; subject: string; slotNo?: number };
 type MergedCell = { seat: { row: number; depth: number }; lines: MergedLine[] };
@@ -814,37 +816,41 @@ export function buildSeatPages(input: ExportInput, scope: Scope = 'all'): SeatPa
       const seats = byRoom.get(roomId);
       const room = rooms.get(roomId);
       if (!seats || !room) continue;
-      const cells = new Map<string, CellModel>();
       const people = new Set<string>();
-      const slots = new Set<string>();
       for (const d of input.result.detaches) if (d.purpose === 'exam' && d.seat && d.roomId === roomId) people.add(d.code);
-      for (const m of seats.values()) {
-        for (const l of m.lines) if (l.head) slots.add(l.head);
-        cells.set(`${m.seat.row}-${m.seat.depth}`, {
-          coord: seatLabel(m.seat), seat: { row: m.seat.row, depth: m.seat.depth }, code: '', classLabel: '', name: '',
-          colorBg: 'FFFFFF', colorLine: '222222', colorFg: '22201B', tags: [], marks: [],
-          periodLines: [...m.lines].sort((x, y) => x.period - y.period).map(({ head, text }) => ({ head, text })),
-          persons: personsOf(m, ctx),
-        });
-      }
-      pages.push({
-        kind: 'seat',
-        title: `${input.exam.name}　${room.name}　座位表（時段版）`,
-        examName: input.exam.name,
-        ...(input.seatHeading?.trim() ? { heading: input.seatHeading.trim() } : {}),
-        ...dateProp([...seats.values()].flatMap((m) => m.lines.flatMap((l) => (l.day === undefined ? [] : [l.day]))), input.exam.examDates),
-        roomName: room.name,
-        tag: PREP_TAG,
-        chips: [`共 ${people.size} 人`, ...slotSubjectChips(seats), '抽離考試'],
-        detachStyle: false,
-        slotMode: true,
-        rows: room.rows,
-        depth: room.depth,
-        cells,
-        usable: usableOf(room),
-        stats: { perClass: [], total: people.size, perSubject: [], table: slotStats(seats, ctx) },
-        ...(() => { const r = rotationRows(seats, ctx); return r ? { rotation: r } : {}; })(),
-      });
+      // #579（D204）：有任何座位 3 人以上輪流 → 整間改成「一個時段一張座位表」，不再翻下一頁對照；其餘維持一間一頁
+      const parts = slotSplit(seats, ctx);
+      const mk = (sub: Map<string, MergedCell>, slotHead?: string): SeatPageModel => {
+        const cells = new Map<string, CellModel>();
+        for (const m of sub.values()) {
+          cells.set(`${m.seat.row}-${m.seat.depth}`, {
+            coord: seatLabel(m.seat), seat: { row: m.seat.row, depth: m.seat.depth }, code: '', classLabel: '', name: '',
+            colorBg: 'FFFFFF', colorLine: '222222', colorFg: '22201B', tags: [], marks: [],
+            periodLines: [...m.lines].sort((x, y) => x.period - y.period).map(({ head, text }) => ({ head, text })),
+            persons: personsOf(m, ctx),
+          });
+        }
+        const here = slotHead ? new Set([...sub.values()].flatMap((m) => m.lines.map((l) => l.code))) : people;
+        return {
+          kind: 'seat',
+          title: `${input.exam.name}　${room.name}　座位表（時段版${slotHead ? `：${slotHead}` : ''}）`,
+          examName: input.exam.name,
+          ...(input.seatHeading?.trim() ? { heading: input.seatHeading.trim() } : {}),
+          ...dateProp([...sub.values()].flatMap((m) => m.lines.flatMap((l) => (l.day === undefined ? [] : [l.day]))), input.exam.examDates),
+          roomName: slotHead ? `${room.name}　${slotHead}` : room.name,
+          tag: PREP_TAG,
+          chips: [...(slotHead ? [slotHead] : []), `共 ${here.size} 人`, ...slotSubjectChips(sub), '抽離考試'],
+          detachStyle: false,
+          slotMode: true,
+          rows: room.rows,
+          depth: room.depth,
+          cells,
+          usable: usableOf(room),
+          stats: { perClass: [], total: here.size, perSubject: [], table: slotStats(sub, ctx) },
+        };
+      };
+      if (parts) for (const part of parts) pages.push(mk(part.seats, part.head));
+      else pages.push(mk(seats));
     }
     if (input.includeStudyRef !== false) pages.push(...studyReferencePages(input, ctx, rooms));
   }
@@ -1337,19 +1343,6 @@ export function fitSeatCell(g: { h: number; topPad: number; codePt: number; mark
   const need = g.codePt * 0.3528 + namePt * 0.3528 * 1.15 + g.markArea;
   const avail = g.h - g.topPad - g.bottomPad;
   return { k: Math.max(0.5, Math.min(1, avail / need)) };
-}
-
-/** 3 人以上輪流的座位清單頁（接在預備教室座位表之後；沒有就 undefined） */
-export function rotationPage(p: SeatPageModel): TablePageModel | undefined {
-  if (!p.rotation) return undefined;
-  return {
-    kind: 'table',
-    title: `${p.heading ?? p.examName}　${p.roomName}　輪流座位`,
-    subtitle: '3 人以上輪流使用的座位（標籤上只印座位）',
-    heads: p.rotation.heads,
-    widths: [1.2, 2.4, 1.4, 0.9, 1.6],
-    rows: p.rotation.rows,
-  };
 }
 
 /** 橫式公告表的列高與字級：一班一頁，依列數縮放（#215）；45 人也放得進一頁（列高最小 3.4mm、字 6.5pt） */
