@@ -428,6 +428,22 @@ export function cornerLayout(tags: readonly CornerTag[], widthMm: number, pt: nu
   return out;
 }
 
+/**
+ * 標籤格有角標時的排法（#504、稿 v2.77）：角標帶（右下、每行一個小牌列）佔實際高度，
+ * 編號（大字）先縮、姓名不動，整塊（編號＋班級｜姓名）置中在「頂端座標區以下、角標帶以上」，角標不得蓋住姓名。
+ * 編號字級下限 14pt；仍放不下時整塊貼齊角標帶上緣。PDF、Word 共用。w、h＝格寬高（mm）。
+ */
+export function labelCornerFit(c: CellModel, w: number, h: number, codeMax: number, markPt: number): { lines: CornerTag[][]; markPt: number; bandMm: number; codePt: number; namePt: number } {
+  const lines = cornerLayout(c.corners ?? [], w - 3.4, markPt);
+  const n = lines.length;
+  const bandMm = n ? n * (markPt * PT_MM * 1.15 + 0.8) + 0.8 : 0;
+  const namePt = namePtFit(c.classLabel, c.name, w - 2.2, 18);
+  const nameMm = namePt * PT_MM * 1.15;
+  const room = h - 5 - bandMm - 0.6 - nameMm - 2.6;
+  const codePt = Math.max(14, Math.min(codeMax, Math.floor(room / PT_MM)));
+  return { lines, markPt, bandMm, codePt, namePt };
+}
+
 /** 格子有特殊標示（淡黃底用）：有角標的格子 */
 export const isSpecial = (c: CellModel): boolean => (c.corners?.length ?? 0) > 0;
 
