@@ -13,7 +13,7 @@ import { CLASS_COLOR_COUNT, CLASS_COLOR_NAMES, colorConflicts } from '../colors'
 import { RosterIO } from './RosterIO';
 import { ScheduleTab } from './Schedule';
 import { allFeatures, withFeature } from '../features';
-import { addClass, addStudent, nextClassNo, validateClassName, classUsage, removeClass, removeStudent, renameClass, searchStudents, setClassColor, setClassTrack, updateStudent, type Doc } from '../store';
+import { addClass, addStudent, moveClass, nextClassNo, validateClassName, classUsage, removeClass, removeStudent, renameClass, searchStudents, setClassColor, setClassTrack, updateStudent, type Doc } from '../store';
 
 type Tab = 'roster' | 'classes' | 'school' | 'rooms' | 'sched' | 'features';
 const TABS: { value: Tab; label: string }[] = [
@@ -275,9 +275,9 @@ function Classes({ doc, onChange, division }: Props) {
       {adding && <AddClassModal doc={doc} division={division} onClose={() => setAdding(false)} onAdd={(r) => { run(r); if (r.ok) setAdding(false); }} />}
       <div class="rtw">
         <table class="t compact nw rt-t">
-          <thead><tr><th>班級</th><th>名稱</th>{!isJ && <th>文理組</th>}<th>班級色（{CLASS_COLOR_COUNT} 色）</th><th></th></tr></thead>
+          <thead><tr><th>班級</th><th>名稱</th>{!isJ && <th>文理組</th>}<th>班級色（{CLASS_COLOR_COUNT} 色）</th><th>順序</th><th></th></tr></thead>
           <tbody>
-            {list.map((c) => {
+            {list.map((c, i) => {
               const clash = colorConflicts(list, c.no, c.colorIndex);
               return (
                 <tr key={c.no}>
@@ -295,6 +295,10 @@ function Classes({ doc, onChange, division }: Props) {
                     </div>
                     {clash.length > 0 && <div class="hint">與 {clash.map((n) => String(n).padStart(2, '0')).join('、')} 班同色；黑白列印請核對班級名稱。</div>}
                   </td>
+                  <td data-label="順序" class="noL"><span class="btnrow" style="flex-wrap:nowrap;gap:4px">
+                    <Button small disabled={i === 0} onClick={() => onChange(moveClass(doc, division, c.no, -1))}><span aria-label={`${c.name}班往前移`}>▲</span></Button>
+                    <Button small disabled={i === list.length - 1} onClick={() => onChange(moveClass(doc, division, c.no, 1))}><span aria-label={`${c.name}班往後移`}>▼</span></Button>
+                  </span></td>
                   <td class="act">{(() => {
                     const u = classUsage(doc, division, c.no);
                     return u.roster + u.examEntries > 0
@@ -307,7 +311,7 @@ function Classes({ doc, onChange, division }: Props) {
           </tbody>
         </table>
       </div>
-      <p class="small muted">班級色只用在座位表；黑白列印請依班級文字辨認。班級名稱可改，同一部別不可重名。</p>
+      <p class="small muted">班級色只用在座位表；黑白列印請依班級文字辨認。班級名稱可改，同一部別不可重名。用 ▲▼ 調整班級順序：座位表預覽的教室頁籤、班級篩選與統計表都照這裡的順序排列（不影響排座結果）。</p>
     </div>
   );
 }
