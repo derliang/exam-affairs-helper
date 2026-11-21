@@ -4,7 +4,7 @@
  * 座位表與標籤的樣式照設計系統成品頁「座位表與標籤」稿件（docs/design/mockups/設計系統.html #paper）：
  * 改這裡的版面要同步改稿件，反之亦然。
  */
-import { roomShown, cornerLayout, seatCellFit, statMerge, titleOf, labelTitleOf, footerText, isSpecial, LABEL_EDGE_MM, LABEL_FOOTER_MM, labelBoxMm, labelGrid, labelGridSize, labelNotePt, landscapeFit, namePtFit, PAPER_MM, periodLineFontPt, personLayout, rotationPage, wideLayout, type PersonLine, SEAT_PAGE, seatGeometry, statLayout, SLOT_TIP, type CellModel, type LabelPageModel, type ListPageModel, type SeatPageModel, type TablePageModel } from './model';
+import { roomShown, cornerLayout, labelCornerFit, seatCellFit, statMerge, titleOf, labelTitleOf, footerText, isSpecial, LABEL_EDGE_MM, LABEL_FOOTER_MM, labelBoxMm, labelGrid, labelGridSize, labelNotePt, landscapeFit, namePtFit, PAPER_MM, periodLineFontPt, personLayout, rotationPage, wideLayout, type PersonLine, SEAT_PAGE, seatGeometry, statLayout, SLOT_TIP, type CellModel, type LabelPageModel, type ListPageModel, type SeatPageModel, type TablePageModel } from './model';
 
 export interface HtmlOptions {
   generatedAt: string;
@@ -23,8 +23,8 @@ const DETACH = { bg: '#E6EBF7', fg: '#274690' };
 const mm = (n: number): string => `${+n.toFixed(2)}mm`;
 
 /** 右下角單字角標（#223）：不考＝黑底白字，加考／有考＝白底黑框 */
-function cornersHtml(c: CellModel, w: number, pt: number): string {
-  const lines = cornerLayout(c.corners ?? [], w - 2.4, pt);
+function cornersHtml(c: CellModel, w: number, pt: number, given?: ReturnType<typeof cornerLayout>): string {
+  const lines = given ?? cornerLayout(c.corners ?? [], w - 2.4, pt);
   return lines.length ? `<span class="pp-cn">${lines.map((l) => `<span class="pp-cl">${l.map((k) => `<span class="pp-mk ${k.kind === 'x' ? 'x' : 'add'}">${esc(k.text)}</span>`).join('')}</span>`).join('')}</span>` : '';
 }
 
@@ -66,7 +66,11 @@ function cellHtml(c: CellModel | undefined, w: number, h: number, mode: 'seat' |
   // 標籤上沒有標示的格子不留標示區、整塊垂直置中、字取最大（#218）；其餘字級在格寬內取最大（#222）
   const free = mode === 'label';
   const npt = namePtFit(c.classLabel, c.name, w - (mode === 'label' ? 2.2 : 1.4), mode === 'label' ? 18 : 12);
-  return `<div class="pp-c${free ? ' fr' : ''}${c.ref ? ' pp-ref' : ''}" style="${size};background:${bg}"><i class="pp-co">${esc(c.coord)}</i><b class="pp-no">${esc(c.code)}</b><span class="pp-nm" style="font-size:${npt}pt"><em style="color:${em}">${esc(c.classLabel)}</em><span>${esc(c.name)}</span></span>${cornersHtml(c, w, mode === 'label' ? 11 : 8)}</div>`;
+  // #504：有角標的標籤，角標帶預留實際高度，編號先縮、姓名不動，角標不蓋住姓名（與 Word 共用 model.labelCornerFit）
+  const lf = mode === 'label' && isSpecial(c) ? labelCornerFit(c, w, h, b4 ? 33 : 31, 11) : null;
+  const pad = lf ? `;padding:5mm 1mm ${mm(lf.bandMm + 0.6)}` : '';
+  const noStyle = lf ? ` style="font-size:${lf.codePt}pt"` : '';
+  return `<div class="pp-c${free ? ' fr' : ''}${c.ref ? ' pp-ref' : ''}" style="${size};background:${bg}${pad}"><i class="pp-co">${esc(c.coord)}</i><b class="pp-no"${noStyle}>${esc(c.code)}</b><span class="pp-nm" style="font-size:${npt}pt"><em style="color:${em}">${esc(c.classLabel)}</em><span>${esc(c.name)}</span></span>${cornersHtml(c, w, mode === 'label' ? 11 : 8, lf?.lines)}</div>`;
 }
 
 /**
@@ -232,7 +236,7 @@ footer { font-size: 8pt; color: #555; text-align: right; margin-top: 3mm }
 .pp.pp-lab .pp-wd .pp-wh.pp-wl{align-items:flex-start;padding-left:1.5mm}
 .pp.pp-lab .pp-wd .pp-wh.pp-wt{justify-content:flex-start;padding-top:0}
 .pp .pp-pr b{font-weight:700}
-.pp .pp-c.pp-bl{border:none;background:none}
+.pp .pp-c.pp-bl{background:none} /* #504：空位保留外框，整張標籤表輪廓完整 */
 .pp .pp-c.pp-ref{outline:.5mm dashed var(--ink);outline-offset:-.8mm}
 .pp .pp-e{background:repeating-linear-gradient(135deg,#F1EDE0 0 1.2mm,#E2DCC8 1.2mm 2.4mm)}
 .pp.pp-lab .pp-c{display:grid;grid-template-rows:1fr auto 9mm;justify-items:center;align-items:center;gap:0;padding:5mm 1mm .8mm}
