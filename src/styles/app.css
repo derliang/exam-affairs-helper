@@ -1148,3 +1148,19 @@ details[open]:not(.moremenu)>summary::after{content:" ▴"}
 .tm-t td,.tm-t th{font-variant-numeric:tabular-nums}
 .tm-t tr.bad td{background:var(--danger-soft)}
 .tm-t .tm-in,.tmset .input[type=time]{width:120px;min-width:0;font-variant-numeric:tabular-nums}
+
+/* 稿 v2.80 Drawer（DESIGN §10.44.3）：≥768px 右側滑出，<768px 底部面板；只用 token，不橫向捲動（D168） */
+.dscrim{position:fixed;inset:0;z-index:50;background:rgba(20,18,12,.45);display:flex;justify-content:flex-end;align-items:stretch}
+.drawer-p{display:flex;flex-direction:column;gap:10px;background:var(--surface);border-left:1px solid var(--line-2);box-shadow:var(--shadow-3);padding:14px;width:min(420px,92vw);height:100%;min-width:0;animation:dr-in .2s ease-out}
+.drawer-p .dr-grab{display:none}
+.drawer-p .dr-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.drawer-p .dr-head h3{margin:0;font-size:17px}
+.drawer-p .dr-body{flex:1;min-height:0;min-width:0;overflow-y:auto;overflow-x:hidden}
+@keyframes dr-in{from{transform:translateX(24px);opacity:0}to{transform:none;opacity:1}}
+@media (max-width:767px){
+  .dscrim{align-items:flex-end;justify-content:stretch}
+  .drawer-p{width:100%;height:auto;max-height:85vh;border-left:0;border-top:1px solid var(--line-2);border-radius:var(--r-xl) var(--r-xl) 0 0;animation-name:dr-up}
+  .drawer-p .dr-grab{display:block;width:44px;height:5px;border-radius:3px;background:var(--line-2);align-self:center}
+}
+@keyframes dr-up{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.drawer-p{animation:none}}
