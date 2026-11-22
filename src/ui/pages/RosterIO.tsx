@@ -11,6 +11,7 @@ import type { Student } from '../../data';
 import { parseRosterWorkbook } from '../step2';
 import { RowFix } from './RowFix';
 import { FileResults, filesOfInput } from './FileResults';
+import { classNamesByNo } from '../classNames';
 
 const DIV_NAME: Record<Division, string> = { senior: '高中部', junior: '國中部' };
 
@@ -41,7 +42,7 @@ export function RosterIO(p: { doc: Doc; division: Division; onChange: (d: Doc) =
   /** 多檔匯入（#506）：每個檔案各自的讀取結果 */
   const [fileResults, setFileResults] = useState<(FileRead<unknown> & { note?: string })[]>([]);
   const [tpl, setTpl] = useState(false);
-  const classNames = p.doc.settings.classes.filter((c) => c.division === p.division).map((c) => c.name);
+  const classNames = classNamesByNo(p.doc.settings.classes, p.division);
 
   /** 一次選多個檔案（#506）：逐檔讀取、單檔壞檔只影響它自己；成功的合併成一份預覽，跨檔衝突變成逐列問題 */
   const onFiles = async (files: File[]) => {
