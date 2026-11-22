@@ -9,6 +9,7 @@ import { previewChoice } from '../step2';
 import { ImportWizard, scanOptionsFor } from './ImportWizard';
 import { RosterIO } from './RosterIO';
 import { ConflictList, FileResults, filesOfInput } from './FileResults';
+import { classNamesByNo } from '../classNames';
 
 /** 差異卡標題（稿 v2.34 H-6 的 7 種情形；「班級或座號不同」「姓名不同」由兩邊內容判斷） */
 export const titleOf = (d: RosterDiff): string => {
@@ -57,7 +58,7 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
   const input = useRef<HTMLInputElement>(null);
 
   const fullyAbsent = entries ? entries.filter((e) => e.subjectIds.length === 0).length : 0;
-  const classNames = doc.settings.classes.filter((c) => c.division === exam.division).map((c) => c.name);
+  const classNames = classNamesByNo(doc.settings.classes, exam.division);
   const dopts = diffOptions(doc, exam);
   const compare = (list: ExamEntry[]) => compareRosters(roster, list, dopts);
 

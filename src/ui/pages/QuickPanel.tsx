@@ -5,6 +5,7 @@ import { flowOf } from '../flow';
 import { parsePasted, quickCheck, type QuickCheck } from '../quickMode';
 import { examEntries, reseat } from '../seating';
 import type { Doc } from '../store';
+import { classNamesByNo } from '../classNames';
 
 const MARK = { ok: '✓', fail: '✗', pending: '…' } as const;
 const Checks = (p: { checks: QuickCheck[] }) => (
@@ -23,7 +24,7 @@ export function QuickPanel(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) =
   const base = { ...quickCheck(doc, exam), entryCount: examEntries(doc, exam).length };
 
   const run = () => {
-    const input = parsePasted(exam, doc.settings.classes.filter((c) => c.division === exam.division).map((c) => c.name), text);
+    const input = parsePasted(exam, classNamesByNo(doc.settings.classes, exam.division), text);
     if (!input) { setErrs(['請先貼上考試名單（從 Excel 複製整張表，含表頭）。']); return; }
     const res = quickCheck(doc, exam, input);
     setTried(res);
