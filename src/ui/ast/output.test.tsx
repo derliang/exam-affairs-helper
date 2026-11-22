@@ -288,7 +288,9 @@ describe('分科輸出：整合標籤兩倍寬（#216／D107）', () => {
       const lay = wideLayout(multi, 36, 35, { topPad: 5, codePt: 33, nameMax: 18, subjMax: 20 });
       const codes = [...lay.left, ...lay.right].filter((l) => /^\d{4}$/.test(l.runs[0]!.text));
       expect(codes).toHaveLength(multi.persons!.length); // 每人一區都有編號
-      expect(codes.every((l) => l.runs[0]!.pt! > l.runs[2]!.pt!)).toBe(true); // 編號比姓名大
+      expect(codes.every((l) => (l.runs[0]!.pt ?? l.pt) >= 12)).toBe(true); // #641：編號不小於 12pt
+      const names = [...lay.left, ...lay.right].filter((l) => !/^\d{4}$/.test(l.runs[0]!.text) && !l.runs[0]!.text.startsWith('座位'));
+      expect(Math.max(...names.map((l) => l.pt))).toBeLessThan(Math.min(...codes.map((l) => l.runs[0]!.pt ?? l.pt))); // 編號是整張最大的字
     }
   });
 });

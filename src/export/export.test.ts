@@ -485,9 +485,14 @@ describe('座位表頁首標籤換行與兩時段格（#247、#212）', () => {
     const all5 = [...many.left!, ...many.right!];
     const codeLines = all5.filter((l) => /^0\d{3}$/.test(l.runs[0]!.text));
     expect(codeLines).toHaveLength(5);
-    for (const l of codeLines) expect(l.runs[0]!.pt!).toBeGreaterThan(l.runs[2]!.pt!);
+    for (const l of codeLines) { expect(l.runs[0]!.pt!).toBeGreaterThanOrEqual(12); expect(l.runs[0]!.pt!).toBeGreaterThan(l.runs[2]!.pt!); } // #641：5 人放不下獨立行時退回同一行，編號仍不小於 12pt
+    // #641：3 人放得下就編號獨立一行（大字），下一行才是「班級｜姓名」
+    const three = wideLayout(cell([person('0101', 1), person('0202', 1), person('0303', 1)]), 36, 35, o);
+    const t3 = [...three.left!, ...three.right!].filter((l) => /^0\d{3}$/.test(l.runs[0]!.text));
+    expect(t3).toHaveLength(3);
+    for (const l of t3) { expect(l.runs).toHaveLength(1); expect(l.runs[0]!.pt!).toBeGreaterThanOrEqual(12); }
     expect(Math.max(...all5.map((l) => l.pt))).toBe(Math.max(...codeLines.map((l) => l.runs[0]!.pt!)));
-    expect(Math.min(...all5.map((l) => l.runs.length > 1 ? l.runs[2]!.pt! : l.pt))).toBeGreaterThanOrEqual(6);
+    expect(Math.min(...all5.map((l) => l.runs.length > 1 ? l.runs[2]!.pt! : l.pt))).toBeGreaterThanOrEqual(5.5); // #641：編號保底 12pt，5 人時科目小字可到約 5.85pt
     expect(many.left!.length).toBeGreaterThan(0); expect(many.right!.length).toBeGreaterThan(0);
   });
 
@@ -548,7 +553,7 @@ describe('座位表頁首標籤換行與兩時段格（#247、#212）', () => {
     const one = { ...mk(2), persons: [mk(2).persons[0]!] };
     const r1 = personLayout(one, 23.5, 20.66, o);
     expect(r1.lines.filter((l) => l.runs[0]!.text.includes('、'))).toHaveLength(1);
-    expect(Math.min(...r1.lines.map((l) => l.pt))).toBeGreaterThanOrEqual(6);
+    expect(Math.min(...r1.lines.map((l) => l.pt))).toBeGreaterThanOrEqual(5.5); // #641：編號保底 12pt，5 人時科目小字可到約 5.85pt
   });
 
   it('#220 殘留：兩人各考 3～6 科（合計超過 4 行）時科目併成一行，整塊放得進格高、最後一行不被切', async () => {

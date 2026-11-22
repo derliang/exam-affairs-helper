@@ -577,8 +577,30 @@ function multiPersonCols(ps: PersonModel[], coord: string, wHalf: number, h: num
     }
     return out;
   };
-  // #586（D205）：每人一區「大字編號＋班級｜姓名」同一行（編號是整張最大的字：姓名字級的 1.5 倍、上限 24pt、最小 7pt），下面接科目；放不下整體一起縮
-  const codePtOf = (pt: number): number => Math.max(7, Math.min(24, Math.floor(pt * 1.5 * 2) / 2));
+  // #586／#641（D214）：多人座位編號是整張最大的字，且不得小於 12pt。先試「編號獨立一行大字、下一行班級｜姓名、再下科目」（編號 18→12pt、姓名取編號一半、6～10pt），
+  // 放不下（人數很多）才退回 D205 的「編號與班級｜姓名同一行」，同一行時編號仍不低於 12pt、姓名先縮
+  const stackH = (c: number): { h: number; n: number } => {
+    const n = Math.max(6, Math.min(10, Math.floor(c * 0.5 * 2) / 2));
+    return { n, h: Math.max(...groups.map((g) => g.reduce((a, p) => a + c * LH + n * LH + subjLines(p, n * 0.9).length * n * 0.9 * LH + 0.9, 0))) };
+  };
+  const nameW = (p: PersonModel, x: number) => textWidthMm(p.classLabel, x, true) + textWidthMm(' | ' + p.name, x);
+  let stackC = 0;
+  for (let c = 18; c >= 12; c -= 0.5) {
+    const { n, h: hh } = stackH(c);
+    if (hh <= avail && ps.every((p) => textWidthMm(p.code, c, true) <= w && nameW(p, n) <= w)) { stackC = c; break; }
+  }
+  const headLine: PersonLine = { runs: [{ text: `座位 ${coord}`, bold: true }], pt: headPt, gapBefore: 0 };
+  if (stackC > 0) {
+    const n = stackH(stackC).n;
+    const colS = (g: PersonModel[]): PersonLine[] =>
+      g.flatMap((p, i): PersonLine[] => [
+        { runs: [{ text: p.code, bold: true, pt: stackC }], pt: stackC, gapBefore: i === 0 ? 0.8 : 0.9, pri: true },
+        { runs: [{ text: p.classLabel, bold: true }, { text: ' | ', pt: n }, { text: p.name, pt: n }], pt: n, gapBefore: 0 },
+        ...subjLines(p, n * 0.9).map((t) => ({ runs: [{ text: t, bold: true }], pt: n * 0.9, gapBefore: 0 })),
+      ]);
+    return { left: [headLine, ...colS(groups[0]!)], right: colS(groups[1]!), pt: n };
+  }
+  const codePtOf = (pt: number): number => Math.max(12, Math.min(24, Math.floor(pt * 1.5 * 2) / 2));
   const heightAt = (pt: number): number =>
     Math.max(...groups.map((g) => g.reduce((a, p) => a + codePtOf(pt) * LH + subjLines(p, pt * 0.9).length * pt * 0.9 * LH + 0.9, 0)));
   // 一行寬：編號（大）加「班級｜姓名」都要放得下
@@ -1177,7 +1199,10 @@ export function statLayout(p: SeatPageModel): { cols: number[]; rowH: number[]; 
   const totalW = 18;
   const leadN = p.stats.table.leadHeads?.length ?? 1;
   // 前導欄（D147⑤）：第幾天、時段、科目（有日期時再加日期欄）；沒有前導欄時維持單一第一欄
-  const leadW = leadN === 1 ? [0] : p.stats.table.leadHeads!.map((h) => (h === '科目' ? 26 : h === '日期' ? 24 : 18));
+  // #640（D214）：「時段」欄有填起訖時間（「時段一 08:30–10:10」）時，欄寬加到整句放得下單行、不拆在「–」後面；沒填時間維持 18mm（逐字不變）
+  const slotIdx = p.stats.table.leadHeads?.indexOf('時段') ?? -1;
+  const slotNeed = slotIdx < 0 ? 0 : Math.max(0, ...rows.map((r) => (r.lead?.[slotIdx] && /\d:\d\d/.test(r.lead[slotIdx]!) ? textWidthMm(r.lead[slotIdx]!, pt, false) + 6 : 0)));
+  const leadW = leadN === 1 ? [0] : p.stats.table.leadHeads!.map((h, i) => (h === '科目' ? 26 : h === '日期' ? 24 : i === slotIdx && slotNeed > 18 ? Math.ceil(slotNeed) : 18));
   const leadSum = leadN === 1 ? 60 : leadW.reduce((a, b) => a + b, 0);
   const classW = Math.max(12, Math.min(20, (innerW - totalW - leadSum) / Math.max(1, n)));
   const firstW = innerW - classW * n - totalW - (leadN === 1 ? 0 : leadSum - leadW[0]!);
