@@ -139,7 +139,8 @@ export function reconcileStandard(doc: Doc, exam: ExamConfig): Reconcile {
   const enrolled = new Map(enrolledList.map((e) => [studentCode(e.classNo, e.seatNo), e]));
   const unseated = [...R].filter((c) => !enrolled.has(c));
   // 報名＝考試名單裡有排座的人（含名冊沒有的人，M-1 用來抓）；不參加＝名冊裡不是報名者的人
-  const listedSeated = entries.map((e) => studentCode(e.classNo, e.seatNo)).filter((c) => enrolled.has(c));
+  // #626：報名＝至少報一科的人（D148，與 ② 的「考生 N、不參加 M」同一口徑）；名單上一科都沒報的人算不參加，不能算報名
+  const listedSeated = entries.filter((e) => e.subjectIds.length > 0).map((e) => studentCode(e.classNo, e.seatNo)).filter((c) => enrolled.has(c));
   const listedSet = new Set(listedSeated);
   const scope = { total: R.size, enrolled: listedSeated.length, absent: [...R].filter((c) => !listedSet.has(c)).length };
   // 學測：每時段「名冊＝考試＋自習」，沒有第三類；會考沒有自習：沒考這節的人（有座位）算不參加欄
