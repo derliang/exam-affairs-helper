@@ -59,7 +59,7 @@ export function RosterIO(p: { doc: Doc; division: Division; onChange: (d: Doc) =
     const good = okFiles(reads);
     setFileResults(reads.map((r) => (r.ok ? { name: r.name, ok: true as const, value: null, note: `${r.value.students.length} 人${r.value.problems.length > 0 ? `、${r.value.problems.length} 列有問題` : ''}` } : r)));
     if (good.length === 0) return;
-    const m = mergeRosterFiles(good.map((g) => ({ file: g.name, result: g.value })));
+    const m = mergeRosterFiles(good.map((g) => ({ file: g.name, result: g.value })), (no) => p.doc.settings.classes.find((c) => c.division === p.division && c.no === no)?.name);
     setUnk('add');
     setDecisions({});
     setFileKey((k) => k + 1);

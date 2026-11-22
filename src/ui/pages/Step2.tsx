@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { ExamConfig, ExamEntry, RosterDiff, RosterDiffChoice } from '../../data';
-import { hasPua, puaCodes, showPua, allResolved, applyDiffs, applyGroupChoice, compareRosters, groupDiffs, manyDiffs, type DiffGroup, diffsStale, isResolved, readXlsx, xlsxReadErrorText, refreshDiffs, validateResolved, groupByKey, okFiles, readFiles, resolveConflicts, type Candidate, type Conflict, type ConflictChoice, type FileRead, type SavedMarkMap, type Sheet } from '../../import';
+import { classText, hasPua, puaCodes, showPua, allResolved, applyDiffs, applyGroupChoice, compareRosters, groupDiffs, manyDiffs, type DiffGroup, diffsStale, isResolved, readXlsx, xlsxReadErrorText, refreshDiffs, validateResolved, groupByKey, okFiles, readFiles, resolveConflicts, type Candidate, type Conflict, type ConflictChoice, type FileRead, type SavedMarkMap, type Sheet } from '../../import';
 import { Alert, Badge, Button, Modal, ClassChip, ConfirmButton, More, PageHead, Seg, StatsBar, StepHead } from '../components';
 import { confirmCopy } from '../flow';
 import { addClass, diffOptions, examYear, rosterName, syncDiffs, updateExam, type Doc } from '../store';
@@ -142,7 +142,7 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
   const notJoin = entries ? compare(entries).notParticipating + fullyAbsent : 0;
   const classes = doc.settings.classes.filter((c) => c.division === exam.division);
   /** 「恭班 45 號　張小翔」：班名＋座號＋姓名（原型寫法） */
-  const who = (x?: { classNo: number; seatNo: number; name: string }) => (x ? `${classes.find((c) => c.no === x.classNo)?.name ?? x.classNo}班 ${x.seatNo} 號　${x.name}` : "—");
+  const who = (x?: { classNo: number; seatNo: number; name: string }) => (x ? `${classText(x.classNo, classes.find((c) => c.no === x.classNo)?.name)} ${x.seatNo} 號　${x.name}` : "—");
   const gtext = (g?: string) => (g ? `　組別 ${g}` : '');
   /** 組別照名單原樣顯示（代碼＋名稱，例「0-全科」），比對用的首字代碼只當找不到原文時的備用（C-2、C-6） */
   const sameId = (a: { classNo: number; seatNo: number }, b?: { classNo: number; seatNo: number }) => !!b && a.classNo === b.classNo && a.seatNo === b.seatNo;
@@ -163,7 +163,7 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
         actions={<><Button onClick={cancelBatch}>取消匯入</Button><Button kind="primary" disabled={!conflictRes.ready} onClick={() => adopt(conflictRes.items, conflict.markMap)}>確認匯入 {conflictRes.items.length} 人</Button></>}>
         <ConflictList conflicts={conflict.conflicts} choices={choices} onChoose={(k, c) => setChoices((m) => { const n = { ...m }; if (c === null) delete n[k]; else n[k] = c; return n; })}
           describe={(e) => `${e.name}${e.groupCode ? `、組別 ${e.groupCode}` : ''}、${e.subjectIds.length} 科`}
-          titleOf={(k) => { const [c, s] = k.split('-'); return `${c} 班 ${s} 號`; }} />
+          titleOf={(k) => { const [c, s] = k.split('-'); return `${classText(Number(c), classes.find((x) => x.no === Number(c))?.name)} ${s} 號`; }} />
         {!conflictRes.ready && <Alert tone="warn"><b>還不能確認：</b>還有 {conflictRes.pending.length} 筆沒有決定。</Alert>}
       </Modal>
     )}
