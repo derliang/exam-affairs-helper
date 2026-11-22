@@ -1,6 +1,6 @@
 /** 畫面層的文件狀態與純函式變更（可單元測試；復原以整份快照為單位） */
 import type { ClassInfo, Division, ExamConfig, ExamKind, Semester, Settings, Student, Track } from '../data';
-import { studentCode } from '../data';
+import { roomDivision, studentCode } from '../data';
 import type { ExamFiles } from '../data/folder';
 import { defaultLabelLayout } from '../export/model';
 import { diffsStale, refreshDiffs, type CompareOptions } from '../import/compare';
@@ -79,7 +79,18 @@ export const setClassColor = (doc: Doc, division: Division, no: number, colorInd
 /** 國中部不分文理組（UI-08）：對國中部班級無效 */
 export function setClassTrack(doc: Doc, division: Division, no: number, track: Track): Doc {
   if (division === 'junior') return doc;
-  return mapClass(doc, no, division, (c) => ({ ...c, track }));
+  const cls = doc.settings.classes.find((c) => c.no === no && c.division === division);
+  const next = mapClass(doc, no, division, (c) => ({ ...c, track }));
+  if (!cls) return next;
+  // #615（D210）：教室的文理組＝班級的文理組。同名的高中部班級教室跟著換，不用使用者逐間再改；預備教室沒有組別，不動
+  const ctx = { classes: doc.settings.classes, exams: doc.exams };
+  let changed = false;
+  const classrooms = doc.settings.classrooms.map((r) => {
+    if (r.kind !== 'class' || r.name !== cls.name || r.track === track || roomDivision(r, ctx) !== division) return r;
+    changed = true;
+    return { ...r, track };
+  });
+  return changed ? { ...next, settings: { ...next.settings, classrooms } } : next;
 }
 
 /**

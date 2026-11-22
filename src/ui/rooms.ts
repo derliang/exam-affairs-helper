@@ -200,3 +200,15 @@ export function fillDefaultTracks(rooms: Classroom[], classes: { name: string; d
   });
   return changed ? out : rooms;
 }
+
+/**
+ * #616（D210）：班級教室（名稱＝班級名稱）依班級資料順序排（D208 自訂順序）；預備教室、沒有對應班級的教室維持原順序、排在後面。
+ * 沒給班級清單就原樣回傳。
+ */
+export function sortByClassOrder<T extends { name: string; kind: string }>(rooms: T[], classes?: { name: string; division?: string }[], division?: string): T[] {
+  if (!classes) return rooms;
+  const idx = new Map<string, number>();
+  classes.filter((c) => !division || c.division === division).forEach((c, i) => { if (!idx.has(c.name)) idx.set(c.name, i); });
+  const at = (r: T): number => (r.kind === 'class' ? idx.get(r.name) ?? Number.MAX_SAFE_INTEGER : Number.MAX_SAFE_INTEGER);
+  return rooms.map((r, i) => ({ r, i })).sort((a, b) => at(a.r) - at(b.r) || a.i - b.i).map((x) => x.r);
+}

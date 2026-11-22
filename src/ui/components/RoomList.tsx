@@ -5,7 +5,7 @@ import { effectiveRoom, roomDivision, rowDepthOf, seatLabel, seatSlotCount } fro
 import { Alert, Badge, Button, ConfirmButton, ConfirmModal, EmptyState, Seg, Stepper, Switch } from './index';
 import { confirmCopy } from '../flow';
 import { classColorVars } from '../colors';
-import { addRoom, clickSeat, duplicateRoom, fillDefaultTracks, isSeatActive, patchRoom, removeRoom, labelSplitNote, resize, roomLimitsOf, seatLimitNote, stepMax, setNoSeat, setRoomDivision, setRoomTrack } from '../rooms';
+import { addRoom, clickSeat, duplicateRoom, fillDefaultTracks, isSeatActive, patchRoom, removeRoom, labelSplitNote, resize, roomLimitsOf, seatLimitNote, stepMax, setNoSeat, setRoomDivision, setRoomTrack, sortByClassOrder } from '../rooms';
 import { rowDepthsOf, setAllDepth, setRowCount, toggleSeat } from '../ast/roomEdit';
 
 /** G22：班級教室＝名冊班級（跟名冊走、不能手動新增或刪除）；沒有對應班級的班級教室是「名冊已沒有這個班」的舊教室 */
@@ -90,7 +90,7 @@ export function RoomList(p: {
   const ctx = { classes: p.classes ?? [], exams: p.exams ?? [] };
   const classesOfDiv = p.classes?.filter((c) => !p.division || c.division === p.division);
   // 校-33：只列這個部別的教室；已被本次勾選、卻屬於另一部別的舊資料照樣列出，才關得掉，不會藏著影響排座
-  const shown = p.rooms.filter((r) => !(junior && r.kind === 'reserve') && (!p.only || r.kind === p.only)
+  const shown = sortByClassOrder(p.rooms, p.classes, p.division).filter((r) => !(junior && r.kind === 'reserve') && (!p.only || r.kind === p.only)
     && (!p.division || roomDivision(r, ctx) === p.division || !!p.selected?.includes(r.id)));
   const stamp = (x: Classroom): Classroom => (x.division || !p.division ? x : { ...x, division: roomDivision(x, ctx) });
   // 教室名稱與高中部班級同名、又還沒指定組別時，自動帶入該班的組別（溫良恭＝理組、儉勤誠＝文組）；只在可選組別的清單做
