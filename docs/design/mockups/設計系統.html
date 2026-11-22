@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>模擬考設計系統 稿 v2.100</title>
+<title>模擬考設計系統 稿 v2.101</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -538,7 +538,7 @@ span.chk.on{background:var(--cbx-on-bg);border-color:var(--cbx-on-line);color:va
 </style>
 
 <div class="top">
-  <span class="brand">模擬考小幫手 設計系統 <span class="badge b-acc">稿 v2.100・2026-11-22</span></span>
+  <span class="brand">模擬考小幫手 設計系統 <span class="badge b-acc">稿 v2.101・2026-11-22</span></span>
   <nav class="toc" aria-label="目錄">
     <a href="#color">色彩</a><a href="#type">字型</a><a href="#base">間距圓角</a><a href="#comp">元件</a><a href="#steps">步驟導覽</a><a href="#special">專屬元件</a><a href="#ast">分科新模型</a><a href="#ast2">分科下一批</a><a href="#paper">座位表與標籤</a><a href="#paper36">輸出補強 v2.36</a><a href="#paper36b">名單與教室 v2.36</a><a href="#brandbar">品牌列</a><a href="#footer">頁尾</a><a href="#align">對位測試頁</a><a href="#v275">v2.75 納入</a><a href="#open">待確認</a>
   </nav>
@@ -1489,6 +1489,22 @@ body{word-break:keep-all;line-break:strict;overflow-wrap:break-word}code,pre,kbd
         <div class="stack" style="gap:6px"><span class="small"><b>改後</b>（只在標點處斷）</span><div style="width:210px;border:1px solid var(--line);border-radius:8px;padding:8px;word-break:keep-all;line-break:strict;overflow-wrap:break-word">最多一個時段自習 0（少教室優先）；綜合教室預設只送綜合教室，不印標籤。</div></div>
       </div>
       <p class="small muted">已知限制：兩個標點之間的一段若本身比一行寬（例如手機寬 375 的「只想改這間教室的模擬考；」），仍會在行尾逐字折；文案撰寫時盡量用逗號把長句切短。</p>
+    </div>
+    <div class="card" id="v2101" style="margin-top:16px"><div class="lab">⑨ 共用設定「班級資料」375 寬小卡（#619，<b>稿 v2.101</b>；D211；DESIGN §10.60）</div>
+      <p class="small muted">改前：這張表掛 <code>rt-mx</code>，容器 ≤480px 被套「數字小方塊並排」，名稱、文理組、色票擠成三條直欄、「理組／文組」拆字、一班卡約 540px。改後：表頭不換行改用新 modifier <code>rt-nh</code>（只管表頭），窄寬走標準小卡；12 個班級色 6×2 排整齊。<code>rt-mx</code> 專給數字矩陣；格內有輸入、切換、色票、按鈕的表單型窄表一律用 <code>rt-nh</code>。</p>
+      <div style="max-width:241px;border:1px solid var(--line);border-radius:var(--r-md);padding:10px 12px;background:var(--surface)">
+        <div style="font-size:16px;font-weight:700">01 溫</div>
+        <div class="small muted" style="margin-top:6px">名稱</div><input class="input" value="溫" aria-label="示範名稱" style="max-width:120px">
+        <div class="small muted" style="margin-top:6px">文理組</div>
+        <div class="seg" role="group" aria-label="示範文理組"><button type="button" aria-pressed="true">理組</button><button type="button" aria-pressed="false">文組</button></div>
+        <div class="small muted" style="margin-top:6px">班級色</div>
+        <div style="display:grid;grid-template-columns:repeat(6,28px);gap:8px;justify-content:start">
+          <span style="width:28px;height:28px;border-radius:50%;background:var(--c1-bg);border:2px solid var(--c1-line)"></span><span style="width:28px;height:28px;border-radius:50%;background:var(--c2-bg);border:2px solid var(--c2-line)"></span><span style="width:28px;height:28px;border-radius:50%;background:var(--c3-bg);border:2px solid var(--c3-line)"></span><span style="width:28px;height:28px;border-radius:50%;background:var(--c4-bg);border:2px solid var(--c4-line)"></span><span style="width:28px;height:28px;border-radius:50%;background:var(--c5-bg);border:2px solid var(--c5-line)"></span><span style="width:28px;height:28px;border-radius:50%;background:var(--c6-bg);border:2px solid var(--c6-line)"></span>
+          <span style="width:28px;height:28px;border-radius:50%;background:var(--c7-bg);border:2px solid var(--c7-line)"></span><span style="width:28px;height:28px;border-radius:50%;background:var(--c8-bg);border:2px solid var(--c8-line)"></span><span style="width:28px;height:28px;border-radius:50%;background:var(--c9-bg);border:2px solid var(--c9-line)"></span><span style="width:28px;height:28px;border-radius:50%;background:var(--c10-bg);border:2px solid var(--c10-line)"></span><span style="width:28px;height:28px;border-radius:50%;background:var(--c11-bg);border:2px solid var(--c11-line)"></span><span style="width:28px;height:28px;border-radius:50%;background:var(--c12-bg);border:2px solid var(--c12-line)"></span>
+        </div>
+        <div class="small muted" style="margin-top:6px">班上有 12 人，不能刪除</div>
+      </div>
+      <p class="small muted" style="margin-top:8px">示範寬 241px＝375 手機實際卡片內寬；實測 375／640／768／860／1280 皆無橫向溢出。</p>
     </div>
     <div class="card" id="v2100" style="margin-top:16px"><div class="lab">②-1 補考匯入重複：「取代／合併」不預選、先講影響（#602；多檔衝突訊息的班級用班名（#599）；<b>稿 v2.100</b>；使用者 2026-11-22 裁示算問題；D208）</div>
       <p class="small muted">舊畫面（補考稿 F-11、DESIGN S-4）預設選「取代」，已排考程的人會被悄悄移除。新規則：①兩個選項<b>都不預選</b>，沒選時「套用」是灰的並提示「請先選一種處理方式」；②取代那一項的說明就先寫「已排進考程的 N 筆會被移除」（N＝0 時不寫）；③合併寫明「已排的考程不受影響」；④統計格與琥珀「受影響」提示條只在選了之後才出現。取代／合併是兩個選項，沒有建議預設，因為兩者各有不可逆的代價，讓使用者看完影響再決定。</p>

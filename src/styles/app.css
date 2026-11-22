@@ -1093,7 +1093,7 @@ details[open]:not(.moremenu)>summary::after{content:" ▴"}
 .t.rt-t td,.t.rt-t th{white-space:normal}
 .t.rt-t td:first-child,.t.rt-t.compact td:first-child{white-space:normal;min-width:0}
 .t.rt-t td.ti>div{min-width:0}
-.t.rt-mx th{white-space:nowrap}
+.t.rt-mx th,.t.rt-nh th{white-space:nowrap}
 /* #501：⑥ 總帳 10 欄，容器 ≤900px 就換成並排小卡（同上畫法，只是切換點較寬）；其餘表格 ≤480px 才換 */
 @container (max-width:900px){
   .rt-t.rt-wide thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
@@ -1141,6 +1141,8 @@ details[open]:not(.moremenu)>summary::after{content:" ▴"}
   .rt-mx:not(.rt-a) td:not(.ti){display:block;flex:1 1 56px;border:1px solid var(--line);border-radius:var(--r-sm);padding:4px 6px;text-align:center;background:var(--sunken)}
   .rt-mx:not(.rt-a) td:not(.ti)::before{display:block;font-size:12px;text-align:center}
   .rt-mx:not(.rt-a) td.tot{background:var(--surface);font-weight:700}
+  /* 稿 v2.101（D211，#619）：班級資料這類「表單型」窄表（rt-nh）走標準小卡，不套 rt-mx 的數字小方塊；12 個班級色 6×2 排整齊 */
+  .rt-t.rt-nh .swatches{display:grid;grid-template-columns:repeat(6,28px);gap:8px;justify-content:start}
   .ut thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
   .ut,.ut tbody{display:block;width:auto}
   .ut tr{display:flex;flex-wrap:wrap;gap:6px;border:1px solid var(--line);border-radius:var(--r-md);padding:10px 12px;margin-bottom:8px;background:var(--surface)}

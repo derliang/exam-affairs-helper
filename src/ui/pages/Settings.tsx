@@ -274,7 +274,7 @@ function Classes({ doc, onChange, division }: Props) {
       {err && <Alert tone="danger">{err}</Alert>}
       {adding && <AddClassModal doc={doc} division={division} onClose={() => setAdding(false)} onAdd={(r) => { run(r); if (r.ok) setAdding(false); }} />}
       <div class="rtw">
-        <table class="t compact nw rt-t rt-wide rt-mx">
+        <table class="t compact nw rt-t rt-wide rt-nh">
           <thead><tr><th>班級</th><th>名稱</th>{!isJ && <th>文理組</th>}<th>班級色（{CLASS_COLOR_COUNT} 色）</th><th>順序</th><th></th></tr></thead>
           <tbody>
             {list.map((c, i) => {
