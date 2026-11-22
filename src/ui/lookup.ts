@@ -109,7 +109,8 @@ export function lookupExaminee(doc: Doc, exam: ExamConfig, result: SeatingResult
     if (!e.subjectIds.includes(s.id)) return { ...row, kind: 'not-taking', place: '', note: '本科不考' } as LookupRow;
     return {
       ...row, kind: 'class', place: home ? roomName(home.classroomId) : '（尚無座位）', seat: home ? seatLabel(home) : undefined,
-      note: '在原教室考試',
+      // #633：會考全班打散時座位在別班教室，不能寫「原教室」（教室名稱≠自己班名就只寫在哪間考）
+      note: home && roomName(home.classroomId) !== className ? `在${roomName(home.classroomId)}考試` : '在原教室考試',
     } as LookupRow;
   });
   return { ...base, rows };

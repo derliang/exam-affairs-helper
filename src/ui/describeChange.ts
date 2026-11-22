@@ -1,6 +1,7 @@
 /** 比對前後兩份文件，推出「剛剛做了什麼」給復原按鈕用（純函式；頁面不用各自傳名稱） */
 import type { Division, Student } from '../data';
 import type { Doc } from './store';
+import { rosterYearOf } from './rosterYears';
 
 const same = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.stringify(b);
 const key = (s: Student): string => `${s.classNo}-${s.seatNo}`;
@@ -93,6 +94,8 @@ function makeupLabel(prev: Doc['makeups'], next: Doc['makeups']): string | undef
 
 /** 同一次變更碰到多處時，以一句話涵蓋；找不到就回 undefined（由呼叫端用預設名稱） */
 export function describeChange(prev: Doc, next: Doc): string | undefined {
+  // #634：切換／新增學年度會把工作名單整份換掉，不能當成「刪除全部名單」
+  if (next.rosterYear !== undefined && next.rosterYear !== rosterYearOf(prev)) return `切換學年度（${rosterYearOf(prev)}→${next.rosterYear}）`;
   const parts: string[] = [];
   for (const div of ['senior', 'junior'] as Division[]) {
     const l = rosterLabel(prev.rosters[div], next.rosters[div], div);

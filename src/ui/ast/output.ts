@@ -72,6 +72,8 @@ interface Ctx {
   className: (n: number) => string;
   /** #503、D208：班級順序＝共用設定「班級資料」清單順序（可自訂）；不在清單的排最後 */
   rank: (n: number) => number;
+  /** #503：方案教室依班級順序排（班級教室照「班級資料」清單，預備／綜合教室維持原順序排後面）；各頁教室頁序都用這個 */
+  rooms: AstPlan['input']['rooms'];
   subjectName: Map<string, string>;
   nameOf: Map<string, string>;
   examNoOf: Map<string, string>;
@@ -85,8 +87,12 @@ function ctxOf(doc: Doc, exam: ExamConfig, plan: AstPlan): Ctx {
   const entries = examEntries(doc, exam);
   const examNoOf = new Map<string, string>();
   for (const e of entries) if (e.examNo) examNoOf.set(codeOf(e), e.examNo);
+  const roomIdx = new Map(doc.settings.classrooms.map((r) => [r.id, r] as const));
+  const classIdx = new Map([...classes.values()].map((n, i) => [n, i] as const));
+  const roomAt = (id: string): number => { const r = roomIdx.get(id); return r && r.kind === 'class' ? classIdx.get(r.name) ?? Number.MAX_SAFE_INTEGER : Number.MAX_SAFE_INTEGER; };
+  const rooms = plan.input.rooms.map((r, i) => ({ r, i })).sort((a, b) => roomAt(a.r.id) - roomAt(b.r.id) || a.i - b.i).map((x) => x.r);
   return {
-    doc, exam, plan, slots,
+    doc, exam, plan, slots, rooms,
     roomName: new Map(doc.settings.classrooms.map((r) => [r.id, r.name])),
     className: (n) => classes.get(n) ?? String(n).padStart(2, '0'),
     rank: (n) => order.get(n) ?? Number.MAX_SAFE_INTEGER,
@@ -127,7 +133,7 @@ function labelPages(c: Ctx, paper: LabelPaper): LabelPageModel[] {
     rm.set(k, [...(rm.get(k) ?? []), { slot: slotIdx.get(e.slotId) ?? 0, slotId: e.slotId, code: e.code, subjectId: e.subjectId, row: e.row, depth: e.depth }]);
     bySeat.set(e.roomId, rm);
   }
-  const order = c.plan.input.rooms.map((r) => r.id).filter((id) => bySeat.has(id));
+  const order = c.rooms.map((r) => r.id).filter((id) => bySeat.has(id));
   return order.flatMap((id): LabelPageModel[] => {
     const rm0 = c.plan.input.rooms.find((r) => r.id === id);
     const maxRow = Math.max(1, ...(rm0?.seats ?? []).map((x) => x.row));
@@ -180,7 +186,7 @@ function seatPages(c: Ctx): SeatPageModel[] {
     byRoom.set(e.roomId, rm);
   }
   const pages: SeatPageModel[] = [];
-  for (const room of c.plan.input.rooms) {
+  for (const room of c.rooms) {
     const seats = byRoom.get(room.id);
     if (room.kind !== 'reserve' || !seats) continue;
     type SeatItem = { slot: number; slotId: string; code: string; subjectId: string; row: number; depth: number };
@@ -221,7 +227,7 @@ function seatPages(c: Ctx): SeatPageModel[] {
         return s.subjectIds.flatMap((sid) => {
           const codes = new Set(inSlot.filter((x) => x.subjectId === sid).map((x) => x.code));
           if (!codes.size) return [];
-          // #640（D215）：統計表「時段」欄後面加「起–訖」（沿用 D179 的時段時間：這場考試自己填的 → 共用節次表 → 都沒有就不加）
+          // #640（D216）：統計表「時段」欄後面加「起–訖」（沿用 D179 的時段時間：這場考試自己填的 → 共用節次表 → 都沒有就不加）
           const lead = [dayTag(s.day), s.label.split(' ').pop()! + slotTimeText(c, s), sub(c, sid)];
           return [{ label: sub(c, sid), lead: hasDate ? [dateTag(dates?.[s.day]), ...lead] : lead, per: per(codes), total: codes.size }];
         });
@@ -253,7 +259,7 @@ function studyRefPages(c: Ctx): SeatPageModel[] {
   const unseated = new Map<string, string[]>();
   for (const x of out.studyUnseated ?? []) unseated.set(key(x.slotId, x.roomId), [...(unseated.get(key(x.slotId, x.roomId)) ?? []), x.code]);
   const pages: SeatPageModel[] = [];
-  for (const room of c.plan.input.rooms) {
+  for (const room of c.rooms) {
     for (const s of c.slots) {
       const here = new Set(out.study.filter((x) => x.slotId === s.id && x.roomId === room.id).map((x) => x.code));
       if (here.size === 0) continue;
@@ -339,7 +345,7 @@ function announcePages(c: Ctx): TablePageModel[] {
 const CELL_TEXT: Record<string, string> = { exam: '考試', study: '自習', borrow: '借用自習', pending: '待核可', home: '原班', none: '—' };
 
 function usagePages(c: Ctx): TablePageModel[] {
-  const rooms = c.plan.input.rooms;
+  const rooms = c.rooms;
   const rows = rooms.map((r) => [rn(c, r.id), r.kind === 'class' ? '班級教室' : '綜合教室', ...c.slots.map((s) => {
     const u = usageCell(c.plan, s, r);
     return u.count > 0 ? `${CELL_TEXT[u.kind]} ${u.count} 人` : (CELL_TEXT[u.kind] ?? '—');

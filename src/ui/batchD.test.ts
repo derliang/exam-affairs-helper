@@ -71,7 +71,9 @@ describe('單一自習容量：第 3、4、5 步口徑一致（學測）', () =>
     expect(sc.worst?.failPart).toBe('study');
     // 第 3 步格子（reserveNeed）與第 5 步用同一組數字
     const n = reserveNeed(d, d.exams[0]!);
-    expect(n).toMatchObject({ need: 5, exam: 2, study: 3, avail: 8 });
+    // #627：放不下時「需要座位」＝已列入 8 ＋ 整間分配後缺口 3 ＝ 11，不再寫 5（5 < 8 卻判不足，自相矛盾）
+    expect(n).toMatchObject({ need: 11, exam: 2, study: 3, avail: 8 });
+    expect(n.need).toBeGreaterThan(n.avail);
   });
   it('兩間 4 座＝夠；再有一間備用教室時，不夠的情況提示「再列入 N 間」並給教室 id', () => {
     const ok = doc([4, 4]);

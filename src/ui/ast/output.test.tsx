@@ -350,7 +350,7 @@ describe('分科輸出：綜合教室座位表（#220）', () => {
     expect([...p.cells.values()].every((c) => (c.persons?.length ?? 0) > 0)).toBe(true);
     expect(o.seat.reduce((n, pg) => n + pg.cells.size, 0)).toBe(new Set(inReserve.map((e) => `${e.roomId}:${e.row}-${e.depth}`)).size);
   });
-  it('#640（D215）：綜合教室座位表統計表的「時段」欄印起訖時間；沒有時間資料時維持原樣', () => {
+  it('#640（D216）：綜合教室座位表統計表的「時段」欄印起訖時間；沒有時間資料時維持原樣', () => {
     const { doc, exam } = squeezed(4, 4);
     const plain = astOutputs(doc, exam, astPlan(doc, exam)!, 'B4').seat[0]!.stats.table.rows.filter((r) => !r.foot).map((r) => r.lead![1]!);
     expect(plain.every((t) => !/\d:\d\d/.test(t))).toBe(true);

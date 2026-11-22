@@ -100,12 +100,12 @@ export function AstStep5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
   const roomName = (id: string) => roomData.get(id)?.name ?? id;
   const planRooms = plan.input.rooms;
   const used = (r: PlanRoom) => r.kind === 'class' || slots.some((s) => usageCell(plan, s, r).kind !== 'none');
-  const rooms = planRooms.filter(used);
   const slot = slots[Math.min(sel.slot, slots.length - 1)]!;
   // #503：班級教室依「班級資料」清單順序、預備教室等維持原順序排後面；班級篩選也照清單順序
   const classIdx = new Map(doc.settings.classes.filter((c) => c.division === 'senior').map((c, i) => [c.no, i]));
   const classRank = (no: number): number => classIdx.get(no) ?? Number.MAX_SAFE_INTEGER;
   const roomRank = (id: string): number => { const nm = roomData.get(id); const i = nm && nm.kind === 'class' ? [...doc.settings.classes.filter((c) => c.division === 'senior')].findIndex((c) => c.name === nm.name) : -1; return i < 0 ? Number.MAX_SAFE_INTEGER : i; };
+  const rooms = planRooms.filter(used).map((r, i) => ({ r, i })).sort((a, b) => roomRank(a.r.id) - roomRank(b.r.id) || a.i - b.i).map((x) => x.r);
   const examRoomIds = planRooms.filter((r) => plan.out.usage[slot.id]?.[r.id] === 'exam').map((r) => r.id).map((id, i) => ({ id, i })).sort((a, b) => roomRank(a.id) - roomRank(b.id) || a.i - b.i).map((x) => x.id);
   const roomId = sel.room && examRoomIds.includes(sel.room) ? sel.room : examRoomIds[0];
   const roster = slotRoster(plan, slot.id);

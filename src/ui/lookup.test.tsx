@@ -86,6 +86,14 @@ describe('H4 查詢結果', () => {
     const hit = lookupExaminee(d, e, res, entries[0]!);
     expect(hit.rows.map((r) => `${r.subject}:${r.kind}:${r.place}:${r.seat}`)).toEqual(['社會:class:溫:1-1', '自然:class:溫:1-1', '英聽:class:溫:1-1']);
   });
+  it('#633 全班打散：座位在別班教室時寫「在〔教室〕考試」，不寫「原教室」；在自己班教室才寫「原教室」', () => {
+    const { d, e, res } = seated();
+    const moved = { ...res, assignments: res.assignments.map((x) => (x.code === '0101' ? { ...x, classroomId: 'L' } : x)) };
+    const hit = lookupExaminee(d, e, moved, entries[0]!);
+    expect(hit.rows.map((r) => r.note)).toEqual(['在良考試', '在良考試', '在良考試']);
+    const own = lookupExaminee(d, e, res, entries[0]!);
+    expect(own.rows.every((r) => r.note === '在原教室考試')).toBe(true);
+  });
   it('抽離自習：不考社會的人到預備教室自習，無座位；其他科仍在班級教室', () => {
     const { d, e, res } = seated();
     const hit = lookupExaminee(d, e, res, entries[1]!);

@@ -124,7 +124,7 @@ function YearBar({ doc, onChange }: { doc: Doc; onChange: (d: Doc) => void }) {
         {!adding && <Button small onClick={() => setAdding(true)}>新增學年度</Button>}
         {adding && (
           <>
-            <input class="input" style="max-width:110px" inputMode="numeric" aria-label="新學年度（民國年）" placeholder="例如 116" value={text} onInput={(e) => setText(e.currentTarget.value)} />
+            <input class="input" style="max-width:110px" inputMode="numeric" aria-label="新學年度（民國年）" placeholder="例如 116" value={text} onInput={(e) => setText(e.currentTarget.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); go(Number(text)); } }} />
             <Button small kind="primary" onClick={() => go(Number(text))}>新增並切換</Button>
             <Button small onClick={() => { setAdding(false); setErr(''); }}>取消</Button>
           </>
