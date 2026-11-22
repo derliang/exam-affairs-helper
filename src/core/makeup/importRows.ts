@@ -25,7 +25,7 @@ const SYNONYMS: [MakeupField, RegExp][] = [
   ['studentId', /^(學號|學生學號|學籍號碼)$/],
   ['newClass', /^(新班|新班級|新班別)$/],
   ['newSeat', /^(新號|新座號)$/],
-  ['oldClass', /^(舊班|舊班級|舊班別|原班|原班級|班級|班別)$/],
+  ['oldClass', /^(舊班|舊班級|舊班別|原班|原班級|班級|班別|班級名稱)$/],
   ['oldSeat', /^(舊號|舊座號|原座號|原號|座號)$/],
   ['name', /^(姓名|學生姓名)$/],
   ['subjectCode', /^(科代碼|科目代碼|課程代碼|科目代號)$/],
@@ -53,11 +53,11 @@ export function mapMakeupColumns(header: readonly string[]): MakeupColumnMap {
     if (!f) return;
     const n = normalizeCell(h);
     // 「班級」「座號」只在沒有明確的舊班／舊號時才當舊班舊號
-    const weak = (f === 'oldClass' && /^(班級|班別)$/.test(n)) || (f === 'oldSeat' && n === '座號');
+    const weak = (f === 'oldClass' && /^(班級|班別|班級名稱)$/.test(n)) || (f === 'oldSeat' && n === '座號');
     if (map[f] === undefined) map[f] = i;
     else if (!weak) {
       const prev = normalizeCell(header[map[f] as number] ?? '');
-      const prevWeak = /^(班級|班別|座號)$/.test(prev);
+      const prevWeak = /^(班級|班別|班級名稱|座號)$/.test(prev);
       if (prevWeak) map[f] = i;
     }
   });

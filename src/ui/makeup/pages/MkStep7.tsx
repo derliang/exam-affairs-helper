@@ -116,7 +116,7 @@ export function MkStep7(p: { s: MakeupSession; onStep: (n: MakeupStepNo) => void
               </div>
             ))}
           </div>
-          <p class="small muted">O-6 座位標籤為選配，這一版尚未提供。檔案以 Word 為主、PDF 為輔（PDF 會開啟列印頁，請用瀏覽器「另存為 PDF」）。</p>
+          <p class="small muted">座位標籤為選配，這一版尚未提供。檔案以 Word 為主、PDF 為輔（PDF 會開啟列印頁，請用瀏覽器「另存為 PDF」）。</p>
           <div class="dlbtns row" style="align-items:flex-start;gap:24px;flex-wrap:wrap">
             <div class="stack" style="gap:6px">
               <FormatButton kind="word" disabled={busy || why !== ''} onClick={() => { void goWord(); }}>下載 Word</FormatButton>

@@ -11,7 +11,9 @@ import {
   type MakeupColumnMap,
   type MakeupField,
   type MakeupParseResult,
+  type MakeupProblemKind,
   type MakeupResolution,
+  type SkipReason,
   type MakeupRow,
 } from '../../core/makeup';
 import type { MakeupSession } from './session';
@@ -27,7 +29,7 @@ export const MAPPING_FIELDS: { field: MakeupField; label: string; hint: string }
   { field: 'subjectCode', label: '科代碼', hint: '可不對應' },
   { field: 'subjectName', label: '科目', hint: '' },
   { field: 'credit', label: '學分', hint: '可不對應' },
-  { field: 'attr', label: '科屬性', hint: '1＝另行通知，只統計不排考程（暫定 U-1）' },
+  { field: 'attr', label: '科屬性', hint: '1＝另行通知，只統計不排考程' },
   { field: 'term', label: '學期', hint: '可不對應' },
   { field: 'score', label: '分數', hint: '可不對應' },
 ];
@@ -57,6 +59,19 @@ export function pickSheets(sheets: readonly { name: string; rows: string[][] }[]
   return { picks, main };
 }
 
+/** 內容與前面某張工作表完全相同的工作表（#623：同一份名單常被複製成好幾個分頁，只匯入一份） */
+export function identicalSheets(sheets: readonly { name: string; rows: string[][] }[]): number[] {
+  const seen = new Set<string>();
+  const out: number[] = [];
+  sheets.forEach((s, i) => {
+    const rows = s.rows.filter((r) => r.some((c) => c && c.trim()));
+    if (rows.length === 0) return;
+    const k = JSON.stringify(rows.map((r) => r.map((c) => (c ?? '').trim())));
+    if (seen.has(k)) out.push(i); else seen.add(k);
+  });
+  return out;
+}
+
 /** 空檔：沒有任何非空的儲存格 */
 export const isEmptyBook = (sheets: readonly { rows: string[][] }[]): boolean =>
   sheets.every((s) => s.rows.every((r) => r.every((c) => !c || !c.trim())));
@@ -65,10 +80,10 @@ const sameMap = (a: MakeupColumnMap, b: MakeupColumnMap): boolean => JSON.string
 
 /**
  * 依畫面確認的對應解析：使用者沒改對應就整本一起解析（多工作表、跨表判重）；
- * 改了對應就只解析所選那張工作表（手動表頭＋對應）。
+ * 改了對應、或使用者在「工作表」下拉明確選了一張（#623），就只解析所選那張工作表（手動表頭＋對應）。
  */
-export function parseWithMapping(sheets: readonly { name: string; rows: string[][] }[], pick: SheetPick, columns: MakeupColumnMap, header: number): MakeupParseResult {
-  if (header === pick.header && sameMap(columns, pick.columns)) return parseMakeupWorkbook(sheets);
+export function parseWithMapping(sheets: readonly { name: string; rows: string[][] }[], pick: SheetPick, columns: MakeupColumnMap, header: number, onlyThisSheet = false): MakeupParseResult {
+  if (!onlyThisSheet && header === pick.header && sameMap(columns, pick.columns)) return parseMakeupWorkbook(sheets);
   return parseMakeupSheet(pick.rows, {}, '', { header, columns });
 }
 
@@ -201,5 +216,10 @@ export function overlapRows(current: MakeupParseResult, next: MakeupParseResult,
 
 export function setResolution(s: MakeupSession, res: MakeupResolution): MakeupSession {
   return { ...s, resolutions: [...s.resolutions.filter((r) => r.rowId !== res.rowId), res] };
+}
+/** 把某一種問題列（例：同學號同科重複）全部略過、記同一個原因（#623 批次處理） */
+export function skipProblemsOfKind(s: MakeupSession, parse: MakeupParseResult, kind: MakeupProblemKind, reason: SkipReason, rowIds?: ReadonlySet<string>): MakeupSession {
+  const ids = new Set(parse.problems.filter((p) => p.kind === kind && (!rowIds || rowIds.has(p.rowId))).map((p) => p.rowId));
+  return { ...s, resolutions: [...s.resolutions.filter((r) => !ids.has(r.rowId)), ...[...ids].map((rowId): MakeupResolution => ({ rowId, action: 'skip', reason }))] };
 }
 export const clearResolution = (s: MakeupSession, rowId: string): MakeupSession => ({ ...s, resolutions: s.resolutions.filter((r) => r.rowId !== rowId) });

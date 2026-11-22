@@ -19,12 +19,11 @@ describe('補考畫面（伺服器端渲染煙霧測試＋文案）', () => {
     expect(ws(s, 6)).toContain('檢核與對帳');
     expect(ws(s, 7)).toContain('下載 Word');
   });
-  it('① 設定：日期已過、年級未指定都有說明；暫定項標暫定', () => {
+  it('① 設定：日期已過、年級未指定都有說明；設定頁不露內部代號', () => {
     const past = { ...s, days: [{ id: 'd1', date: '2020-01-01', start: 480 }] };
     expect(ws(past, 1)).toContain('這個日期已經過了');
     expect(ws({ ...s, gradeDay: { S1: 'd1' } }, 1)).toContain('還沒有指定考日');
-    expect(ws(s, 1)).toContain('暫定 U-2');
-    expect(ws(s, 1)).toContain('暫定 U-5');
+    expect(ws(s, 1)).not.toMatch(/暫定|U-\d|O-\d|C-12|106-1/);
   });
   it('② 匯入：C-1 對帳等式與四個數字；沒有名單時是拖放區', () => {
     const html = ws(s, 2);
@@ -46,7 +45,7 @@ describe('補考畫面（伺服器端渲染煙霧測試＋文案）', () => {
     const html = ws(s, 4);
     expect(html).toContain('班級 × 科目');
     expect(html).toContain('各科總計');
-    expect(html).toContain('與 C-1 納入人次一致');
+    expect(html).toContain('與匯入對帳的納入人次一致');
     expect(html).toContain('多科生科數分布');
     expect(html).toContain('Σ（科數 × 人數）');
   });
