@@ -14,6 +14,8 @@ import { examEntries } from '../seating';
 import type { Doc } from '../store';
 import { astSlots, awayStudy, usageCell, type AstPlan, type AstSlot } from './model';
 import { codeOf, homeRoomIds } from '../../core/astD99/contract';
+import { slotRange } from '../../core/examTimes';
+import { scheduleKeyOf, scheduleOf } from '../../core/periods';
 
 export type AstOutputKey = 'label' | 'seat' | 'ann' | 'use' | 'reg' | 'study';
 
@@ -168,6 +170,11 @@ function labelPages(c: Ctx, paper: LabelPaper): LabelPageModel[] {
 
 // ───── 綜合教室座位表（#220）─────
 
+function slotTimeText(c: Ctx, s: AstSlot): string {
+  if (!s.slot) return '';
+  const r = slotRange(scheduleOf(c.doc.settings, scheduleKeyOf(c.exam.kind, c.exam.round)), c.exam.dayTimes, s.day, s.slot);
+  return r ? ` ${r}` : '';
+}
 /** 綜合教室座位表：每間「有人在那裡考試」的綜合教室一頁，格內每人一區（同整合標籤），下方每時段一列的各班人數統計＋不重複人數 */
 function seatPages(c: Ctx): SeatPageModel[] {
   const slotIdx = new Map(c.slots.map((s, i) => [s.id, i]));
@@ -220,7 +227,8 @@ function seatPages(c: Ctx): SeatPageModel[] {
         return s.subjectIds.flatMap((sid) => {
           const codes = new Set(inSlot.filter((x) => x.subjectId === sid).map((x) => x.code));
           if (!codes.size) return [];
-          const lead = [dayTag(s.day), s.label.split(' ').pop()!, sub(c, sid)];
+          // #640（D216）：統計表「時段」欄後面加「起–訖」（沿用 D179 的時段時間：這場考試自己填的 → 共用節次表 → 都沒有就不加）
+          const lead = [dayTag(s.day), s.label.split(' ').pop()! + slotTimeText(c, s), sub(c, sid)];
           return [{ label: sub(c, sid), lead: hasDate ? [dateTag(dates?.[s.day]), ...lead] : lead, per: per(codes), total: codes.size }];
         });
       });

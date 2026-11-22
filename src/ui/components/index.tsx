@@ -96,11 +96,12 @@ export function StepNav(p: { steps: { no: number; name: string; state: StepState
   const mark: Partial<Record<StepState, string>> = { done: '已完成', stale: '過期', skip: '不需要' };
   const cur = p.steps.find((x) => x.state === 'cur');
   const need = p.steps.filter((x) => x.state !== 'skip').length; // 國中部沒有的步驟不算進總步數
-  // #362：「已完成 N 步」只算目前步驟之前的完成步驟；停在第 1 步就是 0 步，不會因為後面步驟的資料已符合條件而多算
-  const doneN = p.steps.filter((s) => s.state === 'done' && (!cur || s.no < cur.no)).length;
+  // #634（D217，修訂 D151②）：「已完成 N 步」＝側欄打勾（done）的步驟數，與列表「N／M 步完成」同一口徑；M 與「第 X／M 步」的 X 都不含「不需要」的步驟
+  const doneN = p.steps.filter((s) => s.state === 'done').length;
+  const pos = cur ? p.steps.filter((x) => x.state !== 'skip' && x.no <= cur.no).length : 0;
   return (
     <>
-    <p class="stepprog" aria-live="polite">{cur ? `第 ${cur.no}／${p.steps.length} 步` : `共 ${need} 步`}　已完成 {doneN} 步</p>
+    <p class="stepprog" aria-live="polite">{cur ? `第 ${pos}／${need} 步` : `共 ${need} 步`}　已完成 {doneN} 步</p>
     <ol class="steps" aria-label="步驟">
       {p.steps.map((s) => {
         const tag = mark[s.state];
