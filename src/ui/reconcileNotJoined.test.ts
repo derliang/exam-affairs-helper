@@ -59,7 +59,7 @@ describe('學測：未參加＝自習，座位表上要有他的座位', () => {
     expect(g.why).toMatch(/不通過.*須先修正/);
   });
 
-  it('全科缺考（D137 預設排座）也是自習，有座位；算報名者、不算未參加', () => {
+  it('全科缺考（D137 預設排座）也是自習，有座位；算不參加、不算報名（D148、#626：與 ② 的「考生 N、不參加 M」同口徑）', () => {
     const { doc, exam } = gsatDoc();
     const cur = doc.examFiles![exam.id]!;
     const entries: ExamEntry[] = cur.entries!.map((e) => (e.classNo === 1 && e.seatNo === 5 ? { ...e, subjectIds: [] } : e));
@@ -67,7 +67,7 @@ describe('學測：未參加＝自習，座位表上要有他的座位', () => {
     const re = reseat(d2, exam, '2026-11-10T04:00:00Z');
     if (!re.ok) throw new Error(re.error);
     const r = ready(reconcile(re.doc, exam));
-    expect(r.scope).toEqual({ total: 30, enrolled: 30, absent: 0 });
+    expect(r.scope).toEqual({ total: 30, enrolled: 29, absent: 1 });
     expect(re.doc.examFiles![exam.id]!.result!.assignments.some((a) => a.code === '0105')).toBe(true);
     expect(r.checks.filter((c) => c.light === 'fail')).toEqual([]);
     for (const row of r.ledger) { expect(row.ok).toBe(true); expect(row.exam + row.study).toBe(30); }

@@ -12,6 +12,7 @@ import { enabledExportItems, useIsEnabled } from '../features';
 import { prepareExport, relevantIssues, unappliedDiffsOf, unresolvedDiffsOf } from '../exportInput';
 import { afterExport } from '../flow';
 import { roomsOverLabel } from '../rooms';
+import { orderedRoomIds } from '../../export/classOrder';
 import type { Doc } from '../store';
 import { isStale, validationChecks } from '../seating';
 import { defaultLabelLayout, labelSizeNote } from '../../export/model';
@@ -78,7 +79,7 @@ function PreviewCard(p: { prepared: Extract<ReturnType<typeof prepareExport>, { 
   const [kind, setKind] = useState<PreviewKind>('label');
   const [ri, setRi] = useState(0);
   const { input } = p.prepared;
-  const rooms = input.exam.classroomIds
+  const rooms = orderedRoomIds(input) // #503：頁籤照班級順序（與匯出檔同口徑）
     .map((id) => input.settings.classrooms.find((c) => c.id === id))
     .filter((c): c is NonNullable<typeof c> => !!c)
     .sort((a, b) => Number(a.kind === 'reserve') - Number(b.kind === 'reserve'));

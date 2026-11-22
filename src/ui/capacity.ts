@@ -88,7 +88,7 @@ export interface StudyGroupRow {
   /** 抽離考試與抽離自習必須各用整間教室（D27）：依預備教室順序各自取到夠的間數 */
   examRooms: number;
   studyRooms: number;
-  /** 至少需要的座位（考試＋自習，兩者分間排） */
+  /** 至少需要的座位（考試＋自習，兩者分間排）。夠用時＝兩者人數合計；放不下時＝已列入座位＋整間分配後的缺口，與「缺 N」同口徑（#627：不再出現「需要 69、已列 72 卻不足」） */
   seatsNeed: number;
   /** 已列入的預備教室座位合計 */
   avail: number;
@@ -173,7 +173,7 @@ function studyGroupsOf(doc: Doc, exam: ExamConfig) {
       key: g.subjectIds.join('+'), label: g.subjectIds.filter((id) => marks.some((m) => m.subjectId === id && !overrides.has(m.code)) || entries.some((e) => !e.subjectIds.includes(id))).map((id) => name.get(id) ?? id).join('、') || g.subjectIds.map((id) => name.get(id) ?? id).join('、'),
       periods: g.periods, when: [...whenSet].join('、') || `第 ${g.periods.join('、')} 節`, examCount: ex.size, studyCount: st.size, stay: nonTake.size,
       stayByClass: [...byClass].sort((x, y) => x[0] - y[0]).map(([classNo, count]) => ({ classNo, count })),
-      examRooms: a.examRooms, studyRooms: a.studyRooms, seatsNeed: n, avail, ok: a.ok, short: Math.max(0, a.short), ...(a.failPart ? { failPart: a.failPart } : {}),
+      examRooms: a.examRooms, studyRooms: a.studyRooms, seatsNeed: a.ok ? n : Math.max(n, avail + Math.max(0, a.short)), avail, ok: a.ok, short: Math.max(0, a.short), ...(a.failPart ? { failPart: a.failPart } : {}),
     });
   }
   return { applicable: true, groups, used, reserveAll, avail, spare, roomSeats, spareIds: spareRooms.map((r) => r.id) };
