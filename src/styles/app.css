@@ -947,6 +947,8 @@ details.more{font-size:14px;color:var(--text-2)}details.more summary{cursor:poin
 .ut td button[data-lock]{position:relative}
 .ut td button[data-lock]::after{content:"鎖";position:absolute;top:2px;right:2px;background:var(--surface);color:var(--text);border:1px solid var(--text);font-size:10px;font-weight:700;line-height:1;padding:1px 3px;border-radius:3px}
 .mgrid{grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr))}
+/* 稿 v2.102（D214，#501）：時程候選卡門檻 280→240，1280 寬主欄約 520px 也能 2×2 並排（原本 2×280+間距＝572 放不下，掉成一欄直排） */
+.mgrid.cands{grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr))}
 .mcard{min-width:0}
 @media (max-width:560px){.seg.cmpseg{display:flex;flex-direction:column;width:100%}.seg.cmpseg button{text-align:left;border-top:1px solid var(--line-2)}.seg.cmpseg button:first-child{border-top:0}}
 /* A-1：有左側步驟條時（約 761～1100px）中欄不夠寬，摘要列逐項也用窄版兩欄，說明文字不被擠成細欄 */
@@ -1114,6 +1116,10 @@ details[open]:not(.moremenu)>summary::after{content:" ▴"}
   .rt-t.rt-wide tr.grp{border:0;background:transparent;padding:6px 0 0;margin-bottom:0}
   .rt-t.rt-wide tr.grp td{font-size:13px;color:var(--text-2);font-weight:700}
   .rt-t.rt-wide td.on{padding:4px 8px;border-radius:var(--r-sm)}
+  /* 稿 v2.102（D214，#642）：班級資料（rt-nh）小卡左右並排（每張 ≥232px，640 寬 2 欄、375 寬 1 欄），12 個班級色 6×2 */
+  .rt-t.rt-nh tbody{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:8px 12px;align-items:start}
+  .rt-t.rt-nh tr{margin-bottom:0}
+  .rt-t.rt-nh .swatches{display:grid;grid-template-columns:repeat(6,28px);gap:8px;justify-content:start}
   }
 @container (max-width:480px){
   .rt-t:not(.rt-a) thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
