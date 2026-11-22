@@ -167,14 +167,20 @@ describe('Word 輸出（D44/D45）', () => {
     for (const x of footers) expect(x).toContain('資料版本碼：A1B2C3D4');
   });
 
-  it('字型位元組還原後與原檔相同（混淆正確）', async () => {
+  it('字型位元組還原後是有效的子集字型：用到的字形與原檔相同、整檔校驗和正確（混淆正確，#630）', async () => {
     const buf = await renderDocx({ seat: buildSeatPages(makeFixture()) }, { fonts, ...meta });
     const { z, text } = await unzip(buf);
     const keys = [...(await text('word/fontTable.xml')).matchAll(/fontKey="\{([^}]+)\}"/g)].map((m) => m[1]!);
     const d = Buffer.from(await z.file('word/fonts/font1.odttf')!.async('nodebuffer'));
     const k = Buffer.from(keys[0]!.replace(/-/g, ''), 'hex').reverse();
     for (let j = 0; j < 32; j++) d[j]! ^= k[j % 16]!;
-    expect(d.equals(Buffer.from(fonts.regular))).toBe(true);
+    expect(d.length).toBeLessThan(600_000); // 原本整套 4.8MB
+    let sum = 0;
+    for (let j = 0; j < d.length; j += 4) sum = (sum + d.readUInt32BE(j)) >>> 0;
+    expect(sum).toBe(0xb1b0afba); // 整檔校驗和（head.checkSumAdjustment）
+    const { glyphBytesOf } = await import('./fontSubset');
+    for (const ch of '座位表') expect(Math.abs(glyphBytesOf(new Uint8Array(d), ch) - glyphBytesOf(fonts.regular, ch))).toBeLessThanOrEqual(3);
+    expect(glyphBytesOf(new Uint8Array(d), '鑫')).toBe(0); // 沒用到的字形已清空
   });
 
   it('標籤：B4／A3 紙張、欄寬＝紙寬÷7、欄數＝排數、列數＝深位數（D113）', async () => {

@@ -8,6 +8,7 @@
  * 「依考日」：給 dayId 只產生那一天的檔（檔名帶日期）；此時 readback 為空陣列（C-14 只比全場次），
  *   各檔仍有 verification（與該考日的排程比對）。
  */
+import { tableModelPages } from './pageEstimate';
 import {
   buildOutputs,
   fmtTime,
@@ -230,11 +231,11 @@ export function produceMakeupMergedPrintHtml(
   }
   if (tables.length === 0) return null;
   const html = renderPrintHtml({ table: tables }, { generatedAt: opts.generatedAt, dataVersion: dataVersionOf(sc), extraCss: opts.extraCss });
-  return { name: `補考-列印用頁面${sc.suffix}.html`, html, pages: tables.length, kinds: used, problems };
+  return { name: `補考-列印用頁面${sc.suffix}.html`, html, pages: tables.reduce((a, t) => a + tableModelPages(t), 0), kinds: used, problems };
 }
 
 /** ⑦ 按鈕旁預告用：勾選文件的列印頁數合計 */
 export function countMakeupPrintPages(input: ProduceMakeupInput, kinds: readonly MakeupDocKind[], dayId?: string): number {
   const sc = scope(input, dayId);
-  return kinds.reduce((a, k) => a + pagesOf(k, sc.paper).length, 0);
+  return kinds.reduce((a, k) => a + pagesOf(k, sc.paper).reduce((n, t) => n + tableModelPages(t), 0), 0);
 }

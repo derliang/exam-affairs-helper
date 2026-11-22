@@ -6,6 +6,8 @@
  *  - 'separate-family'：Bold 當另一個字型家族「Noto Sans TC Bold」嵌入，粗體字用該家族（備案）。
  *    兩者待真檔抽驗後擇一（見 docs/archive/dispatch/完工-D.md）。
  */
+import JSZip from 'jszip';
+import { subsetTtf } from './fontSubset';
 import {
   AlignmentType,
   BorderStyle,
@@ -204,7 +206,8 @@ function headBlock(
   o: { widthMm: number; h1: string; h2?: string; room: string; h1Pt: number; roomPt: number; padX: number; padY: number; /** 教室牌文字寬度的餘裕（mm），預設 1.5；標籤頁加大（Word 會把「高1教室」這類短名折成兩行） */ slackMm?: number },
   mode: BoldMode,
 ): Table {
-  const roomW = textMm(o.room, o.roomPt, true) + 2 * o.padX + (o.slackMm ?? 1.5);
+  // #622：只剩 1 排的標籤頁，表格比教室牌窄，左欄寬度會變負值（Word 檔無法產生）；教室牌最多佔 60% 寬，放不下的字在牌內折行
+  const roomW = Math.min(textMm(o.room, o.roomPt, true) + 2 * o.padX + (o.slackMm ?? 1.5), o.widthMm * 0.6);
   const leftW = o.widthMm - roomW;
   const lineBd = bd(NAVY, 18);
   const left: Paragraph[] = [
@@ -871,8 +874,29 @@ function tableSection(page: TablePageModel, opts: DocxOptions): ISectionOptions 
 
 export type DocxPages = { seat?: SeatPageModel[]; label?: LabelPageModel[]; list?: ListPageModel | ListPageModel[]; table?: TablePageModel[] };
 
-/** 把一類輸出合併成一個多頁檔（D69）；回傳 .docx 位元組 */
+/** 把一類輸出合併成一個多頁檔（D69）；回傳 .docx 位元組。字型只內嵌文件用到的字形（#630） */
 export async function renderDocx(pages: DocxPages, opts: DocxOptions): Promise<Uint8Array> {
+  // 第一輪不嵌字型，只為了收集文件實際用到的字；第二輪嵌入清掉未用字形的子集（檔案由約 4MB 降到數百 KB）
+  const probe = await packDocx(pages, opts, undefined);
+  const chars = await usedChars(probe);
+  const subset: FontData = { regular: subsetTtf(opts.fonts.regular, chars), bold: subsetTtf(opts.fonts.bold, chars) };
+  return packDocx(pages, opts, subset);
+}
+
+/** 文件內所有出現過的字元，再加基本拉丁字母、數字、常用標點（使用者在 Word 內小改文字時不退回電腦字型） */
+async function usedChars(docx: Uint8Array): Promise<Set<string>> {
+  const z = await JSZip.loadAsync(docx);
+  const set = new Set<string>();
+  for (let c = 0x20; c < 0x7f; c++) set.add(String.fromCharCode(c));
+  for (const ch of '，。、；：！？（）「」『』【】《》〈〉～…—－　○●◎△▲□■☆★※→←↑↓') set.add(ch);
+  for (const name of Object.keys(z.files)) {
+    if (!/^word\/[^/]+\.xml$/.test(name)) continue;
+    for (const ch of await z.files[name]!.async('string')) set.add(ch);
+  }
+  return set;
+}
+
+async function packDocx(pages: DocxPages, opts: DocxOptions, fonts: FontData | undefined): Promise<Uint8Array> {
   const mode = opts.boldMode ?? 'embed-bold';
   const sections: ISectionOptions[] = [];
   for (const p of pages.seat ?? []) sections.push(seatSection(p, opts));
@@ -884,12 +908,13 @@ export async function renderDocx(pages: DocxPages, opts: DocxOptions): Promise<U
     creator: '考務小幫手',
     title: '考務小幫手輸出',
     // docx 9.15 原生支援 bold 面（寫成同家族的 embedBold）；舊做法把 Bold 當另一個家族
-    fonts:
-      mode === 'embed-bold'
-        ? [{ name: FONT, data: opts.fonts.regular as never, bold: opts.fonts.bold as never, characterSet: '00' }]
+    fonts: !fonts
+      ? []
+      : mode === 'embed-bold'
+        ? [{ name: FONT, data: fonts.regular as never, bold: fonts.bold as never, characterSet: '00' }]
         : [
-            { name: FONT, data: opts.fonts.regular as never, characterSet: '00' },
-            { name: FONT_BOLD, data: opts.fonts.bold as never, characterSet: '00' },
+            { name: FONT, data: fonts.regular as never, characterSet: '00' },
+            { name: FONT_BOLD, data: fonts.bold as never, characterSet: '00' },
           ],
     styles: { default: { document: { run: { font: { ascii: FONT, hAnsi: FONT, eastAsia: FONT, cs: FONT }, size: 20 } } } },
     sections,
