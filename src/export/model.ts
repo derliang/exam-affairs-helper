@@ -96,6 +96,8 @@ export interface SeatPageModel {
   examName: string;
   /** 表頭（校-54）：有值時列印頁頁首直接印它，不再拆「考試名稱＋座位表」 */
   heading?: string;
+  /** 學校名稱（#625）：印在頁首標題最前面；空白就不印 */
+  school?: string;
   /** 標題後面的日期範圍（D147④）：「第 1 天 11/17（二）～第 2 天 11/18（三）」；沒有天別資訊就沒有 */
   dateText?: string;
   roomName: string;
@@ -118,6 +120,8 @@ export interface LabelPageModel {
   title: string;
   examName: string;
   heading?: string;
+  /** 學校名稱（#625）：印在頁首標題最前面；空白就不印 */
+  school?: string;
   /** 標題後面的日期範圍（D147④）：「第 1 天 11/17（二）～第 2 天 11/18（三）」；沒有天別資訊就沒有 */
   dateText?: string;
   roomName: string;
@@ -781,6 +785,7 @@ export function buildSeatPages(input: ExportInput, scope: Scope = 'all'): SeatPa
       kind: 'seat',
       title: `${input.exam.name}　${room.name}　座位表`,
       examName: input.exam.name,
+      ...(input.settings.schoolName?.trim() ? { school: input.settings.schoolName.trim() } : {}),
       ...(input.seatHeading?.trim() ? { heading: input.seatHeading.trim() } : {}),
       ...dateProp(examDays(input), input.exam.examDates),
       roomName: room.name,
@@ -841,6 +846,7 @@ export function buildSeatPages(input: ExportInput, scope: Scope = 'all'): SeatPa
           kind: 'seat',
           title: `${input.exam.name}　${room.name}　座位表（時段版${slotHead ? `：${slotHead}` : ''}）`,
           examName: input.exam.name,
+          ...(input.settings.schoolName?.trim() ? { school: input.settings.schoolName.trim() } : {}),
           ...(input.seatHeading?.trim() ? { heading: input.seatHeading.trim() } : {}),
           ...dateProp([...sub.values()].flatMap((m) => m.lines.flatMap((l) => (l.day === undefined ? [] : [l.day]))), input.exam.examDates),
           roomName: slotHead ? `${room.name}　${slotHead}` : room.name,
@@ -892,6 +898,7 @@ function studyReferencePages(input: ExportInput, ctx: Ctx, rooms: Map<string, Cl
       kind: 'seat',
       title: `${input.exam.name}　${room.name}　自習座位（非考試座位）`,
       examName: input.exam.name,
+      ...(input.settings.schoolName?.trim() ? { school: input.settings.schoolName.trim() } : {}),
       ...(input.seatHeading?.trim() ? { heading: input.seatHeading.trim() } : {}),
       ...dateProp(g.subjectIds.flatMap((id) => (periods.get(id) ?? []).filter((sp) => sp.slot).map((sp) => sp.day ?? 0)), input.exam.examDates),
       roomName: `${room.name}　自習座位`,
@@ -974,6 +981,7 @@ export function buildLabelPages(input: ExportInput, scope: Scope = 'all'): Label
         kind: 'label',
         title: `${input.exam.name}　${room.name}${suffix}`,
         examName: input.exam.name,
+        ...(input.settings.schoolName?.trim() ? { school: input.settings.schoolName.trim() } : {}),
         ...(input.labelHeading?.trim() ? { heading: input.labelHeading.trim() } : {}),
         ...dateProp(examDays(input)),
         roomName: room.name + suffix,
@@ -1004,6 +1012,7 @@ export function buildLabelPages(input: ExportInput, scope: Scope = 'all'): Label
         kind: 'label',
         title: `${input.exam.name}　${room.name}　抽離考試${suffix}`,
         examName: input.exam.name,
+        ...(input.settings.schoolName?.trim() ? { school: input.settings.schoolName.trim() } : {}),
         ...(input.labelHeading?.trim() ? { heading: input.labelHeading.trim() } : {}),
         ...dateProp(list.flatMap((m) => m.lines.flatMap((l) => (l.day === undefined ? [] : [l.day])))),
         roomName: `${room.name}　抽離考試${suffix}`,
@@ -1370,12 +1379,14 @@ export function textEm(s: string, bold = false): number {
 
 /** 頁首右上顯示的教室名：預備教室頁在前面加「預備教室」（G34：合併檔內分得出哪幾頁是預備教室；名稱已含該字就不重複） */
 /** 座位表頁首第一行：表頭（或考試名稱）加日期範圍（D147④） */
-export function titleOf(p: { heading?: string; examName: string; dateText?: string }): string {
-  return `${p.heading ?? p.examName}${p.dateText ? `　${p.dateText}` : ''}`;
+/** 學校名稱放標題最前面（#625）；表頭範本裡已經自己寫了校名就不重複 */
+const withSchool = (school: string | undefined, title: string): string => (school?.trim() && !title.includes(school.trim()) ? `${school.trim()}　${title}` : title);
+export function titleOf(p: { heading?: string; examName: string; dateText?: string; school?: string }): string {
+  return withSchool(p.school, `${p.heading ?? p.examName}${p.dateText ? `　${p.dateText}` : ''}`);
 }
 /** 標籤頁首第一行：表頭（或「考試名稱　標籤」）加日期範圍 */
-export function labelTitleOf(p: { heading?: string; examName: string; dateText?: string }): string {
-  return `${p.heading ?? `${p.examName}　標籤`}${p.dateText ? `　${p.dateText}` : ''}`;
+export function labelTitleOf(p: { heading?: string; examName: string; dateText?: string; school?: string }): string {
+  return withSchool(p.school, `${p.heading ?? `${p.examName}　標籤`}${p.dateText ? `　${p.dateText}` : ''}`);
 }
 export function roomShown(p: { roomName: string; tag?: string }): string {
   return p.tag && !p.roomName.includes(p.tag) ? `${p.tag}　${p.roomName}` : p.roomName;

@@ -45,9 +45,9 @@ describe('校-54 表頭接到匯出標題', () => {
     expect(seat.heading).toBe(seatHeading);
     expect(label.heading).toBe(labelHeading);
     const sh = renderPrintHtml({ seat: [seat] }, { generatedAt: '2026-11-13T00:00:00.000Z', dataVersion: 'x' });
-    expect(sh).toContain(`<div class="pp-h1">${seatHeading}`); // 後面可接日期範圍（D147④）
+    expect(sh).toContain(`<div class="pp-h1">${f.settings.schoolName}　${seatHeading}`); // 校名在最前面（#625）；後面可接日期範圍（D147④）
     expect(sh).not.toContain('<div class="pp-h2">座位表</div>');
-    expect(renderPrintHtml({ label: [label] }, { generatedAt: '2026-11-13T00:00:00.000Z', dataVersion: 'x' })).toContain(`<div class="pp-h1">${labelHeading}`);
+    expect(renderPrintHtml({ label: [label] }, { generatedAt: '2026-11-13T00:00:00.000Z', dataVersion: 'x' })).toContain(`<div class="pp-h1">${f.settings.schoolName}　${labelHeading}`);
   });
   it('使用者自訂表頭照用；沒給（舊呼叫端）維持考試名稱＋座位表', () => {
     const f = makeFixture();

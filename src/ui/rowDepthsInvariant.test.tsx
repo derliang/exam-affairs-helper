@@ -26,7 +26,9 @@ function seat(f: ExportInput) {
   if (!r.ok) throw new Error('排座失敗');
   return r.result;
 }
-const out = (f: ExportInput) => ({ seat: sha(buildSeatPages(f, 'all')), label: sha(buildLabelPages(f, 'all')) });
+// #625 之後頁面模型多一個 school 欄位（頁首校名）；這裡比的是座位與格子內容，所以雜湊前拿掉
+const noSchool = <T extends { school?: string }>(pages: T[]): T[] => pages.map(({ school: _s, ...rest }) => rest as T);
+const out = (f: ExportInput) => ({ seat: sha(noSchool(buildSeatPages(f, 'all'))), label: sha(noSchool(buildLabelPages(f, 'all'))) });
 
 /** 在加每排步進器之前的程式（origin/main 5f9c0fe，core、export、data 本 PR 未改）算出的值 */
 const GOLDEN = {

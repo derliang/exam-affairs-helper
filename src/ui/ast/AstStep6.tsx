@@ -25,7 +25,7 @@ const FILE_LABEL: Record<AstOutputKey, string> = { label: '整合標籤', seat: 
 const pagesOf = (o: AstOutputs, k: AstOutputKey): number => estimatePages(o, k);
 
 /** 把勾選的項目轉成輸出檔（Word 每項一個檔；PDF 合併成一個列印頁） */
-export async function runAstExport(o: AstOutputs, keys: AstOutputKey[], format: ExportFormat, paper: LabelPaper, examName: string, fonts: () => Promise<Loaded>, onProgress?: (done: number, total: number, label: string) => void): Promise<OutputFile[]> {
+export async function runAstExport(o: AstOutputs, keys: AstOutputKey[], format: ExportFormat, paper: LabelPaper, examName: string, fonts: () => Promise<Loaded>, onProgress?: (done: number, total: number, label: string) => void, onFail?: (label: string, msg: string) => void): Promise<OutputFile[]> {
   const meta = { generatedAt: new Date().toISOString(), dataVersion: o.version };
   const base = safeName(examName);
   const chosen = keys.filter((k) => pagesOf(o, k) > 0);
@@ -43,7 +43,14 @@ export async function runAstExport(o: AstOutputs, keys: AstOutputKey[], format: 
     onProgress?.(i, chosen.length, FILE_LABEL[k]);
     // 每個檔之間讓出主執行緒，畫面才不會整個卡住（大班數時每個檔要數秒）
     await new Promise<void>((r) => setTimeout(r, 0));
-    const data = await renderDocx(k === 'label' ? { label: o.label } : k === 'seat' ? { seat: o.seat } : { table: o[k] }, opts);
+    // #622：單一檔產生失敗不連累其他檔，並指出是哪一個檔（不直接丟英文內部訊息）
+    let data: Uint8Array;
+    try { data = await renderDocx(k === 'label' ? { label: o.label } : k === 'seat' ? { seat: o.seat } : { table: o[k] }, opts); } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (!onFail) throw new Error(`「${FILE_LABEL[k]}」產生失敗：${msg}`);
+      onFail(FILE_LABEL[k], msg);
+      continue;
+    }
     out.push({ name: `${base}-${FILE_LABEL[k]}${k === 'label' ? `（${paper}）` : ''}.docx`, mime: DOCX_MIME, data, desc: k === 'label' ? `${o.label.length} 張紙（每張標籤兩格寬，${paper}）` : `${pagesOf(o, k)} 頁（A4）`, pages: pagesOf(o, k) });
   }
   return out;
@@ -81,10 +88,13 @@ export function AstStep6(p: { doc: Doc; exam: ExamConfig; onGoStep: (n: 2 | 3 | 
     setFormat(format);
     setBusy(true); setErr(''); setProg('');
     try {
-      const res = await runAstExport(outs, keys, format, paper, exam.name, loader, (i, n, l) => setProg(`第 ${i + 1}／${n} 個檔：${l}`));
+      const fails: string[] = [];
+      const res = await runAstExport(outs, keys, format, paper, exam.name, loader, (i, n, l) => setProg(`第 ${i + 1}／${n} 個檔：${l}`), (l, m) => fails.push(`「${l}」產生失敗（${m}）`));
+      if (res.length === 0) throw new Error(fails.join('、') || '沒有可下載的檔案');
       for (const f of res.filter((x) => x.mime === 'text/html')) { if (!openPrintPage(f)) throw new Error('瀏覽器擋住了新視窗，請允許本網站開啟彈出視窗後再按一次。'); }
       await downloadMany(res.filter((x) => x.mime !== 'text/html'));
       setResults(res);
+      if (fails.length) setErr(`其他檔案已照常下載；${fails.join('、')}。`);
       p.onChange?.(markDownloaded(doc, exam.id));
     } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } finally { setBusy(false); setProg(''); }
   };
