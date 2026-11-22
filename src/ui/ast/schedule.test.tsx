@@ -79,7 +79,7 @@ describe('分科時程推薦（T-19、T-20）', () => {
     expect(scheduleNeedsApproval({ cand: 'C', approved: true })).toBe(false);
     expect(scheduleNeedsApproval({ cand: 'A' })).toBe(false);
     const draft = patch(doc, exam, { astSchedule: { cand: 'C', days: by('C').days } });
-    expect(astFinalizeBlockers(draft.doc, draft.exam, astPlan(draft.doc, draft.exam))).toContain('選的時程不是基準，要管理者核准');
+    expect(astFinalizeBlockers(draft.doc, draft.exam, astPlan(draft.doc, draft.exam))).toContain('選的時程不是基準，要先按「確認採用」');
     const ok = patch(draft.doc, draft.exam, { astSchedule: { cand: 'C', days: by('C').days, approved: true } });
     expect(astFinalizeBlockers(ok.doc, ok.exam, astPlan(ok.doc, ok.exam))).toEqual([]);
   });
@@ -444,7 +444,7 @@ describe('分科 AST-3 畫面', () => {
   const noop = () => undefined;
   it('④ 有時程推薦（四個候選、監考人數、核准）與跨次沿用', () => {
     const html = renderToString(<AstStep4 doc={doc} exam={exam} onChange={noop} onStep={noop} />);
-    for (const t of ['時程推薦', '每間考場監考人數', '基準（目前的分科節次表）', '調整順序', '文理同節考不同科', '縮短成一天', '設為草案', '管理者核准', '跨次座位沿用', '沒有開啟']) expect(html).toContain(t);
+    for (const t of ['時程推薦', '每間考場監考人數', '基準（目前的分科節次表）', '調整順序', '文理同節考不同科', '縮短成一天', '選用這個時程', '確認採用', '跨次座位沿用', '沒有開啟']) expect(html).toContain(t);
     expect(html).toContain('可行但代價較高');
     expect(html).toContain('無改善');
   });
@@ -528,8 +528,8 @@ describe('第三方稽核回歸', () => {
     const days = astCandidates(doc, exam).find((c) => c.id === 'C')!.days;
     const f = patch(doc, exam, { astSchedule: { cand: 'C', days, approved: true }, astApprovals: [{ slotId: 'p1', roomId: 'c1' }] });
     const html = renderToString(<ScheduleCard doc={f.doc} exam={f.exam} onChange={noop} />);
-    expect(html).toMatch(/<button[^>]*disabled[^>]*>目前草案 ✓/);
-    expect(html).toMatch(/<button(?![^>]*disabled)[^>]*>設為草案/);
+    expect(html).toMatch(/<button[^>]*disabled[^>]*>目前選用 ✓/);
+    expect(html).toMatch(/<button(?![^>]*disabled)[^>]*>選用這個時程/);
   });
 
   it('#274 定案後改名單／考科：方案指紋對不上，擋下載與公告；解除定案重新定案後恢復；舊資料不檢查', () => {

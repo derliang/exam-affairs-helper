@@ -40,9 +40,11 @@ export function RowFix(p: {
   classNames?: readonly string[];
   /** 這類問題可「確認無誤」時給一句說明（缺姓名、學號重複）；不給＝不能確認無誤 */
   confirmHint?: string;
+  /** 一開始就選好的處理方式（#635 ④：缺姓名的列預設視為空位＝確認無誤） */
+  initialMode?: RowMode;
   onDecide: (d: { mode: 'add' | 'edit'; value: RowFixValue } | { mode: 'confirm' } | { mode: 'skip' } | null) => void;
 }) {
-  const [mode, setMode] = useState<RowMode | null>(null);
+  const [mode, setMode] = useState<RowMode | null>(p.initialMode ?? null);
   const [c, setC] = useState(p.draft.classNo === undefined ? '' : String(p.draft.classNo));
   const [s, setS] = useState(p.draft.seatNo === undefined ? '' : String(p.draft.seatNo));
   const [n, setN] = useState(p.draft.name);

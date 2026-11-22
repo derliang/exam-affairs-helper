@@ -387,7 +387,7 @@ export function reconcileAst(doc: Doc, exam: ExamConfig, outs?: AstOutputs): Rec
   const cp = astCapacity(doc, exam, plan);
   const m1d = R.size - (scope.enrolled + scope.absent);
   const m1 = tri('M-1', '學生數', R.size, scope.enrolled + scope.absent, m1d, '名冊人數＝報名人數＋不參加人數', `名冊 ${R.size} ＝ 報名 ${scope.enrolled} ＋ 不參加 ${scope.absent}`, m1d !== 0 ? [{ text: `名冊 ${R.size} 人、報名 ${scope.enrolled} 人，考試名單有名冊沒有的人或重複`, step: 2 }] : []);
-  if (m1.light === 'pass' && R.size > 0 && scope.absent / R.size > WARN_ABSENT_RATIO) { m1.light = 'warn'; m1.issues = [{ text: `不參加 ${scope.absent} 人，超過名單範圍 ${R.size} 人的 ${Math.round(WARN_ABSENT_RATIO * 100)}%（常見於名單匯錯）`, step: 2 }]; }
+  // #635 ⑦：分科本來就多數人不考任何科，「不參加超過 20%」幾乎一定成立、不是名單匯錯的訊號，所以分科不套這個警示（學測、會考照舊）
   const m2 = tri('M-2', '每時段人數', sumScope, sumSeat, sumDiff, '座位表＝各教室加總＝名冊總人數（含不參加者，每個學生不管考不考都佔一個座位）；標籤＝應考人數（自習者不印標籤）；每人每時段只算一個去處', `${slots.length} 個時段${sumDiff ? `，差異共 ${sumDiff} 人次` : '全部相符'}`, m2issues);
   const m3 = tri('M-3', '每人每時段一個去處', sumExpPlaces, sumPlaces, sumPlaces - sumExpPlaces, '同一人同一節次只有一個去處（考試座位或自習位置；跨組、跨抽離都算）', `${enrolled.size + absentN} 人 × ${slots.length} 時段；重複 ${dupN}、遺漏 ${missN}`, issues3.slice(0, 20));
   const m4c = m4(uses, (i) => slots[i]?.label ?? `時段 ${i + 1}`, (u) => u.seats);

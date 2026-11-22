@@ -170,17 +170,18 @@ describe('G35 分科（D99：不考的人＝自習，算進座位容量）', () 
     expect(gateOf(r).why).toMatch(/不通過/);
   });
 
-  it('琥珀：名冊多出很多沒報名的人（名單匯錯的徵兆）→ M-1 警示，只提示、不擋下載', () => {
+  it('#635 ⑦ 分科：不參加人數多（本來就多數人不考）→ M-1 不再因比例亮警示，仍然通過、可下載', () => {
     const { doc, exam } = astDoc();
     const more = Array.from({ length: 30 }, (_, k) => ({ classNo: 1 + (k % 6), seatNo: 40 + k, name: `外加${k}` }));
     const d2: Doc = { ...doc, rosters: { ...doc.rosters, senior: [...doc.rosters.senior, ...more] } };
     const plan = astPlan(d2, exam)!;
     const r = ready(reconcile(d2, exam, astOutputs(d2, exam, plan, 'B4')));
     expect(r.scope.absent).toBe(30);
-    expect(light(r, 'M-1')).toBe('warn');
+    expect(r.scope.absent / r.scope.total).toBeGreaterThan(0.2);
+    expect(light(r, 'M-1')).toBe('pass');
     const g = gateOf(r);
     expect(g.fails).toBe(0);
-    expect(g.warns.map((w) => w.id)).toContain('M-1');
+    expect(g.warns.map((w) => w.id)).not.toContain('M-1');
     expect(g.why).toBe('');
   });
 

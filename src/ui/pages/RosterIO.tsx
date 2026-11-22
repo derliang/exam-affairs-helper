@@ -62,7 +62,8 @@ export function RosterIO(p: { doc: Doc; division: Division; onChange: (d: Doc) =
     if (good.length === 0) return;
     const m = mergeRosterFiles(good.map((g) => ({ file: g.name, result: g.value })), (no) => p.doc.settings.classes.find((c) => c.division === p.division && c.no === no)?.name);
     setUnk('add');
-    setDecisions({});
+    // #635 ④：缺姓名的列（空位）預設視為空位、不建立學生，只在清單上提示一次，不必逐列按「確認無誤」
+    setDecisions(Object.fromEntries(m.problems.flatMap((pr, i) => (pr.kind === 'no-name' ? [[i, { action: 'confirm' } as ProblemDecision]] : []))));
     setFileKey((k) => k + 1);
     setYearText(String(rosterYearOf(p.doc)));
     setParsed({ students: m.students, layout: m.layout, issues: m.issues.map((i) => i.message), problems: m.problems, sheetName: '', ...(m.classTracks ? { tracks: m.classTracks } : {}) });
@@ -87,12 +88,12 @@ export function RosterIO(p: { doc: Doc; division: Division; onChange: (d: Doc) =
       {!zone && <FormatButton kind="xls" onClick={() => setTpl(true)}>下載名單範本</FormatButton>}
       {zone && <Button onClick={() => setTpl(true)}>下載名單範本</Button>}
       {zone
-        ? <Button kind="primary" onClick={() => input.current?.click()}>選擇學生名單檔（.xlsx）並匯入</Button>
+        ? <Button kind="primary" onClick={() => input.current?.click()}>選擇學生名單檔（.xlsx／.xls）並匯入</Button>
         : <FormatButton kind="xls" onClick={() => input.current?.click()}>匯入學生名單</FormatButton>}
       {!zone && <FormatButton kind="xls" onClick={async () => downloadBytes(`${DIV_NAME[p.division]}學生名單.xlsx`, await writeXlsx(exportRows(p.doc.rosters[p.division]), '學生名單'), XLSX_MIME)}>匯出學生名單</FormatButton>}
       {!zone && <ClearRoster doc={p.doc} division={p.division} onChange={p.onChange} />}
-      <span class="small muted">匯入接受 .xlsx，可一次選多個檔案；舊版 .xls 請先另存成 .xlsx（程式不直接讀 .xls）</span>
-      <input ref={input} type="file" accept=".xlsx" multiple hidden aria-label="選擇學生名單 Excel 檔（可多選）"
+      <span class="small muted">匯入接受 .xlsx 與舊版 .xls，可一次選多個檔案</span>
+      <input ref={input} type="file" accept=".xlsx,.xls" multiple hidden aria-label="選擇學生名單 Excel 檔（可多選）"
         onChange={(e) => { const fs = filesOfInput(e.currentTarget); e.currentTarget.value = ''; void onFiles(fs); }} />
       {tpl && (
         <Modal title="下載名單範本" onClose={() => setTpl(false)}
@@ -144,8 +145,11 @@ export function RosterIO(p: { doc: Doc; division: Division; onChange: (d: Doc) =
             <div class="stack" style="gap:4px" aria-label="有問題的列">
               <h4 style="margin:8px 0 0">有問題的列（{parsed.problems.length} 列，已決定 {parsed.problems.length - resolution.pending.length} 列）</h4>
               <p class="small muted">這些列不會被默默略過。請逐列決定：<b>手動補上（新增）</b>＝補齊缺的欄位後新增進名單；<b>修改內容</b>＝改正班級、座號、姓名或學號後加入名單；<b>確認無誤</b>＝這一列本來就是正確的，照原樣匯入（缺姓名的列＝保留為空位、不建立學生；只有「缺少姓名」「學號重複」可以）；<b>不匯入這列</b>（下方文字連結）＝這一列不匯入。全部決定完才能確認取代。</p>
+              {parsed.problems.some((pr) => pr.kind === 'no-name') && (
+                <Alert tone="info">有 {parsed.problems.filter((pr) => pr.kind === 'no-name').length} 列缺少姓名，已視為空位（不建立學生），不必逐列確認；若其中有人其實有姓名，到下方該列改選「手動補上」。</Alert>
+              )}
               {parsed.problems.map((pr, i) => (
-                <RowFix key={`${fileKey}-${i}`} where={`${pr.file && fileResults.filter((f) => f.ok).length > 1 ? `檔案「${pr.file}」` : ''}${pr.sheet ? `工作表「${pr.sheet}」` : ''}第 ${pr.row} 列`} kindText={PROBLEM_KIND_TEXT[pr.kind]} message={pr.message} cells={pr.cells} draft={pr.draft} withSchoolId classNames={classNames} {...(CONFIRMABLE.has(pr.kind) ? { confirmHint: pr.kind === 'no-name' ? '這一列保留為空位，不會建立學生。' : '這一列照原樣匯入，視為正確。' } : {})}
+                <RowFix key={`${fileKey}-${i}`} {...(pr.kind === 'no-name' ? { initialMode: 'confirm' as const } : {})} where={`${pr.file && fileResults.filter((f) => f.ok).length > 1 ? `檔案「${pr.file}」` : ''}${pr.sheet ? `工作表「${pr.sheet}」` : ''}第 ${pr.row} 列`} kindText={PROBLEM_KIND_TEXT[pr.kind]} message={pr.message} cells={pr.cells} draft={pr.draft} withSchoolId classNames={classNames} {...(CONFIRMABLE.has(pr.kind) ? { confirmHint: pr.kind === 'no-name' ? '這一列保留為空位，不會建立學生。' : '這一列照原樣匯入，視為正確。' } : {})}
                   error={resolution.invalid[i] ?? ''} onDecide={(d) => decide(i, d === null ? null : d.mode === 'skip' ? { action: 'skip' } : d.mode === 'confirm' ? { action: 'confirm' } : { action: d.mode, ...d.value })} />
               ))}
             </div>

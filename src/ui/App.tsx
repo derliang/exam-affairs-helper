@@ -250,7 +250,7 @@ export function App() {
           return (
             <>
               <PageHead crumbs={[{ label: '補考', onClick: () => go({ page: 'makeup' }) }]} title={ms.name} badge="補考模式" status="已儲存到資料夾">{undoCtl}</PageHead>
-              <MakeupWorkspace s={ms} step={r.step} onChange={(n) => edit(updateMakeup(hist.present, ms.id, () => n))} onStep={(step) => go({ page: 'makeupStep', id: ms.id, step })} onList={() => go({ page: 'makeup' })} />
+              <MakeupWorkspace s={ms} shared={hist.present.settings.classrooms} step={r.step} onChange={(n) => edit(updateMakeup(hist.present, ms.id, () => n))} onStep={(step) => go({ page: 'makeupStep', id: ms.id, step })} onList={() => go({ page: 'makeup' })} />
             </>
           );
         })()}
