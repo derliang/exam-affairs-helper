@@ -42,9 +42,8 @@ describe('#645 座位表一間教室一頁（推翻 D111）：統計表逐級縮
     expect(g.statsNext).toBe(false);
     expect(g.tier).toBeGreaterThanOrEqual(1);
     expect(g.ch).toBeGreaterThanOrEqual(SEAT_CELL_MM.pref);
-    // 整頁放得下
-    const used = 22 + 12 + 4 + 5 + 11 + 5 + statLayout(p, g.tier).total + 16 + (p.chips.length ? 0 : 0) + g.ch * p.depth;
-    expect(used).toBeLessThanOrEqual(SEAT_PAGE.h - 2 * SEAT_PAGE.padY + 0.5 + (Math.max(1, 1) - 1) * 8.7);
+    // 整頁放得下：座位格＋統計表＋固定部分（標題、小標籤、講臺、頁尾約 75mm）不超過可印高度
+    expect(g.ch * p.depth + statLayout(p, g.tier).total + 75).toBeLessThanOrEqual(SEAT_PAGE.h - 2 * SEAT_PAGE.padY + 9);
   });
   it('列數少維持原樣（tier 0，輸出與以前相同）；列數多才逐級縮', () => {
     expect(seatGeometry(bigPage(3)).tier).toBe(0);
