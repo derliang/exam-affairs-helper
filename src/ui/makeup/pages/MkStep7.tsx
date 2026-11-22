@@ -5,7 +5,7 @@
  */
 import { useState } from 'preact/hooks';
 import { Alert, Badge, Button, EmptyState, FormatButton, Seg, Switch } from '../../components';
-import { MAKEUP_DOC_KINDS, type MakeupDocKind } from '../../../export/makeupFiles';
+import { MAKEUP_DOC_KINDS, countMakeupPrintPages, type MakeupDocKind } from '../../../export/makeupFiles';
 import type { OutputFile } from '../../../export/plan';
 import { stampNow } from '../../reconcile';
 import { download, noticeOf, openPrintPage } from '../../pages/Step6';
@@ -44,6 +44,7 @@ export function MkStep7(p: { s: MakeupSession; onStep: (n: MakeupStepNo) => void
   const blocked = d.state === 'none' || d.state === 'blocked';
   const why = d.state === 'none' ? '還沒有補考名單。' : blocked ? `有 ${d.gate.blockers.length} 項不通過，須先修正：${d.gate.reasons.join('；')}` : kinds.length === 0 ? '還沒勾選要下載的文件。' : '';
   const run = runOf(s.id);
+  const pdfPages = why === '' ? countMakeupPrintPages(makeupInputOf(s), kinds, dayId !== 'all' ? dayId : undefined) : 0;
 
   const finish = (words: OutputFile[], pages: OutputFile[]) => {
     if (p.deliver) { p.deliver([...words, ...pages]); return; }
@@ -76,17 +77,11 @@ export function MkStep7(p: { s: MakeupSession; onStep: (n: MakeupStepNo) => void
   const goPdf = async () => {
     setBusy(true); setErr(''); setProblems([]); setNotice('');
     try {
-      const { produceMakeupPrintHtml } = await import('../../../export/makeupFiles');
-      const input = makeupInputOf(s);
-      const pages: OutputFile[] = [];
-      const probs: string[] = [];
-      for (const k of kinds) {
-        const r = produceMakeupPrintHtml(input, k, { generatedAt: new Date().toISOString(), ...(dayId !== 'all' ? { dayId } : {}) });
-        if (!r) continue;
-        probs.push(...r.verification.problems.map((x) => `${r.name}：${x}`));
-        pages.push({ name: r.name, mime: 'text/html', data: r.html, desc: KIND_TEXT[k].name, pages: 0 });
-      }
-      if (probs.length > 0) { setProblems(probs); return; }
+      const { produceMakeupMergedPrintHtml } = await import('../../../export/makeupFiles');
+      const r = produceMakeupMergedPrintHtml(makeupInputOf(s), kinds, { generatedAt: new Date().toISOString(), ...(dayId !== 'all' ? { dayId } : {}) });
+      if (!r) return;
+      if (r.problems.length > 0) { setProblems(r.problems); return; }
+      const pages: OutputFile[] = [{ name: r.name, mime: 'text/html', data: r.html, desc: `${r.pages} 頁（${r.kinds.map((k) => KIND_TEXT[k].name).join('、')}），開啟後選「另存為 PDF」`, pages: r.pages }];
       finish([], pages);
       setNotice(noticeOf(pages));
     } catch (e) {
@@ -122,9 +117,15 @@ export function MkStep7(p: { s: MakeupSession; onStep: (n: MakeupStepNo) => void
             ))}
           </div>
           <p class="small muted">O-6 座位標籤為選配，這一版尚未提供。檔案以 Word 為主、PDF 為輔（PDF 會開啟列印頁，請用瀏覽器「另存為 PDF」）。</p>
-          <div class="row">
-            <FormatButton kind="word" disabled={busy || why !== ''} onClick={() => { void goWord(); }}>下載 Word</FormatButton>
-            <FormatButton kind="pdf" disabled={busy || why !== ''} onClick={() => { void goPdf(); }}>下載 PDF（開啟列印頁）</FormatButton>
+          <div class="dlbtns row" style="align-items:flex-start;gap:24px;flex-wrap:wrap">
+            <div class="stack" style="gap:6px">
+              <FormatButton kind="word" disabled={busy || why !== ''} onClick={() => { void goWord(); }}>下載 Word</FormatButton>
+              <span class="small muted">{why === '' && `將下載 ${kinds.length} 個 Word 檔案`}</span>
+            </div>
+            <div class="stack" style="gap:6px">
+              <FormatButton kind="pdf" disabled={busy || why !== ''} onClick={() => { void goPdf(); }}>下載 PDF（開啟列印頁）</FormatButton>
+              <span class="small muted">{why === '' && `將開啟 1 個列印頁（共 ${pdfPages} 頁），在新視窗選「列印」→「另存為 PDF」`}</span>
+            </div>
           </div>
           {why !== '' && <p class="small" role="status" data-why>{blocked ? '不能下載：' : ''}{why}</p>}
           {busy && <p class="small muted" role="status">正在產生並回讀驗算…</p>}

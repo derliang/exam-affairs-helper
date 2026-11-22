@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>模擬考設計系統 稿 v2.97</title>
+<title>模擬考設計系統 稿 v2.98</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -538,7 +538,7 @@ span.chk.on{background:var(--cbx-on-bg);border-color:var(--cbx-on-line);color:va
 </style>
 
 <div class="top">
-  <span class="brand">模擬考小幫手 設計系統 <span class="badge b-acc">稿 v2.97・2026-11-22</span></span>
+  <span class="brand">模擬考小幫手 設計系統 <span class="badge b-acc">稿 v2.98・2026-11-22</span></span>
   <nav class="toc" aria-label="目錄">
     <a href="#color">色彩</a><a href="#type">字型</a><a href="#base">間距圓角</a><a href="#comp">元件</a><a href="#steps">步驟導覽</a><a href="#special">專屬元件</a><a href="#ast">分科新模型</a><a href="#ast2">分科下一批</a><a href="#paper">座位表與標籤</a><a href="#paper36">輸出補強 v2.36</a><a href="#paper36b">名單與教室 v2.36</a><a href="#brandbar">品牌列</a><a href="#footer">頁尾</a><a href="#align">對位測試頁</a><a href="#v275">v2.75 納入</a><a href="#open">待確認</a>
   </nav>
@@ -1477,6 +1477,14 @@ span.chk.on{background:var(--cbx-on-bg);border-color:var(--cbx-on-line);color:va
         <li><b>A3 格數（設計員定案，待審）</b>：A3 舊版是 7×7、每格 35mm 正方（沿用舊標籤，D74）。兩倍寬要成對，7 欄是奇數，只能每列放 3 張、浪費一欄（49→21 張）。改 <b>8 欄×7 列</b>：35mm 正方不變、兩格併一張＝70×35mm，每列 4 張、一張紙 28 張；寬度 280mm，左右各留約 8.5mm（大於一般印表機不可印邊界約 5mm）。B4 維持扣 10mm 邊界均分、6 欄併成 3 欄＝3×8＝24 張。</li>
         <li><b>被否決</b>：①只放大字、格數不變（使用者先選後改，改為兩倍寬）；②A3 維持 7 欄、每列 3 張（浪費整欄）；③一人一格不併格、但把科目改兩欄（B4 格寬 38mm，兩欄後每欄不到 19mm，字反而更小）。</li>
         <li><b>代價</b>：張數增加（座位 48 個時，B4 由 1 張紙變 2 張）；這是使用者要的取捨，列印前下載畫面要寫明「整合標籤每張兩格寬、共 N 張紙」。</li></ul></div>
+    <div class="card" id="v298" style="margin-top:16px"><div class="lab">⑦-1 補考 ⑦ 下載 PDF：多份併成單一列印頁，按鈕旁預告頁數（#592，<b>稿 v2.98</b>；使用者 2026-11-22 裁示比照分科 ⑥；D206）</div>
+      <p class="small muted">勾選多份文件按「下載 PDF」只開 1 個列印頁（各份依序接在同一頁面內），不再開多個視窗被瀏覽器擋下。Word 仍每份一個檔。與分科 ⑥、模擬考 ⑥ 同一種畫法：按鈕下方一行小灰字預告。</p>
+      <div class="row" style="align-items:flex-start;gap:24px;flex-wrap:wrap">
+        <div class="stack" style="gap:6px"><span class="btn btn-primary btn-lg"><span class="fi w">W</span>下載 Word</span><span class="small muted">將下載 6 個 Word 檔案</span></div>
+        <div class="stack" style="gap:6px"><span class="btn btn-primary btn-lg"><span class="fi p">PDF</span>下載 PDF（開啟列印頁）</span><span class="small muted">將開啟 1 個列印頁（共 12 頁），在新視窗選「列印」→「另存為 PDF」</span></div>
+      </div>
+      <p class="small muted">被擋下時兩顆鈕灰化，預告行不顯示，原因沿用上方「不能下載：…」一行。</p>
+    </div>
     <div class="card" id="v297" style="margin-top:16px"><div class="lab">④-3 分科整合標籤：單人回一般大小、多人編號放大（#586，<b>稿 v2.97；使用者已核可（全採建議），已實作於 1.27.21</b>；修訂 D107，D108 保留）</div>
       <p class="small muted">使用者原話（2026-11-22）：「多人坐一個位置的，考生編號要放大且明顯；單人坐一個位置的，維持正常的標籤大小，不需要兩倍寬，為了排版的話，可以有空白格」。使用者已裁示全採設計員建議；B4 示意，1mm＝4px，全部假資料。</p>
       <div class="v36 g" style="grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr))">

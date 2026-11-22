@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 import { fakeRoster, fakeSettings, room, runAll, type FakeClass } from '../core/makeup/fixtures';
 import { makeupVersion, runMakeupChecks, type MakeupOutputs } from '../core/makeup';
-import { MAKEUP_DOC_KINDS, produceMakeupFiles, produceMakeupPrintHtml, type ProduceMakeupInput } from './makeupFiles';
+import { MAKEUP_DOC_KINDS, countMakeupPrintPages, produceMakeupFiles, produceMakeupMergedPrintHtml, produceMakeupPrintHtml, type ProduceMakeupInput } from './makeupFiles';
 import { readDocxTables } from './makeupReadback';
 
 const fontDir = new URL('./fonts/', import.meta.url);
@@ -176,5 +176,22 @@ describe('PDF 用列印 HTML：同樣回讀驗算', () => {
       expect(r, kind).not.toBeNull();
       expect(r!.verification.problems, r!.name).toEqual([]);
     }
+  });
+});
+
+describe('#592 多份文件併成單一列印頁', () => {
+  it('頁數＝各份相加、只有一份 html、各份驗算無問題', () => {
+    const input = build(5);
+    const r = produceMakeupMergedPrintHtml(input, MAKEUP_DOC_KINDS, { generatedAt });
+    expect(r).not.toBeNull();
+    expect(r!.problems).toEqual([]);
+    const sum = MAKEUP_DOC_KINDS.reduce((a, k) => a + (produceMakeupPrintHtml(input, k, { generatedAt }) ? 1 : 0), 0);
+    expect(r!.kinds.length).toBe(sum);
+    expect(r!.pages).toBe(countMakeupPrintPages(input, MAKEUP_DOC_KINDS));
+    expect(r!.html.match(/<!doctype html>/g)?.length).toBe(1);
+    expect(r!.pages).toBeGreaterThan(MAKEUP_DOC_KINDS.length - 1);
+  });
+  it('沒勾任何文件回 null', () => {
+    expect(produceMakeupMergedPrintHtml(build(5), [], { generatedAt })).toBeNull();
   });
 });
