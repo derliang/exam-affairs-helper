@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { groupByKey, mergeRosterFiles, okFiles, readFiles, resolveConflicts } from './multiFile';
+import { classText, groupByKey, mergeRosterFiles, okFiles, readFiles, resolveConflicts } from './multiFile';
 import { parseRoster } from './roster';
 
 const HEAD = ['班級', '座號', '姓名', '學號'];
@@ -36,6 +36,17 @@ describe('#506 多檔：名冊合併（跨檔衝突轉成逐列問題）', () =>
     expect(pr).toMatchObject({ kind: 'dup', file: 'B.xlsx', sheet: '名單', row: 2 });
     expect(pr.message).toContain('A.xlsx');
     expect(pr.draft).toMatchObject({ classNo: 1, seatNo: 2, name: '乙乙' });
+  });
+  it('#599 問題列的班級用班名（有班名用班名、沒有才用「第NN班」），不再寫「02 班」', () => {
+    const parts = [
+      { file: 'A.xlsx', result: roster([['溫', '1', '甲']]) },
+      { file: 'B.xlsx', result: roster([['溫', '1', '甲甲']]) },
+    ];
+    const named = mergeRosterFiles(parts, (no) => (no === 1 ? '溫' : undefined));
+    expect(named.problems[0]!.message).toContain('溫班 1 號「甲」');
+    expect(named.problems[0]!.message).not.toMatch(/0\d 班/);
+    expect(mergeRosterFiles(parts).problems[0]!.message).toContain('第01班 1 號「甲」');
+    expect(classText(2, '三年二班')).toBe('三年二班');
   });
   it('跨檔同學號（不同座號）：學號重複問題列', () => {
     const m = mergeRosterFiles([

@@ -72,6 +72,8 @@ interface Ctx {
   slots: AstSlot[];
   roomName: Map<string, string>;
   className: (n: number) => string;
+  /** #503、D208：班級順序＝共用設定「班級資料」清單順序（可自訂）；不在清單的排最後 */
+  rank: (n: number) => number;
   subjectName: Map<string, string>;
   nameOf: Map<string, string>;
   examNoOf: Map<string, string>;
@@ -81,6 +83,7 @@ interface Ctx {
 function ctxOf(doc: Doc, exam: ExamConfig, plan: AstPlan): Ctx {
   const slots = astSlots(doc, exam);
   const classes = new Map(doc.settings.classes.filter((c) => c.division === exam.division).map((c) => [c.no, c.name]));
+  const order = new Map([...classes.keys()].map((n, i) => [n, i] as const));
   const entries = examEntries(doc, exam);
   const examNoOf = new Map<string, string>();
   for (const e of entries) if (e.examNo) examNoOf.set(codeOf(e), e.examNo);
@@ -88,6 +91,7 @@ function ctxOf(doc: Doc, exam: ExamConfig, plan: AstPlan): Ctx {
     doc, exam, plan, slots,
     roomName: new Map(doc.settings.classrooms.map((r) => [r.id, r.name])),
     className: (n) => classes.get(n) ?? String(n).padStart(2, '0'),
+    rank: (n) => order.get(n) ?? Number.MAX_SAFE_INTEGER,
     subjectName: new Map(exam.subjects.map((s) => [s.id, subjectShort(s.name)])),
     nameOf: new Map(plan.input.students.map((s) => [codeOf(s), s.name])),
     examNoOf,
@@ -204,7 +208,7 @@ function seatPages(c: Ctx): SeatPageModel[] {
         });
       }
       // 統計：每個時段一列（各班人數＋合計），最後「不重複人數」
-      const classNos = [...new Set([...here.values()].flat().map((x) => Number(x.code.slice(0, 2))))].sort((x, y) => x - y);
+      const classNos = [...new Set([...here.values()].flat().map((x) => Number(x.code.slice(0, 2))))].sort((x, y) => c.rank(x) - c.rank(y) || x - y);
       const per = (codes: Iterable<string>) => { const a = [...codes]; return classNos.map((n) => a.filter((x) => Number(x.slice(0, 2)) === n).length); };
       // #581：比照學測統計表（D170／D174）：日期（有填才有）｜第幾天｜時段｜科目｜各班｜總計，逐「日期＋時段＋科目」一列，同天同時段由 statMerge 垂直合併
       const dates = c.exam.examDates;
@@ -260,7 +264,7 @@ function studyRefPages(c: Ctx): SeatPageModel[] {
           corners: [{ kind: 'add', text: '自習' }],
         });
       }
-      const nos = [...per.keys()].sort((p, q) => p - q);
+      const nos = [...per.keys()].sort((p, q) => c.rank(p) - c.rank(q) || p - q);
       const miss = unseated.get(key(s.id, room.id)) ?? [];
       pages.push({
         kind: 'seat', title: `${c.exam.name}　${rn(c, room.id)}　自習座位（非考試座位）`, examName: c.exam.name, roomName: `${rn(c, room.id)}　自習座位`,
@@ -281,7 +285,7 @@ function studyRefPages(c: Ctx): SeatPageModel[] {
 function announcePages(c: Ctx): TablePageModel[] {
   const examAt = new Map(c.plan.out.exams.map((e) => [`${e.slotId}|${e.code}`, e]));
   const studyAt = new Map(c.plan.out.study.map((s) => [`${s.slotId}|${s.code}`, s]));
-  const classes = [...new Set(c.plan.input.students.map((s) => s.classNo))].sort((a, b) => a - b);
+  const classes = [...new Set(c.plan.input.students.map((s) => s.classNo))].sort((a, b) => c.rank(a) - c.rank(b) || a - b);
   const home = homeRoomIds(c.plan.input.rooms);
   const lead = ['座號', '姓名', ...(c.hasExamNo ? ['應試編號'] : [])];
   // 兩層表頭（#215）：上層「第N天」、下層「時段X 科目」，不折行
@@ -379,7 +383,7 @@ function registerPages(c: Ctx): TablePageModel[] {
           const from = new Map<number, number>();
           for (const e of list) from.set(Number(e.code.slice(0, 2)), (from.get(Number(e.code.slice(0, 2))) ?? 0) + 1);
           const mx = mixedIn(id);
-          return [rn(c, id), String(seatsOf.get(id) ?? ''), String(list.length), [...from].sort((a, b) => a[0] - b[0]).map(([cl, n]) => `${c.className(cl)} ${n} 人`).join('、'), '1', mx > 0 ? `同排混科 ${mx} 排，依座位分區發卷` : ''];
+          return [rn(c, id), String(seatsOf.get(id) ?? ''), String(list.length), [...from].sort((a, b) => c.rank(a[0]) - c.rank(b[0]) || a[0] - b[0]).map(([cl, n]) => `${c.className(cl)} ${n} 人`).join('、'), '1', mx > 0 ? `同排混科 ${mx} 排，依座位分區發卷` : ''];
         }),
       });
       for (const id of rooms) {
@@ -408,7 +412,7 @@ function studyPages(c: Ctx): TablePageModel[] {
     out.push({
       kind: 'table', title: `${c.exam.name}　自習教室名單`, subtitle: `${s.label}${s.subjectIds.map((i) => sub(c, i)).join('、')}　自習 ${away.length} 人、${rooms.length} 間教室`,
       heads: ['地點', '班級', '座號', '姓名', ...(c.hasExamNo ? ['應試編號'] : [])], widths: [1.8, 1.1, 0.9, 1.6, ...(c.hasExamNo ? [1.4] : [])],
-      rows: [...away].sort((a, b) => rooms.indexOf(a.roomId) - rooms.indexOf(b.roomId) || a.code.localeCompare(b.code)).map((a) => [rn(c, a.roomId), c.className(Number(a.code.slice(0, 2))), a.code.slice(2), c.nameOf.get(a.code) ?? '', ...(c.hasExamNo ? [c.examNoOf.get(a.code) ?? ''] : [])]),
+      rows: [...away].sort((a, b) => rooms.indexOf(a.roomId) - rooms.indexOf(b.roomId) || c.rank(Number(a.code.slice(0, 2))) - c.rank(Number(b.code.slice(0, 2))) || a.code.localeCompare(b.code)).map((a) => [rn(c, a.roomId), c.className(Number(a.code.slice(0, 2))), a.code.slice(2), c.nameOf.get(a.code) ?? '', ...(c.hasExamNo ? [c.examNoOf.get(a.code) ?? ''] : [])]),
     });
     for (const id of rooms) work.push([`${slotShort(s)} ${s.subjectIds.map((i) => sub(c, i)).join('、')}`, rn(c, id), `${away.filter((a) => a.roomId === id).length}／${cap.get(id) ?? 0}`, '□ 已貼', '□ 已布置', '']);
   }

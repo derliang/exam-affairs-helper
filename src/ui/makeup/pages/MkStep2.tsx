@@ -387,21 +387,23 @@ function RosterPreview(p: { s: MakeupSession; onSkip: (row: MakeupRow, reason: S
 
 // ───────────── 重複匯入（F-11） ─────────────
 
-function DupModal(p: { d: Pending; onApply: (m: 'replace' | 'merge') => void; onClose: () => void }) {
-  const [mode, setMode] = useState<'replace' | 'merge'>('replace');
+export function DupModal(p: { d: Pending; onApply: (m: 'replace' | 'merge') => void; onClose: () => void }) {
+  /** #602、D208：不預選，使用者明確選一種才能套用（預設「取代」會悄悄移除已排考程） */
+  const [mode, setMode] = useState<'replace' | 'merge' | null>(null);
   const { diff } = p.d;
   return (
-    <Modal title="這份名單看起來已經匯入過" onClose={p.onClose} actions={<><Button onClick={p.onClose}>取消</Button><Button kind="primary" onClick={() => p.onApply(mode)}>套用</Button></>}>
+    <Modal title="這份名單看起來已經匯入過" onClose={p.onClose} actions={<><Button onClick={p.onClose}>取消</Button><Button kind="primary" disabled={mode === null} onClick={() => { if (mode) p.onApply(mode); }}>套用</Button></>}>
       <div class="stack">
         <p>新檔（{p.d.fileName}）有 {p.d.parse.rawCount} 列，其中 {diff.same} 列與目前的名單相同。請選擇怎麼處理：</p>
-        <label class="chk" style="display:flex;gap:8px"><input type="radio" name="mk2-dup" checked={mode === 'replace'} onChange={() => setMode('replace')} /><span><b>取代</b>：用新檔整份換掉目前名單。已排的考程會重新檢核；先前的問題列處理與略過紀錄會清掉，需要重做。</span></label>
-        <label class="chk" style="display:flex;gap:8px"><input type="radio" name="mk2-dup" checked={mode === 'merge'} onChange={() => setMode('merge')} /><span><b>合併</b>：保留目前的，只加入新檔多出來的列。</span></label>
-        <div class="stats side-stats">
+        <label class="chk" style="display:flex;gap:8px"><input type="radio" name="mk2-dup" checked={mode === 'replace'} onChange={() => setMode('replace')} /><span><b>取代</b>：用新檔整份換掉目前名單。先前的問題列處理與略過紀錄會清掉，需要重做。{diff.removedScheduled > 0 ? <> <b>已排進考程的 {diff.removedScheduled} 筆會被移除</b>，套用後 ⑥ 會立刻重新檢核。</> : '已排的考程會重新檢核。'}</span></label>
+        <label class="chk" style="display:flex;gap:8px"><input type="radio" name="mk2-dup" checked={mode === 'merge'} onChange={() => setMode('merge')} /><span><b>合併</b>：保留目前的，只加入新檔多出來的列；已排的考程不受影響。</span></label>
+        {mode === null && <Alert tone="info">請先選一種處理方式，才能按「套用」。</Alert>}
+        {mode !== null && <div class="stats side-stats">
           <div><small>{mode === 'replace' ? '會新增' : '會新增（新檔多出的列）'}</small><strong>{diff.added}</strong></div>
           {mode === 'replace' && <div><small>會更新（分數或班級不同）</small><strong>{diff.updated}</strong></div>}
           {mode === 'replace' && <div><small>會移除（新檔沒有）</small><strong>{diff.removed}</strong></div>}
-        </div>
-        {mode === 'replace' && diff.removedScheduled > 0 && <Alert tone="warn"><b>受影響：已排進考程的 {diff.removedScheduled} 筆會被移除</b>。套用後 ⑥ 會立刻重新檢核；如果因此出現遺漏，儀表板會變紅並列出來。</Alert>}
+        </div>}
+        {mode === 'replace' && diff.removedScheduled > 0 && <Alert tone="warn"><b>受影響：已排進考程的 {diff.removedScheduled} 筆會被移除</b>。如果因此出現遺漏，⑥ 儀表板會變紅並列出來；不想動考程請改選「合併」。</Alert>}
       </div>
     </Modal>
   );

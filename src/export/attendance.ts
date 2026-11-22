@@ -6,6 +6,7 @@
  * 標題用「考試名稱」，不寫死「模擬考」，日後補考可沿用（D77③）。
  * 沒有考科的人（全科缺考、未參加）預設排座（D137），各科印「—」或自習去處；到他處考試者各科印去處，不佔本教室打勾格。
  */
+import { orderedRoomIds } from './classOrder';
 import { specialOf } from '../core/stats';
 import { seatLabel } from '../data';
 import type { Classroom, SeatAssignment } from '../data';
@@ -21,7 +22,7 @@ export const estimateAttendancePages = (pages: readonly TablePageModel[]): numbe
 
 export function buildAttendancePages(input: ExportInput): TablePageModel[] {
   const { exam, settings, result, entries, students } = input;
-  const rooms = exam.classroomIds
+  const rooms = orderedRoomIds(input)
     .map((id) => settings.classrooms.find((c) => c.id === id))
     .filter((c): c is Classroom => !!c);
   const roomName = new Map(settings.classrooms.map((c) => [c.id, c.name]));

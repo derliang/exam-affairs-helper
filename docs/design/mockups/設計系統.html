@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>模擬考設計系統 稿 v2.99</title>
+<title>模擬考設計系統 稿 v2.100</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -538,7 +538,7 @@ span.chk.on{background:var(--cbx-on-bg);border-color:var(--cbx-on-line);color:va
 </style>
 
 <div class="top">
-  <span class="brand">模擬考小幫手 設計系統 <span class="badge b-acc">稿 v2.99・2026-11-22</span></span>
+  <span class="brand">模擬考小幫手 設計系統 <span class="badge b-acc">稿 v2.100・2026-11-22</span></span>
   <nav class="toc" aria-label="目錄">
     <a href="#color">色彩</a><a href="#type">字型</a><a href="#base">間距圓角</a><a href="#comp">元件</a><a href="#steps">步驟導覽</a><a href="#special">專屬元件</a><a href="#ast">分科新模型</a><a href="#ast2">分科下一批</a><a href="#paper">座位表與標籤</a><a href="#paper36">輸出補強 v2.36</a><a href="#paper36b">名單與教室 v2.36</a><a href="#brandbar">品牌列</a><a href="#footer">頁尾</a><a href="#align">對位測試頁</a><a href="#v275">v2.75 納入</a><a href="#open">待確認</a>
   </nav>
@@ -1489,6 +1489,29 @@ body{word-break:keep-all;line-break:strict;overflow-wrap:break-word}code,pre,kbd
         <div class="stack" style="gap:6px"><span class="small"><b>改後</b>（只在標點處斷）</span><div style="width:210px;border:1px solid var(--line);border-radius:8px;padding:8px;word-break:keep-all;line-break:strict;overflow-wrap:break-word">最多一個時段自習 0（少教室優先）；綜合教室預設只送綜合教室，不印標籤。</div></div>
       </div>
       <p class="small muted">已知限制：兩個標點之間的一段若本身比一行寬（例如手機寬 375 的「只想改這間教室的模擬考；」），仍會在行尾逐字折；文案撰寫時盡量用逗號把長句切短。</p>
+    <div class="card" id="v2100" style="margin-top:16px"><div class="lab">②-1 補考匯入重複：「取代／合併」不預選、先講影響（#602；多檔衝突訊息的班級用班名（#599）；<b>稿 v2.100</b>；使用者 2026-11-22 裁示算問題；D208）</div>
+      <p class="small muted">舊畫面（補考稿 F-11、DESIGN S-4）預設選「取代」，已排考程的人會被悄悄移除。新規則：①兩個選項<b>都不預選</b>，沒選時「套用」是灰的並提示「請先選一種處理方式」；②取代那一項的說明就先寫「已排進考程的 N 筆會被移除」（N＝0 時不寫）；③合併寫明「已排的考程不受影響」；④統計格與琥珀「受影響」提示條只在選了之後才出現。取代／合併是兩個選項，沒有建議預設，因為兩者各有不可逆的代價，讓使用者看完影響再決定。</p>
+      <div class="v36 g" style="grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr))">
+        <div><div class="small"><b>剛打開（兩項都沒選）</b></div>
+          <div class="modal-frame"><div class="modal" role="dialog" aria-label="示範">
+            <h3>這份名單看起來已經匯入過</h3>
+            <p class="small">新檔（補考名單.xlsx）有 45 列，其中 40 列與目前的名單相同。請選擇怎麼處理：</p>
+            <label class="chk-row small" style="display:flex;gap:8px"><span class="chk" style="flex:none;width:22px;height:22px;border-radius:6px;display:grid;place-items:center;font-weight:800"></span><span><b>取代</b>：用新檔整份換掉目前名單。先前的問題列處理與略過紀錄會清掉，需要重做。<b>已排進考程的 19 筆會被移除</b>，套用後 ⑥ 會立刻重新檢核。</span></label>
+            <label class="chk-row small" style="display:flex;gap:8px"><span class="chk" style="flex:none;width:22px;height:22px;border-radius:6px;display:grid;place-items:center;font-weight:800"></span><span><b>合併</b>：保留目前的，只加入新檔多出來的列；已排的考程不受影響。</span></label>
+            <div class="alert a-info"><span class="ico" data-i="i"></span><span>請先選一種處理方式，才能按「套用」。</span><span></span></div>
+            <div class="acts"><button class="btn">取消</button><button class="btn btn-primary" disabled>套用</button></div>
+          </div></div></div>
+        <div><div class="small"><b>選了「取代」之後</b>（才出現統計格與受影響提示條）</div>
+          <div class="modal-frame"><div class="modal" role="dialog" aria-label="示範">
+            <h3>這份名單看起來已經匯入過</h3>
+            <label class="chk-row small" style="display:flex;gap:8px"><span class="chk on" style="flex:none;width:22px;height:22px;border-radius:6px;display:grid;place-items:center;font-weight:800">✓</span><span><b>取代</b>：用新檔整份換掉目前名單。先前的問題列處理與略過紀錄會清掉，需要重做。<b>已排進考程的 19 筆會被移除</b>，套用後 ⑥ 會立刻重新檢核。</span></label>
+            <label class="chk-row small" style="display:flex;gap:8px"><span class="chk" style="flex:none;width:22px;height:22px;border-radius:6px;display:grid;place-items:center;font-weight:800"></span><span><b>合併</b>：保留目前的，只加入新檔多出來的列；已排的考程不受影響。</span></label>
+            <div class="stats"><div><small>會新增</small><strong>3</strong></div><div><small>會更新（分數或班級不同）</small><strong>5</strong></div><div class="bad"><small>會移除（新檔沒有）</small><strong>21</strong></div></div>
+            <div class="alert a-warn"><span class="ico" data-i="!"></span><span><b>受影響：已排進考程的 19 筆會被移除</b>。如果因此出現遺漏，⑥ 儀表板會變紅並列出來；不想動考程請改選「合併」。</span><span></span></div>
+            <div class="acts"><button class="btn">取消</button><button class="btn btn-primary">套用</button></div>
+          </div></div></div>
+      </div>
+      <p class="small muted" style="margin-top:8px"><b>#599 班級稱呼</b>：多檔匯入的衝突與問題列一律寫班名，有班名用班名（已以「班」結尾不重複加），名單裡才出現、班級資料還沒有的新班才寫「第01班」。例：「班級與座號與檔案「A.xlsx」的 <b>溫班 3 號「甲生」</b>重複」「<b>溫班 5 號</b> 怎麼處理」（舊畫面是「02 班」「1 班」）。</p>
     </div>
     <div class="card" id="v298" style="margin-top:16px"><div class="lab">⑦-1 補考 ⑦ 下載 PDF：多份併成單一列印頁，按鈕旁預告頁數（#592，<b>稿 v2.98</b>；使用者 2026-11-22 裁示比照分科 ⑥；D206）</div>
       <p class="small muted">勾選多份文件按「下載 PDF」只開 1 個列印頁（各份依序接在同一頁面內），不再開多個視窗被瀏覽器擋下。Word 仍每份一個檔。與分科 ⑥、模擬考 ⑥ 同一種畫法：按鈕下方一行小灰字預告。</p>
