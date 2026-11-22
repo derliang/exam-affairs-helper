@@ -32,10 +32,31 @@ describe('步驟條文字（校-08）', () => {
     expect(html).toContain('第 2／6 步');
     expect(html).toContain('已完成 1 步');
   });
-  it('#362 停在第 1 步時，後面步驟的資料已符合條件也不算「已完成」：顯示已完成 0 步', () => {
+  it('#634（D217，修訂 #362）：已完成步數＝側欄打勾數，停在第 1 步而第 2 步已打勾就是 1 步', () => {
     const steps = [1, 2, 3, 4, 5, 6].map((no) => ({ no, name: `s${no}`, state: (no === 1 ? 'cur' : no === 2 ? 'done' : 'todo') as 'done' | 'cur' | 'todo' }));
     const html = renderToString(<StepNav steps={steps} onGo={noop} />);
     expect(html).toContain('第 1／6 步');
-    expect(html).toContain('已完成 0 步');
+    expect(html).toContain('已完成 1 步');
+  });
+});
+
+describe('#634 步驟計數口徑（D217）', () => {
+  it('「不需要」的步驟不算進總數，目前步驟序號也不計它（與列表 N／M 步完成同口徑）', () => {
+    const steps = [1, 2, 3, 4, 5, 6].map((no) => ({ no, name: `s${no}`, state: (no === 4 ? 'skip' : no < 5 ? 'done' : no === 5 ? 'cur' : 'todo') as 'done' | 'cur' | 'todo' | 'skip' }));
+    const html = renderToString(<StepNav steps={steps} onGo={noop} />);
+    expect(html).toContain('第 4／5 步');
+    expect(html).toContain('已完成 3 步');
+  });
+});
+
+describe('#634 回到哪裡要寫具體名稱（D217）', () => {
+  it('pageName：共用設定寫到分頁名；名單比對、個別覆寫、補考頁都有名稱，不再是「上一頁」', async () => {
+    const { pageName } = await import('./App');
+    const doc = { exams: [{ id: 'e1', name: '甲考' }] } as never;
+    expect(pageName({ page: 'settings', tab: 'features' }, doc)).toBe('共用設定「選用功能」');
+    expect(pageName({ page: 'settings' }, doc)).toBe('共用設定');
+    expect(pageName({ page: 'reconcile', examId: 'e1' }, doc)).toBe('「甲考」名單比對');
+    expect(pageName({ page: 'override', examId: 'e1' }, doc)).toBe('「甲考」個別覆寫');
+    expect(pageName({ page: 'makeup' }, doc)).toBe('補考場次列表');
   });
 });

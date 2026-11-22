@@ -72,14 +72,14 @@ describe('G1 列表：封存、還原、刪除（學測、分科、會考）', (
     expect((await loadDoc(fs)).data.exams.map((e) => e.id)).not.toContain(id);
   });
 
-  it('列表依考試日期分「還沒開始／已經結束」；沒有封存鈕與「已封存」區；每列只有「查看／安排」「刪除」（D163）', () => {
+  it('列表依考試日期分「尚未結束／已經結束」；沒有封存鈕與「已封存」區；每列只有「查看／安排」「刪除」（D163）', () => {
     const d = docWith();
     const [e1, e2] = d.exams as ExamConfig[];
     const dated: Doc = { ...d, exams: d.exams.map((e) => (e.id === e1!.id ? { ...e, examDates: ['2026-09-01'] } : e.id === e2!.id ? { ...e, examDates: ['2026-12-31'] } : e)) };
     const html = renderToString(<Exams doc={dated} today="2026-11-19" onOpen={noop} onNew={noop} onSettings={noop} onChangeFolder={noop} onDelete={noop} />);
-    expect(html).toContain('還沒開始');
+    expect(html).toContain('尚未結束');
     expect(html).toContain('已經結束');
-    expect(html.indexOf('還沒開始')).toBeLessThan(html.indexOf('已經結束'));
+    expect(html.indexOf('尚未結束')).toBeLessThan(html.indexOf('已經結束'));
     expect(html).toContain('查看／安排');
     expect(html).toContain('>刪除<');
     for (const t of ['>封存<', '>還原<', '已封存', '查看／下載']) expect(html).not.toContain(t);

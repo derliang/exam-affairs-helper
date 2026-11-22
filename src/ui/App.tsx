@@ -264,13 +264,19 @@ export function App() {
   );
 }
 
-/** 「← 回到 …」要寫清楚是哪一頁（DESIGN 10.1） */
+const SETTINGS_TAB_NAMES = { roster: '學生名單', classes: '班級資料', school: '學校與表頭', rooms: '教室清單', sched: '節次與時長', features: '選用功能' } as const;
+/** 「← 回到 …」要寫清楚是哪一頁（DESIGN 10.1；#634 D217：共用設定要寫到分頁名、不再有「上一頁」兜底的頁） */
 export function pageName(r: Route, doc: Doc): string {
   switch (r.page) {
     case 'exams': return '模擬考列表';
     case 'new': return '新增模擬考';
     case 'wizard': { const n = r.step ?? 1; return n >= 6 ? '首次設定 總覽' : `首次設定 第 ${n} 步 ${WIZARD_STEPS[n - 1]?.name ?? ''}`; }
-    case 'settings': return '共用設定';
+    case 'settings': return r.tab ? `共用設定「${SETTINGS_TAB_NAMES[r.tab]}」` : '共用設定';
+    case 'reconcile': return `「${doc.exams.find((e) => e.id === r.examId)?.name ?? '模擬考'}」名單比對`;
+    case 'override': return `「${doc.exams.find((e) => e.id === r.examId)?.name ?? '模擬考'}」個別覆寫`;
+    case 'makeup': return '補考場次列表';
+    case 'makeupNew': return '新增補考場次';
+    case 'makeupStep': return `補考第 ${r.step} 步`;
     case 'init': return '資料夾設定';
     case 'lookup': return '考生查詢';
     case 'copyright': return '使用授權';

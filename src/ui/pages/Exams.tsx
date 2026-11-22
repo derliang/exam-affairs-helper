@@ -47,7 +47,7 @@ export function Exams(p: {
   const [envHide, setEnvHide] = useState(false);
   const banner = p.onEnv && !p.listError ? envBanner(p.doc) : 'none';
   const all = sortExams(p.doc.exams);
-  // #352、D163、D164：依考試日期分「還沒開始」「已經結束」（取代「進行中」「已封存」；封存功能拿掉）
+  // #352、D163、D164：依考試日期分「尚未結束」「已經結束」（取代「進行中」「已封存」；封存功能拿掉）
   const { upcoming, ended } = groupExams(all, p.today ?? todayTaipei(), lastModified);
   const canDelete = !!(p.onDelete || p.onDeleteMany);
   const toggle = (id: string) => setSel((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
@@ -122,8 +122,8 @@ export function Exams(p: {
             <Button small onClick={() => setSel([])}>取消選取</Button>
             <Button small kind="danger" onClick={() => setDel(all.filter((e) => sel.includes(e.id)))}>刪除所選</Button></div>
         )}
-        {groupHead('還沒開始', upcoming)}
-        {upcoming.length === 0 && <EmptyState title="目前沒有還沒開始的模擬考">可以新增，或到下方「已經結束」查看。</EmptyState>}
+        {groupHead('尚未結束', upcoming)}
+        {upcoming.length === 0 && <EmptyState title="目前沒有尚未結束的模擬考">可以新增，或到下方「已經結束」查看。</EmptyState>}
         <div class="exam-list">{upcoming.map(card)}</div>
         {ended.length > 0 && (
           <>
