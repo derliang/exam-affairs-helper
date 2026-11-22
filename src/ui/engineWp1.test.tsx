@@ -142,7 +142,7 @@ describe('WP-5 會考：名冊每個人都排座位（會考不可不參加）',
     for (const l of r.ledger) { expect([l.scope, l.exam, l.study, l.absent]).toEqual([20, 16, 0, 4]); expect(l.ok).toBe(true); }
     const p = prepareExport(doc, exam);
     if (!p.ok) throw new Error(p.errors.join());
-    const labels = buildLabelPages(p.input, 'all').flatMap((pg) => pg.cells.map((c) => c.code));
+    const labels = buildLabelPages(p.input, 'all').flatMap((pg) => pg.cells.filter((c) => !c.empty).map((c) => c.code));
     expect(labels).toHaveLength(16);
     expect(labels).not.toContain('0109');
     expect(labels).not.toContain('0201');

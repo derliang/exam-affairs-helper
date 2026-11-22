@@ -8,7 +8,7 @@
 import type { ExamConfig, LabelPaper } from '../../data';
 import { subjectShort } from '../../core/subjectShort';
 import { dataVersion } from '../../core/version';
-import { STUDY_LEGEND, roomTooBigForLabel, seatGeometry, splitLabelTiles, textEm, wideLabelLayout, type LabelPageModel, type TablePageModel, type CellModel, type PersonModel, type SeatPageModel } from '../../export/model';
+import { STUDY_LEGEND, addSeatLegend, emptyLabelCells, roomTooBigForLabel, seatGeometry, splitLabelTiles, textEm, wideLabelLayout, type LabelPageModel, type TablePageModel, type CellModel, type PersonModel, type SeatPageModel } from '../../export/model';
 import { dateTag, dayTag } from '../../export/dayLabel';
 import { examEntries } from '../seating';
 import type { Doc } from '../store';
@@ -156,7 +156,9 @@ function labelPages(c: Ctx, paper: LabelPaper): LabelPageModel[] {
       };
     });
     // 兩倍寬（D113）：一頁橫向最多 3 張、縱向 7 張，排數超過 3 就分頁，每張標「第 N／共 M 張」；格子依座位表的排×深位
-    const tiles = splitLabelTiles(cells, { cols: layout.cols / 2, rows: layout.rows });
+    // D215（#648）：教室裡沒人坐的座位也印一張只有座位編號的標籤（空白標籤），與座位表同一原則
+    const withEmpty = [...cells, ...emptyLabelCells(rm0?.seats.map((x) => `${x.row}-${x.depth}`) ?? [], new Set(seats.map((l) => `${l[0]!.row}-${l[0]!.depth}`)))];
+    const tiles = splitLabelTiles(withEmpty, { cols: layout.cols / 2, rows: layout.rows });
     return tiles.map((t, i): LabelPageModel => {
       const suffix = tiles.length > 1 ? `（第 ${i + 1}／${tiles.length} 張）` : '';
       return {
@@ -243,7 +245,7 @@ function seatPages(c: Ctx): SeatPageModel[] {
       });
     }
   }
-  return pages;
+  return pages.map(addSeatLegend);
 }
 
 /**
@@ -353,7 +355,7 @@ function usagePages(c: Ctx): TablePageModel[] {
   const pages: TablePageModel[] = [{
     kind: 'table', title: `${c.exam.name}　每節教室用途表`,
     subtitle: '考試＝這節是考場；自習＝接收離開原班的自習者；借用自習＝經核可借他班原班教室；原班＝同學留在原班；—＝沒用到',
-    heads: ['教室', '類型', ...c.slots.map((s) => slotHead(c, s))], widths: [1.6, 1.1, ...c.slots.map(() => 1.5)], rows,
+    heads: ['教室', '類型', ...c.slots.map((s) => slotHead(c, s))], widths: [1.6, Math.max(1.1, 0.2 + 0.17 * c.slots.length), ...c.slots.map(() => 1.5)], rows, // D215（#631）：類型欄至少約 10% 寬，「班級教室」「綜合教室」不拆行
   }];
   const m = c.plan.out.metrics;
   if (m) {

@@ -73,6 +73,8 @@ export interface CellModel {
   corners?: CornerTag[];
   /** 自習參考座位格（非考試座位、不印標籤）：虛線框，黑白列印也分得出（分科自習座位頁用；學測原班虛線格已拿掉，D137） */
   ref?: boolean;
+  /** 沒人坐的可用座位（D215，#648）：標籤只印座位編號、其餘留白；座位表不用這個欄位（空位由 usable 減 cells 得出） */
+  empty?: boolean;
 }
 /** 角標：x＝不考（黑底白字）、add＝加考／抽離考試（白底黑框）、take＝「有考」（該科不考超過一半時反標，白底黑框） */
 export interface CornerTag { kind: 'x' | 'add' | 'take' | 'detach'; text: string }
@@ -225,7 +227,34 @@ export function wideLabelLayout(paper: LabelPaper): LabelLayout {
 export const LABEL_ROOM_MAX = 8;
 export const PREP_TAG = '預備教室';
 /** 自習座位頁圖例（G36 補做項④、稿 v2.68 圖例列）：此頁座位都是自習座位、斜紋＝停用（#550：自習頁格子不畫虛線與「自習」字，D147 匯出樣式不自訂）；與頁首「非考試座位」小標籤並列，黑白列印也分得出 */
-export const STUDY_LEGEND = '圖例：此頁座位都是自習座位（不印標籤）；斜紋格＝停用';
+export const STUDY_LEGEND = '圖例：此頁座位都是自習座位（不印標籤）；斜線格＝空位（沒人坐）；斜紋底＝停用座位';
+/**
+ * 座位表圖例（D215，#647）：座位表一律畫出教室全部座位（排×深位）。沒人坐的可用座位＝白底一條斜線（劃掉）；
+ * 停用座位（教室設定停用，或超出座位數）＝斜紋底。頁面有這兩種格子才加這一枚圖例小標籤（與自習座位頁的 STUDY_LEGEND 並列，不重複）。
+ */
+export function seatLegendOf(p: SeatPageModel): string | undefined {
+  let empty = 0;
+  for (const k of p.usable) if (!p.cells.has(k)) empty++;
+  const off = p.rows * p.depth - p.usable.size;
+  const parts = [...(empty > 0 ? ['斜線格＝空位（沒人坐）'] : []), ...(off > 0 ? ['斜紋底＝停用座位'] : [])];
+  return parts.length ? `圖例：${parts.join('；')}` : undefined;
+}
+/** 在座位頁頭加圖例小標籤（已有「圖例：」開頭的小標籤就不重複）；回傳同一頁 */
+export function addSeatLegend(p: SeatPageModel): SeatPageModel {
+  if (p.chips.some((c) => c.startsWith('圖例：'))) return p;
+  const l = seatLegendOf(p);
+  if (l) p.chips.push(l);
+  return p;
+}
+/** 沒人坐的座位的標籤格（D215，#648）：只有座位編號 */
+export function emptyLabelCell(seat: { row: number; depth: number }): CellModel {
+  return { coord: seatLabel(seat), seat: { row: seat.row, depth: seat.depth }, code: '', classLabel: '', name: '', colorBg: 'FFFFFF', colorLine: '222222', colorFg: '22201B', tags: [], marks: [], empty: true };
+}
+const seatOfKey = (k: string): { row: number; depth: number } => { const [r, d] = k.split('-'); return { row: Number(r), depth: Number(d) }; };
+/** 教室可用座位裡沒有人的那些，補成標籤用的空白格 */
+export function emptyLabelCells(usable: Iterable<string>, taken: ReadonlySet<string>): CellModel[] {
+  return [...usable].filter((k) => !taken.has(k)).map((k) => emptyLabelCell(seatOfKey(k)));
+}
 
 /**
  * 標籤頁的列印邊距（D136，使用者 2026-11-18 裁示 #387「標籤與紙張邊緣沒有間距，列印會有問題」）：
@@ -888,6 +917,7 @@ export function buildSeatPages(input: ExportInput, scope: Scope = 'all'): SeatPa
     }
     if (input.includeStudyRef !== false) pages.push(...studyReferencePages(input, ctx, rooms));
   }
+  for (const pg of pages) addSeatLegend(pg);
   return pages;
 }
 
@@ -1011,7 +1041,7 @@ export function buildLabelPages(input: ExportInput, scope: Scope = 'all'): Label
         layout,
         grid: { cols: room.rows, rows: room.depth },
         notes: labelNoteLines(input.settings.labelNotes),
-        cells: t.cells.map((x) => makeCell(x.a.code, x.a, ctx)),
+        cells: [...t.cells.map((x) => makeCell(x.a.code, x.a, ctx)), ...emptyLabelCells(usableOf(room), new Set(input.result.assignments.filter((a) => a.classroomId === id).map((a) => `${a.row}-${a.depth}`)))].sort((a, b) => a.seat.row - b.seat.row || a.seat.depth - b.seat.depth),
       });
     });
     const lp = pages[pages.length - 1]!;
@@ -1042,7 +1072,7 @@ export function buildLabelPages(input: ExportInput, scope: Scope = 'all'): Label
         layout,
         grid: { cols: room.rows, rows: room.depth },
         notes: labelNoteLines(input.settings.labelNotes),
-        cells: t.cells.map((x) => ({
+        cells: t.cells.map((x): CellModel => ({
           coord: seatLabel(x.seat),
           seat: { row: x.seat.row, depth: x.seat.depth },
           code: '',
@@ -1055,7 +1085,7 @@ export function buildLabelPages(input: ExportInput, scope: Scope = 'all'): Label
           marks: [],
           periodLines: x.lines.sort((a, b) => a.period - b.period).map(({ head, text }) => ({ head, text })),
           persons: personsOf(x, ctx),
-        })),
+        })).concat(emptyLabelCells(usableOf(room), new Set(list.map((m) => `${m.seat.row}-${m.seat.depth}`)))).sort((a, b) => a.seat.row - b.seat.row || a.seat.depth - b.seat.depth),
       });
       });
     }
@@ -1189,13 +1219,15 @@ export function namePtFit(classLabel: string, name: string, innerMm: number, max
  * 座位表下方統計表的版面（#217）：第一欄放得下的字不折行；放不下的折行，列高隨行數撐開，
  * 座位格高度（seatGeometry）扣掉的也是同一個總高，整張表一定在頁面內。Word 與列印頁共用。
  */
-export function statLayout(p: SeatPageModel): { cols: number[]; rowH: number[]; pt: number; total: number } {
+export type StatTier = 0 | 1 | 2;
+/** 統計表精簡級數（D215，#645）：0＝原樣（12／10.5pt）；1＝精簡 9pt、列高最小 5.2mm；2＝極簡 8pt、列高最小 4.6mm。座位表一間教室一頁時，列數多就逐級縮 */
+export function statLayout(p: SeatPageModel, tier: StatTier = 0): { cols: number[]; rowH: number[]; pt: number; total: number } {
   const innerW = SEAT_PAGE.w - 2 * SEAT_PAGE.padX;
   const rows = statRows(p);
   const n = p.stats.table.classes.length;
   // D170：列數 ≤ 5 為 12pt／8mm；> 5 為 10.5pt／6.4mm（學測兩天會有 6～10 列，不然把座位格壓太矮）
   const small = rows.length > 5;
-  const pt = small ? 10.5 : 12;
+  const pt = tier === 1 ? 9 : tier === 2 ? 8 : small ? 10.5 : 12;
   const totalW = 18;
   const leadN = p.stats.table.leadHeads?.length ?? 1;
   // 前導欄（D147⑤）：第幾天、時段、科目（有日期時再加日期欄）；沒有前導欄時維持單一第一欄
@@ -1208,7 +1240,7 @@ export function statLayout(p: SeatPageModel): { cols: number[]; rowH: number[]; 
   const firstW = innerW - classW * n - totalW - (leadN === 1 ? 0 : leadSum - leadW[0]!);
   if (leadN > 1) leadW[0] = firstW;
   const lineH = pt * 0.3528 * 1.3;
-  const h = (k: number) => Math.max(small ? 6.4 : 8, +(k * lineH + (small ? 1.6 : 3.4)).toFixed(1));
+  const h = (k: number) => (tier ? Math.max(tier === 1 ? 5.2 : 4.6, +(k * lineH + (tier === 1 ? 1 : 0.8)).toFixed(1)) : Math.max(small ? 6.4 : 8, +(k * lineH + (small ? 1.6 : 3.4)).toFixed(1)));
   // 每列文字最多折幾行：單一欄看整欄寬；前導欄逐格看各自欄寬，單格橫跨其餘欄時看合併寬
   const lines = (r: (typeof rows)[number]) => {
     const cells = leadN === 1 ? [r.label] : (r.lead ?? [r.label]);
@@ -1321,7 +1353,8 @@ export function chipRowCount(chips: readonly string[]): number {
  * 座位格尺寸。時段版（預備／綜合教室）的統計表每時段一列，時段多（例如分科 12 列）就把座位格壓到約 15mm，
  * 兩人格姓名只剩 4～5pt（#212）。座位格會因此低於 22mm 時，統計表改放下一頁（statsNext），座位圖用整頁高度（最高 32mm）。
  */
-export function seatGeometry(p: SeatPageModel, o: { topMm?: number } = {}): { cw: number; ch: number; st: ReturnType<typeof statRows>; statsNext: boolean } {
+export const SEAT_CELL_MM = { pref: 18, hard: 15 } as const;
+export function seatGeometry(p: SeatPageModel, o: { topMm?: number } = {}): { cw: number; ch: number; st: ReturnType<typeof statRows>; statsNext: boolean; tier: StatTier } {
   const innerW = SEAT_PAGE.w - 2 * SEAT_PAGE.padX;
   const cw = Math.min(p.slotMode ? 24.79 : 25, +((innerW - 6.5) / p.rows).toFixed(2));
   const st = statRows(p);
@@ -1330,17 +1363,28 @@ export function seatGeometry(p: SeatPageModel, o: { topMm?: number } = {}): { cw
   // D170：每格的標示帶都要放得進（號碼 ≥ 11pt）；放不進就統計表換頁、座位格換高，絕不壓到姓名
   const top = o.topMm ?? 1.2;
   const fits = (ch: number) => [...p.cells.values()].every((c) => c.persons || c.periodLines || !c.code || seatCellFit(c, cw, ch, top).ok);
-  // 時段版：統計表（每時段一列）加一行格內說明（約 6mm）
-  const withStats = chOf(base + (p.slotMode ? 6 + 5 + statLayout(p).total : 5 + statLayout(p).total));
-  if ((p.slotMode && withStats < 22) || !fits(withStats)) {
-    const without = chOf(base + (p.slotMode ? 6 + 5 : 5), 32);
+  if (!p.slotMode) {
+    // D215（#645，推翻 D111）：班級教室座位表一間教室一頁。統計表逐級縮（原樣→精簡 9pt→極簡 8pt），選第一個讓座位格 ≥ 18mm 且標示放得進的級數；
+    // 縮到極簡仍 ≥ 15mm（硬下限）且放得進也用；再不行才退回統計表另起一頁（極端：統計表約 15 列以上）
+    const tiers: StatTier[] = [0, 1, 2];
+    const chs = tiers.map((t) => chOf(base + 5 + statLayout(p, t).total));
+    for (const t of tiers) if (chs[t]! >= SEAT_CELL_MM.pref && fits(chs[t]!)) return { cw, ch: chs[t]!, st, statsNext: false, tier: t };
+    if (chs[2]! >= SEAT_CELL_MM.hard && fits(chs[2]!)) return { cw, ch: chs[2]!, st, statsNext: false, tier: 2 };
+    const without = chOf(base + 5, 32);
+    if (!fits(without)) throw new Error(`「${p.roomName}」座位格放不下特殊考生標示（格高 ${without}mm）：請減少同一格的標示，或調整教室的深位數`);
+    return { cw, ch: without, st, statsNext: true, tier: 0 };
+  }
+  // 時段版（預備／綜合教室）：統計表每時段一列，兩人輪流格需要 ≥ 22mm（#212），維持 D111：放不下就統計表另起一頁
+  const withStats = chOf(base + 6 + 5 + statLayout(p).total);
+  if (withStats < 22 || !fits(withStats)) {
+    const without = chOf(base + 6 + 5, 32);
     if (without > withStats) {
       if (!fits(without)) throw new Error(`「${p.roomName}」座位格放不下特殊考生標示（格高 ${without}mm）：請減少同一格的標示，或調整教室的深位數`);
-      return { cw, ch: without, st, statsNext: true };
+      return { cw, ch: without, st, statsNext: true, tier: 0 };
     }
   }
   if (!fits(withStats)) throw new Error(`「${p.roomName}」座位格放不下特殊考生標示（格高 ${withStats}mm）：請減少同一格的標示，或調整教室的深位數`);
-  return { cw, ch: withStats, st, statsNext: false };
+  return { cw, ch: withStats, st, statsNext: false, tier: 0 };
 }
 
 /** 標籤格尺寸（D113、D136）：見 labelFit；padX＝左右列印邊距 */
