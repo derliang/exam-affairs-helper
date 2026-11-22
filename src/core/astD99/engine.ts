@@ -28,8 +28,9 @@ import {
   type StudyPlacement,
   type StudySeat,
 } from './contract';
+import { planHomeExam } from './homeExam';
 
-interface Stu {
+export interface Stu {
   idx: number;
   code: string;
   classNo: number;
@@ -37,7 +38,7 @@ interface Stu {
   track?: string;
 }
 
-interface Room {
+export interface Room {
   idx: number;
   id: string;
   kind: 'class' | 'reserve';
@@ -94,6 +95,7 @@ const MAX_ENUM = 200_000;
 const MAX_PASSES = 4;
 
 export function planD99(input: PlanInput): PlanOutput {
+  if (input.mode === 'home-exam') return planHomeExam(input); // D219：第三種排法另有一套（見 homeExam.ts）
   const ctx = new Ctx(input);
   return ctx.run();
 }
@@ -728,7 +730,7 @@ class Ctx {
   }
 }
 
-function toRoom(r: PlanRoom, idx: number): Room {
+export function toRoom(r: PlanRoom, idx: number): Room {
   const seats = [...r.seats].sort((a, b) => a.row - b.row || a.depth - b.depth);
   const rows: { row: number; depths: number[] }[] = [];
   for (const s of seats) {

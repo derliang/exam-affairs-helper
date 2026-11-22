@@ -368,7 +368,9 @@ export function reconcileAst(doc: Doc, exam: ExamConfig, outs?: AstOutputs): Rec
       const seatKeys = new Map<string, number>();
       for (const e of ex) seatKeys.set(`${e.row}-${e.depth}`, (seatKeys.get(`${e.row}-${e.depth}`) ?? 0) + 1);
       uses.push({ reserve: roomById.get(rid)?.kind === 'reserve', room: rid, roomName: rname(rid), slot: gi, exam: ex.length, study: st, seats: roomById.get(rid)?.seats.length ?? 0, dup: [...seatKeys.values()].filter((n) => n > 1).length });
-      if (ex.length > 0 && st > 0) { overlapN++; overlap.push({ text: `${rname(rid)} ${s.label}：同時有考試 ${ex.length} 人與自習 ${st} 人`, step: 5 }); }
+      // D219：「原班應考標 X」模式，原班教室裡同時有本班考生與標 X 的本班同學是設計，不算考試與自習混用
+      const xStay = plan.input.mode === 'home-exam' && roomById.get(rid)?.kind === 'class' && study.filter((e) => e.roomId === rid).every((e) => Number(e.code.slice(0, 2)) === roomById.get(rid)?.classNo);
+      if (ex.length > 0 && st > 0 && !xStay) { overlapN++; overlap.push({ text: `${rname(rid)} ${s.label}：同時有考試 ${ex.length} 人與自習 ${st} 人`, step: 5 }); }
     }
     // D159（D153 延伸）：座位表＝各教室加總＝名冊全部（含不參加者；每人每時段只算一個去處），標籤＝應考人數
     const resExam = exams.filter((e) => roomById.get(e.roomId)?.kind === 'reserve').length;
