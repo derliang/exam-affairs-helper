@@ -195,8 +195,8 @@ export interface ExamConfig {
   reserveSeatMode?: 'peer' | 'proctor';
   /** 學測／會考預備教室座位排法（#258）：min-depth＝最少深位（沒設＝預設，人數平均分到各排）、min-rows＝最少排數（一排坐滿再下一排） */
   reserveLayout?: 'min-depth' | 'min-rows';
-  /** 分科排座模式（D99）：fewest-rooms＝少教室優先（沒設＝預設）、least-movement＝少移動優先 */
-  astMode?: 'fewest-rooms' | 'least-movement';
+  /** 分科排座模式（D99）：fewest-rooms＝少教室優先（沒設＝預設）、least-movement＝少移動優先、home-exam＝原班應考、不考者留原班標 X（D219） */
+  astMode?: 'fewest-rooms' | 'least-movement' | 'home-exam';
   /** 分科綜合教室座位排法（#258）：min-depth＝最少深位（沒設＝預設，人數平均分到各排）、min-rows＝最少排數 */
   astReserveLayout?: 'min-depth' | 'min-rows';
   /** 分科（G36）：固定自習教室（教室 id，手動硬性指定）：全程不當考場，每人整天只去同一間自習；沒設＝自動盡量同一間（WP-2，D141） */

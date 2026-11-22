@@ -21,7 +21,7 @@ import { rosterFor } from '../rosterYears';
 import { dataVersion } from '../../core/version';
 import { snapOf } from '../../core/astD99/release';
 
-export const MODE_LABEL: Record<PlanMode, string> = { 'fewest-rooms': '少教室優先', 'least-movement': '少移動優先' };
+export const MODE_LABEL: Record<PlanMode, string> = { 'fewest-rooms': '少教室優先', 'least-movement': '少移動優先', 'home-exam': '原班應考標 X' };
 export const astModeOf = (exam: ExamConfig): PlanMode => exam.astMode ?? 'fewest-rooms';
 
 export interface AstSlot extends PlanSlot {

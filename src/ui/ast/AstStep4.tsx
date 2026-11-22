@@ -12,6 +12,7 @@ import { astModeOf, astPlan, astSlots, MODE_LABEL } from './model';
 const MODES: { id: PlanMode; badge?: string; intro: string; order: string[] }[] = [
   { id: 'fewest-rooms', badge: '預設', intro: '用最少的教室（教室多＝監考人力多）。願意讓更多人換教室。', order: ['用到的教室總數（兩天去重；原班與綜合教室各算 1 間）', '被抽離的原班非應考者人次', '各考場人數平均（整班為單位，盡量不拆班）', '同排混科次數', '自習地點穩定（同人跨節盡量同一間）', '標籤張數'] },
   { id: 'least-movement', intro: '讓最少人離開原班教室（應考者與自習者各算 1 人次），教室可以多用幾間。', order: ['離開原班人次', '跨節換教室次數', '用到的教室總數', '各考場人數平均', '同排混科次數', '標籤張數'] },
+  { id: 'home-exam', intro: '有人考試的班整班留在原班教室：應考者坐考試座位，不考的人留在原班、座位標 X，不印標籤。教室放不下全班或組別不符的班，應考者才去綜合教室。（取代 D135 ⑥「同室不可考試又自習」，只限這個模式的原班，見 D219）', order: ['原班放得下全班的班：整班留原班，離開原班 0 人', '放不下的班：應考者去綜合教室考試', '沒人應考的班：整班留原班自習', '同一間教室允許本班的考生與標 X 的同學同時在場'] },
 ];
 
 interface Row { label: string; note?: string; get: (m: PlanMetrics) => number; show?: (m: PlanMetrics) => string; low?: boolean }
@@ -39,13 +40,14 @@ export function AstStep4(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
   const { doc, exam } = p;
   const mode = astModeOf(exam);
   const hasList = examEntries(doc, exam).length > 0;
-  const plans = { 'fewest-rooms': astPlan(doc, exam, 'fewest-rooms'), 'least-movement': astPlan(doc, exam, 'least-movement') };
+  const plans = { 'fewest-rooms': astPlan(doc, exam, 'fewest-rooms'), 'least-movement': astPlan(doc, exam, 'least-movement'), 'home-exam': astPlan(doc, exam, 'home-exam') };
   const met = (m: PlanMode): PlanMetrics | undefined => plans[m]?.out.metrics;
   const choose = (m: PlanMode) => { const r = updateExam(doc, exam.id, { astMode: m }); if (r.ok) p.onChange(r.doc); };
   const layout = exam.astReserveLayout ?? 'min-depth';
   const chooseLayout = (l: 'min-depth' | 'min-rows') => { const r = updateExam(doc, exam.id, { astReserveLayout: l }); if (r.ok) p.onChange(r.doc); };
   const a = met('fewest-rooms');
   const b = met('least-movement');
+  const c3 = met('home-exam');
   const slots = astSlots(doc, exam);
   const issues = plans[mode] ? homeIssues(plans[mode]!.input, { classNames: new Map(doc.settings.classes.filter((c) => c.division === exam.division).map((c) => [c.no, c.name])) }) : [];
   const issueN = issues.reduce((x, i) => x + (i.kind === 'none' ? i.students : Math.max(0, i.students - i.cap)), 0);
@@ -61,6 +63,7 @@ export function AstStep4(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
         <td class="ti" data-label="指標"><div>{r.label}{r.note && <><br /><span class="small muted">{r.note}</span></>}</div></td>
         <td data-label="少教室優先" class={`n nb${ca}${mode === 'fewest-rooms' ? ' on' : ''}`}>{a ? (r.show ? r.show(a) : va) : '—'}</td>
         <td data-label="少移動優先" class={`n${cb}${mode === 'least-movement' ? ' on' : ''}`}>{b ? (r.show ? r.show(b) : vb) : '—'}</td>
+        <td data-label="原班應考標 X" class={`n${mode === 'home-exam' ? ' on' : ''}`}>{c3 ? (r.show ? r.show(c3) : r.get(c3)) : '—'}</td>
       </tr>
     );
   };
@@ -93,7 +96,7 @@ export function AstStep4(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
       )}
 
       <div class="card stack">
-        <div><h3>選擇排座模式</h3><p class="small muted">兩種模式都提供，由你選；<b>預設少教室優先</b>，可以隨時切換，切換後 ⑤ 的教室用途表會重排。分科<b>不再使用「X＋科目」標示</b>，也不再有「標少數」的設定。</p></div>
+        <div><h3>選擇排座模式</h3><p class="small muted">三種模式都提供，由你選；<b>預設少教室優先</b>，可以隨時切換，切換後 ⑤ 的教室用途表會重排。「少教室優先」「少移動優先」<b>不使用「X＋科目」標示</b>，也沒有「標少數」的設定；只有「原班應考標 X」會在不考者的座位標 X。</p></div>
         <div class="mgrid">
           {MODES.map((m) => {
             const on = mode === m.id;
@@ -120,18 +123,19 @@ export function AstStep4(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
       </div>
 
       <div class="card stack">
-        <div><h3>方案比較</h3><p class="small muted">用這份名單，兩種模式各算一次。選哪個由你決定，程式只負責把代價算清楚。</p></div>
+        <div><h3>方案比較</h3><p class="small muted">用這份名單，三種模式各算一次。選哪個由你決定，程式只負責把代價算清楚。</p></div>
         <div class="rtw">
           <table class="t compact cmpt rt-t">
             <thead><tr>
               <th>指標</th>
               <th class={mode === 'fewest-rooms' ? 'selc' : ''}>少教室優先{mode === 'fewest-rooms' ? <span class="nb">（使用中）</span> : ''}</th>
               <th class={mode === 'least-movement' ? 'selc' : ''}>少移動優先{mode === 'least-movement' ? '（使用中）' : ''}</th>
+              <th class={mode === 'home-exam' ? 'selc' : ''}>原班應考標 X{mode === 'home-exam' ? '（使用中）' : ''}</th>
             </tr></thead>
             <tbody>
-              <tr class="grp"><td colSpan={3} class="noL">取捨指標（越小越好，粗體＝較少）</td></tr>
+              <tr class="grp"><td colSpan={4} class="noL">取捨指標（越小越好，粗體＝較少）</td></tr>
               {GROUP1.map(row)}
-              <tr class="grp"><td colSpan={3} class="noL">試務複雜度（供比較；數字越小越單純）</td></tr>
+              <tr class="grp"><td colSpan={4} class="noL">試務複雜度（供比較；數字越小越單純）</td></tr>
               {GROUP2.map(row)}
             </tbody>
           </table>
