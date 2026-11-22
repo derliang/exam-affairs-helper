@@ -52,7 +52,6 @@ export function MkStep2(p: { s: MakeupSession; onChange: (s: MakeupSession) => v
     if (files.length === 0) return;
     setErr(null);
     const reads = await readFiles(files, async (file) => {
-      if (/\.xls$/i.test(file.name)) throw new Error('這是舊版 .xls 檔，請用 Excel 開啟後「另存新檔」成 .xlsx，再匯入。');
       let sheets;
       try { sheets = await readXlsx(await file.arrayBuffer()); } catch (e) {
         throw new Error(xlsxReadErrorText(e));
@@ -139,7 +138,7 @@ export function MkStep2(p: { s: MakeupSession; onChange: (s: MakeupSession) => v
         onDragOver={(e) => { e.preventDefault(); setOver(true); }} onDragLeave={() => setOver(false)}
         onDrop={(e) => { e.preventDefault(); setOver(false); void onFiles(filesOfDrop(e)); }}>
         <strong>把教務系統匯出的不及格名單拖到這裡，或選擇檔案（可一次多個）</strong>
-        <span class="small">支援 .xlsx；.xls 請先另存為 .xlsx。一人一科一列、班級以舊班舊號為準。</span>
+        <span class="small">支援 .xlsx 與舊版 .xls。一人一科一列、班級以舊班舊號為準。</span>
         <span class="small muted">這份檔案只在你的電腦上讀取，不會上傳。</span>
       </div>
       <input ref={input} type="file" accept=".xlsx,.xls" multiple hidden aria-label="選擇補考名單檔案（可多選）" onChange={(e) => { const fs = filesOfInput(e.currentTarget); e.currentTarget.value = ''; void onFiles(fs); }} />

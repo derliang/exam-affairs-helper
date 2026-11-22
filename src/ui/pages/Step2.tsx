@@ -174,7 +174,7 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
     <FileResults results={batch || conflict ? fileResults : fileResults.filter((r) => !r.ok)} hideSingleOk />
   </>);
   const filePick = (
-    <input ref={input} type="file" accept=".xlsx" multiple hidden aria-label="選擇考試名單 Excel 檔（可多選）"
+    <input ref={input} type="file" accept=".xlsx,.xls" multiple hidden aria-label="選擇考試名單 Excel 檔（可多選）"
       onChange={(e) => { const fs = filesOfInput(e.currentTarget); e.currentTarget.value = ''; void onFiles(fs); }} />
   );
 
@@ -200,9 +200,10 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
           const btn = (choice: 'use-exam' | 'use-roster') => {
             const text = `整組${CHOICE_TEXT[choice]}`;
             const kind = g === 'A' && choice === 'use-roster' ? 'primary' : 'default';
-            return g === 'B'
-              ? <ConfirmButton kind={kind} undoable copy={{ title: '整組套用？', body: `這 ${list.length} 筆姓名完全不同，可能不是同一人。確定${text}？${choice === 'use-exam' ? '這會改到所有模擬考共用的名單。' : ''}`, confirm: '確定套用' }} onConfirm={() => batch(choice)}>{text}</ConfirmButton>
-              : <Button kind={kind} onClick={() => batch(choice)}>{text}</Button>;
+            // #635 ⑤：確認與否只看後果，不看是哪一組——「以考試名單為準」會改到所有模擬考共用的名單，每一組都先確認；「以學生名單為準」只動這份考試名單（可復原），每一組都直接套用
+            return choice === 'use-exam'
+              ? <ConfirmButton kind={kind} undoable copy={{ title: '整組套用？', body: `這 ${list.length} 筆${g === 'B' ? '姓名完全不同，可能不是同一人。' : ''}確定${text}？這會改到所有模擬考共用的名單。`, confirm: '確定套用' }} onConfirm={() => batch(choice)}>{text}</ConfirmButton>
+            : <Button kind={kind} onClick={() => batch(choice)}>{text}</Button>;
           };
           return (
             <div class="card stack" style="gap:10px" key={`grp-${g}`}>
@@ -391,7 +392,7 @@ export function Step2(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
             )}
           </div>
         </div>
-        <p class="small muted">匯入接受 .xlsx 檔；舊版 .xls 請先用 Excel 另存新檔成 .xlsx。</p>
+        <p class="small muted">匯入接受 .xlsx 與舊版 .xls 檔。</p>
         <p class="small muted">學生名單＝全體學生；考試名單＝每位學生報名這次考試的情況。學生名單裡有、但考試名單沒有的人，以及考試名單上一科都沒報的人，{exam.kind !== 'bcct'
           ? '都是不參加：每節都是自習生，不算考生、不印標籤，一樣進排座（考生多數則自習生抽離，反之考生抽離），座位表上列出班級、座號、姓名，人數顯示在下方。'
           : '都是不參加，但會考不可不參加：一樣排座位（頂多該座位沒人坐），座位表上列出、不印標籤，人數顯示在下方。'}</p>

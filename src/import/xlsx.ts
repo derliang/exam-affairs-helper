@@ -4,6 +4,7 @@
  * 不處理公式計算與樣式；公式儲存格取其快取值。
  */
 import JSZip from 'jszip';
+import { readXls, XlsParseError } from './xls';
 
 export interface Sheet {
   name: string;
@@ -63,7 +64,7 @@ function parseSheet(xml: string, shared: string[]): string[][] {
   return rows;
 }
 
-export const XLS_MESSAGE = '這是舊版 Excel（.xls），請用 Excel 另存新檔成 .xlsx 後再匯入';
+export const XLS_MESSAGE = '這是舊版 Excel（.xls）但程式讀不了（檔案可能已損壞、加密，或是 Excel 95 以前的格式）。請用 Excel 開啟，「另存新檔」成 .xlsx 後再匯入';
 
 /** 舊版 .xls（OLE 複合檔）的檔頭 D0 CF 11 E0（#202） */
 export function isLegacyXls(data: ArrayBuffer | Uint8Array): boolean {
@@ -78,7 +79,11 @@ export const xlsxReadErrorText = (e: unknown): string =>
   e instanceof XlsError ? e.message : '這個檔案打不開：可能已損壞，或不是真正的 .xlsx 檔（例如副檔名被改過、檔案是空的）。請用 Excel 開啟後另存成 .xlsx，再匯入。';
 
 export async function readXlsx(data: ArrayBuffer | Uint8Array): Promise<Sheet[]> {
-  if (isLegacyXls(data)) throw new XlsError(XLS_MESSAGE);
+  if (isLegacyXls(data)) {
+    try { return readXls(data); } catch (e) {
+      throw new XlsError(e instanceof XlsParseError && e.message ? `${XLS_MESSAGE}（${e.message}）` : XLS_MESSAGE);
+    }
+  }
   const zip = await JSZip.loadAsync(data);
   const wb = await zip.file('xl/workbook.xml')?.async('string');
   if (!wb) throw new Error('不是有效的 Excel 檔（找不到 workbook.xml）');

@@ -137,7 +137,7 @@ export function AstStep4(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
           </table>
         </div>
         <p class="small muted"><b>「跨科換座位次數」「考場教室數／自習教室數」「需跨教室學生數」只顯示，不參與「較少」粗體標示，也不影響排座順位</b>（D103）。</p>
-        <Alert tone="info"><b>時程：</b>以上面「時程推薦」選定並核准的時程為準（預設基準 A：「節次與時長」的分科時程；目前 {slots.length} 個時段、{slots.length ? `${slots.map((s) => s.subjectLabel).join('、')}` : '尚無'}）。先比時程指標再排座。</Alert>
+        <Alert tone="info"><b>時程：</b>以上面「時程推薦」選定並確認採用的時程為準（預設基準 A：「節次與時長」的分科時程；目前 {slots.length} 個時段、{slots.length ? `${slots.map((s) => s.subjectLabel).join('、')}` : '尚無'}）。先比時程指標再排座。</Alert>
       </div>
       <CarryCard doc={doc} exam={exam} onChange={p.onChange} />
       </PhaseGuard>

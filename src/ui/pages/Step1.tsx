@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'preact/hooks';
 import type { ExamConfig, Semester, Subject } from '../../data';
-import { Alert, Badge, Button, ConfirmButton, Modal, More, Seg, StepHead } from '../components';
+import { Alert, Badge, Button, ConfirmButton, Modal, More, Seg, StepHead, Stepper } from '../components';
 import { ExamDatesFields, packDates } from './ExamDatesFields';
 import { ExamTimesBlock } from './ExamTimesBlock';
 import { scheduleKeyOf, scheduleOf } from '../../core/periods';
@@ -155,6 +155,7 @@ function BasicModal(p: { exam: ExamConfig; onClose: () => void; onSave: (patch: 
         {gsat && (
           <div class="field"><span class="label">次別</span>
             <Seg<string> label="次別" value={String(round)} onChange={(v) => setRound(Number(v))} options={rounds.map((n) => ({ value: String(n), label: `第${CN[n] ?? n}次` }))} />
+            <Stepper label="次別" value={round} min={1} max={20} onChange={setRound} />
             <span class="hint">改次別時，考科表沒自訂過會重新帶入；④ 會標為過期。</span></div>
         )}
         <div class="field"><span class="label">類型與對象</span>
