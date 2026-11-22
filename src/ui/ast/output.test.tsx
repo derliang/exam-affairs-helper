@@ -58,7 +58,7 @@ describe('分科輸出：內容', () => {
     expect(new Set(o.label.map((p) => p.roomName.replace(/（第.*張）$/, ''))).size).toBe(rooms.size);
     expect(o.label.length).toBeGreaterThanOrEqual(rooms.size);
     const seats = new Set(plan.out.exams.map((e) => `${e.roomId}:${e.row}-${e.depth}`));
-    expect(o.label.reduce((n, p) => n + p.cells.length, 0)).toBe(seats.size);
+    expect(o.label.reduce((n, p) => n + p.cells.filter((c) => !c.empty).length, 0)).toBe(seats.size);
     expect(plan.out.metrics!.labels).toBe(seats.size);
     const cell = o.label[0]!.cells.find((c) => c.periodLines!.length > 1)!;
     expect(cell.periodLines![0]!.head).toMatch(/^\d天\d$/);
@@ -112,7 +112,7 @@ describe('分科輸出：內容', () => {
     const cls = (code: string) => doc.settings.classes.find((x) => x.no === Number(code.slice(0, 2)) && x.division === exam.division)?.name ?? code.slice(0, 2);
     const fromPlan = new Set(plan.out.exams.map((e) => `${cls(e.code)}${e.code.slice(2)}|${e.row}－${e.depth}`));
     for (const r of roster) expect(fromPlan.has(r)).toBe(true);
-    const labelTexts = o.label.flatMap((p) => p.cells.flatMap((c) => c.periodLines!.map((l) => l.text)));
+    const labelTexts = o.label.flatMap((p) => p.cells.filter((c) => !c.empty).flatMap((c) => c.periodLines!.map((l) => l.text)));
     expect(labelTexts).toHaveLength(plan.out.exams.length);
     for (const e of plan.out.exams) expect(labelTexts.some((t) => t.includes(e.code))).toBe(true);
     // 公告：全部公告裡「考」的格子數＝方案的考試數
@@ -164,7 +164,7 @@ describe('分科輸出：應試編號（選填）', () => {
     expect(o.ann[0]!.rows[0]![2]).toBe('A101');
     expect(rosterTables(o)[0]!.heads).toContain('應試編號');
     const code = codeOf({ classNo: 1, seatNo: 1 });
-    expect(o.label.flatMap((p) => p.cells.flatMap((c) => c.periodLines!.map((l) => l.text))).some((t) => t.includes(code) && t.endsWith('A101'))).toBe(true);
+    expect(o.label.flatMap((p) => p.cells.filter((c) => !c.empty).flatMap((c) => c.periodLines!.map((l) => l.text))).some((t) => t.includes(code) && t.endsWith('A101'))).toBe(true);
   });
 });
 
@@ -242,12 +242,12 @@ describe('分科輸出：整合標籤兩倍寬（#216／D107）', () => {
       expect(o.label.every((p) => p.layout.wide === true)).toBe(true);
       expect(o.label.every((p) => p.layout.cols === 6 && p.layout.rows === 7)).toBe(true);
       expect(o.label.every((p) => p.grid && p.grid.cols <= 3 && p.grid.rows <= 7)).toBe(true);
-      expect(o.label.every((p) => p.cells.length <= 21)).toBe(true);
+      expect(o.label.every((p) => p.cells.filter((c) => !c.empty).length <= 21)).toBe(true);
       const multi = o.label.filter((p) => p.part);
       expect(multi.length).toBeGreaterThan(0);
       expect(multi.every((p) => /（第 [0-9]+／[0-9]+ 張）$/.test(p.roomName))).toBe(true);
       // 一張標籤＝一個座位：總張數與方案的座位數一致
-      expect(o.label.reduce((n, p) => n + p.cells.length, 0)).toBe(new Set(plan.out.exams.map((e) => e.roomId + ':' + e.row + '-' + e.depth)).size);
+      expect(o.label.reduce((n, p) => n + p.cells.filter((c) => !c.empty).length, 0)).toBe(new Set(plan.out.exams.map((e) => e.roomId + ':' + e.row + '-' + e.depth)).size);
     }
   });
   it('整合標籤：橫排超過 8 的教室不輸出標籤（D113、D154）', () => {
@@ -275,7 +275,7 @@ describe('分科輸出：整合標籤兩倍寬（#216／D107）', () => {
   it('#586（D205）：單人座位一般大小一格＋右格完全空白，多人座位兩格寬且每人一區有大字編號', async () => {
     const { doc, exam } = fixture();
     const o = astOutputs(doc, exam, astPlan(doc, exam)!, 'B4');
-    const cells = o.label.flatMap((p) => p.cells);
+    const cells = o.label.flatMap((p) => p.cells.filter((c) => !c.empty));
     const nOne = cells.filter((c) => c.persons?.length === 1).length;
     expect(nOne).toBeGreaterThan(0);
     expect(nOne + cells.filter((c) => (c.persons?.length ?? 0) > 1).length).toBe(cells.length);

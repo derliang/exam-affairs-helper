@@ -39,7 +39,7 @@ export function readHtmlTables(html: string): RawTables {
   const tables = (html.match(/<table[\s\S]*?<\/table>/g) ?? []).map((t) =>
     (t.match(/<tr[\s>][\s\S]*?<\/tr>/g) ?? []).map((r) => (r.match(/<t[dh][\s>][\s\S]*?<\/t[dh]>/g) ?? []).map(strip)),
   );
-  const footers = (html.match(/<footer>[\s\S]*?<\/footer>/g) ?? []).map(strip);
+  const footers = [...(html.match(/<footer>[\s\S]*?<\/footer>/g) ?? []), ...(html.match(/<div class="pp-foot"[^>]*>[\s\S]*?<\/div>/g) ?? [])].map(strip);
   return { tables, footers, text: strip(html.replace(/<style[\s\S]*?<\/style>/g, '')) };
 }
 
@@ -65,7 +65,7 @@ const add = (m: Record<string, number>, k: string, n: number): void => {
 };
 
 /** 從一份檔的表格重新點人次。kind 決定怎麼讀。 */
-export function summarizeTables(file: string, kind: MakeupDocKind, raw: RawTables, gradeOfClass: Record<string, GradeKey>): ReadbackDetail {
+export function summarizeTables(file: string, kind: MakeupDocKind, raw: RawTables, gradeOfClass: Record<string, GradeKey>, studentIds?: ReadonlySet<string>): ReadbackDetail {
   const problems: string[] = [];
   let total = 0;
   const byPaper: Record<string, number> = {};
@@ -86,10 +86,11 @@ export function summarizeTables(file: string, kind: MakeupDocKind, raw: RawTable
       add(byPaper, r[0]!, n);
     }
   } else if (kind === 'O-2') {
-    const ts = body('考日・年級');
-    need(ts.length, '考程');
+    // D220（#646）：O-2 是兩張表；人次只點第二張「補考監考表」（表頭第一格「監考時段」），各格「卷別(人數)」，第一欄是列名不算
+    const ts = body('監考時段');
+    need(ts.length, '監考');
     for (const t of ts) for (const r of t) for (const c of r.slice(1)) {
-      for (const m of c.matchAll(/(\d+) 人次/g)) total += Number(m[1]);
+      for (const m of c.matchAll(/\((\d+)\)/g)) total += Number(m[1]);
       for (const m of c.matchAll(/(\d{2}:\d{2}) 前不得離場/g)) leaves.add(m[1]!);
     }
     for (const m of raw.text.matchAll(/(\d{2}:\d{2}) 前不得離場/g)) leaves.add(m[1]!);
@@ -122,12 +123,13 @@ export function summarizeTables(file: string, kind: MakeupDocKind, raw: RawTable
       }
     }
   } else if (kind === 'O-5') {
-    const ts = body('座位');
-    need(ts.length, '座位');
-    for (const t of ts) for (const r of t) {
-      if (!r[3]) continue;
-      total++;
-      if (r[0]!.includes('無座位')) problems.push(`${file}：學號 ${r[3]} 沒有座位`);
+    // D220（#644）：O-5 是格狀座位圖，沒有表頭可認；數「學號出現幾次」（每個座位格寫一次學號）
+    const text = raw.text;
+    for (const id of studentIds ?? []) {
+      let n = 0;
+      for (let at = text.indexOf(id); at >= 0; at = text.indexOf(id, at + id.length)) n++;
+      total += n;
+      if (n === 0) problems.push(`${file}：學號 ${id} 沒有座位（座位圖上找不到）`);
     }
   } else {
     const ts = body('序號');

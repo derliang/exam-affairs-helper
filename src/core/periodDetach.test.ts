@@ -153,7 +153,7 @@ describe('預備教室合併標籤（D94-5）', () => {
   it('每間預備教室一張紙、每座位一張；每節一行印節次＋科目＋班座號；國文印國綜、國寫兩行；自習不印', () => {
     const pages = buildLabelPages(fixture(), 'reserve');
     expect(pages.map((p) => p.roomName)).toEqual(['預備教室　抽離考試']);
-    expect(pages[0]!.cells.map((c) => [c.coord, c.periodLines!.map((l) => `${l.head} ${l.text}`)])).toEqual([
+    expect(pages[0]!.cells.filter((c) => !c.empty).map((c) => [c.coord, c.periodLines!.map((l) => `${l.head} ${l.text}`)])).toEqual([
       ['1-1', ['第一天 時段一 英文　良 06', '第一天 時段三 國綜　溫 05', '第二天 時段三 國寫　溫 05']],
       ['1-2', ['第一天 時段一 英文　溫 07', '第二天 時段一 數學　溫 07']],
     ]);

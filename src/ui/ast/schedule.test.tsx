@@ -423,8 +423,8 @@ describe('分科輸出：T-24 班級公告、T-25 整合標籤', () => {
   });
   it('T-25 整合標籤：一座位一張、各時段一行、行內容對得上方案；沒匯入應試編號就不印', () => {
     const seats = new Set(plan.out.exams.map((e) => `${e.roomId}:${e.row}-${e.depth}`));
-    expect(o.label.reduce((n, p) => n + p.cells.length, 0)).toBe(seats.size);
-    const lines = o.label.flatMap((p) => p.cells.flatMap((c) => c.periodLines!));
+    expect(o.label.reduce((n, p) => n + p.cells.filter((c) => !c.empty).length, 0)).toBe(seats.size);
+    const lines = o.label.flatMap((p) => p.cells.filter((c) => !c.empty).flatMap((c) => c.periodLines!));
     expect(lines).toHaveLength(plan.out.exams.length);
     for (const e of plan.out.exams) expect(lines.some((l) => l.text.includes(e.code))).toBe(true);
     expect(JSON.stringify(o.label)).not.toContain('應試');
@@ -432,7 +432,7 @@ describe('分科輸出：T-24 班級公告、T-25 整合標籤', () => {
   it('T-25 有匯入應試編號：標籤行尾才印', () => {
     const f = fixture(12, (e) => ({ ...e, examNo: `A${e.classNo}${String(e.seatNo).padStart(2, '0')}` }));
     const op = astOutputs(f.doc, f.exam, astPlan(f.doc, f.exam)!);
-    const lines = op.label.flatMap((p) => p.cells.flatMap((c) => c.periodLines!));
+    const lines = op.label.flatMap((p) => p.cells.filter((c) => !c.empty).flatMap((c) => c.periodLines!));
     expect(lines.every((l) => /A\d+\d{2}/.test(l.text))).toBe(true);
   });
 });

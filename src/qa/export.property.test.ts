@@ -107,7 +107,7 @@ describe('輸出版面模型與排座結果逐筆一致', () => {
       // INV-16 標籤：每間有人的教室一張，順序與座位表一致，格數不超過；沒有考科的人（每節自習）有座位但不印標籤（D135⑤、D137）
       const labels = buildLabelPages(input, 'class');
       const noSubject = new Set(input.entries.filter((e) => e.subjectIds.length === 0).map((e) => studentCode(e.classNo, e.seatNo)));
-      expect(labels.reduce((a, p) => a + p.cells.length, 0), `seed=${seed}`).toBe(input.result.assignments.filter((a) => !noSubject.has(a.code)).length);
+      expect(labels.reduce((a, p) => a + p.cells.filter((c) => !c.empty).length, 0), `seed=${seed}`).toBe(input.result.assignments.filter((a) => !noSubject.has(a.code)).length);
       for (const p of labels) {
         const coords = p.cells.map((c) => c.coord);
         const sorted = [...coords].sort((a, b) => {
@@ -168,7 +168,7 @@ describe('姓名來源不同步的保險（缺陷 F-1 回歸）', () => {
     // 預備教室時段版（稿 v2.28）只印科目＋班座號、不印姓名，不在此檢查
     for (const p of buildSeatPages(input).filter((q) => !q.slotMode && !q.title.includes('自習座位'))) for (const c of p.cells.values()) expect(c.name, c.code).not.toBe('');
     // 預備教室合併標籤（D94-5）只印節次＋科目＋班座號、不印姓名，不在此檢查
-    for (const p of buildLabelPages(input)) for (const c of p.cells) if (!c.periodLines) expect(c.name, c.code).not.toBe('');
+    for (const p of buildLabelPages(input)) for (const c of p.cells) if (!c.periodLines && !c.empty) expect(c.name, c.code).not.toBe('');
     for (const r of buildDetachList(input).rows) expect(r.name, r.code).not.toBe('');
   });
 });

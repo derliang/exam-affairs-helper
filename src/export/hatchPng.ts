@@ -34,6 +34,11 @@ function chunk(type: string, data: Uint8Array): Uint8Array {
 }
 
 const cache = new Map<string, { data: Uint8Array; w: number; h: number }>();
+const SLASH_COLORS: [number, number, number][] = [
+  [0xff, 0xff, 0xff],
+  [0x8e, 0x86, 0x70],
+];
+const SLASH_MM = 0.4; // 斜線粗細
 
 /** 產生 wMm × hMm 的斜線底紋 PNG；回傳位元組與像素尺寸（同尺寸只算一次） */
 export function hatchPng(wMm: number, hMm: number): { data: Uint8Array; w: number; h: number } {
@@ -45,13 +50,29 @@ export function hatchPng(wMm: number, hMm: number): { data: Uint8Array; w: numbe
   return made;
 }
 
-function draw(wMm: number, hMm: number): { data: Uint8Array; w: number; h: number } {
+/** 空位格（D220，#647）：白底、一條由左下到右上的斜線（劃掉）；同尺寸只算一次 */
+export function slashPng(wMm: number, hMm: number): { data: Uint8Array; w: number; h: number } {
+  const key = `s${Math.round(wMm * PX_PER_MM)}x${Math.round(hMm * PX_PER_MM)}`;
+  const hit = cache.get(key);
+  if (hit) return hit;
+  const made = draw(wMm, hMm, 'slash');
+  cache.set(key, made);
+  return made;
+}
+
+function draw(wMm: number, hMm: number, kind: 'hatch' | 'slash' = 'hatch'): { data: Uint8Array; w: number; h: number } {
   const w = Math.max(1, Math.round(wMm * PX_PER_MM));
   const h = Math.max(1, Math.round(hMm * PX_PER_MM));
   // 每列前面一個濾鏡位元組（0）
   const raw = new Uint8Array((w + 1) * h);
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
+      if (kind === 'slash') {
+        // 點到「左下—右上」對角線的距離（mm）；線上的點塗成線色
+        const dist = (Math.abs((x + 0.5) / w + (y + 0.5) / h - 1) * w * h) / Math.hypot(w, h) / PX_PER_MM;
+        raw[y * (w + 1) + 1 + x] = dist <= SLASH_MM / 2 ? 1 : 0;
+        continue;
+      }
       const t = ((x + y) / PX_PER_MM) * Math.SQRT1_2; // 沿 135° 方向的距離（mm）
       raw[y * (w + 1) + 1 + x] = Math.floor(t / 1.2) % 2;
     }
@@ -81,7 +102,7 @@ function draw(wMm: number, hMm: number): { data: Uint8Array; w: number; h: numbe
   }
   z.set(be32(adler), zo);
   const ihdr = new Uint8Array([...be32(w), ...be32(h), 8, 3, 0, 0, 0]);
-  const plte = new Uint8Array(COLORS.flat());
+  const plte = new Uint8Array((kind === 'slash' ? SLASH_COLORS : COLORS).flat());
   const sig = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
   const out = [sig, chunk('IHDR', ihdr), chunk('PLTE', plte), chunk('IDAT', z), chunk('IEND', new Uint8Array())];
   const data = new Uint8Array(out.reduce((n, p) => n + p.length, 0));

@@ -24,7 +24,7 @@ import {
 import type { MakeupEntry } from '../core/makeup';
 import { renderDocx, type BoldMode, type FontData } from './docxRender';
 import { renderPrintHtml, type HtmlOptions } from './htmlRender';
-import type { TablePageModel } from './model';
+import type { SeatPageModel, TablePageModel } from './model';
 import {
   buildAnnouncementPages,
   buildLeaveListPages,
@@ -115,7 +115,15 @@ export function scheduleOfDay(schedule: MakeupSchedule, dayId: string): MakeupSc
   };
 }
 
-function pagesOf(kind: MakeupDocKind, p: MakeupPaperInput): TablePageModel[] {
+/** 一份文件的頁：O-5 是座位圖頁（D220），其餘是表格頁 */
+type MkPage = SeatPageModel | TablePageModel;
+const pageCount = (p: MkPage): number => (p.kind === 'seat' ? 1 : tableModelPages(p));
+const docxPagesOf = (pages: MkPage[]): { seat?: SeatPageModel[]; table?: TablePageModel[] } => ({
+  seat: pages.filter((x): x is SeatPageModel => x.kind === 'seat'),
+  table: pages.filter((x): x is TablePageModel => x.kind === 'table'),
+});
+
+function pagesOf(kind: MakeupDocKind, p: MakeupPaperInput): MkPage[] {
   switch (kind) {
     case 'O-1': return buildPrepPages(p);
     case 'O-2': return buildTimetablePages(p);
@@ -131,6 +139,10 @@ interface Scoped {
   paper: MakeupPaperInput;
   total: number;
   seats: number;
+  /** 沒有座位的人次（O-5 座位圖畫不出來，另列問題） */
+  unseated: string[];
+  /** 全部學號（O-5 座位圖回讀＝數學號出現幾次） */
+  ids: Set<string>;
   byPaper: Record<string, number>;
   leave: string[];
   version: string;
@@ -148,6 +160,8 @@ function scope(input: ProduceMakeupInput, dayId?: string): Scoped {
     paper: { title: day ? `${input.title}　${day}` : input.title, settings: input.settings, roster: input.roster, schedule, outputs },
     total,
     seats: schedule.sittings.length,
+    unseated: schedule.sittings.filter((x) => !x.seat).map((x) => x.studentId),
+    ids: new Set(schedule.sittings.map((x) => x.studentId)),
     byPaper,
     leave: [...new Set(schedule.early.map((e) => fmtTime(e.leaveAt)))].sort(),
     version: makeupVersion(input.roster, input.settings, input.plan),
@@ -156,10 +170,13 @@ function scope(input: ProduceMakeupInput, dayId?: string): Scoped {
 }
 
 function verify(file: string, kind: MakeupDocKind, raw: RawTables, input: ProduceMakeupInput, sc: Scoped): { rb: ReadbackSummary; v: FileVerification } {
-  const d = summarizeTables(file, kind, raw, input.roster.gradeOfClass);
+  const d = summarizeTables(file, kind, raw, input.roster.gradeOfClass, sc.ids);
   const problems = [...d.problems];
   const expected = kind === 'O-5' ? sc.seats : sc.total;
-  if (d.total !== expected) problems.push(`${file}：回讀 ${d.total}，排程應有 ${expected}`);
+  // O-5 是座位圖：沒有座位的人畫不出來，不算進回讀，另外逐人列為問題（與舊清單版「（無座位）」一樣擋下）
+  if (kind === 'O-5') for (const id of sc.unseated) if (!problems.some((x) => x.includes(`學號 ${id} 沒有座位`))) problems.push(`${file}：學號 ${id} 沒有座位`);
+  const actual = kind === 'O-5' ? d.total + sc.unseated.length : d.total;
+  if (actual !== expected) problems.push(`${file}：回讀 ${actual}，排程應有 ${expected}`);
   if (d.byPaper) {
     for (const k of new Set([...Object.keys(d.byPaper), ...Object.keys(sc.byPaper)])) {
       if ((d.byPaper[k] ?? 0) !== (sc.byPaper[k] ?? 0)) problems.push(`${file}：${k} 回讀 ${d.byPaper[k] ?? 0}，應有 ${sc.byPaper[k] ?? 0}`);
@@ -171,7 +188,7 @@ function verify(file: string, kind: MakeupDocKind, raw: RawTables, input: Produc
   if (kind !== 'O-2') for (const t of d.leaveTimes) if (!sc.leave.includes(t)) problems.push(`${file}：印了排程沒有的離場時間 ${t}`);
   return {
     rb: { file, total: d.total, ...(d.byPaper ? { byPaper: d.byPaper } : {}), ...(d.version ? { version: d.version } : {}) },
-    v: { file, kind, expected, actual: d.total, ok: problems.length === 0, problems },
+    v: { file, kind, expected, actual, ok: problems.length === 0, problems },
   };
 }
 
@@ -187,7 +204,7 @@ export async function produceMakeupFiles(input: ProduceMakeupInput, opts: Produc
     const pages = pagesOf(kind, sc.paper);
     if (pages.length === 0) continue;
     const name = `補考-${FILE_LABEL[kind]}${sc.suffix}.docx`;
-    const docx = await renderDocx({ table: pages }, { fonts: opts.fonts, generatedAt: opts.generatedAt, dataVersion: dataVersionOf(sc), boldMode: opts.boldMode });
+    const docx = await renderDocx(docxPagesOf(pages), { fonts: opts.fonts, generatedAt: opts.generatedAt, dataVersion: dataVersionOf(sc), boldMode: opts.boldMode });
     const { rb, v } = verify(name, kind, await readDocxTables(docx), input, sc);
     files.push({ kind, name, docx });
     verification.push(v);
@@ -207,7 +224,7 @@ export function produceMakeupPrintHtml(
   const pages = pagesOf(kind, sc.paper);
   if (pages.length === 0) return null;
   const name = `補考-${FILE_LABEL[kind]}${sc.suffix}.pdf`;
-  const html = renderPrintHtml({ table: pages }, { generatedAt: opts.generatedAt, dataVersion: dataVersionOf(sc), extraCss: opts.extraCss });
+  const html = renderPrintHtml({ ordered: pages }, { generatedAt: opts.generatedAt, dataVersion: dataVersionOf(sc), extraCss: opts.extraCss });
   return { name, html, verification: verify(name, kind, readHtmlTables(html), input, sc).v };
 }
 
@@ -218,7 +235,7 @@ export function produceMakeupMergedPrintHtml(
   opts: Pick<HtmlOptions, 'generatedAt' | 'extraCss'> & { dayId?: string },
 ): { name: string; html: string; pages: number; kinds: MakeupDocKind[]; problems: string[] } | null {
   const sc = scope(input, opts.dayId);
-  const tables: TablePageModel[] = [];
+  const tables: MkPage[] = [];
   const used: MakeupDocKind[] = [];
   const problems: string[] = [];
   for (const k of kinds) {
@@ -230,12 +247,12 @@ export function produceMakeupMergedPrintHtml(
     used.push(k);
   }
   if (tables.length === 0) return null;
-  const html = renderPrintHtml({ table: tables }, { generatedAt: opts.generatedAt, dataVersion: dataVersionOf(sc), extraCss: opts.extraCss });
-  return { name: `補考-列印用頁面${sc.suffix}.html`, html, pages: tables.reduce((a, t) => a + tableModelPages(t), 0), kinds: used, problems };
+  const html = renderPrintHtml({ ordered: tables }, { generatedAt: opts.generatedAt, dataVersion: dataVersionOf(sc), extraCss: opts.extraCss });
+  return { name: `補考-列印用頁面${sc.suffix}.html`, html, pages: tables.reduce((a, t) => a + pageCount(t), 0), kinds: used, problems };
 }
 
 /** ⑦ 按鈕旁預告用：勾選文件的列印頁數合計 */
 export function countMakeupPrintPages(input: ProduceMakeupInput, kinds: readonly MakeupDocKind[], dayId?: string): number {
   const sc = scope(input, dayId);
-  return kinds.reduce((a, k) => a + pagesOf(k, sc.paper).reduce((n, t) => n + tableModelPages(t), 0), 0);
+  return kinds.reduce((a, k) => a + pagesOf(k, sc.paper).reduce((n, t) => n + pageCount(t), 0), 0);
 }

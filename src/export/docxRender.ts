@@ -30,7 +30,7 @@ import {
   WidthType,
   type ISectionOptions,
 } from 'docx';
-import { hatchPng } from './hatchPng';
+import { hatchPng, slashPng } from './hatchPng';
 import {
   footerText,
   labelBoxMm,
@@ -191,6 +191,19 @@ const HATCH_FILL = { type: ShadingType.CLEAR, fill: 'EAE5D4', color: 'auto' } as
 /** 空位格：整格鋪斜線圖（圖片比格子內側小一點，避免蓋住框線） */
 function hatchParas(wMm: number, hMm: number): Paragraph[] {
   const { data } = hatchPng(wMm, hMm);
+  const px = (mm: number) => Math.round((mm * 96) / 25.4);
+  return [
+    new Paragraph({
+      spacing: { before: 0, after: 0 },
+      run: { size: 2 },
+      children: [new ImageRun({ type: 'png', data, transformation: { width: px(wMm), height: px(hMm) } })],
+    }),
+  ];
+}
+
+/** 空位格（D220，#647）：白底、一條左下到右上的斜線（劃掉） */
+function slashParas(wMm: number, hMm: number): Paragraph[] {
+  const { data } = slashPng(wMm, hMm);
   const px = (mm: number) => Math.round((mm * 96) / 25.4);
   return [
     new Paragraph({
@@ -407,6 +420,10 @@ function wideUnit(m: CellModel | undefined, o: { w: number; h: number; cellTw: n
     // #504：空位也畫外框（兩倍寬的空位是一張，中間不畫線），整張標籤表輪廓完整
     return [0, 1].map((i) => new TableCell({ width: { size: o.cellTw, type: WidthType.DXA }, verticalAlign: VerticalAlign.TOP, margins: { top: 0, bottom: 0, left: tw(1), right: tw(1) }, borders: { top: b, bottom: b, left: i === 0 ? b : none, right: i === 1 ? b : none }, children: [line([], { h: 0.35 })] }));
   }
+  if (m.empty) {
+    // D220（#648）：沒人坐的座位，兩倍寬一張只印座位編號（右上角），中間不畫線
+    return [0, 1].map((i) => new TableCell({ width: { size: o.cellTw, type: WidthType.DXA }, verticalAlign: VerticalAlign.TOP, margins: { top: 0, bottom: 0, left: tw(1), right: tw(1) }, borders: { top: b, bottom: b, left: i === 0 ? b : none, right: i === 1 ? b : none }, children: [i === 1 ? line([run2(m.coord, { size: 9, bold: true, color: '4A463A' }, o.mode)], { h: 4.2, align: AlignmentType.RIGHT, right: 0.6 }) : line([], { h: 0.35 })] }));
+  }
   const g = { topPad: 5, codePt: o.isB4 ? 33 : 31, nameMax: 18, subjMax: o.isB4 ? 20 : 16 };
   if ((m.persons?.length ?? 0) === 1) {
     // #586（D205）：單人座位回一般大小一格（同學測標籤版式），右格完全空白（無框線、無底色）
@@ -457,7 +474,7 @@ function pageFooter(opts: DocxOptions): Footer {
 
 function seatSection(page: SeatPageModel, opts: DocxOptions): ISectionOptions {
   const mode = opts.boldMode ?? 'embed-bold';
-  const { cw, ch, st, statsNext } = seatGeometry(page, { topMm: 2.8 });
+  const { cw, ch, st, statsNext, tier } = seatGeometry(page, { topMm: 2.8 });
   const innerW = SEAT_PAGE.w - 2 * SEAT_PAGE.padX;
   const axisW = 6.5;
   const tw = (mm: number) => mmToTwip(mm);
@@ -525,9 +542,9 @@ function seatSection(page: SeatPageModel, opts: DocxOptions): ISectionOptions {
           width: { size: tw(cw), type: WidthType.DXA },
           verticalAlign: VerticalAlign.TOP,
           margins: { top: 0, bottom: 0, left: tw(0.5), right: tw(0.5) },
-          shading: c ? { type: ShadingType.CLEAR, fill: pal!.bg, color: 'auto' } : HATCH_FILL,
+          shading: c ? { type: ShadingType.CLEAR, fill: pal!.bg, color: 'auto' } : page.usable.has(`${r}-${d}`) ? { type: ShadingType.CLEAR, fill: 'FFFFFF', color: 'auto' } : HATCH_FILL,
           borders,
-          children: c ? (c.persons ? personParas(c, cw - 1.3, ch, { topPad: 4.5, coordPt: g.coordPt, codePt: 19, nameMax: 10.5, schedMax: 7, joinSched: true }, mode) : c.periodLines ? periodParas(c, cw - 1.3, ch, g.coordPt, mode) : seatCellParas(c, cw, ch, pal!.fg, mode)) : hatchParas(cw - 1.3, ch - 1.4),
+          children: c ? (c.persons ? personParas(c, cw - 1.3, ch, { topPad: 4.5, coordPt: g.coordPt, codePt: 19, nameMax: 10.5, schedMax: 7, joinSched: true }, mode) : c.periodLines ? periodParas(c, cw - 1.3, ch, g.coordPt, mode) : seatCellParas(c, cw, ch, pal!.fg, mode)) : page.usable.has(`${r}-${d}`) ? slashParas(cw - 1.3, ch - 1.4) : hatchParas(cw - 1.3, ch - 1.4),
         }),
       );
     }
@@ -582,7 +599,7 @@ function seatSection(page: SeatPageModel, opts: DocxOptions): ISectionOptions {
   });
 
   // 統計表
-  const sl = statLayout(page);
+  const sl = statLayout(page, tier);
   const stCols = sl.cols;
   // 統計表樣式（D170、§10.43.7）：表頭淡藍底深藍字、上下深藍線；表身只設下框線；每天最後一列深灰線；總計欄左雙線；使用人數列上雙線＋淡底
   const merge = statMerge(page);
@@ -693,7 +710,7 @@ function labelSection(page: LabelPageModel, opts: DocxOptions): ISectionOptions 
           margins: { top: 0, bottom: 0, left: tw(1), right: tw(1) },
           shading: m ? { type: ShadingType.CLEAR, fill: marked ? 'FFE08A' : 'FFFFFF', color: 'auto' } : undefined,
           borders: { top: b, bottom: b, left: b, right: b }, // #504：空位也有外框
-          children: m ? (m.persons ? personParas(m, box.w - 2, box.h, { topPad: 5, coordPt: g.coordPt, codePt: isB4 ? 33 : 31, nameMax: 18, schedMax: 11 }, mode) : m.periodLines ? periodParas(m, box.w - 2, box.h, g.coordPt, mode) : cellParas(m, g, INK, mode)) : [line([], { h: 0.35 })],
+          children: m?.empty ? [line([run2(m.coord, { size: g.coordPt, bold: true, color: '4A463A' }, mode)], { h: 4.2, align: AlignmentType.RIGHT, right: 0.6 })] : m ? (m.persons ? personParas(m, box.w - 2, box.h, { topPad: 5, coordPt: g.coordPt, codePt: isB4 ? 33 : 31, nameMax: 18, schedMax: 11 }, mode) : m.periodLines ? periodParas(m, box.w - 2, box.h, g.coordPt, mode) : cellParas(m, g, INK, mode)) : [line([], { h: 0.35 })],
         }),
       );
     }

@@ -9,7 +9,9 @@
  * 所有函式純計算、不取現在時間；只讀模型，不重排程。
  */
 import { fmtTime, type MakeupOutputs, type MakeupRoster, type MakeupSchedule, type MakeupSettings, type SlotInfo } from '../core/makeup';
-import type { TablePageModel } from './model';
+import { classroomSeats, seatLabel, type Classroom } from '../data';
+import { classColor } from './colors';
+import { addSeatLegend, type CellModel, type SeatPageModel, type TablePageModel } from './model';
 
 export interface MakeupPaperInput {
   /** 例「115 學年第一學期補考」 */
@@ -76,67 +78,122 @@ export function buildPrepPages(i: MakeupPaperInput): TablePageModel[] {
   ];
 }
 
-/** O-2 考程表（A4 橫式）：群組 × 時段，每格時間、科目、人次與教室人數；最後一列監考老師空欄 */
+/**
+ * O-2 考程表（A4 橫式，D220／#646 重做，照學校歷年「補考時間、地點表」＋「補考監考表」）：每個考日兩頁——
+ * ①補考時間、地點表（給學生）：欄＝年級組（上方分高中部／初中部），列＝節次（每節三列：時間、科目、補考地點）；
+ * ②補考監考表（給監考老師）：欄＝監考教室（含座位數），列＝時段（每時段兩列：時間、考科與人數），最上列監考老師留空手寫。
+ * 回讀驗算（makeupReadback）認第二張表：表頭第一格「監考時段」，各格「卷別(人數)」。提前開考的「HH:MM 前不得離場」印在兩張表的注意事項。
+ */
 export function buildTimetablePages(i: MakeupPaperInput): TablePageModel[] {
   const c = ctxOf(i);
-  const bySlot = new Map<string, typeof i.schedule.sittings>();
-  for (const x of i.schedule.sittings) {
-    const a = bySlot.get(x.slotId);
-    if (a) a.push(x);
-    else bySlot.set(x.slotId, [x]);
-  }
   const dayOrder = (id: string): number => i.settings.days.findIndex((d) => d.id === id);
-  const groups = i.settings.groups
-    .filter((g) => i.schedule.slots.some((s) => s.groupId === g.id))
-    .sort((a, b) => dayOrder(a.dayId) - dayOrder(b.dayId));
-  const regular = (gid: string): SlotInfo[] => i.schedule.slots.filter((s) => s.groupId === gid && s.kind !== 'early').sort((a, b) => a.index - b.index);
-  const maxN = Math.max(1, ...groups.map((g) => regular(g.id).length));
-  const cell = (s: SlotInfo): string => {
-    const list = bySlot.get(s.id) ?? [];
-    const subj = new Map<string, number>();
-    const room = new Map<string, number>();
-    for (const x of list) {
-      for (const sub of x.subjects) subj.set(sub, (subj.get(sub) ?? 0) + 1);
-      room.set(x.roomId, (room.get(x.roomId) ?? 0) + 1);
-    }
-    const subjText = [...subj].map(([k, v]) => `${k} ${v} 人次`).join('＋');
-    const roomText = [...room].map(([id, n]) => `${c.roomName(id)} ${n}`).join('／');
-    return `${slotTime(s)}　${subjText || '—'}${roomText ? `（${roomText}）` : ''}`;
-  };
-  const rows: string[][] = [];
-  for (const g of groups) {
-    const label = `${c.dayLabel(g.dayId)} ${g.label}`;
-    const slots = regular(g.id);
-    rows.push([label, ...Array.from({ length: maxN }, (_, k) => (slots[k] ? cell(slots[k]!) : '—'))]);
-    const early = i.schedule.slots.find((s) => s.groupId === g.id && s.kind === 'early');
-    if (early) {
-      const list = bySlot.get(early.id) ?? [];
-      const rooms = [...new Set(list.map((x) => c.roomName(x.roomId)))].join('、');
-      const entries = list.reduce((a, x) => a + x.subjects.length, 0);
-      const leave = Math.max(...list.map((x) => x.leaveAt ?? 0));
-      rows.push([`${label} 提前開考`, `${fmtTime(early.start)} 起　${rooms}　${list.length} 人　共 ${entries} 人次　最早離場 ${fmtTime(leave)}`, ...Array.from({ length: maxN - 1 }, () => '')]);
-    }
-  }
-  rows.push(['監考老師', ...Array.from({ length: maxN }, () => '')]);
+  const days = [...new Set(i.schedule.slots.map((s) => s.dayId))].sort((a, b) => dayOrder(a) - dayOrder(b));
   const leaves = leaveTimes(i);
-  const notes = [
-    '考試請攜帶學生證，依公告教室就座，自由入座。',
-    '綜合節同學到該時段結束才可離場。',
-    ...(leaves.length ? [`提前開考的同學${leaves.map((t) => `${t} 前不得離場`).join('、')}。`] : []),
-    '多科生的各科考卷合為一份，監考老師點交。',
-  ];
-  return [
-    {
+  const kindsOf = (s: SlotInfo): string => (s.kind === 'final' ? '多科' : '單科');
+  const timeText = (s: SlotInfo): string => (s.kind === 'final' ? `${fmtTime(s.start)}～考完為止` : s.kind === 'early' ? `${fmtTime(s.start)} 起` : `${fmtTime(s.start)}–${fmtTime(s.end)}`);
+  const pages: TablePageModel[] = [];
+  for (const dayId of days) {
+    const day = c.dayLabel(dayId);
+    const slots = i.schedule.slots.filter((s) => s.dayId === dayId);
+    const sit = (slotId: string) => i.schedule.sittings.filter((x) => x.slotId === slotId);
+    const groups = i.settings.groups.filter((g) => g.dayId === dayId && slots.some((s) => s.groupId === g.id));
+    const hasEarly = leaves.length > 0 && slots.some((s) => s.kind === 'early' && sit(s.id).length > 0);
+    const dayLeaves = [...new Set(i.schedule.early.filter((e) => slots.some((s) => s.groupId === e.groupId)).map((e) => fmtTime(e.leaveAt)))].sort();
+
+    // ① 補考時間、地點表（給學生）
+    const dept = (g: (typeof groups)[number]): string => (g.grades.some((x) => x.startsWith('S')) ? '高中部' : '初中部');
+    const ordered = [...groups].sort((a, b) => (dept(a) === dept(b) ? 0 : dept(a) === '高中部' ? -1 : 1));
+    const headGroups = [{ text: '', span: 1 }];
+    for (const g of ordered) {
+      const last = headGroups[headGroups.length - 1]!;
+      if (last.text === dept(g)) last.span++;
+      else headGroups.push({ text: dept(g), span: 1 });
+    }
+    const regular = (gid: string): SlotInfo[] => slots.filter((s) => s.groupId === gid && s.kind !== 'early').sort((a, b) => a.index - b.index);
+    const maxN = Math.max(1, ...ordered.map((g) => regular(g.id).length));
+    const place = (s: SlotInfo): string => {
+      const by = new Map<string, Set<string>>();
+      for (const x of sit(s.id)) {
+        const set = by.get(x.roomId) ?? new Set<string>();
+        set.add(x.oldClass);
+        by.set(x.roomId, set);
+      }
+      return [...by].map(([rid, cls]) => (by.size > 1 ? `${c.roomName(rid)}（${[...cls].join('、')}）` : c.roomName(rid))).join('／') || '—';
+    };
+    const subj = (s: SlotInfo): string => {
+      const used = new Set(sit(s.id).flatMap((x) => x.subjects));
+      return [...used].join('、') || '—';
+    };
+    const r1: string[][] = [];
+    for (let k = 0; k < maxN; k++) {
+      const per = ordered.map((g) => regular(g.id)[k]);
+      const name = `第${CN[k] ?? k + 1}節`;
+      r1.push([`${name}・時間`, ...per.map((s) => (s ? timeText(s) : '—'))]);
+      r1.push([`${name}・科目`, ...per.map((s) => (s ? subj(s) : '—'))]);
+      r1.push([`${name}・補考地點`, ...per.map((s) => (s ? place(s) : '—'))]);
+    }
+    if (slots.some((s) => s.kind === 'early' && sit(s.id).length > 0)) {
+      const per = ordered.map((g) => slots.find((s) => s.groupId === g.id && s.kind === 'early' && sit(s.id).length > 0));
+      r1.push(['提前開考・時間', ...per.map((s) => (s ? timeText(s) : '—'))]);
+      r1.push(['提前開考・科目', ...per.map((s) => (s ? subj(s) : '—'))]);
+      r1.push(['提前開考・補考地點', ...per.map((s) => (s ? place(s) : '—'))]);
+    }
+    const hasFinal = slots.some((s) => s.kind === 'final');
+    const notes1 = [
+      '請攜帶學生證，依公告教室就座，自由入座。',
+      '考試中請保持安靜，不得攜帶手機、智慧型手錶進入考場。',
+      ...(hasFinal ? [`綜合節（${[...new Set(slots.filter((s) => s.kind === 'final').map(kindsOf))].join('')}）同學考完才可離場，時間可能較長，請先用餐。`] : []),
+      ...(hasEarly ? [`提前開考的同學${dayLeaves.map((t) => `${t} 前不得離場`).join('、')}。`] : []),
+    ];
+    pages.push({
       kind: 'table',
       landscape: true,
-      title: '補考考程表',
-      subtitle: i.title,
-      legend: `注意事項：${notes.join('')}`,
-      heads: ['考日・年級', ...Array.from({ length: maxN }, (_, k) => `時段${CN[k] ?? k + 1}`)],
-      widths: [2.2, ...Array.from({ length: maxN }, () => 4)],
-      rows,
-    },
-  ];
+      title: '補考時間、地點表',
+      subtitle: `${i.title}　${day}`,
+      legend: `請詳閱注意事項：${notes1.map((t, k) => `${k + 1}. ${t}`).join('　')}`,
+      heads: ['節次', ...ordered.map((g) => g.label)],
+      headGroups,
+      widths: [1.7, ...ordered.map(() => 4)],
+      rows: r1,
+    });
+
+    // ② 補考監考表（給監考老師）
+    const dayRooms = i.settings.rooms.filter((r) => i.schedule.sittings.some((x) => x.roomId === r.id && slots.some((s) => s.id === x.slotId)));
+    const seatsOf = (r: (typeof dayRooms)[number]): number => classroomSeats({ id: r.id, name: r.name, kind: 'class', rows: r.rows, depth: r.depth, seatCount: r.seatCount, ...(r.disabled ? { disabled: r.disabled } : {}), ...(r.rowDepths ? { rowDepths: r.rowDepths } : {}) } as Classroom).length;
+    const timeKey = (s: SlotInfo): string => `${s.kind === 'early' ? 'e' : 'n'}|${s.start}|${s.kind === 'early' ? 0 : s.end}`;
+    const keys = [...new Map(slots.filter((s) => sit(s.id).length > 0).map((s) => [timeKey(s), s] as const)).values()].sort((a, b) => (a.kind === 'early' ? 1 : 0) - (b.kind === 'early' ? 1 : 0) || a.start - b.start || a.end - b.end);
+    const r2: string[][] = [['監考老師', ...dayRooms.map(() => '')]];
+    let n = 0;
+    for (const s of keys) {
+      const same = slots.filter((x) => timeKey(x) === timeKey(s));
+      const label = s.kind === 'early' ? '提前開考' : `時段${CN[n++] ?? n}`;
+      const mine = (rid: string) => i.schedule.sittings.filter((x) => x.roomId === rid && same.some((y) => y.id === x.slotId));
+      r2.push([`${label}・時間`, ...dayRooms.map((r) => (mine(r.id).length ? timeText(s) : ''))]);
+      r2.push([
+        `${label}・考科與人數`,
+        ...dayRooms.map((r) => {
+          const list = mine(r.id);
+          if (!list.length) return '';
+          const cnt = new Map<string, number>();
+          for (const x of list) for (const p of x.papers) cnt.set(p, (cnt.get(p) ?? 0) + 1);
+          const cls = [...new Set(list.map((x) => x.oldClass))];
+          const leave = s.kind === 'early' ? Math.max(...list.map((x) => x.leaveAt ?? 0)) : 0;
+          return [...cnt].map(([k, v]) => `${k}(${v})`).join('、') + (cls.length > 1 ? `　班級：${cls.join('、')}` : '') + (leave ? `　${fmtTime(leave)} 前不得離場` : '');
+        }),
+      ]);
+    }
+    pages.push({
+      kind: 'table',
+      landscape: true,
+      title: '補考監考表',
+      subtitle: `${i.title}　${day}　請於　　：　　到教務處櫃臺領卷`,
+      legend: `注意事項：多科生的各科考卷合為一份，監考老師點交。各格「卷別(人數)」為該教室該時段應到人次。${hasEarly ? `提前開考的同學${dayLeaves.map((t) => `${t} 前不得離場`).join('、')}，請勿提前放行。` : ''}`,
+      heads: ['監考時段', ...dayRooms.map((r) => `${r.name}（${seatsOf(r)}座位）`)],
+      widths: [2.3, ...dayRooms.map(() => 3)],
+      rows: r2,
+    });
+  }
+  return pages;
 }
 
 /** O-3 班級公告：每班一頁；公告版只印學號（不印姓名），導師存參版把學號欄換成姓名（兩份行數相同） */
@@ -192,27 +249,47 @@ export function buildRollCallPages(i: MakeupPaperInput): TablePageModel[] {
   });
 }
 
-/** O-5 座位表（參考）：每考場每節一張，依班級、座號排列；座標寫「第N排－深位」（D119） */
-export function buildSeatTablePages(i: MakeupPaperInput): TablePageModel[] {
+/**
+ * O-5 座位表（D220／#644：由清單改成格狀座位圖，比照學測座位表）：每考場每節一頁，每個座位一格、依排與深位排成方陣、講臺在下；
+ * 格內：座標（右上）、舊號（大字）、舊班｜學號；沒人坐的可用座位畫斜線、停用座位畫斜紋（D220／#647）。
+ * 仍依班級、座號排座（D119：現場自由入座，本表僅供檢核「每個人都有座位」）。回讀驗算數「出現的學號」（makeupReadback）。
+ */
+export function buildSeatTablePages(i: MakeupPaperInput): SeatPageModel[] {
   const c = ctxOf(i);
   const roll = new Map(i.outputs.rollCalls.map((r) => [`${r.slotId}@@${r.roomId}`, r]));
-  return i.outputs.seatTables.map((t) => {
+  const pages: SeatPageModel[] = [];
+  for (const t of i.outputs.seatTables) {
     const s = c.slot(t.slotId);
+    const room = i.settings.rooms.find((r) => r.id === t.roomId);
+    if (!room) continue;
+    const cls: Classroom = { id: room.id, name: room.name, kind: 'class', rows: room.rows, depth: room.depth, seatCount: room.seatCount, ...(room.disabled ? { disabled: room.disabled } : {}), ...(room.rowDepths ? { rowDepths: room.rowDepths } : {}) };
+    const usable = new Set(classroomSeats(cls).map((x) => `${x.row}-${x.depth}`));
+    const classes = [...new Set(t.seats.map((x) => x.oldClass))].sort((a, b) => a.localeCompare(b, 'zh-Hant', { numeric: true }));
+    const cells = new Map<string, CellModel>();
+    for (const x of t.seats) {
+      if (!x.seat) continue;
+      const [r, d] = x.seat.split('-').map(Number) as [number, number];
+      const col = classColor(classes.indexOf(x.oldClass) + 1);
+      cells.set(x.seat, { coord: seatLabel({ row: r, depth: d }), seat: { row: r, depth: d }, code: pad2(x.oldSeat), classLabel: x.oldClass, name: x.studentId, colorBg: col.bg, colorLine: col.line, colorFg: col.fg, tags: [], marks: [] });
+    }
     const sheet = roll.get(`${t.slotId}@@${t.roomId}`);
-    const rows = t.seats.map((x) => {
-      const [r, d] = (x.seat ?? '').split('-');
-      return [x.seat ? `第${r}排－${d}` : '（無座位）', x.oldClass, pad2(x.oldSeat), x.studentId];
-    });
-    return {
-      kind: 'table' as const,
-      title: '補考座位表（參考）',
-      subtitle: `考場：${sheet?.roomName ?? c.roomName(t.roomId)}　${c.dayLabel(s.dayId)}　${slotName(s)} ${slotTime(s)}　共 ${rows.length} 人`,
-      legend: '依班級、座號排列；現場自由入座，本表僅供檢核「每個人都有座位」（座標「排－深位」）。',
-      heads: ['座位', '舊班', '舊號', '學號'],
-      widths: [2, 1.6, 1, 1.8],
-      rows,
-    };
-  });
+    const per = classes.map((k) => t.seats.filter((x) => x.oldClass === k).length);
+    pages.push(addSeatLegend({
+      kind: 'seat',
+      title: `${i.title}　補考座位表`,
+      examName: i.title,
+      heading: `${i.title}　補考座位表`,
+      roomName: sheet?.roomName ?? c.roomName(t.roomId),
+      chips: [`${c.dayLabel(s.dayId)} ${slotName(s)} ${slotTime(s)}`, `共 ${t.seats.length} 人`, '現場自由入座，本表僅供檢核每個人都有座位'],
+      detachStyle: false,
+      rows: room.rows,
+      depth: room.depth,
+      cells,
+      usable,
+      stats: { perClass: classes.map((k, n) => ({ className: k, count: per[n]! })), total: t.seats.length, perSubject: [], table: { classes, headLabel: '補考人數', rows: [{ label: '本場人數', per, total: t.seats.length }] } },
+    }));
+  }
+  return pages;
 }
 
 /** O-7 公假名單（給學務處；欄位格式暫定 U-3，待核對 106-2 初三那份）：學生、班級、科目、日期基本版 */

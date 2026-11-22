@@ -32,6 +32,7 @@ function cornersHtml(c: CellModel, w: number, pt: number, given?: ReturnType<typ
 function wideHtml(c: CellModel | undefined, w: number, h: number, b4: boolean): string {
   const size = `width:${mm(w * 2)};height:${mm(h)}`;
   if (!c) return `<div class="pp-c pp-bl" style="${size};grid-column:span 2"></div>`;
+  if (c.empty) return `<div class="pp-c pp-bl pp-el" style="${size};grid-column:span 2"><i class="pp-co">${esc(c.coord)}</i></div>`;
   // #586（D205）：單人座位回一般大小一格（同學測標籤版式），右格留完全空白（不畫線）；位置與座位表對齊不變
   if ((c.persons?.length ?? 0) === 1) return `${cellHtml(c, w, h, 'label', b4)}<div class="pp-c" style="width:${mm(w)};height:${mm(h)};border:0;background:transparent"></div>`;
   const lay = wideLayout(c, w - 1.5, h, { topPad: 5, codePt: b4 ? 33 : 31, nameMax: 18, subjMax: b4 ? 20 : 16 });
@@ -45,9 +46,12 @@ function wideHtml(c: CellModel | undefined, w: number, h: number, b4: boolean): 
 }
 
 /** 一格：座位表用班級色（抽離考試用柔和單色），標籤用白底，有標示的標籤格用淺黃 */
-function cellHtml(c: CellModel | undefined, w: number, h: number, mode: 'seat' | 'detach' | 'label', b4 = true): string {
+function cellHtml(c: CellModel | undefined, w: number, h: number, mode: 'seat' | 'detach' | 'label', b4 = true, slash = false): string {
   const size = `width:${mm(w)};height:${mm(h)}`;
-  if (!c) return `<div class="pp-c ${mode === 'label' ? 'pp-bl' : 'pp-e'}" style="${size}"></div>`;
+  // D220（#647）：沒人坐的可用座位＝白底斜線（空位）；停用座位＝斜紋底
+  if (!c) return `<div class="pp-c ${mode === 'label' ? 'pp-bl' : slash ? 'pp-em' : 'pp-e'}" style="${size}"></div>`;
+  // D220（#648）：沒人坐的座位的標籤，只印座位編號
+  if (c.empty) return `<div class="pp-c pp-bl pp-el" style="${size}"><i class="pp-co">${esc(c.coord)}</i></div>`;
   if (c.persons) {
     // 預備教室／綜合教室／整合標籤（v2.36）：版式同一般標籤，格內每人一區；排法同 Word（model.personLayout）
     const g = mode === 'label' ? { topPad: 5, codePt: b4 ? 33 : 31, nameMax: 18, schedMax: 11 } : { topPad: 4.5, codePt: 19, nameMax: 10.5, schedMax: 7, joinSched: true };
@@ -90,14 +94,14 @@ function seatCellHtml(c: CellModel, w: number, h: number, mode: 'seat' | 'detach
 }
 
 function seatHtml(p: SeatPageModel, o: HtmlOptions): string {
-  const { cw, ch, st, statsNext } = seatGeometry(p);
+  const { cw, ch, st, statsNext, tier } = seatGeometry(p);
   const mode = p.detachStyle ? 'detach' : 'seat';
   let cells = '';
-  for (let d = p.depth; d >= 1; d--) for (let r = 1; r <= p.rows; r++) cells += cellHtml(p.cells.get(`${r}-${d}`), cw, ch, mode);
+  for (let d = p.depth; d >= 1; d--) for (let r = 1; r <= p.rows; r++) cells += cellHtml(p.cells.get(`${r}-${d}`), cw, ch, mode, true, p.usable.has(`${r}-${d}`));
   const ay = Array.from({ length: p.depth }, (_, i) => `<span>${p.depth - i}</span>`).join('');
   const ax = Array.from({ length: p.rows }, (_, i) => `<span>第${i + 1}排</span>`).join('');
   const chips = p.chips.map((t, i) => `<span class="pp-chip${i === 0 ? ' s' : ''}">${esc(t)}</span>`).join('');
-  const sl = statLayout(p);
+  const sl = statLayout(p, tier);
   const colg = `<colgroup>${sl.cols.map((w) => `<col style="width:${mm(w)}">`).join('')}</colgroup>`;
   const leadHeads = p.stats.table.leadHeads;
   const leadN = leadHeads?.length ?? 1;
@@ -246,6 +250,7 @@ footer { font-size: 8pt; color: #555; text-align: right; margin-top: 3mm }
 .pp .pp-pr b{font-weight:700}
 .pp .pp-c.pp-bl{background:none} /* #504：空位保留外框，整張標籤表輪廓完整 */
 .pp .pp-c.pp-ref{outline:.5mm dashed var(--ink);outline-offset:-.8mm}
+.pp .pp-em{background:linear-gradient(to bottom right,transparent calc(50% - .2mm),#8E8670 calc(50% - .2mm),#8E8670 calc(50% + .2mm),transparent calc(50% + .2mm)),#fff}
 .pp .pp-e{background:repeating-linear-gradient(135deg,#F1EDE0 0 1.2mm,#E2DCC8 1.2mm 2.4mm)}
 .pp.pp-lab .pp-c{display:grid;grid-template-rows:1fr auto 9mm;justify-items:center;align-items:center;gap:0;padding:5mm 1mm .8mm}
 .pp.pp-lab .pp-no{align-self:end;margin-bottom:2.6mm;font-size:31pt}.pp.pp-lab .pp-nm{font-size:15pt}.pp.pp-lab .pp-mk{font-size:12pt}.pp.pp-lab .pp-co{font-size:9pt}
@@ -282,10 +287,10 @@ footer { font-size: 8pt; color: #555; text-align: right; margin-top: 3mm }
 .pp .pp-sc .pp-mk.add{border:.45mm double var(--ink);padding:0 .6mm}
 `;
 
-export type HtmlPages = { seat?: SeatPageModel[]; label?: LabelPageModel[]; list?: ListPageModel | ListPageModel[]; table?: TablePageModel[] };
+export type HtmlPages = { seat?: SeatPageModel[]; label?: LabelPageModel[]; list?: ListPageModel | ListPageModel[]; table?: TablePageModel[]; /** 照給定順序印（補考「單一列印頁」混合座位頁與表格頁時用）；有給就忽略上面各類 */ ordered?: (SeatPageModel | TablePageModel)[] };
 
 export function renderPrintHtml(pages: HtmlPages, o: HtmlOptions): string {
-  const body = [
+  const body = pages.ordered ? pages.ordered.map((p) => (p.kind === 'seat' ? seatHtml(p, o) : tableHtml(p, o))) : [
     ...(pages.seat ?? []).map((p) => seatHtml(p, o)),
     ...(pages.label ?? []).map((p) => labelHtml(p, o)),
     ...[pages.list ?? []].flat().map((l) => listHtml(l, o)),
