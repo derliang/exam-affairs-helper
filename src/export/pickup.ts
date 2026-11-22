@@ -4,6 +4,7 @@
  * 份數規則見 core/stats.ts 的 pickupCounts（含抽離、備用、缺考、單人特例）。
  * 標題用考試名稱，不寫死「模擬考」（D77③）。
  */
+import { orderedRoomIds } from './classOrder';
 import { pickupCounts, specialOf } from '../core/stats';
 import type { ExportInput, TablePageModel } from './model';
 
@@ -12,7 +13,7 @@ const WIDTHS = [2.2, 1.6, 1.6, 2.2, 3.6];
 
 export function buildPickupPages(input: ExportInput): TablePageModel[] {
   const { exam, settings, result, entries } = input;
-  const rooms = exam.classroomIds
+  const rooms = orderedRoomIds(input)
     .map((id) => settings.classrooms.find((c) => c.id === id))
     .filter((c): c is NonNullable<typeof c> => !!c);
   const counts = pickupCounts({

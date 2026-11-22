@@ -91,7 +91,11 @@ export function resolveConflicts<T>(unique: readonly Candidate<T>[], conflicts: 
 
 export interface RosterPart { file: string; result: RosterResult }
 
-const who = (s: { classNo: number; seatNo: number; name: string }): string => `${String(s.classNo).padStart(2, '0')} 班 ${s.seatNo} 號「${s.name}」`;
+/** 班級稱呼（#599）：有班名就用班名（名稱已以「班」結尾不重複加），沒有（名單裡才出現的新班）才退回「第NN班」 */
+export const classText = (no: number, name?: string): string => {
+  const n = name?.trim();
+  return n ? (n.endsWith('班') ? n : `${n}班`) : `第${String(no).padStart(2, '0')}班`;
+};
 
 /**
  * 依選取順序合併多個檔案各自解析出的名冊。
@@ -99,7 +103,8 @@ const who = (s: { classNo: number; seatNo: number; name: string }): string => `$
  * 轉成問題列（dup／dup-school-id），訊息指出與哪個檔案的哪一列重複，交給使用者逐列決定。
  * 每個問題列都帶上檔名與工作表，畫面才指得出是哪個檔案的哪一列。
  */
-export function mergeRosterFiles(parts: readonly RosterPart[]): RosterResult & { perFile: { file: string; students: number; problems: number }[] } {
+export function mergeRosterFiles(parts: readonly RosterPart[], nameOfClass?: (no: number) => string | undefined): RosterResult & { perFile: { file: string; students: number; problems: number }[] } {
+  const who = (s: { classNo: number; seatNo: number; name: string }): string => `${classText(s.classNo, nameOfClass?.(s.classNo))} ${s.seatNo} 號「${s.name}」`;
   const students: Student[] = [];
   const problems: RosterProblem[] = [];
   const issues: RosterResult['issues'] = [];

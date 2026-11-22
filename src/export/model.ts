@@ -3,6 +3,7 @@
  * 純函式、不碰畫面、不讀檔；輸入是 src/data 型別。
  * 統計（D40）暫由本檔 computeStats 計算；施工B 若提供正式統計，替換此函式即可。
  */
+import { orderedRoomIds } from './classOrder';
 import { subjectShort } from '../core/subjectShort';
 import {
   classroomSeats,
@@ -281,12 +282,16 @@ interface Ctx {
   entries: Map<string, ExamEntry>;
   /** 「學生|科目」有抽離考試（到別的教室考）的集合：加考標示分「原教室加考」與「抽離」用（D147②③） */
   detachExam: Set<string>;
+  /** #503、D208：班級順序＝共用設定「班級資料」清單順序（可自訂）；不在清單的排最後 */
+  rank: (classNo: number) => number;
   input: ExportInput;
 }
 const parseCode = (code: string) => ({ classNo: Number(code.slice(0, 2)), seatNo: Number(code.slice(2)) });
 
 function ctxOf(input: ExportInput): Ctx {
+  const order = new Map(input.settings.classes.filter((c) => c.division === input.exam.division).map((c, i) => [c.no, i] as const));
   return {
+    rank: (no) => order.get(no) ?? Number.MAX_SAFE_INTEGER,
     students: new Map(input.students.map((s) => [studentCode(s.classNo, s.seatNo), s])),
     // #371：只取本部別的班級（與排座引擎、對帳同一口徑 examClasses）；國中、高中班號重疊時，不能讓後面的班蓋掉本部別的班名
     classes: new Map(input.settings.classes.filter((c) => c.division === input.exam.division).map((c) => [c.no, c])),
@@ -335,10 +340,10 @@ function usableOf(c: Classroom): Set<string> {
 function fromRoomStats(rs: RoomStats, ctx: Ctx): StatsModel {
   return {
     total: rs.total,
-    perClass: rs.perClass.map((c) => ({ className: ctx.classes.get(c.classNo)?.name ?? String(c.classNo), count: c.count })),
+    perClass: [...rs.perClass].sort((a, b) => ctx.rank(a.classNo) - ctx.rank(b.classNo) || a.classNo - b.classNo).map((c) => ({ className: ctx.classes.get(c.classNo)?.name ?? String(c.classNo), count: c.count })),
     perSubject: rs.perSubject.map((c) => ({ subjectName: ctx.subjectName.get(c.subjectId) ?? c.subjectId, count: c.inRoom })),
     table: (() => {
-      const nos = rs.perClass.map((c) => c.classNo);
+      const nos = rs.perClass.map((c) => c.classNo).sort((a, b) => ctx.rank(a) - ctx.rank(b) || a - b);
       const pick = (l: { classNo: number; count: number }[]) => nos.map((n) => l.find((x) => x.classNo === n)?.count ?? 0);
       // D147⑤：每個「日期＋時段＋科目」一列，不合併；沒有節次表資訊的科目排在最後、天別與時段留空
       const periods = examSubjectPeriods(ctx.input.exam, ctx.input.settings);
@@ -668,7 +673,7 @@ function slotStats(seats: Map<string, MergedCell>, ctx: ReturnType<typeof ctxOf>
       e.codes.add(l.code); e.period = Math.min(e.period, l.period); bySlot.set(key, e);
     }
   }
-  const nos = [...classNos].sort((a, b) => a - b);
+  const nos = [...classNos].sort((a, b) => ctx.rank(a) - ctx.rank(b) || a - b);
   const per = (codes: Iterable<string>) => { const arr = [...codes]; return nos.map((n) => arr.filter((c) => parseCode(c).classNo === n).length); };
   // D170：欄＝日期（有資料才有）｜第幾天｜時段｜科目｜各班｜總計，逐「日期＋時段＋科目」一列；最後「使用人數（不重複）」
   const dates = ctx.input.exam.examDates;
@@ -765,7 +770,7 @@ export function buildSeatPages(input: ExportInput, scope: Scope = 'all'): SeatPa
   const ctx = ctxOf(input);
   const rooms = new Map(input.settings.classrooms.map((c) => [c.id, c]));
   const pages: SeatPageModel[] = [];
-  for (const id of scope === 'reserve' ? [] : input.exam.classroomIds) {
+  for (const id of scope === 'reserve' ? [] : orderedRoomIds(input)) {
     const room = rooms.get(id);
     if (!room) continue;
     const mine = input.result.assignments.filter((a) => a.classroomId === id);
@@ -812,7 +817,7 @@ export function buildSeatPages(input: ExportInput, scope: Scope = 'all'): SeatPa
   if (scope !== 'class') {
     // 預備教室座位表（時段版，稿 v2.28）：一間預備教室一頁，格內每行一個時段；抽離自習不排座位
     const byRoom = reserveMerged(input, ctx);
-    const order = [...input.exam.classroomIds, ...byRoom.keys()];
+    const order = [...orderedRoomIds(input), ...byRoom.keys()];
     for (const roomId of [...new Set(order)]) {
       const seats = byRoom.get(roomId);
       const room = rooms.get(roomId);
@@ -882,7 +887,7 @@ function studyReferencePages(input: ExportInput, ctx: Ctx, rooms: Map<string, Cl
       const no = Number(code.slice(0, 2));
       per.set(no, (per.get(no) ?? 0) + 1);
     }
-    const nos = [...per.keys()].sort((a, b) => a - b);
+    const nos = [...per.keys()].sort((a, b) => ctx.rank(a) - ctx.rank(b) || a - b);
     out.push({
       kind: 'seat',
       title: `${input.exam.name}　${room.name}　自習座位（非考試座位）`,
@@ -954,7 +959,7 @@ export function buildLabelPages(input: ExportInput, scope: Scope = 'all'): Label
   const ctx = ctxOf(input);
   const layout = input.exam.labelLayout;
   const pages: LabelPageModel[] = [];
-  for (const id of scope === 'reserve' ? [] : input.exam.classroomIds) {
+  for (const id of scope === 'reserve' ? [] : orderedRoomIds(input)) {
     const room = input.settings.classrooms.find((c) => c.id === id);
     if (!room || roomTooBigForLabel(room)) continue;
     // 沒有考科的人（全科缺考、未參加）每節都是自習生：有座位、座位表列出，但不印標籤（D135⑤、D137）
@@ -986,7 +991,7 @@ export function buildLabelPages(input: ExportInput, scope: Scope = 'all'): Label
   if (scope !== 'class') {
     // 預備教室合併標籤（D94-5）：每間預備教室一張紙、每個座位一張標籤；同一座位各節的使用者列在同一張，每節一行
     const byRoom = reserveMerged(input, ctx);
-    const order = [...input.exam.classroomIds, ...byRoom.keys()];
+    const order = [...orderedRoomIds(input), ...byRoom.keys()];
     for (const roomId of [...new Set(order)]) {
       const seats = byRoom.get(roomId);
       const room = input.settings.classrooms.find((c) => c.id === roomId);
@@ -1058,7 +1063,7 @@ export function buildStudyLists(input: ExportInput): ListPageModel[] {
       kind: 'list' as const,
       title: `${input.exam.name}　抽離自習名單（${sub.name}，共 ${bySubject.get(sub.id)!.length} 人）`,
       subtitle: whenOf(sub.id, sub.name),
-      rows: bySubject.get(sub.id)!.sort((a, b) => a.code.localeCompare(b.code)),
+      rows: bySubject.get(sub.id)!.sort((a, b) => ctx.rank(parseCode(a.code).classNo) - ctx.rank(parseCode(b.code).classNo) || a.code.localeCompare(b.code)),
     }));
 }
 
@@ -1097,7 +1102,7 @@ export function buildDetachList(input: ExportInput): ListPageModel {
       purpose,
     });
   }
-  rows.sort((a, b) => a.subject.localeCompare(b.subject, 'zh-TW') || a.code.localeCompare(b.code));
+  rows.sort((a, b) => a.subject.localeCompare(b.subject, 'zh-TW') || ctx.rank(parseCode(a.code).classNo) - ctx.rank(parseCode(b.code).classNo) || a.code.localeCompare(b.code));
   return { kind: 'list', title: `${input.exam.name}　抽離名單`, rows };
 }
 
