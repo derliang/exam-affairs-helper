@@ -1,5 +1,6 @@
 /** 補考場次的七步驟工作區：左步驟列、中間各步畫面、右側摘要。⑥ 儀表板、⑦ 下載與每頁最上面的常駐摘要列由 K3 接手 */
 import { useEffect } from 'preact/hooks';
+import type { Classroom } from '../../../data';
 import { Button, StepNav } from '../../components';
 import { scrollPageTop } from '../../nav';
 import { withSnapshot } from '../dashboard';
@@ -41,7 +42,7 @@ export function MakeupSummary(p: { s: MakeupSession }) {
 }
 
 export function MakeupWorkspace(p: {
-  s: MakeupSession; step: MakeupStepNo; onChange: (s: MakeupSession) => void; onStep: (n: MakeupStepNo) => void; onList: () => void;
+  s: MakeupSession; /** 共用設定的教室清單（#635 ③：補考 ③ 可一次帶入） */ shared?: Classroom[]; step: MakeupStepNo; onChange: (s: MakeupSession) => void; onStep: (n: MakeupStepNo) => void; onList: () => void;
 }) {
   const { s, step } = p;
   // 規格 6.1：每次變更都把當下的對帳結果一起存進場次（結果沒變就不多記一筆）
@@ -56,7 +57,7 @@ export function MakeupWorkspace(p: {
         <MakeupSummaryBar s={s} onStep={p.onStep} />
         {step === 1 ? <MkStep1 s={s} onChange={change} />
           : step === 2 ? <MkStep2 s={s} onChange={change} />
-          : step === 3 ? <MkStep3 s={s} onChange={change} />
+          : step === 3 ? <MkStep3 s={s} onChange={change} {...(p.shared ? { shared: p.shared } : {})} />
           : step === 4 ? <MkStep4 s={s} onChange={change} />
           : step === 5 ? <MkStep5 s={s} onChange={change} onStep={p.onStep} />
           : step === 6 ? <MkStep6 s={s} onStep={p.onStep} />

@@ -86,7 +86,7 @@ export function summarizeTables(file: string, kind: MakeupDocKind, raw: RawTable
       add(byPaper, r[0]!, n);
     }
   } else if (kind === 'O-2') {
-    // D215（#646）：O-2 是兩張表；人次只點第二張「補考監考表」（表頭第一格「監考時段」），各格「卷別(人數)」，第一欄是列名不算
+    // D220（#646）：O-2 是兩張表；人次只點第二張「補考監考表」（表頭第一格「監考時段」），各格「卷別(人數)」，第一欄是列名不算
     const ts = body('監考時段');
     need(ts.length, '監考');
     for (const t of ts) for (const r of t) for (const c of r.slice(1)) {
@@ -123,7 +123,7 @@ export function summarizeTables(file: string, kind: MakeupDocKind, raw: RawTable
       }
     }
   } else if (kind === 'O-5') {
-    // D215（#644）：O-5 是格狀座位圖，沒有表頭可認；數「學號出現幾次」（每個座位格寫一次學號）
+    // D220（#644）：O-5 是格狀座位圖，沒有表頭可認；數「學號出現幾次」（每個座位格寫一次學號）
     const text = raw.text;
     for (const id of studentIds ?? []) {
       let n = 0;

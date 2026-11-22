@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'preact/hooks';
 import type { ExamKind, Semester } from '../../data';
-import { Alert, Button, PageHead } from '../components';
+import { Alert, Button, PageHead, Stepper } from '../components';
 import { checkExamName } from '../flow';
 import { confirmEnv, envReport } from '../env';
 import { EnvCard } from './EnvCard';
@@ -139,6 +139,8 @@ export function NewExam(p: {
                     <button type="button" key={n} class="rbtn" aria-pressed={round === n} onClick={() => onRound(n)}>第{CN[n] ?? n}次</button>
                   ))}
                 </div>
+                {/* #635 ⑧：次別可填數字（真實分科有第 7 次），共用元件 Stepper */}
+                <Stepper label="次別" value={round} min={1} max={20} onChange={onRound} />
                 <span class="hint">{kind === 'gsat' ? '第 1、2 次數學是單一科，第 3 次起分為數學A、數學B；建立後可在第 1 步「修改基本資料」更改' : '分科每次考的科目都一樣，次別只用在名稱'}</span></div>
             )}
             <div class={`field${!check.ok ? ' err' : ''}`}><label for="exam-name">模擬考名稱</label>

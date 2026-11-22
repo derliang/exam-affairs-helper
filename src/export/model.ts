@@ -73,7 +73,7 @@ export interface CellModel {
   corners?: CornerTag[];
   /** 自習參考座位格（非考試座位、不印標籤）：虛線框，黑白列印也分得出（分科自習座位頁用；學測原班虛線格已拿掉，D137） */
   ref?: boolean;
-  /** 沒人坐的可用座位（D215，#648）：標籤只印座位編號、其餘留白；座位表不用這個欄位（空位由 usable 減 cells 得出） */
+  /** 沒人坐的可用座位（D220，#648）：標籤只印座位編號、其餘留白；座位表不用這個欄位（空位由 usable 減 cells 得出） */
   empty?: boolean;
 }
 /** 角標：x＝不考（黑底白字）、add＝加考／抽離考試（白底黑框）、take＝「有考」（該科不考超過一半時反標，白底黑框） */
@@ -229,7 +229,7 @@ export const PREP_TAG = '預備教室';
 /** 自習座位頁圖例（G36 補做項④、稿 v2.68 圖例列）：此頁座位都是自習座位、斜紋＝停用（#550：自習頁格子不畫虛線與「自習」字，D147 匯出樣式不自訂）；與頁首「非考試座位」小標籤並列，黑白列印也分得出 */
 export const STUDY_LEGEND = '圖例：此頁座位都是自習座位（不印標籤）；斜線格＝空位（沒人坐）；斜紋底＝停用座位';
 /**
- * 座位表圖例（D215，#647）：座位表一律畫出教室全部座位（排×深位）。沒人坐的可用座位＝白底一條斜線（劃掉）；
+ * 座位表圖例（D220，#647）：座位表一律畫出教室全部座位（排×深位）。沒人坐的可用座位＝白底一條斜線（劃掉）；
  * 停用座位（教室設定停用，或超出座位數）＝斜紋底。頁面有這兩種格子才加這一枚圖例小標籤（與自習座位頁的 STUDY_LEGEND 並列，不重複）。
  */
 export function seatLegendOf(p: SeatPageModel): string | undefined {
@@ -246,7 +246,7 @@ export function addSeatLegend(p: SeatPageModel): SeatPageModel {
   if (l) p.chips.push(l);
   return p;
 }
-/** 沒人坐的座位的標籤格（D215，#648）：只有座位編號 */
+/** 沒人坐的座位的標籤格（D220，#648）：只有座位編號 */
 export function emptyLabelCell(seat: { row: number; depth: number }): CellModel {
   return { coord: seatLabel(seat), seat: { row: seat.row, depth: seat.depth }, code: '', classLabel: '', name: '', colorBg: 'FFFFFF', colorLine: '222222', colorFg: '22201B', tags: [], marks: [], empty: true };
 }
@@ -1220,7 +1220,7 @@ export function namePtFit(classLabel: string, name: string, innerMm: number, max
  * 座位格高度（seatGeometry）扣掉的也是同一個總高，整張表一定在頁面內。Word 與列印頁共用。
  */
 export type StatTier = 0 | 1 | 2;
-/** 統計表精簡級數（D215，#645）：0＝原樣（12／10.5pt）；1＝精簡 9pt、列高最小 5.2mm；2＝極簡 8pt、列高最小 4.6mm。座位表一間教室一頁時，列數多就逐級縮 */
+/** 統計表精簡級數（D220，#645）：0＝原樣（12／10.5pt）；1＝精簡 9pt、列高最小 5.2mm；2＝極簡 8pt、列高最小 4.6mm。座位表一間教室一頁時，列數多就逐級縮 */
 export function statLayout(p: SeatPageModel, tier: StatTier = 0): { cols: number[]; rowH: number[]; pt: number; total: number } {
   const innerW = SEAT_PAGE.w - 2 * SEAT_PAGE.padX;
   const rows = statRows(p);
@@ -1364,7 +1364,7 @@ export function seatGeometry(p: SeatPageModel, o: { topMm?: number } = {}): { cw
   const top = o.topMm ?? 1.2;
   const fits = (ch: number) => [...p.cells.values()].every((c) => c.persons || c.periodLines || !c.code || seatCellFit(c, cw, ch, top).ok);
   if (!p.slotMode) {
-    // D215（#645，推翻 D111）：班級教室座位表一間教室一頁。統計表逐級縮（原樣→精簡 9pt→極簡 8pt），選第一個讓座位格 ≥ 18mm 且標示放得進的級數；
+    // D220（#645，推翻 D111）：班級教室座位表一間教室一頁。統計表逐級縮（原樣→精簡 9pt→極簡 8pt），選第一個讓座位格 ≥ 18mm 且標示放得進的級數；
     // 縮到極簡仍 ≥ 15mm（硬下限）且放得進也用；再不行才退回統計表另起一頁（極端：統計表約 15 列以上）
     const tiers: StatTier[] = [0, 1, 2];
     const chs = tiers.map((t) => chOf(base + 5 + statLayout(p, t).total));

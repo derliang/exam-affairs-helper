@@ -201,7 +201,7 @@ function hatchParas(wMm: number, hMm: number): Paragraph[] {
   ];
 }
 
-/** 空位格（D215，#647）：白底、一條左下到右上的斜線（劃掉） */
+/** 空位格（D220，#647）：白底、一條左下到右上的斜線（劃掉） */
 function slashParas(wMm: number, hMm: number): Paragraph[] {
   const { data } = slashPng(wMm, hMm);
   const px = (mm: number) => Math.round((mm * 96) / 25.4);
@@ -421,7 +421,7 @@ function wideUnit(m: CellModel | undefined, o: { w: number; h: number; cellTw: n
     return [0, 1].map((i) => new TableCell({ width: { size: o.cellTw, type: WidthType.DXA }, verticalAlign: VerticalAlign.TOP, margins: { top: 0, bottom: 0, left: tw(1), right: tw(1) }, borders: { top: b, bottom: b, left: i === 0 ? b : none, right: i === 1 ? b : none }, children: [line([], { h: 0.35 })] }));
   }
   if (m.empty) {
-    // D215（#648）：沒人坐的座位，兩倍寬一張只印座位編號（右上角），中間不畫線
+    // D220（#648）：沒人坐的座位，兩倍寬一張只印座位編號（右上角），中間不畫線
     return [0, 1].map((i) => new TableCell({ width: { size: o.cellTw, type: WidthType.DXA }, verticalAlign: VerticalAlign.TOP, margins: { top: 0, bottom: 0, left: tw(1), right: tw(1) }, borders: { top: b, bottom: b, left: i === 0 ? b : none, right: i === 1 ? b : none }, children: [i === 1 ? line([run2(m.coord, { size: 9, bold: true, color: '4A463A' }, o.mode)], { h: 4.2, align: AlignmentType.RIGHT, right: 0.6 }) : line([], { h: 0.35 })] }));
   }
   const g = { topPad: 5, codePt: o.isB4 ? 33 : 31, nameMax: 18, subjMax: o.isB4 ? 20 : 16 };

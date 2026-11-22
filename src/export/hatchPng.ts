@@ -50,7 +50,7 @@ export function hatchPng(wMm: number, hMm: number): { data: Uint8Array; w: numbe
   return made;
 }
 
-/** 空位格（D215，#647）：白底、一條由左下到右上的斜線（劃掉）；同尺寸只算一次 */
+/** 空位格（D220，#647）：白底、一條由左下到右上的斜線（劃掉）；同尺寸只算一次 */
 export function slashPng(wMm: number, hMm: number): { data: Uint8Array; w: number; h: number } {
   const key = `s${Math.round(wMm * PX_PER_MM)}x${Math.round(hMm * PX_PER_MM)}`;
   const hit = cache.get(key);

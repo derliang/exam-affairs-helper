@@ -42,7 +42,7 @@ export function ScheduleCard(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc)
   const had = (exam.astLocks?.seats?.length ?? 0) + (exam.astLocks?.classes?.length ?? 0) + (exam.astLocks?.rooms?.length ?? 0) + (exam.astApprovals?.length ?? 0) > 0;
   return (
     <div class="card stack">
-      <div><h3>時程推薦</h3><p class="small muted">先比<b>時程指標</b>（天數、時段數、同時使用的考場、監考人力），<b>選定時程之後才排座</b>，不會每個候選都完整排座。縮短天數、調整科目順序、文理同節考不同科三種都可以是候選；只有「沒有共同考生」的兩科才能同一時段，其餘標「可行但代價較高」或「不可行」。<b>未經管理者核准，不能設為正式公告。</b></p></div>
+      <div><h3>時程推薦</h3><p class="small muted">先比<b>時程指標</b>（天數、時段數、同時使用的考場、監考人力），<b>選定時程之後才排座</b>，不會每個候選都完整排座。縮短天數、調整科目順序、文理同節考不同科三種都可以是候選；只有「沒有共同考生」的兩科才能同一時段，其餘標「可行但代價較高」或「不可行」。<b>沒按「確認採用」前，不能設為正式公告。</b></p></div>
       <div class="row" style="gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px">
         <span class="label" style="margin:0">每間考場監考人數</span>
         <div class="stepper">
@@ -51,7 +51,7 @@ export function ScheduleCard(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc)
           <button type="button" class="icon-btn" aria-label="監考人數加一" disabled={inv >= 6} onClick={() => patch({ astInvigilators: inv + 1 })}>＋</button>
         </div>
         <Badge tone={inv === 1 ? undefined : 'info'}>{inv === 1 ? '預設' : '已改'}</Badge>
-        <span class="small muted" style="flex:1 1 220px">「所需監考人力」＝考場數×這個人數。預設 1 人，管理者可改（1～6），改了立刻重算下面每個候選；只影響人力指標，不影響排座，也不排誰監考。</span>
+        <span class="small muted" style="flex:1 1 220px">「所需監考人力」＝考場數×這個人數。預設 1 人，可自己改（1～6），改了立刻重算下面每個候選；只影響人力指標，不影響排座，也不排誰監考。</span>
       </div>
       <div class="mgrid cands">
         {cands.map((c) => {
@@ -78,19 +78,19 @@ export function ScheduleCard(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc)
                 {c.id === 'A'
                   ? <Button small kind={on ? 'primary' : 'default'} onClick={() => choose(c)}>{on ? '目前使用 ✓' : '改回基準'}</Button>
                   : <>
-                      <Button small kind={on ? 'primary' : 'default'} disabled={c.verdict === 'infeasible' || on} onClick={() => choose(c)}>{on ? '目前草案 ✓' : '設為草案'}</Button>
-                      {c.verdict !== 'infeasible' && <Button small disabled={!on} onClick={() => approve(c)} title={on ? undefined : '先設為草案'}>{on && sched?.approved ? '已核准（取消）' : '管理者核准'}</Button>}
+                      <Button small kind={on ? 'primary' : 'default'} disabled={c.verdict === 'infeasible' || on} onClick={() => choose(c)}>{on ? '目前選用 ✓' : '選用這個時程'}</Button>
+                      {c.verdict !== 'infeasible' && <Button small disabled={!on} onClick={() => approve(c)} title={on ? undefined : '先選用這個時程'}>{on && sched?.approved ? '已確認採用（取消）' : '確認採用'}</Button>}
                     </>}
               </div>
             </div>
           );
         })}
       </div>
-      {cur !== 'A' && <Alert tone="warn"><b>目前選的是候選 {cur}{sched?.approved ? '，已核准。' : '，還沒有核准。'}</b>{sched?.approved ? '' : '未經管理者核准，不能確認定案、不能設為正式公告。'}換時程後，原本的替代方案核可與鎖定已清掉（時段不同了），⑤ 依這個時程重排。</Alert>}
+      {cur !== 'A' && <Alert tone="warn"><b>目前選的是候選 {cur}{sched?.approved ? '，已確認採用。' : '，還沒有確認採用。'}</b>{sched?.approved ? '' : '沒按「確認採用」前，不能確認定案、不能設為正式公告。'}換時程後，原本的替代方案核可與鎖定已清掉（時段不同了），⑤ 依這個時程重排。</Alert>}
       {cur === 'A' && had && <Alert tone="info">目前用基準時程。</Alert>}
       <More title="說明：指標怎麼算">同時考場峰值＝同一時段各科需要的考場加總的最大值（每間考場的座位數依本次勾選的班級教室平均）；監考人力＝每間考場監考人數（目前 {inv} 人），峰值＝同時考場峰值×{inv}，總人次＝所有時段考場數加總×{inv}。共同考生＝兩科都報名的人；同組的兩科（例如物理×化學）多數考生都考，不能同時段。分科每科時長不鎖死，這裡不看分鐘數。</More>
       {!astPlan(doc, exam) && <p class="small muted">還沒有名單或教室，指標以目前名單算；排座結果在 ⑤。</p>}
-      {pend && <ConfirmModal copy={{ title: '換時程？', body: `換時程會清掉 ${nApr} 筆核可（含時程核准）與 ${nLock} 筆鎖定，因為時段會不同。`, confirm: '確定換時程' }} onConfirm={() => apply(pend)} onClose={() => setPend(null)} />}
+      {pend && <ConfirmModal copy={{ title: '換時程？', body: `換時程會清掉 ${nApr} 筆核可（含時程確認採用）與 ${nLock} 筆鎖定，因為時段會不同。`, confirm: '確定換時程' }} onConfirm={() => apply(pend)} onClose={() => setPend(null)} />}
     </div>
   );
 }

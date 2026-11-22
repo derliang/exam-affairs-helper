@@ -8,6 +8,7 @@ import { classCapacity, reserveCheck, reserveNeed, studyCapacity } from '../capa
 import { StudyNeedDetail } from './StudyCapacityView';
 import { newClassRoomIds, roomsMissingTrack } from '../rooms';
 import { examEntries, examRooms, seatableEntries } from '../seating';
+import { addedReserveIds, markRoomsBefore, takeRoomsBefore } from '../pendingNewRooms';
 import { setClassTrack, updateExam, type Doc } from '../store';
 
 /** ③ 教室設定：標題卡、狀態檢核卡（理組／文組分列＋預備教室）、班級（文理組）卡、教室與座位卡（原型 v3） */
@@ -20,6 +21,16 @@ export function Step3(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
     if (exam.classroomIds.length === 0 && lackRooms > 0) p.onChange(syncClassRooms(doc, exam));
   }, [exam.id, exam.classroomIds.length, lackRooms]);
   const rooms = doc.settings.classrooms;
+  // #635 ②：從這裡去共用設定新增的預備教室，回來預設列入本次考試
+  useEffect(() => {
+    const before = takeRoomsBefore(exam.id);
+    if (!before) return;
+    const added = addedReserveIds(before, doc.settings.classrooms).filter((id) => !exam.classroomIds.includes(id));
+    if (!added.length) return;
+    const r = updateExam(doc, exam.id, { classroomIds: [...exam.classroomIds, ...added] });
+    if (r.ok) p.onChange(r.doc);
+  }, [exam.id]);
+  const toRooms = p.onToRooms ? () => { markRoomsBefore(exam.id, doc.settings.classrooms.map((r) => r.id)); p.onToRooms!(); } : undefined;
   const senior = exam.division === 'senior';
   const { lines, noList, seats } = classCapacity(doc, exam);
   const students = seatableEntries(doc, exam).length;
@@ -89,7 +100,7 @@ export function Step3(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
         )}
         <div class="stack" style="gap:6px">
           {lines.map((l) => <p key={l.label} class={`small${l.ok ? ' muted' : ' errnote'}`}>{l.ok ? <><b>{l.label}：</b>{l.detail}</> : l.message}</p>)}
-          {senior && hasList && <StudyNeedDetail sc={sc} onAdd={(ids) => setIds([...exam.classroomIds, ...ids])} {...(p.onToRooms ? { onNewRoom: p.onToRooms } : {})} />}
+          {senior && hasList && <StudyNeedDetail sc={sc} onAdd={(ids) => setIds([...exam.classroomIds, ...ids])} {...(toRooms ? { onNewRoom: toRooms } : {})} />}
         </div>
         {missing.length > 0 && <Alert tone="danger"><b>高中部排座要先指定教室的組別。</b>「{missing.map((r) => r.name).join('、')}」還沒選理組或文組，請在下面該列的「組別」按鈕選一個（預備教室不用選）。</Alert>}
         {!senior && <Alert tone={reserve.tone}>{reserve.message}</Alert>}
@@ -121,7 +132,7 @@ export function Step3(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
               <p class="small muted">每班的班級教室已依學生名單自動帶出，只要調整座位配置；班級教室跟名冊班級走、不能手動新增；手動新增的只有預備教室。</p>
               <More title="說明：座位表與教室來源">{senior ? '預備教室座位另計，不計入教室座位合計。' : ''}教室清單是所有模擬考共用的：修改教室會影響其他使用這間教室的模擬考；只想改這次考試的座位，請在「編輯座位」上方選「只這次考試」。</More>
             </div>
-            {p.onToRooms && <Button onClick={p.onToRooms}>到共用設定的教室清單 ›</Button>}
+            {toRooms && <Button onClick={toRooms}>到共用設定的教室清單 ›</Button>}
           </div>
           {rosterCount === 0 && (
             <Alert tone="info" action={p.onToRoster && <Button small onClick={p.onToRoster}>到學生名單 ›</Button>}><b>還沒有學生名單：</b>匯入學生名單後，會依班級自動帶出每班的班級教室。</Alert>

@@ -3,7 +3,7 @@
  * 類型（一般／特別；混班由系統自動挑，D180）、本次使用開關、狀態檢核（F-15：最擁擠時段的同時在考人數 vs 可用座位）。
  * 座位上限沿用 D160：橫排、深位各 ≤8、總座位 ≤56（稿寫 7×7 是舊的 G14，已被 D160 取代）。
  */
-import { Alert, Badge, Seg, Switch } from '../../components';
+import { Alert, Badge, Button, Seg, Switch } from '../../components';
 import { RoomList } from '../../components/RoomList';
 import type { Classroom } from '../../../data';
 import { fmtTime, type MakeupRoom, type MakeupRoomUse } from '../../../core/makeup';
@@ -39,7 +39,13 @@ export function newRoom(rooms: readonly MakeupRoom[]): MakeupRoom {
   return { id: `room-${n}`, name: `教室${rooms.length + 1}`, rows: 5, depth: 6, seatCount: 30, use: 'class' };
 }
 
-export function MkStep3(p: { s: MakeupSession; onChange: (s: MakeupSession) => void }) {
+/** #635 ③：共用設定裡還沒帶進這場補考的教室（高中部或不分部；已帶入的以 id 判斷） */
+export const sharedToImport = (shared: readonly Classroom[], rooms: readonly MakeupRoom[]): Classroom[] => {
+  const have = new Set(rooms.map((r) => r.id));
+  return shared.filter((c) => c.division !== 'junior' && !have.has(c.id));
+};
+
+export function MkStep3(p: { s: MakeupSession; onChange: (s: MakeupSession) => void; shared?: readonly Classroom[] }) {
   const { s } = p;
   const chk = roomCheckOf(s);
   const setRooms = (rooms: MakeupRoom[]) => {
@@ -47,6 +53,8 @@ export function MkStep3(p: { s: MakeupSession; onChange: (s: MakeupSession) => v
     const ids = new Set(rooms.map((r) => r.id));
     p.onChange({ ...s, rooms, roomOff: s.roomOff.filter((id) => ids.has(id)) });
   };
+  const todo = sharedToImport(p.shared ?? [], s.rooms);
+  const importShared = () => setRooms([...s.rooms, ...fromClassrooms(todo, [])]);
   const setUse = (id: string, use: MakeupRoomUse) => setRooms(s.rooms.map((r) => (r.id === id ? { ...r, use } : r)));
   const toggle = (id: string, on: boolean) => p.onChange({ ...s, roomOff: on ? s.roomOff.filter((x) => x !== id) : [...new Set([...s.roomOff, id])] });
   const worst = chk.days.find((d) => d.need - d.seats === chk.shortage && !d.ok);
@@ -83,6 +91,11 @@ export function MkStep3(p: { s: MakeupSession; onChange: (s: MakeupSession) => v
       <div class="card stack">
         <div class="lab">教室清單</div>
         <p class="small muted">混班教室由系統自動挑，你只要設定哪些是特別教室（提前開考用）。</p>
+        {todo.length > 0 && (
+          <Alert tone="info" action={<Button small kind="primary" onClick={importShared}>帶入 {todo.length} 間教室</Button>}>
+            共用設定的教室清單裡有 {todo.length} 間教室還沒帶進這場補考（座位圖照共用設定），不必一間間新增。帶入後可再調整座位、開關「本次使用」。
+          </Alert>
+        )}
         <RoomList flat rooms={s.rooms.map(toClassroom)} paper="B4" division="senior" track="none" reserveName="教室" addLabel="＋ 新增教室"
           onAdd={() => setRooms([...s.rooms, newRoom(s.rooms)])}
           onChange={(list) => setRooms(fromClassrooms(list, s.rooms))}

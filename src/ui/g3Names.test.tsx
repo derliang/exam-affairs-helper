@@ -33,7 +33,7 @@ describe('G8 第 2 步：名單空的直接匯入、已有名單改成「修改�
     it(`${kind}：共用名單空的 → 可直接匯入（醒目匯入區），警告只有一個`, () => {
       const { doc, exam } = withExam(kind, []);
       const html = renderToString(<Step2 doc={doc} exam={exam} onChange={noop} onToRoster={noop} />);
-      expect(html).toContain('選擇學生名單檔（.xlsx）並匯入');
+      expect(html).toContain('選擇學生名單檔（.xlsx／.xls）並匯入');
       expect(html).toContain('下載名單範本');
       expect(html).toContain('同一份資料');
       expect(html).toContain('尚未匯入');
@@ -48,7 +48,7 @@ describe('G8 第 2 步：名單空的直接匯入、已有名單改成「修改�
       expect(html).toContain(`修改${sn}`);
       expect(html).toContain('3 人');
       expect(html).toContain('頁首路徑列');
-      expect(html).not.toContain('選擇學生名單檔（.xlsx）並匯入');
+      expect(html).not.toContain('選擇學生名單檔（.xlsx／.xls）並匯入');
       expect(html).not.toContain('學生名單是空的');
     });
   }

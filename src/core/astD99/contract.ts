@@ -6,7 +6,7 @@
  */
 import type { AstLocks, PrevSeat, SeatPos, Track } from '../../data/types';
 
-export type PlanMode = 'fewest-rooms' | 'least-movement';
+export type PlanMode = 'fewest-rooms' | 'least-movement' | 'home-exam';
 
 export interface PlanRoom {
   id: string;
@@ -169,7 +169,9 @@ export function checkPlan(input: PlanInput, out: PlanOutput): string[] {
     for (const s of study) {
       if (!room.has(s.roomId)) v.push(`${slot.id}：自習教室 ${s.roomId} 不存在`);
       // H-07：同節同教室不可考試又自習
-      if (usage[s.roomId] !== 'study') v.push(`${slot.id}：${s.roomId} 有人自習但用途不是自習（考試／自習混用）`);
+      // D219：原班應考、不考者留原班標 X 模式，本班同學留在原班考場（X 座位）不算混用
+      const xStay = input.mode === 'home-exam' && room.get(s.roomId)?.kind === 'class' && room.get(s.roomId)?.classNo === byCode.get(s.code)?.classNo;
+      if (usage[s.roomId] !== 'study' && !(xStay && usage[s.roomId] === 'exam')) v.push(`${slot.id}：${s.roomId} 有人自習但用途不是自習（考試／自習混用）`);
     }
     // S-03／D99 一-2：自習者進他班原班教室，必須管理者開啟或已核可該時段的替代方案
     for (const s of study) {
@@ -264,7 +266,7 @@ export function computeMetrics(input: PlanInput, out: PlanOutput): PlanMetrics {
       studyRooms.add(s.roomId);
       leaveHome++;
     }
-    if (h !== undefined && examBySlot.get(s.slotId)?.has(h)) displaced++;
+    if (h !== undefined && h !== s.roomId && examBySlot.get(s.slotId)?.has(h)) displaced++;
     setLoc(s.code, s.slotId, s.roomId);
     studySets.set(s.code, (studySets.get(s.code) ?? new Set()).add(s.roomId));
   }

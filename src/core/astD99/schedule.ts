@@ -157,7 +157,7 @@ export function buildCandidates(inp: ScheduleInput): Candidate[] {
   const base: Days = inp.base.map((d) => d.map((s) => [...s]));
   const bm = m(base);
   const ids = base.flat(2);
-  const out: Candidate[] = [{ id: 'A', title: '基準（目前的分科節次表）', days: base, verdict: 'baseline', note: '依共用設定「節次與時長」的順序，不寫死、管理者可改。', metrics: bm, blockers: [] }];
+  const out: Candidate[] = [{ id: 'A', title: '基準（目前的分科節次表）', days: base, verdict: 'baseline', note: '依共用設定「節次與時長」的順序，不寫死、可到共用設定改。', metrics: bm, blockers: [] }];
 
   // B：每天把第一科移到最後（只是調順序，指標不變）
   const reorder: Days = base.map((d) => (d.length > 1 ? [...d.slice(1), d[0]!] : d.map((s) => [...s])));

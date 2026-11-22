@@ -115,7 +115,7 @@ export function scheduleOfDay(schedule: MakeupSchedule, dayId: string): MakeupSc
   };
 }
 
-/** 一份文件的頁：O-5 是座位圖頁（D215），其餘是表格頁 */
+/** 一份文件的頁：O-5 是座位圖頁（D220），其餘是表格頁 */
 type MkPage = SeatPageModel | TablePageModel;
 const pageCount = (p: MkPage): number => (p.kind === 'seat' ? 1 : tableModelPages(p));
 const docxPagesOf = (pages: MkPage[]): { seat?: SeatPageModel[]; table?: TablePageModel[] } => ({

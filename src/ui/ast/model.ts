@@ -21,7 +21,7 @@ import { rosterFor } from '../rosterYears';
 import { dataVersion } from '../../core/version';
 import { snapOf } from '../../core/astD99/release';
 
-export const MODE_LABEL: Record<PlanMode, string> = { 'fewest-rooms': '少教室優先', 'least-movement': '少移動優先' };
+export const MODE_LABEL: Record<PlanMode, string> = { 'fewest-rooms': '少教室優先', 'least-movement': '少移動優先', 'home-exam': '原班應考標 X' };
 export const astModeOf = (exam: ExamConfig): PlanMode => exam.astMode ?? 'fewest-rooms';
 
 export interface AstSlot extends PlanSlot {
@@ -405,7 +405,7 @@ export function astFinalizeBlockers(doc: Doc, exam: ExamConfig, plan: AstPlan | 
   if (plan.unplaced > 0 && plan.pending.length === 0) b.push(`有 ${plan.unplaced} 人排不進自習空間`);
   if (plan.conflicts.length > 0) b.push(`有 ${plan.conflicts.length} 項鎖定衝突`);
   if (plan.errors.length > 0 && plan.pending.length === 0 && plan.unplaced === 0) b.push(`硬性限制有 ${plan.errors.length} 項不通過`);
-  if (scheduleNeedsApproval(exam.astSchedule)) b.push('選的時程不是基準，要管理者核准');
+  if (scheduleNeedsApproval(exam.astSchedule)) b.push('選的時程不是基準，要先按「確認採用」');
   const nm = new Map(exam.subjects.map((x) => [x.id, x.name]));
   const conf = astScheduleConflicts(doc, exam);
   if (conf.length > 0) b.push(`選的時程有同節兩科共同考生：${conf.slice(0, 3).map((c) => `${c.slot} ${nm.get(c.a) ?? c.a}與${nm.get(c.b) ?? c.b}（${c.count} 人）`).join('、')}`);

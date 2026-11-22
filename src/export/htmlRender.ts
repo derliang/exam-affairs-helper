@@ -48,9 +48,9 @@ function wideHtml(c: CellModel | undefined, w: number, h: number, b4: boolean): 
 /** 一格：座位表用班級色（抽離考試用柔和單色），標籤用白底，有標示的標籤格用淺黃 */
 function cellHtml(c: CellModel | undefined, w: number, h: number, mode: 'seat' | 'detach' | 'label', b4 = true, slash = false): string {
   const size = `width:${mm(w)};height:${mm(h)}`;
-  // D215（#647）：沒人坐的可用座位＝白底斜線（空位）；停用座位＝斜紋底
+  // D220（#647）：沒人坐的可用座位＝白底斜線（空位）；停用座位＝斜紋底
   if (!c) return `<div class="pp-c ${mode === 'label' ? 'pp-bl' : slash ? 'pp-em' : 'pp-e'}" style="${size}"></div>`;
-  // D215（#648）：沒人坐的座位的標籤，只印座位編號
+  // D220（#648）：沒人坐的座位的標籤，只印座位編號
   if (c.empty) return `<div class="pp-c pp-bl pp-el" style="${size}"><i class="pp-co">${esc(c.coord)}</i></div>`;
   if (c.persons) {
     // 預備教室／綜合教室／整合標籤（v2.36）：版式同一般標籤，格內每人一區；排法同 Word（model.personLayout）

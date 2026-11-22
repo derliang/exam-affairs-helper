@@ -368,7 +368,9 @@ export function reconcileAst(doc: Doc, exam: ExamConfig, outs?: AstOutputs): Rec
       const seatKeys = new Map<string, number>();
       for (const e of ex) seatKeys.set(`${e.row}-${e.depth}`, (seatKeys.get(`${e.row}-${e.depth}`) ?? 0) + 1);
       uses.push({ reserve: roomById.get(rid)?.kind === 'reserve', room: rid, roomName: rname(rid), slot: gi, exam: ex.length, study: st, seats: roomById.get(rid)?.seats.length ?? 0, dup: [...seatKeys.values()].filter((n) => n > 1).length });
-      if (ex.length > 0 && st > 0) { overlapN++; overlap.push({ text: `${rname(rid)} ${s.label}：同時有考試 ${ex.length} 人與自習 ${st} 人`, step: 5 }); }
+      // D219：「原班應考標 X」模式，原班教室裡同時有本班考生與標 X 的本班同學是設計，不算考試與自習混用
+      const xStay = plan.input.mode === 'home-exam' && roomById.get(rid)?.kind === 'class' && study.filter((e) => e.roomId === rid).every((e) => Number(e.code.slice(0, 2)) === roomById.get(rid)?.classNo);
+      if (ex.length > 0 && st > 0 && !xStay) { overlapN++; overlap.push({ text: `${rname(rid)} ${s.label}：同時有考試 ${ex.length} 人與自習 ${st} 人`, step: 5 }); }
     }
     // D159（D153 延伸）：座位表＝各教室加總＝名冊全部（含不參加者；每人每時段只算一個去處），標籤＝應考人數
     const resExam = exams.filter((e) => roomById.get(e.roomId)?.kind === 'reserve').length;
@@ -387,7 +389,7 @@ export function reconcileAst(doc: Doc, exam: ExamConfig, outs?: AstOutputs): Rec
   const cp = astCapacity(doc, exam, plan);
   const m1d = R.size - (scope.enrolled + scope.absent);
   const m1 = tri('M-1', '學生數', R.size, scope.enrolled + scope.absent, m1d, '名冊人數＝報名人數＋不參加人數', `名冊 ${R.size} ＝ 報名 ${scope.enrolled} ＋ 不參加 ${scope.absent}`, m1d !== 0 ? [{ text: `名冊 ${R.size} 人、報名 ${scope.enrolled} 人，考試名單有名冊沒有的人或重複`, step: 2 }] : []);
-  if (m1.light === 'pass' && R.size > 0 && scope.absent / R.size > WARN_ABSENT_RATIO) { m1.light = 'warn'; m1.issues = [{ text: `不參加 ${scope.absent} 人，超過名單範圍 ${R.size} 人的 ${Math.round(WARN_ABSENT_RATIO * 100)}%（常見於名單匯錯）`, step: 2 }]; }
+  // #635 ⑦：分科本來就多數人不考任何科，「不參加超過 20%」幾乎一定成立、不是名單匯錯的訊號，所以分科不套這個警示（學測、會考照舊）
   const m2 = tri('M-2', '每時段人數', sumScope, sumSeat, sumDiff, '座位表＝各教室加總＝名冊總人數（含不參加者，每個學生不管考不考都佔一個座位）；標籤＝應考人數（自習者不印標籤）；每人每時段只算一個去處', `${slots.length} 個時段${sumDiff ? `，差異共 ${sumDiff} 人次` : '全部相符'}`, m2issues);
   const m3 = tri('M-3', '每人每時段一個去處', sumExpPlaces, sumPlaces, sumPlaces - sumExpPlaces, '同一人同一節次只有一個去處（考試座位或自習位置；跨組、跨抽離都算）', `${enrolled.size + absentN} 人 × ${slots.length} 時段；重複 ${dupN}、遺漏 ${missN}`, issues3.slice(0, 20));
   const m4c = m4(uses, (i) => slots[i]?.label ?? `時段 ${i + 1}`, (u) => u.seats);
