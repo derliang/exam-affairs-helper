@@ -839,7 +839,7 @@ table.t{border-collapse:collapse;width:100%}
 
 /* 節次與時長（共用設定第六個分頁，稿 v2.22／D94）：照原型稿，一天一欄、科目由上往下 */
 .tt{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
-@media (max-width:700px){.tt{grid-template-columns:1fr}}
+@media (max-width:1000px){.tt{grid-template-columns:1fr}}
 .ttc{border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);display:grid;gap:0;overflow:hidden}
 .ttc>.hd{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;background:var(--sunken);border-bottom:1px solid var(--line);font-weight:800}
 .ttr{display:grid;grid-template-columns:auto 56px minmax(0,1fr) 78px auto;gap:6px 8px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--line);background:var(--surface)}
@@ -1208,6 +1208,15 @@ details[open]:not(.moremenu)>summary::after{content:" ▴"}
 
 /* 斷行規則（Issue 511～516、DESIGN 10.49）：①全站段落避免孤字 ②不可拆的單位（進度、日期、時間、選項名）加 .nb ③步驟欄加寬、副標平衡斷行 ④列表卡在 960px 以下改單欄 */
 body{text-wrap:pretty}
+/* 稿 v2.99（D207，窄寬斷行 C 包）：全站中文只在標點、空白處換行，不在詞中間腰斬（「預設只／送綜合教室」）；整段真的放不下（超過一行寬）才逐字折，不會橫向捲動。輸入欄、程式碼、等寬文字不受影響 */
+body{word-break:keep-all;line-break:strict;overflow-wrap:break-word}
+code,pre,kbd,samp,textarea,input{word-break:normal;overflow-wrap:anywhere}
+/* 學生名單：寬版整列不換行（姓名不直排），特殊需求欄可換行；容器 ≤900px 一律換成並排小卡（同班級資料表） */
+.t.rt-t.rt-keep td:not(.small),.t.rt-t.rt-keep th{white-space:nowrap}
+.t.rt-t.rt-keep td.small{white-space:normal;min-width:8em}
+@container (max-width:900px){.t.rt-t.rt-keep td:not(.small),.t.rt-t.rt-keep td.small{white-space:normal;min-width:0}}
+/* 長標籤的按鈕（例：鎖定「預備教室1・第一天 時段一」的用途（考場））手機寬不撐出頁面：≤560px 可換行（分科 ⑤ 375 橫向捲動） */
+@media (max-width:560px){.btn{max-width:100%;white-space:normal;height:auto;padding-top:6px;padding-bottom:6px;text-align:center}}
 .nb{white-space:nowrap}
 .step small{text-wrap:balance}
 .tcard .subj{text-wrap:balance}

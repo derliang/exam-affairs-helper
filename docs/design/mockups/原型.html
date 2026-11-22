@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>模擬考原型 稿 v2.96</title>
+<title>模擬考原型 稿 v2.99</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -831,7 +831,7 @@ table.t{border-collapse:collapse;width:100%;min-width:560px}
 @media (max-width:560px){.featrow{grid-template-columns:1fr}}
 /* 節次與時長（共用設定第六個分頁，D92／D94）：像學校的考試時間表——一天一欄，科目由上往下排；可拖拉或用 ↑↓ 改順序 */
 .tt{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
-@media (max-width:700px){.tt{grid-template-columns:1fr}}
+@media (max-width:1000px){.tt{grid-template-columns:1fr}}body{word-break:keep-all;line-break:strict;overflow-wrap:break-word}code,pre,kbd,samp,textarea,input{word-break:normal;overflow-wrap:anywhere}
 .ttc{border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);display:grid;gap:0;overflow:hidden}
 .ttc>.hd{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;background:var(--sunken);border-bottom:1px solid var(--line);font-weight:800}
 .ttr{display:grid;grid-template-columns:auto 56px minmax(0,1fr) 78px auto;gap:6px 8px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--line);background:var(--surface)}
@@ -905,7 +905,7 @@ span.chk.on{background:var(--cbx-on-bg);border-color:var(--cbx-on-line);color:va
 </style>
 
 <div class="pbar">
-  <span class="brand">原型工具列</span><span class="badge b-warn">原型專用，實作沒有</span><span class="badge b-acc vbadge">稿 v2.96・2026-11-22</span>
+  <span class="brand">原型工具列</span><span class="badge b-warn">原型專用，實作沒有</span><span class="badge b-acc vbadge">稿 v2.99・2026-11-22</span>
   <nav class="nav" id="pnav" aria-label="原型導覽"></nav>
   <div class="seg" role="group" aria-label="深淺色">
     <button type="button" id="thSys" aria-pressed="true">跟隨系統</button>

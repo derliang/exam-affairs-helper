@@ -175,7 +175,7 @@ function Roster({ doc, onChange, division }: Props) {
         <RosterIO doc={doc} division={division} onChange={onChange} />
       </div>
       <div class="rtw">
-        <table class="t compact nw rt-t rt-mx">
+        <table class="t compact nw rt-t rt-wide rt-keep rt-mx">
           <thead><tr><th>班級</th><th>座號</th><th>考生編號</th><th>姓名</th><th>學號</th>{!isJ && <th>組別</th>}<th>特殊生需求</th><th /></tr></thead>
           <tbody>
             {rows.map((r) => {
