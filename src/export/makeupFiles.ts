@@ -209,3 +209,32 @@ export function produceMakeupPrintHtml(
   const html = renderPrintHtml({ table: pages }, { generatedAt: opts.generatedAt, dataVersion: dataVersionOf(sc), extraCss: opts.extraCss });
   return { name, html, verification: verify(name, kind, readHtmlTables(html), input, sc).v };
 }
+
+/** 把勾選的多份文件併成「單一列印頁」（#592、D206，比照分科 ⑥）；每份仍各自回讀驗算，頁數＝各份頁數相加 */
+export function produceMakeupMergedPrintHtml(
+  input: ProduceMakeupInput,
+  kinds: readonly MakeupDocKind[],
+  opts: Pick<HtmlOptions, 'generatedAt' | 'extraCss'> & { dayId?: string },
+): { name: string; html: string; pages: number; kinds: MakeupDocKind[]; problems: string[] } | null {
+  const sc = scope(input, opts.dayId);
+  const tables: TablePageModel[] = [];
+  const used: MakeupDocKind[] = [];
+  const problems: string[] = [];
+  for (const k of kinds) {
+    const pages = pagesOf(k, sc.paper);
+    if (pages.length === 0) continue;
+    const r = produceMakeupPrintHtml(input, k, opts);
+    if (r) problems.push(...r.verification.problems.map((x) => `${r.name}：${x}`));
+    tables.push(...pages);
+    used.push(k);
+  }
+  if (tables.length === 0) return null;
+  const html = renderPrintHtml({ table: tables }, { generatedAt: opts.generatedAt, dataVersion: dataVersionOf(sc), extraCss: opts.extraCss });
+  return { name: `補考-列印用頁面${sc.suffix}.html`, html, pages: tables.length, kinds: used, problems };
+}
+
+/** ⑦ 按鈕旁預告用：勾選文件的列印頁數合計 */
+export function countMakeupPrintPages(input: ProduceMakeupInput, kinds: readonly MakeupDocKind[], dayId?: string): number {
+  const sc = scope(input, dayId);
+  return kinds.reduce((a, k) => a + pagesOf(k, sc.paper).length, 0);
+}

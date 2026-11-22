@@ -125,6 +125,7 @@ describe('儀表板畫面', () => {
     expect(html).toContain('下載 Word');
     expect(html).toContain('下載 PDF（開啟列印頁）');
     for (const k of ['O-1', 'O-2', 'O-3', 'O-4', 'O-5', 'O-7']) expect(html).toContain(k);
+    expect(html).toMatch(/將開啟 1 個列印頁（共 \d+ 頁）/);
     expect(html).not.toMatch(/<button[^>]*disabled[^>]*>[^<]*(<[^>]+>)*[^<]*下載 Word/);
   });
   it('⑦ 被擋下：按鈕停用，並寫明為什麼不能、怎麼修', () => {
