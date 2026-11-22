@@ -1,6 +1,7 @@
 /** D177（稿 v2.79 Q2、Q3）：統計表時段欄加「起–訖」小字；沒填時間輸出完全不變；標籤不印時間。全部匿名假資料。 */
 import { describe, expect, it } from 'vitest';
-import { buildSeatPages, statMerge } from './index';
+import { buildSeatPages, statLayout, statMerge } from './index';
+import { textWidthMm } from './model';
 import { makeFixture } from './fixtures';
 
 const real = () => JSON.parse(JSON.stringify(makeFixture()).replace(/"zh"/g, '"chinese"').replace(/"en"/g, '"english"').replace(/"ma"/g, '"math"')) as ReturnType<typeof makeFixture>;
@@ -20,6 +21,18 @@ describe('統計表時段欄的「起–訖」（D177）', () => {
     const p = buildSeatPages(f, 'class')[0]!;
     const m = statMerge(p);
     expect(m).toHaveLength(p.stats.table.rows.length);
+  });
+  it('#640（D214）：有時間時「時段」欄寬放得下整句單行（不拆在 – 後面）；沒填時間欄寬不變', () => {
+    const f = real();
+    const p0 = buildSeatPages(f, 'class')[0]!;
+    const i0 = p0.stats.table.leadHeads!.indexOf('時段');
+    expect(statLayout(p0).cols[i0]).toBe(18);
+    f.exam.dayTimes = [{ first: '08:30' }, { first: '08:30' }];
+    const p = buildSeatPages(f, 'class')[0]!;
+    const L = statLayout(p);
+    const longest = Math.max(...p.stats.table.rows.map((r) => (r.lead?.[i0] ? textWidthMm(r.lead[i0]!, L.pt, false) : 0)));
+    expect(L.cols[i0]!).toBeGreaterThanOrEqual(longest + 4);
+    expect(L.cols.reduce((a, b) => a + b, 0)).toBeCloseTo(statLayout(p0).cols.reduce((a, b) => a + b, 0), 0); // 表總寬不變
   });
   it('標籤不印時間（D92、Q3）：座位格與標籤模型沒有開始時間', () => {
     const f = real();

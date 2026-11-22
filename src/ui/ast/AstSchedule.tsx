@@ -53,7 +53,7 @@ export function ScheduleCard(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc)
         <Badge tone={inv === 1 ? undefined : 'info'}>{inv === 1 ? '預設' : '已改'}</Badge>
         <span class="small muted" style="flex:1 1 220px">「所需監考人力」＝考場數×這個人數。預設 1 人，管理者可改（1～6），改了立刻重算下面每個候選；只影響人力指標，不影響排座，也不排誰監考。</span>
       </div>
-      <div class="mgrid">
+      <div class="mgrid cands">
         {cands.map((c) => {
           const m = c.metrics;
           const bm = base.metrics!;
