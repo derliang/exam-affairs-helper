@@ -92,24 +92,24 @@ export function MkStep1(p: { s: MakeupSession; onChange: (s: MakeupSession) => v
           <div class="field"><span class="label">初中部每節（分鐘）</span><Stepper label="初中部每節" min={10} max={180} value={s.periodMin.junior} onChange={(n) => setSched({ periodMin: { ...s.periodMin, junior: n } })} /></div>
           <div class="field"><span class="label">節間休息（分鐘）</span><Stepper label="節間休息" min={0} max={60} value={s.breakMin} onChange={(n) => setSched({ breakMin: n })} /></div>
         </div>
-        <p class="small muted">預設高中 50 分、初中 45 分、休息 10 分；106-1 初二曾用 15 分，可改。節數不綁年級：由 ⑤ 依各科人數建議，你可以調整。</p>
+        <p class="small muted">預設高中 50 分、初中 45 分、休息 10 分，都可以改。節數不綁年級：由 ⑤ 依各科人數建議，你可以調整。</p>
       </div>
 
       <div class="card stack">
-        <div><div class="lab">提前開考的判斷 <Badge tone="warn">暫定 U-2</Badge></div><p class="small muted">預設值由施工提案，這裡先用暫定值，你可以改。</p></div>
+        <div><div class="lab">提前開考的判斷</div><p class="small muted">預設門檻與上限可依學校做法調整。</p></div>
         <div class="row">
           <div class="field"><span class="label">各科時間加總超過（分鐘）建議提前開考</span><Stepper label="建議提前開考門檻" min={30} max={600} value={s.early.suggestOverMin} onChange={(n) => setSched({ early: { ...s.early, suggestOverMin: n } })} /></div>
           <div class="field"><span class="label">提前開考的總作答時間上限（分鐘）</span><Stepper label="提前開考上限" min={30} max={600} value={s.early.capMin} onChange={(n) => set({ early: { ...s.early, capMin: n } })} /></div>
         </div>
-        <p class="small muted">每科以所屬部別的每節時長計。例：4 科 × 50 ＝ 200 分，超過 150，建議提前；超過上限會在 ⑥ 出警示（C-12）。</p>
+        <p class="small muted">每科以所屬部別的每節時長計。例：4 科 × 50 ＝ 200 分，超過 150，建議提前；超過上限會在 ⑥ 出警示。</p>
       </div>
 
       <div class="card stack">
-        <div><div class="lab">要產生哪些參考文件 <Badge tone="warn">暫定 U-5</Badge></div><p class="small muted">座位表預設產生（用於檢核）；座位標籤（O-6）這一版尚未提供。</p></div>
+        <div><div class="lab">要產生哪些參考文件</div><p class="small muted">座位表預設產生（用於檢核）；座位標籤這一版尚未提供。</p></div>
         <div class="row">
-          <Switch label="座位表（O-5）" ariaLabel="產生座位表" checked={s.options.seatChart} onText="產生" offText="不產生" onChange={(v) => set({ options: { ...s.options, seatChart: v } })} />
+          <Switch label="座位表" ariaLabel="產生座位表" checked={s.options.seatChart} onText="產生" offText="不產生" onChange={(v) => set({ options: { ...s.options, seatChart: v } })} />
         </div>
-        <p class="small muted">其他文件（O-1～O-4、O-7）固定產生，不在這裡選。</p>
+        <p class="small muted">其他文件（人數統計、考程表、班級公告、補考點名單、公假名單）固定產生，不在這裡選。</p>
       </div>
     </section>
   );

@@ -4,7 +4,7 @@
  */
 import { useRef, useState } from 'preact/hooks';
 import { Alert, Badge, Button, EmptyState, Modal, More, StatsBar } from '../../components';
-import { readXlsx, readFiles, groupByKey, resolveConflicts, xlsxReadErrorText, type ConflictChoice, type FileRead } from '../../../import';
+import { readXlsx, readFiles, groupByKey, resolveConflicts, xlsxReadErrorText, hasPua, puaCodes, type ConflictChoice, type FileRead } from '../../../import';
 import { ConflictList, FileResults, filesOfDrop, filesOfInput } from '../../pages/FileResults';
 import {
   SKIP_REASON_TEXT,
@@ -16,11 +16,11 @@ import {
   type MakeupRow,
   type SkipReason,
 } from '../../../core/makeup';
-import { MAPPING_FIELDS, clearResolution, diffImport, isEmptyBook, isRequiredField, mergeImport, mergeImportWith, overlapKeys, overlapRows, parseWithMapping, pickSheets, replaceImport, rowKey, rowWhere, setResolution, type ImportDiff, type SheetPick } from '../importOps';
+import { MAPPING_FIELDS, clearResolution, diffImport, identicalSheets, isEmptyBook, skipProblemsOfKind, isRequiredField, mergeImport, mergeImportWith, overlapKeys, overlapRows, parseWithMapping, pickSheets, replaceImport, rowKey, rowWhere, setResolution, type ImportDiff, type SheetPick } from '../importOps';
 import { baseOf } from '../pipeline';
 import type { MakeupSession } from '../session';
 
-interface Draft { fileName: string; sheets: { name: string; rows: string[][] }[]; picks: SheetPick[]; sel: number; header: number; columns: MakeupColumnMap }
+interface Draft { fileName: string; sheets: { name: string; rows: string[][] }[]; picks: SheetPick[]; sel: number; header: number; columns: MakeupColumnMap; /** 使用者在「工作表」下拉明確選了一張：只匯入那一張（#623） */ only?: boolean; /** 內容與前面分頁完全相同、不會重複匯入的分頁名稱 */ same: string[] }
 interface Pending { parse: MakeupParseResult; fileName: string; diff: ImportDiff }
 /** 多檔匯入（#506、D187）：一批檔案依序過欄位對應；新檔與目前名單同學號同科重疊時逐筆問 */
 interface Batch { files: { name: string; sheets: { name: string; rows: string[][] }[] }[]; i: number }
@@ -45,7 +45,7 @@ export function MkStep2(p: { s: MakeupSession; onChange: (s: MakeupSession) => v
   const draftOf = (name: string, sheets: { name: string; rows: string[][] }[]): Draft => {
     const { picks, main } = pickSheets(sheets);
     const pk = picks[main]!;
-    return { fileName: name, sheets, picks, sel: main, header: pk.header, columns: pk.columns };
+    return { fileName: name, sheets, picks, sel: main, header: pk.header, columns: pk.columns, same: identicalSheets(sheets).map((i) => sheets[i]!.name || `工作表 ${i + 1}`) };
   };
   /** 一次選多個檔案：逐檔讀取，壞檔只影響它自己；讀得進來的依序進欄位對應 */
   const onFiles = async (files: File[]) => {
@@ -90,7 +90,9 @@ export function MkStep2(p: { s: MakeupSession; onChange: (s: MakeupSession) => v
   const confirmMapping = () => {
     if (!draft) return;
     const pk = draft.picks[draft.sel]!;
-    const parse = parseWithMapping(draft.sheets, pk, draft.columns, draft.header);
+    const dupIdx = new Set(identicalSheets(draft.sheets));
+    const uniq = draft.only ? draft.sheets : draft.sheets.filter((_, i) => !dupIdx.has(i));
+    const parse = parseWithMapping(uniq, pk, draft.columns, draft.header, !!draft.only);
     if (parse.missing.length > 0) {
       const labels = parse.missing.map((f) => MAPPING_FIELDS.find((m) => m.field === f)?.label ?? f).join('、');
       setErr({ title: `找不到「${labels}」欄`, text: '沒有學號就無法認人、也無法對帳。請確認這是教務系統的「不及格名單」匯出檔，或在下面的欄位對應手動指定。' });
@@ -127,6 +129,8 @@ export function MkStep2(p: { s: MakeupSession; onChange: (s: MakeupSession) => v
   const total = r.included.length + r.notified.length + r.skipped.length + r.unresolved.length;
   const balanced = !!s.parse && total === r.rawCount;
   const ok = balanced && r.unresolved.length === 0;
+  const dupProbs = r.unresolved.filter((x) => x.kind === 'dup');
+  const puaRows = s.parse ? [...s.parse.rows, ...s.parse.problems.map((x) => x.draft)].filter((x) => hasPua(x.name)) : [];
 
   const picker = (
     <>
@@ -164,7 +168,7 @@ export function MkStep2(p: { s: MakeupSession; onChange: (s: MakeupSession) => v
                 <input ref={input} type="file" accept=".xlsx,.xls" multiple hidden aria-label="選擇補考名單檔案（可多選）" onChange={(e) => { const fs = filesOfInput(e.currentTarget); e.currentTarget.value = ''; void onFiles(fs); }} />
               </div>
               <Alert tone={ok ? 'ok' : 'danger'}>
-                <b>{ok ? '✓ 匯入對帳：對上了（差異 0）' : r.unresolved.length > 0 ? `✕ 匯入對帳：還有 ${r.unresolved.length} 筆沒處理，對不上不通過` : '✕ 匯入對帳：列數對不上'}</b>　C-1
+                <b>{ok ? '✓ 匯入對帳：對上了（差異 0）' : r.unresolved.length > 0 ? `✕ 匯入對帳：還有 ${r.unresolved.length} 筆沒處理，對不上不通過` : '✕ 匯入對帳：列數對不上'}</b>
               </Alert>
               <StatsBar items={[
                 { label: '匯入列數', value: r.rawCount },
@@ -176,19 +180,21 @@ export function MkStep2(p: { s: MakeupSession; onChange: (s: MakeupSession) => v
               <p class="small muted">{ok ? `所有列都有去處。略過的 ${r.skipped.length} 筆記在下方「略過紀錄」，也會出現在 ⑥ 的對帳表。` : '未處理的問題列歸零，才能進下一步；你可以逐筆補上、修改或略過。'}</p>
             </div>
             {s.parse.warnings.length > 0 && (
-              <Alert tone="warn"><b>同學號但資料不一致（F-12）</b>：{s.parse.warnings.length} 項，請確認是同一位學生。
+              <Alert tone="warn"><b>同學號但資料不一致</b>：{s.parse.warnings.length} 項，請確認是同一位學生。
                 <ul class="small">{s.parse.warnings.slice(0, 5).map((w) => <li key={w}>{w}</li>)}</ul>{s.parse.warnings.length > 5 && <span class="small muted">其餘 {s.parse.warnings.length - 5} 項略</span>}</Alert>
             )}
             {r.unresolved.length > 0 && (
               <div class="card stack">
                 <div class="lab">問題列　{r.unresolved.length} 筆待處理</div>
+                {dupProbs.length >= 2 && <div class="row"><Button onClick={() => p.onChange(skipProblemsOfKind(s, s.parse!, 'dup', 'duplicate'))}>全部略過重複列（{dupProbs.length} 筆，原因記「重複列」）</Button></div>}
                 {r.unresolved.map((prob) => <ProblemCard key={prob.rowId} prob={prob} parse={s.parse} onFix={(row) => p.onChange(setResolution(s, { rowId: prob.rowId, action: 'fix', row }))}
                   onSkip={(reason, note) => p.onChange(setResolution(s, { rowId: prob.rowId, action: 'skip', reason, ...(note ? { note } : {}) }))} />)}
               </div>
             )}
+            {puaRows.length > 0 && <Alert tone="warn"><b>{puaRows.length} 位學生姓名含造字區字元</b>（{puaRows.slice(0, 5).map((e) => `${e.oldClass}班${e.oldSeat}號 ${puaCodes(e.name).join('、')}`).join('；')}{puaRows.length > 5 ? '…' : ''}）。造字區字元不是標準字，印在點名單上可能是空白；請向教務處確認這幾位的標準寫法。</Alert>}
             <SkipLog s={s} onUndo={(id) => p.onChange(clearResolution(s, id))} />
             <RosterPreview s={s} onSkip={(row, reason, note) => p.onChange(setResolution(s, { rowId: row.rowId, action: 'skip', reason, ...(note ? { note } : {}) }))} />
-            <Alert tone="warn"><b>暫定 U-1</b>「科屬性＝1 即不筆試」只在 106-1 檔看過；先照 D114 處理，施工前再用更多匯出檔核對。</Alert>
+            <Alert tone="info">科屬性是 1 的科目視為「另行通知」：只統計、不排考程。</Alert>
           </>
         )}
 
@@ -219,6 +225,7 @@ function MappingCard(p: { d: Draft; onChange: (d: Draft) => void; onConfirm: () 
     if (v === '') delete c[f]; else c[f] = Number(v);
     p.onChange({ ...d, columns: c });
   };
+  const noReq = MAPPING_FIELDS.filter((m) => isRequiredField(m.field) && d.columns[m.field] === undefined).map((m) => m.label);
   const first = pk.rows.slice(d.header + 1).filter((r) => r.some((c) => c && c.trim())).slice(0, 4);
   return (
     <div class="card stack">
@@ -228,10 +235,11 @@ function MappingCard(p: { d: Draft; onChange: (d: Draft) => void; onConfirm: () 
       </div>
       {d.picks.length > 1 && (
         <div class="field"><label for="mk2-sheet">工作表</label>
-          <select id="mk2-sheet" class="input" value={String(d.sel)} onChange={(e) => { const i = Number(e.currentTarget.value); const q = d.picks[i]!; p.onChange({ ...d, sel: i, header: q.header, columns: q.columns }); }}>
+          <select id="mk2-sheet" class="input" value={String(d.sel)} onChange={(e) => { const i = Number(e.currentTarget.value); const q = d.picks[i]!; p.onChange({ ...d, sel: i, header: q.header, columns: q.columns, only: true }); }}>
             {d.picks.map((q) => <option key={q.index} value={String(q.index)}>{q.name || `工作表 ${q.index + 1}`}</option>)}
           </select>
-          <span class="hint">沒改對應時，所有工作表一起匯入（高一、高二分頁也行）。</span></div>
+          <span class="hint">沒選工作表、也沒改對應時，所有工作表一起匯入（高一、高二分頁也行）；選了某一張，就只匯入那一張。</span>
+          {d.same.length > 0 && !d.only && <Alert tone="info">{d.same.map((n) => `「${n}」`).join('、')} 的內容與前面的工作表完全相同，只會匯入一份。</Alert>}</div>
       )}
       <div><div class="lab">欄位對應</div><p class="small muted">已自動對應 {mapped} 欄。班級一律用「舊班、舊號」，新班、新號只留存參考。</p></div>
       <div class="grid2" style="display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr))">
@@ -245,7 +253,7 @@ function MappingCard(p: { d: Draft; onChange: (d: Draft) => void; onConfirm: () 
                 {head.map((h, i) => <option key={i} value={String(i)}>{(h ?? '').trim() || `第 ${i + 1} 欄`}</option>)}
               </select>
               <span class={col === undefined && isRequiredField(m.field) ? 'field-msg' : 'hint'}>
-                {col === undefined ? (isRequiredField(m.field) ? '必要欄位，請指定' : '未對應') : `已對應　例：${cellOf(first[0], col) || '—'}`}{m.hint && col !== undefined ? `　${m.hint}` : ''}
+                {col === undefined ? (isRequiredField(m.field) ? '必要欄位，請指定' : '未對應') : first.length > 0 && first.every((r) => !cellOf(r, col)) ? '這一欄在預覽的列裡都是空白，請確認有選對欄' : `已對應　例：${cellOf(first[0], col) || '—'}`}{m.hint && col !== undefined ? `　${m.hint}` : ''}
               </span>
             </div>
           );
@@ -263,7 +271,7 @@ function MappingCard(p: { d: Draft; onChange: (d: Draft) => void; onConfirm: () 
           ))}
         </tbody>
       </table></div>
-      <div class="row"><Button kind="primary" onClick={p.onConfirm}>確認對應並匯入 ›</Button></div>
+      <div class="row"><Button kind="primary" disabled={noReq.length > 0} onClick={p.onConfirm}>確認對應並匯入 ›</Button>{noReq.length > 0 && <span class="small field-msg">還有必要欄位沒指定：{noReq.join('、')}</span>}</div>
     </div>
   );
 }
@@ -278,7 +286,7 @@ function SkipForm(p: { onSkip: (reason: SkipReason, note?: string) => void; onCa
   return (
     <div class="row" style="align-items:flex-end">
       <div class="field"><label class="small">略過原因</label>
-        <select class="input" aria-label="略過原因" value={reason} onChange={(e) => setReason(e.currentTarget.value as SkipReason)}>
+        <select class="input" aria-label="略過原因" value={reason} onInput={(e) => setReason(e.currentTarget.value as SkipReason)} onChange={(e) => setReason(e.currentTarget.value as SkipReason)}>
           {REASONS.map((r) => <option key={r} value={r}>{SKIP_REASON_TEXT[r]}</option>)}
         </select></div>
       {reason === 'other' && <div class="field"><label class="small">說明</label><input class="input" aria-label="略過說明" value={note} onInput={(e) => setNote(e.currentTarget.value)} /></div>}
@@ -392,7 +400,7 @@ export function DupModal(p: { d: Pending; onApply: (m: 'replace' | 'merge') => v
   const [mode, setMode] = useState<'replace' | 'merge' | null>(null);
   const { diff } = p.d;
   return (
-    <Modal title="這份名單看起來已經匯入過" onClose={p.onClose} actions={<><Button onClick={p.onClose}>取消</Button><Button kind="primary" disabled={mode === null} onClick={() => { if (mode) p.onApply(mode); }}>套用</Button></>}>
+    <Modal title={diff.same + diff.updated > 0 ? '這份名單看起來已經匯入過' : '目前已有名單，新檔要怎麼處理？'} onClose={p.onClose} actions={<><Button onClick={p.onClose}>取消</Button><Button kind="primary" disabled={mode === null} onClick={() => { if (mode) p.onApply(mode); }}>套用</Button></>}>
       <div class="stack">
         <p>新檔（{p.d.fileName}）有 {p.d.parse.rawCount} 列，其中 {diff.same} 列與目前的名單相同。請選擇怎麼處理：</p>
         <label class="chk" style="display:flex;gap:8px"><input type="radio" name="mk2-dup" checked={mode === 'replace'} onChange={() => setMode('replace')} /><span><b>取代</b>：用新檔整份換掉目前名單。先前的問題列處理與略過紀錄會清掉，需要重做。{diff.removedScheduled > 0 ? <> <b>已排進考程的 {diff.removedScheduled} 筆會被移除</b>，套用後 ⑥ 會立刻重新檢核。</> : '已排的考程會重新檢核。'}</span></label>

@@ -97,11 +97,11 @@ export function MkStep4(p: { s: MakeupSession; onChange: (s: MakeupSession) => v
       {r.unresolved.length > 0 && <Alert tone="warn">② 還有 {r.unresolved.length} 筆問題列沒處理，統計暫時不含這些列。</Alert>}
       <TrackSplitCard s={s} subjects={subjectNames} classes={classNames} onChange={p.onChange} />
       {b.matrices.map((m) => <Matrix key={m.division} m={m} />)}
-      <Alert tone={sumM === r.included.length ? 'ok' : 'danger'}>{sumM === r.included.length ? '✓' : '✕'} 與 C-1 納入人次一致：矩陣合計 {sumM}　＝　納入 {r.included.length}</Alert>
+      <Alert tone={sumM === r.included.length ? 'ok' : 'danger'}>{sumM === r.included.length ? '✓' : '✕'} 與匯入對帳的納入人次一致：矩陣合計 {sumM}　＝　納入 {r.included.length}</Alert>
 
       <div class="card stack">
-        <div class="lab">另行通知科目 <Badge tone="warn">暫定 U-1</Badge></div>
-        <p class="small muted">科屬性＝1（文化基本教材、生命教育、生涯規劃等）：只統計，不排考程，但必須列出供對帳（D114）。</p>
+        <div class="lab">另行通知科目</div>
+        <p class="small muted">科屬性＝1（文化基本教材、生命教育、生涯規劃等）：只統計，不排考程，但必須列出供對帳。</p>
         {nb.total === 0 ? <p class="small">沒有另行通知科目。</p> : (
           <div class="rtw"><table class="t compact rt-t rt-a">
             <thead><tr><th>科目</th><th>人次</th></tr></thead>
@@ -111,7 +111,7 @@ export function MkStep4(p: { s: MakeupSession; onChange: (s: MakeupSession) => v
             </tbody>
           </table></div>
         )}
-        <p class="small"><Badge tone={nb.total === r.notified.length ? 'ok' : 'danger'}>{nb.total === r.notified.length ? '✓' : '✕'}</Badge> ＝ C-1 的「另行通知」{r.notified.length}　　其中 {nb.notifiedOnly.length} 位學生只有另行通知科目（不會出現在考程）。</p>
+        <p class="small"><Badge tone={nb.total === r.notified.length ? 'ok' : 'danger'}>{nb.total === r.notified.length ? '✓' : '✕'}</Badge> ＝ 匯入對帳的「另行通知」{r.notified.length}　　其中 {nb.notifiedOnly.length} 位學生只有另行通知科目（不會出現在考程）。</p>
       </div>
 
       <div class="card stack">
