@@ -53,8 +53,8 @@ export function legendKindsOf(kinds: Iterable<SeatKind>): SeatKind[] {
 }
 
 /**
- * 分科（使用者 2026-11-23）：理組預設考數甲、物理、化學、生物，可加考數乙、歷史、地理、公民；文組預設考數乙、歷史、地理、公民，可加考物理、化學、生物。
- * 加考依科類歸類（歷地公＝社會科、物化生＝自然科），沿用學測的底色：理組加數乙＝sci-b、加社會科＝sci-soc、兩者＝sci-both；文組加自然科＝lib-sci。
+ * 分科（使用者 2026-11-23）：理組預設考數甲、物理、化學、生物，可加考數乙、歷史、地理、公民；文組預設考數乙、歷史、地理、公民，可加考物理、化學、生物，另可加考數甲（使用者 2026-11-23 補）。
+ * 加考依科類歸類（歷地公＝社會科、物化生＝自然科），沿用學測的底色：理組加數乙＝sci-b、加社會科＝sci-soc、兩者＝sci-both；文組加數甲＝lib-a、加自然科＝lib-sci、兩者＝lib-both。
  * subjectIds＝這位考生本次實際要考的全部科目（含預設的）。
  */
 const AST_SOCIAL = ['history', 'geography', 'civics'];
@@ -62,14 +62,20 @@ const AST_NATURE = ['physics', 'chemistry', 'biology'];
 export function astSeatKindOf(track: Track | undefined, subjectIds: Iterable<string>): SeatKind {
   if (!track) return 'general';
   const ids = new Set(subjectIds);
-  if (track === 'liberal') return AST_NATURE.some((x) => ids.has(x)) ? 'lib-sci' : 'general';
+  if (track === 'liberal') {
+    // 文組可加考數甲（＝lib-a）、自然科（＝lib-sci）、兩者（＝lib-both）；數乙是文組預設
+    const jia = ids.has('math-jia');
+    const nat = AST_NATURE.some((x) => ids.has(x));
+    return jia && nat ? 'lib-both' : jia ? 'lib-a' : nat ? 'lib-sci' : 'general';
+  }
   const a = ids.has('math-yi');
   const b = AST_SOCIAL.some((x) => ids.has(x));
   return a && b ? 'sci-both' : a ? 'sci-b' : b ? 'sci-soc' : 'general';
 }
 /** 分科圖例文字（與學測不同：數乙、社會科、自然科） */
 export const AST_KIND_LABEL: Partial<Record<SeatKind, string>> = {
-  'sci-b': '理組加考數乙', 'sci-soc': '理組加考社會科', 'sci-both': '理組加考數乙＋社會科', 'lib-sci': '文組加考自然科',
+  'sci-b': '理組加考數乙', 'sci-soc': '理組加考社會科', 'sci-both': '理組加考數乙＋社會科',
+  'lib-a': '文組加考數甲', 'lib-sci': '文組加考自然科', 'lib-both': '文組加考數甲＋自然科',
 };
 
 /** 預備教室依「用途」配色（使用者 2026-11-23 方案 A）：考試＝淡藍；自習＝淺灰加虛線框；不參加＝黑底白字小牌（另印） */
