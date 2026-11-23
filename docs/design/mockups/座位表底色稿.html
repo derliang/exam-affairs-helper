@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>座位表底色稿 稿 v2.105</title>
+<title>座位表底色稿 稿 v2.106</title>
 <style>
 /* 版面：三個區塊由上到下——座位表（彩色與黑白對照）、標籤對齊、匯入考程表。底色用專案 tokens 的 --sk-*；紙面固定淺色。 */
 :root{--bg:#F6F4EE;--surface:#FFFDF8;--line:#DDD8C8;--text:#22201B;--text-2:#5B5648;--accent:#2A5FD6;--accent-soft:#E8EDF8;--accent-ink:#1B3E94;
@@ -57,7 +57,7 @@ p{margin:4px 0;color:var(--text-2);font-size:13.5px}.small{font-size:12.5px}
 </style>
 </head>
 <body>
-<div class="top"><div><h1>座位表底色稿 稿 v2.105</h1><p>2026-11-23　v2.104 已發布；v2.105 新增第 4、5 節：分科底色、預備教室依用途配色（D224）</p></div><button class="tg" id="tgl" type="button">切換深淺色</button></div>
+<div class="top"><div><h1>座位表底色稿 稿 v2.106</h1><p>2026-11-23　v2.104 已發布；v2.105 新增第 4、5 節；v2.106 補文組加考數甲：分科底色、預備教室依用途配色（D224）</p></div><button class="tg" id="tgl" type="button">切換深淺色</button></div>
 <p>班級代表色不變，但座位表與標籤不再用它。底色只看「文理組＋加考什麼」：一般考生沒有底色。以下全是假資料。</p>
 
 <h2>1 座位表：理組三種、文組三種、一般白底，圖例在表下方</h2>
@@ -84,7 +84,7 @@ p{margin:4px 0;color:var(--text-2);font-size:13.5px}.small{font-size:12.5px}
 <h2>4 分科：沿用同一套邏輯，按「科類」歸類</h2>
 <div class="card"><p>理組預設考數甲、物理、化學、生物；加考數乙、歷史、地理、公民。文組預設考數乙、歷史、地理、公民；加考物理、化學、生物。歷地公合稱社會科、物化生合稱自然科。</p>
 <div class="row2" style="margin-top:8px"><div class="paper" id="a1"></div><div class="paper gray" id="a1g"></div></div>
-<p class="small">左：彩色；右：黑白模擬。理組三種（加考數乙＝藍、加考社會科＝橘、兩者＝紫），文組只有一種加考底色（加考自然科＝粉紅，文組可加考的沒有數甲）。具體加考哪一科看格內小牌。</p></div>
+<p class="small">左：彩色；右：黑白模擬。理組三種（加考數乙＝藍、加考社會科＝橘、兩者＝紫），文組三種（加考數甲＝綠、加考自然科＝粉紅、兩者＝青）。具體加考哪一科看格內小牌。</p></div>
 
 <h2>5 預備教室：方案 A，依「這一格這一節做什麼」配色</h2>
 <div class="card"><p>同一節一間預備教室只會全考試或全自習；同一格不同節可以坐不同人。所以顏色看用途，不看班級也不看加考類型：<b>考試＝淡藍</b>、<b>自習＝淺灰＋虛線框</b>、<b>不參加＝黑底白字小牌</b>。一格各節用途不同時，格子白底，每一行左邊用色條標用途（實線藍＝考試、虛線灰＝自習）。</p>
@@ -114,9 +114,9 @@ function chart(el,list,pre,used){var h='<div class="grid">';list.forEach(functio
 var L=[['0101','',''],['0103','sci-b','＋數B'],['0104','sci-soc','＋社會'],['0106','sci-both','＋數B 社'],['0201','lib-a','＋數A'],['0203','lib-sci','＋自然'],['0205','lib-both','＋數A 自'],['0208','','X 自然']];
 document.getElementById('labs').innerHTML=L.map(function(c){return '<div class="lab"'+(c[1]?' data-k="'+c[1]+'" style="background:var(--bg-k)"':'')+'><span class="co">1-1</span><b>'+c[0]+'</b><small>'+(c[0]<'02'?'溫':'良')+' 甲生'+c[0].slice(-2)+'</small>'+(c[2]?'<span class="mk" style="font-size:12px;font-weight:700;border:1px solid #22201B;background:#fff;padding:0 4px;color:#22201B">'+c[2]+'</span>':'')+'</div>'}).join('');
 
-(function(){var A=[['sci-b','＋數乙'],['','' ],['sci-soc','＋歷史'],['','' ],['sci-both','＋數乙 公'],['','' ],['sci-soc','＋地理'],['sci-b','＋數乙'],['lib-sci','＋物理'],['','' ],['lib-sci','＋化 生'],['','']];
+(function(){var A=[['sci-b','＋數乙'],['','' ],['sci-soc','＋歷史'],['','' ],['sci-both','＋數乙 公'],['','' ],['sci-soc','＋地理'],['sci-b','＋數乙'],['lib-sci','＋物理'],['lib-a','＋數甲'],['lib-both','＋數甲 化'],['','']];
 function ch(el){var h='<div class="grid">';A.forEach(function(c,i){var n=String(i+1).padStart(2,'0');var lib=c[0]==='lib-sci'||i>=8;h+='<div class="cell"'+(c[0]?' data-k="'+c[0]+'"':'')+'><span class="co">'+(i%4+1)+'-'+(3-Math.floor(i/4))+'</span><b>'+(lib?'02':'01')+n+'</b><span>'+(lib?'文':'理')+'生'+n+'</span>'+(c[1]?'<span class="mk">'+c[1]+'</span>':'')+'</div>'});
-h+='</div><div class="pod">講臺</div><div class="legend"><b>底色</b><span><i class="sw"></i>一般考生</span><span><i class="sw" data-k="sci-b" style="background:var(--bg-k)"></i>理組加考數乙</span><span><i class="sw" data-k="sci-soc" style="background:var(--bg-k)"></i>理組加考社會科</span><span><i class="sw" data-k="sci-both" style="background:var(--bg-k)"></i>理組加考數乙＋社會科</span><span><i class="sw" data-k="lib-sci" style="background:var(--bg-k)"></i>文組加考自然科</span></div>';el.innerHTML=h}
+h+='</div><div class="pod">講臺</div><div class="legend"><b>底色</b><span><i class="sw"></i>一般考生</span><span><i class="sw" data-k="sci-b" style="background:var(--bg-k)"></i>理組加考數乙</span><span><i class="sw" data-k="sci-soc" style="background:var(--bg-k)"></i>理組加考社會科</span><span><i class="sw" data-k="sci-both" style="background:var(--bg-k)"></i>理組加考數乙＋社會科</span><span><i class="sw" data-k="lib-a" style="background:var(--bg-k)"></i>文組加考數甲</span><span><i class="sw" data-k="lib-sci" style="background:var(--bg-k)"></i>文組加考自然科</span><span><i class="sw" data-k="lib-both" style="background:var(--bg-k)"></i>文組加考數甲＋自然科</span></div>';el.innerHTML=h}
 ch(document.getElementById('a1'));ch(document.getElementById('a1g'))})();
 document.getElementById('tgl').onclick=function(){var r=document.documentElement;r.setAttribute('data-theme',r.getAttribute('data-theme')==='dark'?'light':'dark')};
 </script>

@@ -58,6 +58,8 @@ describe('分科底色與預備教室用途色（使用者 2026-11-23）', () =>
     const base = ['math-yi', 'history', 'geography', 'civics'];
     expect(astSeatKindOf('liberal', base)).toBe('general');
     expect(astSeatKindOf('liberal', [...base, 'chemistry'])).toBe('lib-sci');
+    expect(astSeatKindOf('liberal', [...base, 'math-jia'])).toBe('lib-a'); // 文組加考數甲
+    expect(astSeatKindOf('liberal', [...base, 'math-jia', 'physics', 'biology'])).toBe('lib-both');
     expect(astSeatKindOf(undefined, [...base, 'chemistry'])).toBe('general');
   });
   it('預備教室考試淡藍與自習淺灰灰階亮度差 ≥ 15，黑白列印另有虛線框與文字', () => {
