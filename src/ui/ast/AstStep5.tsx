@@ -2,6 +2,7 @@ import { useRef, useState } from 'preact/hooks';
 import type { Classroom, ExamConfig } from '../../data';
 import { classroomSeats, effectiveRooms, rowDepthOf } from '../../data';
 import type { PlanRoom } from '../../core/astD99/contract';
+import { countHardLimits } from '../../core/astD99/hardLimits';
 import { Alert, Badge, Button, EmptyState, StepHead } from '../components';
 import { AST_STEP_BLURBS } from '../nav';
 import { normColor } from '../colors';
@@ -118,16 +119,7 @@ export function AstStep5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
   const lockedUse = new Set((exam.astLocks?.rooms ?? []).map((l) => `${l.slotId}|${l.roomId}`));
 
   // 硬性限制檢查（DESIGN 10.14）：由方案輸出直接數，不通過就不輸出看似成功的結果
-  let seatOver = 0; let capOver = 0; let both = 0;
-  for (const s of slots) {
-    for (const r of planRooms) {
-      const ex = plan.out.exams.filter((e) => e.slotId === s.id && e.roomId === r.id).length;
-      const st = plan.out.study.filter((e) => e.slotId === s.id && e.roomId === r.id).length;
-      if (ex > r.seats.length) seatOver++;
-      if (st > r.studyCapacity) capOver++;
-      if (ex > 0 && st > 0) both++;
-    }
-  }
+  const { seatOver, capOver, both } = countHardLimits(plan.input, plan.out);
   const unplaced = plan.unplaced;
   const check = (ok: boolean, title: string, detail: string) => (
     <div class="row" style="justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:6px" key={title}>
