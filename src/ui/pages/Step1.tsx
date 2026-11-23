@@ -12,6 +12,12 @@ import { defaultSubjects, isCustomized, mathSplit, removeSubject, saveSubject, s
 const CN = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
 
 /** ① 考試設定：基本資料卡、考科表卡（含「誰要考」）、沿用上次設定卡（原型 v1） */
+/** 匯入考程表推算年份用：學年度 ＋1911 起，上學期先試學年開始那年、下學期先試隔年（星期對不上再換） */
+function yearHints(exam: ExamConfig): number[] {
+  const y = examYear(exam) + 1911;
+  return exam.semester === 'second' ? [y + 1, y, y + 2] : [y, y + 1, y - 1];
+}
+
 export function Step1(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => void; openBasic?: boolean; openTimes?: boolean; onToSched?: () => void }) {
   const { exam, doc } = p;
   const [err, setErr] = useState('');
@@ -44,7 +50,7 @@ export function Step1(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
           <Button onClick={() => setBasic(true)}>修改基本資料</Button>
         </div>
         {/* #473、D177：考試日期與各節時間放在第 1 步最上面；各節時間就地展開設定（稿 v2.79） */}
-        <ExamTimesBlock exam={exam} table={scheduleOf(doc.settings, scheduleKeyOf(exam.kind, exam.round))} open={!!p.openTimes} onChange={(dayTimes) => set({ dayTimes })} onEditDates={() => setBasic(true)} />
+        <ExamTimesBlock exam={exam} table={scheduleOf(doc.settings, scheduleKeyOf(exam.kind, exam.round))} open={!!p.openTimes} onChange={(dayTimes) => set({ dayTimes })} onEditDates={() => setBasic(true)} onImport={(r) => set({ ...(r.examDates ? { examDates: r.examDates } : {}), ...(r.dayTimes ? { dayTimes: r.dayTimes } : {}) })} yearHints={yearHints(exam)} />
         {err && <Alert tone="danger">{err}</Alert>}
 
       {/* 稿 v2.31：三張卡合成一張卡，區塊內上下分區：基本資料（含次別）／考科表／沿用上次 */}

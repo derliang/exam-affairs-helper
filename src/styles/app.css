@@ -132,10 +132,12 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
 .sheet{--cw:108px;--ch:116px}
 .chart.gray,.sheet.gray{filter:grayscale(1) contrast(1.05)}
 .cell{position:relative;width:var(--cw);height:var(--ch);display:grid;grid-template-rows:1fr auto auto;align-items:center;justify-items:center;padding:4px 2px 3px;row-gap:1px;border:1px solid var(--cut);margin:0;background:var(--surface);color:var(--text);font-family:var(--f-no);text-align:center;line-height:1.1;overflow:hidden}
-.cell[data-c="1"]{background:var(--c1-bg)} .cell[data-c="2"]{background:var(--c2-bg)} .cell[data-c="3"]{background:var(--c3-bg)}
-.cell[data-c="4"]{background:var(--c4-bg)} .cell[data-c="5"]{background:var(--c5-bg)} .cell[data-c="6"]{background:var(--c6-bg)}
-.cell[data-c="1"] .meta{color:var(--c1-ink)} .cell[data-c="2"] .meta{color:var(--c2-ink)} .cell[data-c="3"] .meta{color:var(--c3-ink)}
-.cell[data-c="4"] .meta{color:var(--c4-ink)} .cell[data-c="5"] .meta{color:var(--c5-ink)} .cell[data-c="6"] .meta{color:var(--c6-ink)}
+.cell[data-k="sci-b"]{background:var(--sk-sci-b-bg);border-color:var(--sk-sci-b-line)} .cell[data-k="sci-b"] .meta{color:var(--sk-sci-b-ink)}
+.cell[data-k="sci-soc"]{background:var(--sk-sci-soc-bg);border-color:var(--sk-sci-soc-line)} .cell[data-k="sci-soc"] .meta{color:var(--sk-sci-soc-ink)}
+.cell[data-k="sci-both"]{background:var(--sk-sci-both-bg);border-color:var(--sk-sci-both-line)} .cell[data-k="sci-both"] .meta{color:var(--sk-sci-both-ink)}
+.cell[data-k="lib-a"]{background:var(--sk-lib-a-bg);border-color:var(--sk-lib-a-line)} .cell[data-k="lib-a"] .meta{color:var(--sk-lib-a-ink)}
+.cell[data-k="lib-sci"]{background:var(--sk-lib-sci-bg);border-color:var(--sk-lib-sci-line)} .cell[data-k="lib-sci"] .meta{color:var(--sk-lib-sci-ink)}
+.cell[data-k="lib-both"]{background:var(--sk-lib-both-bg);border-color:var(--sk-lib-both-line)} .cell[data-k="lib-both"] .meta{color:var(--sk-lib-both-ink)}
 .cell .no{font-size:22px;font-weight:700;letter-spacing:.02em;font-variant-numeric:tabular-nums;color:var(--text)}
 .cell .meta{font-size:12px;font-weight:500;white-space:nowrap}
 .cell .meta .tg{font-weight:700;margin-right:6px;padding-right:6px;border-right:1.5px solid currentColor}
@@ -192,10 +194,6 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 /* ===== M2 定案（D69）===== */
 /* 班級色 7～12（1～6 在上面的規則）*/
-.cell[data-c="7"]{background:var(--c7-bg)} .cell[data-c="8"]{background:var(--c8-bg)} .cell[data-c="9"]{background:var(--c9-bg)}
-.cell[data-c="10"]{background:var(--c10-bg)} .cell[data-c="11"]{background:var(--c11-bg)} .cell[data-c="12"]{background:var(--c12-bg)}
-.cell[data-c="7"] .meta{color:var(--c7-ink)} .cell[data-c="8"] .meta{color:var(--c8-ink)} .cell[data-c="9"] .meta{color:var(--c9-ink)}
-.cell[data-c="10"] .meta{color:var(--c10-ink)} .cell[data-c="11"] .meta{color:var(--c11-ink)} .cell[data-c="12"] .meta{color:var(--c12-ink)}
 .cp[data-c="7"]{background:var(--c7-bg);border-color:var(--c7-line);color:var(--c7-ink)} .cp[data-c="8"]{background:var(--c8-bg);border-color:var(--c8-line);color:var(--c8-ink)}
 .cp[data-c="9"]{background:var(--c9-bg);border-color:var(--c9-line);color:var(--c9-ink)} .cp[data-c="10"]{background:var(--c10-bg);border-color:var(--c10-line);color:var(--c10-ink)}
 .cp[data-c="11"]{background:var(--c11-bg);border-color:var(--c11-line);color:var(--c11-ink)} .cp[data-c="12"]{background:var(--c12-bg);border-color:var(--c12-line);color:var(--c12-ink)}
@@ -259,7 +257,7 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
 /* UI-23：抽離座位表改柔和單色（深淺色都用主色淡底），班級字與座標照印，黑白列印仍分得出 */
 .chart.pull{--cw:104px;--ch:112px}
 .chart.pull .cell:not(.empty-seat){background:var(--accent-soft);border:2px solid var(--accent-line);color:var(--accent-ink)}
-.chart.pull .cell:not(.empty-seat) .no,.chart.pull .cell:not(.empty-seat) .co,.chart.pull .cell:not(.empty-seat) .meta,.chart.pull .cell[data-c] .meta,.chart.pull .cell .meta .tg{color:var(--accent-ink)}
+.chart.pull .cell:not(.empty-seat) .no,.chart.pull .cell:not(.empty-seat) .co,.chart.pull .cell:not(.empty-seat) .meta,.chart.pull .cell[data-k] .meta,.chart.pull .cell .meta .tg{color:var(--accent-ink)}
 .chart.pull .cell:not(.empty-seat) .no{font-size:25px}
 .chart.pull .cell:not(.empty-seat) .meta{font-size:13px;font-weight:700}
 .chart.pull .cell .mk{font-size:12px}
@@ -1232,3 +1230,15 @@ code,pre,kbd,samp,textarea,input{word-break:normal;overflow-wrap:anywhere}
 @media (max-width:1060px){.ws,.ws.wide{grid-template-columns:248px minmax(0,1fr)}.ws .side-r{grid-column:1/-1}}
 @media (max-width:900px){.ws,.ws.wide{grid-template-columns:minmax(0,1fr)}.ws .side{position:static}}
 @media (max-width:960px){.exam{grid-template-columns:1fr}}
+
+/* 座位表底色圖例（2026-11-23）：色塊＋文字綁在一起；黑白列印靠灰階深淺與格內標示文字分辨 */
+.kind-legend{display:flex;flex-wrap:nowrap;gap:6px 12px;align-items:center;font-size:12px;color:var(--text-2);margin:6px 0 2px}
+.kind-legend b{color:var(--text)}
+.kind-legend .kl-i{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.kind-legend .kl-sw{display:inline-block;width:22px;height:14px;border:1px solid var(--cut);border-radius:3px;background:var(--surface)}
+.kind-legend .kl-sw[data-k="sci-b"]{background:var(--sk-sci-b-bg);border-color:var(--sk-sci-b-line)}
+.kind-legend .kl-sw[data-k="sci-soc"]{background:var(--sk-sci-soc-bg);border-color:var(--sk-sci-soc-line)}
+.kind-legend .kl-sw[data-k="sci-both"]{background:var(--sk-sci-both-bg);border-color:var(--sk-sci-both-line)}
+.kind-legend .kl-sw[data-k="lib-a"]{background:var(--sk-lib-a-bg);border-color:var(--sk-lib-a-line)}
+.kind-legend .kl-sw[data-k="lib-sci"]{background:var(--sk-lib-sci-bg);border-color:var(--sk-lib-sci-line)}
+.kind-legend .kl-sw[data-k="lib-both"]{background:var(--sk-lib-both-bg);border-color:var(--sk-lib-both-line)}

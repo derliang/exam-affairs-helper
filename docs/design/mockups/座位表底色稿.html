@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>座位表底色稿 稿 v2.104</title>
+<style>
+/* 版面：三個區塊由上到下——座位表（彩色與黑白對照）、標籤對齊、匯入考程表。底色用專案 tokens 的 --sk-*；紙面固定淺色。 */
+:root{--bg:#F6F4EE;--surface:#FFFDF8;--line:#DDD8C8;--text:#22201B;--text-2:#5B5648;--accent:#2A5FD6;--accent-soft:#E8EDF8;--accent-ink:#1B3E94;
+--sk-sci-b-bg:#D6E8FA;--sk-sci-b-line:#6E9BD0;--sk-sci-b-ink:#17406E;
+--sk-sci-soc-bg:#F2C27A;--sk-sci-soc-line:#C58A2E;--sk-sci-soc-ink:#5E3A00;
+--sk-sci-both-bg:#A58CD8;--sk-sci-both-line:#6F55B0;--sk-sci-both-ink:#2A1A5C;
+--sk-lib-a-bg:#D3EFD1;--sk-lib-a-line:#78B574;--sk-lib-a-ink:#1F5A1A;
+--sk-lib-sci-bg:#F0B0C8;--sk-lib-sci-line:#C9638C;--sk-lib-sci-ink:#6E1636;
+--sk-lib-both-bg:#6FB5AF;--sk-lib-both-line:#3F8680;--sk-lib-both-ink:#0B3B37;
+--paper:#FFFFFF;--ink:#22201B;--cut:#8E8670}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#13120E;--surface:#1C1A15;--line:#302D24;--text:#F1EDE2;--text-2:#CFC8B6;--accent:#3F63C4;--accent-soft:#1B2540;--accent-ink:#AFC2F5;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#13120E;--surface:#1C1A15;--line:#302D24;--text:#F1EDE2;--text-2:#CFC8B6;--accent:#3F63C4;--accent-soft:#1B2540;--accent-ink:#AFC2F5;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:"Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));max-width:1100px;margin:0 auto;line-height:1.6}
+h1{font-size:22px;margin:0 0 4px}h2{font-size:17px;margin:32px 0 6px;text-wrap:balance}h3{font-size:14px;margin:14px 0 6px}
+p{margin:4px 0;color:var(--text-2);font-size:13.5px}.small{font-size:12.5px}
+.top{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start}
+.tg{border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer}
+.row2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,430px),1fr));gap:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;min-width:0}
+.paper{background:var(--paper);color:var(--ink);border:1px solid var(--cut);padding:10px;overflow-x:auto}
+.paper.gray{filter:grayscale(1) contrast(1.05)}
+.lbl{font-size:12px;font-weight:700;color:var(--text-2);letter-spacing:.04em;margin-bottom:6px}
+.grid{display:grid;grid-template-columns:repeat(4,86px);gap:0;width:max-content}
+.cell{width:86px;height:64px;border:1px solid var(--cut);background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;line-height:1.15;position:relative}
+.cell b{font-size:16px}.cell .mk{font-size:10px;font-weight:700;border:1px solid #22201B;background:#fff;padding:0 3px;margin-top:2px;color:#22201B}.cell .co{position:absolute;right:3px;top:1px;font-size:8px;color:#5B5648}
+.cell[data-k]{background:var(--bg-k)}
+[data-k=sci-b]{--bg-k:var(--sk-sci-b-bg);border-color:var(--sk-sci-b-line)}[data-k=sci-soc]{--bg-k:var(--sk-sci-soc-bg);border-color:var(--sk-sci-soc-line)}[data-k=sci-both]{--bg-k:var(--sk-sci-both-bg);border-color:var(--sk-sci-both-line)}
+[data-k=lib-a]{--bg-k:var(--sk-lib-a-bg);border-color:var(--sk-lib-a-line)}[data-k=lib-sci]{--bg-k:var(--sk-lib-sci-bg);border-color:var(--sk-lib-sci-line)}[data-k=lib-both]{--bg-k:var(--sk-lib-both-bg);border-color:var(--sk-lib-both-line)}
+.pod{margin:6px 0 0;width:max-content;min-width:100%;text-align:center;border:1.5px solid #22201B;font-weight:700;font-size:12px;padding:2px 0}
+.legend{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:6px 12px;font-size:12px;margin-top:8px;align-items:center}
+.legend span{display:inline-flex;gap:6px;align-items:center;white-space:nowrap}
+.sw{display:inline-block;width:22px;height:14px;border:1px solid #8E8670;background:#fff}
+.lab{width:112px;height:150px;border:1px solid #8E8670;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:#fff;position:relative}
+.lab b{font-size:28px}.lab small{font-size:12px}.lab .co{position:absolute;right:4px;top:2px;font-size:10px;color:#5B5648}
+.labs{display:flex;gap:0;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:8px;padding:8px 14px;font-size:14px}
+.btn.p{background:var(--accent);border-color:var(--accent);color:#fff}
+.alert{border:1px solid var(--line);background:var(--accent-soft);color:var(--text);border-radius:10px;padding:12px 14px;font-size:13.5px;display:flex;gap:12px;justify-content:space-between;flex-wrap:wrap}
+.alert .s{font-size:12px;color:var(--text-2)}
+.bar{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;align-items:center}
+</style>
+</head>
+<body>
+<div class="top"><div><h1>座位表底色稿 稿 v2.104</h1><p>2026-11-23　D222　使用者原話第 1～7 項對照，圖例同一行</p></div><button class="tg" id="tgl" type="button">切換深淺色</button></div>
+<p>班級代表色不變，但座位表與標籤不再用它。底色只看「文理組＋加考什麼」：一般考生沒有底色。以下全是假資料。</p>
+
+<h2>1 座位表：理組三種、文組三種、一般白底，圖例在表下方</h2>
+<div class="row2">
+ <div class="card"><div class="lbl">理組教室・彩色列印</div><div class="paper" id="p1"></div></div>
+ <div class="card"><div class="lbl">同一張・黑白列印（灰階模擬）</div><div class="paper gray" id="p1g"></div></div>
+ <div class="card"><div class="lbl">文組教室・彩色列印</div><div class="paper" id="p2"></div></div>
+ <div class="card"><div class="lbl">同一張・黑白列印（灰階模擬）</div><div class="paper gray" id="p2g"></div></div>
+</div>
+<p class="small">黑白時同組的三種底色深淺各不相同（程式有測試：灰階亮度兩兩相差 20 以上），格內的「＋數B」等小牌照舊印出，兩層一起才分得清。</p>
+
+<h2>2 標籤：底色與座位表一模一樣</h2>
+<div class="card"><div class="labs" id="labs"></div><p class="small">原本「特殊情形一律淺黃」取消，標籤與座位表同一個人同一種底色。一般考生白底。</p></div>
+
+<h2>3 第 1 步：「匯入考程表」按鈕</h2>
+<div class="card" style="display:grid;gap:12px">
+ <div class="bar"><div><b>考試日期與各節時間</b><p>考試日期：2026-10-28（三）～10-29（四）</p></div>
+ <div style="display:flex;gap:8px;flex-wrap:wrap"><span class="btn">修改考試日期</span><span class="btn">匯入考程表</span><span class="btn p">設定各節時間 ▾</span></div></div>
+ <div class="alert"><div><b>讀到「高三第三次學測模擬考 時間科目表.docx」</b><div>第 1 天　10/28：英文 08:05、自然 10:00、國綜 13:05、數學B 14:55</div><div>第 2 天　10/29：數學A 08:05、社會 10:00、國寫 13:05</div><div class="s">注意：第 2 天考程表有 3 個考試時段，節次表有 4 個，先套用前 3 個，請確認。</div><div class="s">按「套用」會取代這場考試目前的日期與各節時間，可從上方「復原」回來。</div></div><div style="display:flex;gap:8px;align-items:flex-start"><span class="btn p">套用</span><span class="btn">取消</span></div></div>
+ <p class="small">讀法：每天一欄、「時間」「科目」成對兩列；只取「測驗」那一段當開始時間，自習與休息不算；年份用月日加星期推算。你上傳的四份檔案都讀得到（含分科文組／理組同日兩欄：只取第一欄並提醒）。</p>
+</div>
+
+<h2>已定案的取捨</h2>
+<p>分科、會考、國中的座位表沒有文理組加考，一律不上色。補考座位表本來用原班色，這次沒動，等你說要不要也改。「不考」的考生不上色，只印黑底小牌。</p>
+<script>
+var K={'sci-b':'理組加考數B','sci-soc':'理組加考社會','sci-both':'理組加考數B＋社會','lib-a':'文組加考數A','lib-sci':'文組加考自然','lib-both':'文組加考數A＋自然'};
+var cls1=[[0,'sci-b','＋數B'],[0,'','' ],[0,'sci-soc','＋社'],[0,'',''],[0,'sci-both','＋數B 社'],[0,'',''],[0,'sci-b','＋數B'],[0,'',''],[0,'',''],[0,'sci-soc','＋社'],[0,'',''],[0,'','X 自']];
+var cls2=[[0,'lib-a','＋數A'],[0,'',''],[0,'lib-sci','＋自然'],[0,'',''],[0,'lib-both','＋數A 自'],[0,'',''],[0,'lib-a','＋數A'],[0,'',''],[0,'',''],[0,'lib-sci','＋自然'],[0,'',''],[0,'','']];
+function chart(el,list,pre,used){var h='<div class="grid">';list.forEach(function(c,i){var n=pre+String(i+1).padStart(2,'0');h+='<div class="cell"'+(c[1]?' data-k="'+c[1]+'"':'')+'><span class="co">'+(i%4+1)+'-'+(3-Math.floor(i/4))+'</span><b>'+n+'</b><span>甲生'+n.slice(-2)+'</span>'+(c[2]?'<span class="mk">'+c[2]+'</span>':'')+'</div>'});
+ h+='</div><div class="pod">講臺</div><div class="legend"><b>底色</b><span><i class="sw"></i>一般考生</span>'+used.map(function(k){return '<span><i class="sw" data-k="'+k+'" style="background:var(--bg-k)"></i>'+K[k]+'</span>'}).join('')+'</div>';el.innerHTML=h}
+['p1','p1g'].forEach(function(i){chart(document.getElementById(i),cls1,'01',['sci-b','sci-soc','sci-both'])});
+['p2','p2g'].forEach(function(i){chart(document.getElementById(i),cls2,'02',['lib-a','lib-sci','lib-both'])});
+var L=[['0101','',''],['0103','sci-b','＋數B'],['0104','sci-soc','＋社會'],['0106','sci-both','＋數B 社'],['0201','lib-a','＋數A'],['0203','lib-sci','＋自然'],['0205','lib-both','＋數A 自'],['0208','','X 自然']];
+document.getElementById('labs').innerHTML=L.map(function(c){return '<div class="lab"'+(c[1]?' data-k="'+c[1]+'" style="background:var(--bg-k)"':'')+'><span class="co">1-1</span><b>'+c[0]+'</b><small>'+(c[0]<'02'?'溫':'良')+' 甲生'+c[0].slice(-2)+'</small>'+(c[2]?'<span class="mk" style="font-size:12px;font-weight:700;border:1px solid #22201B;background:#fff;padding:0 4px;color:#22201B">'+c[2]+'</span>':'')+'</div>'}).join('');
+document.getElementById('tgl').onclick=function(){var r=document.documentElement;r.setAttribute('data-theme',r.getAttribute('data-theme')==='dark'?'light':'dark')};
+</script>
+
+</body>
+</html>

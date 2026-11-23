@@ -67,7 +67,8 @@ function cellHtml(c: CellModel | undefined, w: number, h: number, mode: 'seat' |
   }
   if (mode !== 'label') return seatCellHtml(c, w, h, mode);
   const marked = isSpecial(c);
-  const bg = mode === 'label' ? (marked ? '#FFE08A' : '#fff') : mode === 'detach' ? DETACH.bg : `#${c.colorBg}`;
+  // 標籤底色對齊座位表（2026-11-23）：同一組 colorBg，一般考生白底
+  const bg = `#${c.colorBg || 'FFFFFF'}`;
   const em = mode === 'label' ? '#22201B' : mode === 'detach' ? DETACH.fg : `#${c.colorFg}`;
   // 標籤上沒有標示的格子不留標示區、整塊垂直置中、字取最大（#218）；其餘字級在格寬內取最大（#222）
   const free = mode === 'label';
@@ -91,6 +92,11 @@ function seatCellHtml(c: CellModel, w: number, h: number, mode: 'seat' | 'detach
     ? `<span class="pp-band">${f.lines.map((l) => `<span class="pp-bl">${l.map((k) => `<span class="pp-mk ${k.kind === 'x' ? 'x' : 'add'}" style="font-size:${f.markPt}pt">${esc(k.text)}</span>`).join('')}</span>`).join('')}</span>`
     : '';
   return `<div class="pp-c pp-sc${c.ref ? ' pp-ref' : ''}" style="width:${mm(w)};height:${mm(h)};background:${bg}"><i class="pp-co">${esc(c.coord)}</i><b class="pp-no" style="font-size:${f.codePt}pt">${esc(c.code)}</b><span class="pp-nm" style="font-size:${f.namePt}pt"><em style="color:${em}">${esc(c.classLabel)}</em><span>${esc(c.name)}</span></span>${band}</div>`;
+}
+
+/** 底色圖例：色塊＝底色本身；黑白列印靠灰階深淺與格內標示文字分辨 */
+function legendHtml(p: SeatPageModel): string {
+  return p.legend?.length ? `<div class="pp-legend">${p.legend.map((l) => `<span class="pp-lg" style="background:#${l.bg}">${esc(l.label)}</span>`).join('')}</div>` : '';
 }
 
 function seatHtml(p: SeatPageModel, o: HtmlOptions): string {
@@ -126,7 +132,7 @@ function seatHtml(p: SeatPageModel, o: HtmlOptions): string {
   const stHtml = `<table class="pp-st" style="font-size:${sl.pt}pt">${colg}<thead><tr style="height:${mm(sl.rowH[0]!)}">${(leadHeads ?? [p.stats.table.headLabel ?? '項目']).map((h) => `<th>${esc(h)}</th>`).join('')}${p.stats.table.classes.map((c) => `<th>${esc(c)}</th>`).join('')}<th class="t">${leadHeads ? '總計' : '合計'}</th></tr></thead><tbody>${st.map(tr).join('')}</tbody></table>`;
   return `<section class="sheet pp pp-seat" style="page:a4full;width:${SEAT_PAGE.w}mm;height:${SEAT_PAGE.h - 0.5}mm;padding:${SEAT_PAGE.padY}mm ${SEAT_PAGE.padX}mm">
 <div class="pp-hd"><div><div class="pp-h1">${esc(titleOf(p))}</div>${p.heading ? '' : '<div class="pp-h2">座位表</div>'}</div><span class="pp-room">${esc(roomShown(p))}</span></div>
-<div class="pp-chips">${chips}</div>
+<div class="pp-chips">${chips}</div>${legendHtml(p)}
 <div class="pp-wrapg" style="margin-top:4mm"><div class="pp-ay" style="grid-template-rows:repeat(${p.depth},${mm(ch)})">${ay}</div><div><div class="pp-grid" style="grid-template-columns:repeat(${p.rows},${mm(cw)})">${cells}</div><div class="pp-ax" style="grid-template-columns:repeat(${p.rows},${mm(cw)})">${ax}</div></div></div>
 <div class="pp-bottom"><span class="l">${p.slotMode ? `已使用 ${p.cells.size} 格` : `共 ${p.stats.total} 人`}</span><span class="pp-pod">講臺</span><span></span></div>
 ${p.slotMode ? `<div class="pp-sltip">${esc(SLOT_TIP)}</div>` : ''}${statsNext ? '' : stHtml}
@@ -219,6 +225,8 @@ footer { font-size: 8pt; color: #555; text-align: right; margin-top: 3mm }
 .pp .pp-h2{font-family:'Noto Serif TC','PMingLiU',serif;font-weight:700;font-size:28pt;line-height:1.1;margin-top:1mm}
 .pp .pp-room{display:block;background:var(--navy);color:#fff;border-radius:1.2mm;padding:1.6mm 6mm;font-weight:700;font-size:16pt}
 .pp .pp-chips{display:flex;gap:2mm;flex-wrap:wrap;margin:3.5mm 0 0}
+.pp .pp-legend{display:flex;gap:1.5mm;flex-wrap:nowrap;margin:1.5mm 0 0}
+.pp .pp-lg{border:.3mm solid #222;padding:.4mm 2mm;white-space:nowrap;font-size:8.5pt;font-weight:700;color:#111}
 .pp .pp-chip{border:.3mm solid var(--navy);color:var(--navy);border-radius:5mm;padding:.6mm 3.5mm;font-size:12pt;font-weight:700}
 .pp .pp-chip.s{background:var(--navy);color:#fff}
 .pp .pp-grid{display:grid;border-top:.35mm solid var(--cut);border-left:.35mm solid var(--cut);width:max-content}
