@@ -6,6 +6,7 @@ import type { ClassInfo, Classroom, ExamConfig, ExamEntry, MarkMode, MarkRule, O
 import { classroomSeats, effectiveRooms, studentCode } from '../data';
 import { isResolved } from '../import/compare';
 import { subjectShort } from '../core/subjectShort';
+import { seatKindOf, type SeatKind } from '../core/seatKind';
 import {
   allocateDetaches,
   applyMarks,
@@ -355,6 +356,8 @@ export type ChartCell =
   | { kind: 'free'; co: string }
   | {
       kind: 'student'; co: string; code: string; name: string; classNo: number; className: string; colorIndex: number;
+      /** 底色分類（2026-11-23）：依文理組與加考科目，不再依班級色 */
+      seatKind: SeatKind;
       /** 標示文字，例「X 社會」「＋ 數A」「抽離 自然 考試」「→教務處」 */
       marks: string[];
       markKind?: 'x' | 'add';
@@ -374,11 +377,13 @@ function studentCtx(doc: Doc, exam: ExamConfig, result: SeatingResult) {
   const classes = new Map(examClasses(doc, exam).map((c) => [c.no, c]));
   const subjName = new Map(exam.subjects.map((s) => [s.id, s.name]));
   const marksBy = new Map<string, string[]>();
+  const extraIds = new Map<string, string[]>();
   const absent = new Set<string>();
   // D147：不考＝「X 科目」；加考在原教室考＝「＋ 科目」；到別處考（有抽離考試）＝「抽離 科目 考試」，與匯出檔同一份文字
   const awayExam = new Set(result.detaches.filter((d) => d.purpose === 'exam').map((d) => `${d.code}|${d.subjectId}`));
   for (const m of result.marks) {
     if (m.mode === 'absent') absent.add(m.code);
+    else extraIds.set(m.code, [...(extraIds.get(m.code) ?? []), m.subjectId]);
     const sub = subjectShort(subjName.get(m.subjectId) ?? m.subjectId);
     const text = m.mode === 'absent' ? `X ${sub}` : awayExam.has(`${m.code}|${m.subjectId}`) ? `抽離 ${sub} 考試` : `＋ ${sub}`;
     marksBy.set(m.code, [...(marksBy.get(m.code) ?? []), text]);
@@ -395,6 +400,7 @@ function studentCtx(doc: Doc, exam: ExamConfig, result: SeatingResult) {
     const markKind = marks.length ? (absent.has(code) ? 'x' : 'add') : undefined;
     return {
       kind: 'student', co, code, name: nameOf.get(code) ?? e?.name ?? '（不在名單）', classNo, className: c?.name ?? String(classNo), colorIndex: c?.colorIndex ?? classNo,
+      seatKind: seatKindOf(c?.track, extraIds.get(code) ?? []),
       marks, ...(markKind ? { markKind } : {}),
     };
   };

@@ -5,7 +5,6 @@ import type { PlanRoom } from '../../core/astD99/contract';
 import { countHardLimits } from '../../core/astD99/hardLimits';
 import { Alert, Badge, Button, EmptyState, StepHead } from '../components';
 import { AST_STEP_BLURBS } from '../nav';
-import { normColor } from '../colors';
 import { useChartFit } from '../components/SeatChart';
 import { updateExam, type Doc } from '../store';
 import { examEntries } from '../seating';
@@ -44,7 +43,7 @@ function RoomChart(p: { doc: Doc; plan: AstPlan; slot: AstSlot; roomId: string; 
       const lk = p.locked?.has(e.code) ?? false;
       const act = p.lockMode && p.onSeat ? { role: 'button' as const, tabIndex: 0, onClick: () => p.onSeat!(e.code, c, d), onKeyDown: (ev: KeyboardEvent) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); p.onSeat!(e.code, c, d); } } } : {};
       cells.push(
-        <div key={key} class={`cell${dim ? ' dim' : ''}${lk ? ' locked' : ''}${p.lockMode ? ' lockable' : ''}`} data-c={cls ? normColor(cls.colorIndex) : 1}
+        <div key={key} class={`cell${dim ? ' dim' : ''}${lk ? ' locked' : ''}${p.lockMode ? ' lockable' : ''}`}
           aria-label={`${e.code} ${cls?.name ?? ''} ${s?.name ?? ''}，座位 ${key}${p.lockMode ? (lk ? '，已鎖定，點一下解除' : '，點一下鎖定') : lk ? '，已鎖定' : ''}`} {...(p.lockMode ? { 'aria-pressed': lk } : {})} {...act}>
           <span class="co">{key}</span><span class="no">{e.code}</span>
           <span class="meta"><span class="tg">{cls?.name ?? ''}</span>{s?.name ?? ''}</span>

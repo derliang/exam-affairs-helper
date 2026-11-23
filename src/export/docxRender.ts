@@ -517,6 +517,30 @@ function seatSection(page: SeatPageModel, opts: DocxOptions): ISectionOptions {
     chipTables.push(new Table({ width: { size: cols.reduce((a, b) => a + b, 0), type: WidthType.DXA }, columnWidths: cols, layout: TableLayoutType.FIXED, borders: noInside, rows: [new TableRow({ height: { value: tw(7.2), rule: HeightRule.EXACT }, children: cells })] }));
   });
 
+  // 底色圖例（2026-11-23）：色塊就是底色本身，列印成黑白時靠灰階深淺與格內標示文字分辨；超過頁寬換列
+  if (page.legend?.length) {
+    // 圖例排同一行（節省高度）：字級由 9 往下縮到放得下為止
+    const need = (pt: number): number => page.legend!.reduce((a, l) => a + textMm(l.label, pt, true) * 1.06 + 5, 0) + 2 * (page.legend!.length - 1);
+    const lpt = [9, 8.5, 8, 7.5, 7].find((pt) => need(pt) <= innerW) ?? 7;
+    const lcols: number[] = [];
+    const lcells: TableCell[] = [];
+    page.legend.forEach((l, k) => {
+      const w = textMm(l.label, lpt, true) * 1.06 + 5;
+      if (k > 0) { lcols.push(tw(2)); lcells.push(new TableCell({ width: { size: tw(2), type: WidthType.DXA }, borders: noBd, children: [line([], { h: 1 })] })); }
+      lcols.push(tw(w));
+      lcells.push(new TableCell({
+        width: { size: tw(w), type: WidthType.DXA },
+        verticalAlign: VerticalAlign.CENTER,
+        shading: { type: ShadingType.CLEAR, fill: l.bg, color: 'auto' },
+        borders: { top: bd(INK, 6), bottom: bd(INK, 6), left: bd(INK, 6), right: bd(INK, 6) },
+        margins: { top: 0, bottom: 0, left: tw(2), right: tw(2) },
+        children: [line([run2(l.label, { size: lpt, bold: true, color: INK }, mode)], { h: 5 })],
+      }));
+    });
+    chipTables.push(spacer(1.5));
+    chipTables.push(new Table({ width: { size: lcols.reduce((x, y) => x + y, 0), type: WidthType.DXA }, columnWidths: lcols, layout: TableLayoutType.FIXED, borders: noInside, rows: [new TableRow({ height: { value: tw(5.6), rule: HeightRule.EXACT }, children: lcells })] }));
+  }
+
   // 座位格：最外框深色粗線，格間細線；有標示的格加粗黑框
   const g = { h: ch, innerW: cw - 1.4, topPad: 4.5, codePt: 19, namePt: 12, coordPt: 6.5, markPt: 8, markArea: 5.2, bottomPad: 0.8, codeAtBottom: false, codeGap: 0 };
   const rows: TableRow[] = [];
@@ -708,7 +732,7 @@ function labelSection(page: LabelPageModel, opts: DocxOptions): ISectionOptions 
           width: { size: cellTw, type: WidthType.DXA },
           verticalAlign: VerticalAlign.TOP,
           margins: { top: 0, bottom: 0, left: tw(1), right: tw(1) },
-          shading: m ? { type: ShadingType.CLEAR, fill: marked ? 'FFE08A' : 'FFFFFF', color: 'auto' } : undefined,
+          shading: m ? { type: ShadingType.CLEAR, fill: m.colorBg || 'FFFFFF', color: 'auto' } : undefined,
           borders: { top: b, bottom: b, left: b, right: b }, // #504：空位也有外框
           children: m?.empty ? [line([run2(m.coord, { size: g.coordPt, bold: true, color: '4A463A' }, mode)], { h: 4.2, align: AlignmentType.RIGHT, right: 0.6 })] : m ? (m.persons ? personParas(m, box.w - 2, box.h, { topPad: 5, coordPt: g.coordPt, codePt: isB4 ? 33 : 31, nameMax: 18, schedMax: 11 }, mode) : m.periodLines ? periodParas(m, box.w - 2, box.h, g.coordPt, mode) : cellParas(m, g, INK, mode)) : [line([], { h: 0.35 })],
         }),

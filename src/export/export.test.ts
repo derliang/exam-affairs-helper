@@ -293,11 +293,11 @@ describe('PDF 列印 HTML：照稿件版面（設計系統成品頁「座位表�
     expect(h).not.toMatch(/<td[^>]*>考[^<]*、[^<]*<\/td>/);
   });
 
-  it('標籤：全白底、特殊情形一律淺黃、頁面紙張與格數對、注意事項固定', () => {
+  it('標籤：一般考生白底、不再有特殊情形淺黃、頁面紙張與格數對、注意事項固定', () => {
     const h = html({ paper: 'A3' }, 'label');
     expect(h).toContain('page:a3');
-    expect(h).toContain('background:#FFE08A');
-    expect(h).toContain('background:#fff');
+    expect(h).not.toContain('#FFE08A'); // 2026-11-23：底色改依文理組＋加考科目，與座位表一致
+    expect(h).toContain('background:#FFFFFF');
     expect(h).not.toMatch(/background:#FBE7C6/); // 標籤不用班級色
     expect(h).toContain(`repeat(4,${+((297 - 21) / 7).toFixed(2)}mm)`); // 4 排
     expect(h).toContain('注意事項：');

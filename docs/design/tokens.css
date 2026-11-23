@@ -22,6 +22,12 @@
   --c10-bg:#D9BE9F; --c10-line:#A4743F; --c10-ink:#432810;
   --c11-bg:#BCC5CF; --c11-line:#6C7B8B; --c11-ink:#1E2833;
   --c12-bg:#D9B6CB; --c12-line:#A5668A; --c12-ink:#46172F;
+  --sk-sci-b-bg:#D6E8FA; --sk-sci-b-line:#6E9BD0; --sk-sci-b-ink:#17406E;
+  --sk-sci-soc-bg:#F2C27A; --sk-sci-soc-line:#C58A2E; --sk-sci-soc-ink:#5E3A00;
+  --sk-sci-both-bg:#A58CD8; --sk-sci-both-line:#6F55B0; --sk-sci-both-ink:#2A1A5C;
+  --sk-lib-a-bg:#D3EFD1; --sk-lib-a-line:#78B574; --sk-lib-a-ink:#1F5A1A;
+  --sk-lib-sci-bg:#F0B0C8; --sk-lib-sci-line:#C9638C; --sk-lib-sci-ink:#6E1636;
+  --sk-lib-both-bg:#6FB5AF; --sk-lib-both-line:#3F8680; --sk-lib-both-ink:#0B3B37;
   --fmt-word:#2A6AC8; --fmt-pdf:#B8423A; --fmt-xls:#1F7A47;
   --fmt-word-soft:#E6EEFB; --fmt-pdf-soft:#FBEAE8; --fmt-xls-soft:#E3F2E8;
   --shadow-1:0 1px 2px rgba(34,32,27,.07),0 2px 6px -2px rgba(34,32,27,.06);
@@ -59,6 +65,12 @@
   --c10-bg:#4A3826; --c10-line:#92704A; --c10-ink:#F0DEC8;
   --c11-bg:#343A42; --c11-line:#6C7886; --c11-ink:#E2E7EC;
   --c12-bg:#4A2D3E; --c12-line:#9C6B88; --c12-ink:#F2DCE8;
+  --sk-sci-b-bg:#1F3550; --sk-sci-b-line:#4F77A8; --sk-sci-b-ink:#D3E6FA;
+  --sk-sci-soc-bg:#5A4318; --sk-sci-soc-line:#A8782A; --sk-sci-soc-ink:#F7E2BC;
+  --sk-sci-both-bg:#44356E; --sk-sci-both-line:#8A72C4; --sk-sci-both-ink:#E9DFFA;
+  --sk-lib-a-bg:#1F4A22; --sk-lib-a-line:#5E9A5A; --sk-lib-a-ink:#D3F0D1;
+  --sk-lib-sci-bg:#5A2A3E; --sk-lib-sci-line:#B0597D; --sk-lib-sci-ink:#F7D3E1;
+  --sk-lib-both-bg:#1D4F4B; --sk-lib-both-line:#4F9A94; --sk-lib-both-ink:#C9F0EC;
   --fmt-word:#5B93E6; --fmt-pdf:#E0766E; --fmt-xls:#4DB57A;
   --fmt-word-soft:#1B2740; --fmt-pdf-soft:#3A1F1D; --fmt-xls-soft:#1A3326;
   --shadow-1:0 1px 2px rgba(0,0,0,.55),0 2px 8px -2px rgba(0,0,0,.40),inset 0 1px 0 rgba(255,255,255,.03); --shadow-2:0 2px 4px rgba(0,0,0,.5),0 10px 24px -8px rgba(0,0,0,.6); --shadow-3:0 4px 8px rgba(0,0,0,.5),0 24px 48px -12px rgba(0,0,0,.75);
@@ -87,6 +99,12 @@
   --c10-bg:#4A3826; --c10-line:#92704A; --c10-ink:#F0DEC8;
   --c11-bg:#343A42; --c11-line:#6C7886; --c11-ink:#E2E7EC;
   --c12-bg:#4A2D3E; --c12-line:#9C6B88; --c12-ink:#F2DCE8;
+  --sk-sci-b-bg:#1F3550; --sk-sci-b-line:#4F77A8; --sk-sci-b-ink:#D3E6FA;
+  --sk-sci-soc-bg:#5A4318; --sk-sci-soc-line:#A8782A; --sk-sci-soc-ink:#F7E2BC;
+  --sk-sci-both-bg:#44356E; --sk-sci-both-line:#8A72C4; --sk-sci-both-ink:#E9DFFA;
+  --sk-lib-a-bg:#1F4A22; --sk-lib-a-line:#5E9A5A; --sk-lib-a-ink:#D3F0D1;
+  --sk-lib-sci-bg:#5A2A3E; --sk-lib-sci-line:#B0597D; --sk-lib-sci-ink:#F7D3E1;
+  --sk-lib-both-bg:#1D4F4B; --sk-lib-both-line:#4F9A94; --sk-lib-both-ink:#C9F0EC;
   --fmt-word:#5B93E6; --fmt-pdf:#E0766E; --fmt-xls:#4DB57A;
   --fmt-word-soft:#1B2740; --fmt-pdf-soft:#3A1F1D; --fmt-xls-soft:#1A3326;
   --shadow-1:0 1px 2px rgba(0,0,0,.55),0 2px 8px -2px rgba(0,0,0,.40),inset 0 1px 0 rgba(255,255,255,.03); --shadow-2:0 2px 4px rgba(0,0,0,.5),0 10px 24px -8px rgba(0,0,0,.6); --shadow-3:0 4px 8px rgba(0,0,0,.5),0 24px 48px -12px rgba(0,0,0,.75);

@@ -5,6 +5,7 @@
  */
 import { orderedRoomIds } from './classOrder';
 import { subjectShort } from '../core/subjectShort';
+import { legendKindsOf, SEAT_KINDS, seatKindOf, type SeatKind } from '../core/seatKind';
 import {
   classroomSeats,
   labelNoteLines,
@@ -27,7 +28,6 @@ import { dayName, examSubjectPeriods, scheduleKeyOf, scheduleOf, slotName } from
 import { dateTag, dayRangeText, dayTag } from './dayLabel';
 import { periodGroups } from '../core/detach';
 import { studyReference } from '../core/studyRef';
-import { classColor } from './colors';
 
 export interface ExportInput {
   settings: Settings;
@@ -58,6 +58,8 @@ export interface CellModel {
   colorBg: string;
   colorLine: string;
   colorFg: string;
+  /** 底色分類（2026-11-23）：座位表與標籤共用；只有 makeCell 產生的考生格有 */
+  seatKind?: SeatKind;
   /** 個別考試標示（D39/D55）：文字加底色加粗框 */
   tags: { kind: 'absent' | 'extra'; text: string }[];
   /** 同一批標示拆成「小標＋科目」，列印頁把同小標的科目合併成一個標示（例：X 數B、社會） */
@@ -107,6 +109,8 @@ export interface SeatPageModel {
   tag?: string;
   /** 頁首小標籤：共幾人、不考／加考各科人數 */
   chips: string[];
+  /** 底色圖例（2026-11-23）：本頁出現的加考底色；沒有就不印 */
+  legend?: { label: string; bg: string; line: string }[];
   rows: number; // 排數（橫向欄）
   depth: number; // 深位數（縱向列）
   /** key = 排-深位；沒有的是空位或沒排人 */
@@ -339,7 +343,9 @@ function makeCell(code: string, seat: { row: number; depth: number }, ctx: Ctx):
   const st = ctx.students.get(code);
   const classNo = Number(code.slice(0, 2));
   const cls = ctx.classes.get(classNo);
-  const col = classColor(cls?.colorIndex ?? classNo);
+  // 2026-11-23：底色依文理組與加考科目（SeatKind），不再依班級色；一般考生白底
+  const kind = seatKindOf(cls?.track, ctx.input.result.marks.filter((m) => m.code === code && m.mode === 'extra').map((m) => m.subjectId));
+  const col = SEAT_KINDS[kind];
   const tags = ctx.input.result.marks
     .filter((m) => m.code === code)
     .map((m) => ({
@@ -356,6 +362,7 @@ function makeCell(code: string, seat: { row: number; depth: number }, ctx: Ctx):
     colorBg: col.bg,
     colorLine: col.line,
     colorFg: col.fg,
+    seatKind: kind,
     tags,
     marks: ctx.input.result.marks
       .filter((m) => m.code === code)
@@ -851,6 +858,8 @@ export function buildSeatPages(input: ExportInput, scope: Scope = 'all'): SeatPa
     });
     const pg = pages[pages.length - 1]!;
     pg.chips = chipsOf(pg.stats.total, cells.values(), input.exam.subjects);
+    const lg = legendKindsOf([...cells.values()].map((c) => c.seatKind ?? 'general'));
+    if (lg.length) pg.legend = [{ label: '一般考生', bg: SEAT_KINDS.general.bg, line: '8E8670' }, ...lg.map((k) => ({ label: SEAT_KINDS[k].label, bg: SEAT_KINDS[k].bg, line: SEAT_KINDS[k].line }))];
     const notes = applyCorners([...cells.values()], input.exam.subjects.map((s) => s.name));
     if (notes.length) { pg.flipNotes = notes; pg.chips.push(...notes); }
     // D146：學測原班座位表，不參加的人有正式座位，格內黑底小牌「X 不參加」（不逐科列 X），每節到預備教室自習

@@ -3,19 +3,32 @@
  * 「修改各節開始時間」就地展開時間表（不再跳共用設定）。方案 B：每天填「第一節開始」＋「節間休息」，其餘自動接上，個別時段可手動改。
  * 編輯立刻生效、可從上方「復原」回來，沒有儲存鈕。只影響顯示，不影響排座。
  */
-import { useState } from 'preact/hooks';
+import { useRef, useState } from 'preact/hooks';
 import type { DayTimes, ExamConfig, PeriodTable } from '../../data';
 import { DEFAULT_BREAK, rangeText, setBreak, setFirst, setManual, slotTimes, timeIssues, type SlotTime } from '../../core/examTimes';
 import { dayName, numberRows } from '../../core/periods';
+import { applySchedule, parseScheduleDocx, type ScheduleApply } from '../../import/scheduleDocx';
 import { Alert, Badge, Button, ConfirmButton, Stepper } from '../components';
 import { dateRangeText, shortDate } from '../examDates';
 import { confirmCopy } from '../flow';
 
 const slotLabel = (t: SlotTime, rows: string[]): string => `時段${['', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'][t.slot] ?? t.slot}${rows[0] ? `　${rows.join('、')}` : ''}`;
 
-export function ExamTimesBlock(p: { exam: ExamConfig; table: PeriodTable; open?: boolean; onChange: (dayTimes: DayTimes[] | undefined) => void; onEditDates: () => void }) {
+export function ExamTimesBlock(p: { exam: ExamConfig; table: PeriodTable; open?: boolean; onChange: (dayTimes: DayTimes[] | undefined) => void; onEditDates: () => void; /** 匯入考程表（2026-11-23）：一次套用日期與各節時間；沒給就不顯示匯入鈕 */ onImport?: (r: { examDates?: string[]; dayTimes?: DayTimes[] }) => void; /** 推算年份用的候選西元年（依序試，星期對得上的先用） */ yearHints?: number[] }) {
   const { exam, table } = p;
   const [open, setOpen] = useState(!!p.open);
+  const file = useRef<HTMLInputElement>(null);
+  const [imp, setImp] = useState<{ name: string; r?: ScheduleApply; err?: string } | null>(null);
+  const onFile = async (f: File | undefined): Promise<void> => {
+    if (!f) return;
+    try {
+      const parsed = await parseScheduleDocx(await f.arrayBuffer());
+      const cand = [...new Set([...(exam.examDates?.[0] ? [Number(exam.examDates[0].slice(0, 4))] : []), ...(p.yearHints ?? [new Date().getFullYear()])])];
+      setImp({ name: f.name, r: applySchedule(parsed, table, cand) });
+    } catch (e) {
+      setImp({ name: f.name, err: e instanceof Error ? e.message : '讀不了這個檔案' });
+    }
+  };
   const dt = exam.dayTimes;
   const times = slotTimes(table, dt);
   const numbered = numberRows(table);
@@ -34,9 +47,20 @@ export function ExamTimesBlock(p: { exam: ExamConfig; table: PeriodTable; open?:
         </div>
         <div class="row">
           <Button onClick={p.onEditDates}>修改考試日期</Button>
+          {p.onImport && <Button onClick={() => file.current?.click()}>匯入考程表</Button>}
           <Button kind="primary" onClick={() => setOpen(!open)}>{open ? '收合 ▴' : '設定各節時間 ▾'}</Button>
         </div>
       </div>
+      {p.onImport && <input ref={file} type="file" accept=".docx" hidden aria-label="選擇考程表 Word 檔（.docx）" onChange={(e) => { const f = e.currentTarget.files?.[0]; e.currentTarget.value = ''; void onFile(f); }} />}
+      {imp?.err && <Alert tone="danger" action={<Button small onClick={() => setImp(null)}>關閉</Button>}><b>無法匯入「{imp.name}」</b>　{imp.err}</Alert>}
+      {imp?.r && (
+        <Alert tone="info" action={<><Button small kind="primary" onClick={() => { p.onImport?.({ ...(imp.r!.examDates ? { examDates: imp.r!.examDates } : {}), ...(imp.r!.dayTimes ? { dayTimes: imp.r!.dayTimes } : {}) }); setImp(null); setOpen(true); }}>套用</Button> <Button small onClick={() => setImp(null)}>取消</Button></>}>
+          <b>讀到「{imp.name}」</b>
+          {imp.r.lines.length ? imp.r.lines.map((l) => <div key={l}>{l}</div>) : <div>沒有可以套用的考試時段。</div>}
+          {imp.r.notes.map((n) => <div class="small" key={n}>注意：{n}</div>)}
+          <div class="small muted">按「套用」會取代這場考試目前的日期與各節時間，可從上方「復原」回來。</div>
+        </Alert>
+      )}
       {open && (
         <>
           <div style="display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr))">
