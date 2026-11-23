@@ -4,7 +4,7 @@
  * pull＝抽離考試的預備教室：整張柔和單色、不依班級上色（UI-23）。
  */
 import { useLayoutEffect, useRef } from 'preact/hooks';
-import { legendKindsOf, SEAT_KINDS } from '../../core/seatKind';
+import { legendKindsOf, SEAT_KINDS, type SeatKind } from '../../core/seatKind';
 import type { ChartCell, ChartModel } from '../seating';
 
 /** 稿 v2.75（E）：座位表一律等比縮進容器、不捲動（D154 橫排 ≤8，手機每格約 35px 以上）；下限只防容器量到 0 的退化情況 */
@@ -121,13 +121,18 @@ export function ChartLegend(p: { override?: boolean; marks?: boolean }) {
 
 /** 底色圖例（2026-11-23）：只列這張圖出現過的底色；沒有任何加考底色就不印。白底＝一般考生 */
 export function KindLegend(p: { model: ChartModel }) {
-  const kinds = legendKindsOf(p.model.lines.flat().flatMap((c) => (c.kind === 'student' ? [c.seatKind] : [])));
+  return <KindLegendOf kinds={p.model.lines.flat().flatMap((c) => (c.kind === 'student' ? [c.seatKind] : []))} />;
+}
+
+/** 圖例本體：kinds＝圖上出現過的分類；labels 可換成分科的說法 */
+export function KindLegendOf(p: { kinds: Iterable<SeatKind>; labels?: Partial<Record<SeatKind, string>> }) {
+  const kinds = legendKindsOf(p.kinds);
   if (!kinds.length) return null;
   return (
     <div class="kind-legend" aria-label="底色圖例">
       <b>底色</b>
       <span class="kl-i"><i class="kl-sw" />一般考生</span>
-      {kinds.map((k) => <span class="kl-i" key={k}><i class="kl-sw" data-k={k} />{SEAT_KINDS[k].label}</span>)}
+      {kinds.map((k) => <span class="kl-i" key={k}><i class="kl-sw" data-k={k} />{p.labels?.[k] ?? SEAT_KINDS[k].label}</span>)}
     </div>
   );
 }

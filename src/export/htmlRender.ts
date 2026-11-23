@@ -19,7 +19,8 @@ export function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-const DETACH = { bg: '#E6EBF7', fg: '#274690' };
+// 自習座位頁（使用者 2026-11-23 方案 A）：自習＝淺灰；考試的預備教室才是淡藍
+const DETACH = { bg: '#ECEBE7', fg: '#22201B' };
 const mm = (n: number): string => `${+n.toFixed(2)}mm`;
 
 /** 右下角單字角標（#223）：不考＝黑底白字，加考／有考＝白底黑框 */
@@ -42,7 +43,7 @@ function wideHtml(c: CellModel | undefined, w: number, h: number, b4: boolean): 
   const two = n === 2;
   const multi = n >= 3; // 3 人以上：每人一區、靠上排（D108）
   const cls = (right: boolean) => `pp-wh${multi ? ' pp-wl pp-wt' : right && !two ? ' pp-wl' : ''}`;
-  return `<div class="pp-c pp-wd" style="${size};grid-column:span 2;background:#fff">${co}<div class="${cls(false)}">${spans(lay.left)}</div><div class="${cls(true)}"${two || multi ? ' style="border-left:.2mm solid #C8C2AE"' : ''}>${spans(lay.right)}</div></div>`;
+  return `<div class="pp-c pp-wd" style="${size};grid-column:span 2;background:#${c.colorBg || 'FFFFFF'}">${co}<div class="${cls(false)}">${spans(lay.left)}</div><div class="${cls(true)}"${two || multi ? ' style="border-left:.2mm solid #C8C2AE"' : ''}>${spans(lay.right)}</div></div>`;
 }
 
 /** 一格：座位表用班級色（抽離考試用柔和單色），標籤用白底，有標示的標籤格用淺黃 */
@@ -57,13 +58,13 @@ function cellHtml(c: CellModel | undefined, w: number, h: number, mode: 'seat' |
     const g = mode === 'label' ? { topPad: 5, codePt: b4 ? 33 : 31, nameMax: 18, schedMax: 11 } : { topPad: 4.5, codePt: 19, nameMax: 10.5, schedMax: 7, joinSched: true };
     const { lines } = personLayout(c, w - (mode === 'label' ? 2 : 1.3), h, g);
     const ls = lines.map((l) => `<span class="pp-pr" style="font-size:${l.pt}pt;margin-top:${mm(l.gapBefore)}">${l.runs.map((r) => { const t = r.bold ? `<b>${esc(r.text)}</b>` : esc(r.text); return r.pt ? `<span style="font-size:${r.pt}pt">${t}</span>` : t; }).join('')}</span>`).join('');
-    return `<div class="pp-c pp-pe" style="${size};background:#fff"><i class="pp-co">${esc(c.coord)}</i><span class="pp-prs">${ls}</span></div>`;
+    return `<div class="pp-c pp-pe" style="${size};background:#${c.colorBg || 'FFFFFF'}"><i class="pp-co">${esc(c.coord)}</i><span class="pp-prs">${ls}</span></div>`;
   }
   if (c.periodLines) {
     // 預備教室合併標籤（D94-5）：每節一行、同字級，印節次＋科目＋班座號
     const pt = periodLineFontPt(c.periodLines, w - 3, h - 5);
     const ls = c.periodLines.map((l) => `<span class="pp-pll" style="font-size:${pt}pt"><small style="font-size:${+(pt * 0.7).toFixed(1)}pt">${esc(l.head)}</small>${esc(l.text)}</span>`).join('');
-    return `<div class="pp-c pp-pl" style="${size};background:#fff"><i class="pp-co">${esc(c.coord)}</i><span class="pp-pls">${ls}</span></div>`;
+    return `<div class="pp-c pp-pl" style="${size};background:#${c.colorBg || 'FFFFFF'}"><i class="pp-co">${esc(c.coord)}</i><span class="pp-pls">${ls}</span></div>`;
   }
   if (mode !== 'label') return seatCellHtml(c, w, h, mode);
   const marked = isSpecial(c);

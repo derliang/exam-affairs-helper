@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>座位表底色稿 稿 v2.104</title>
+<title>座位表底色稿 稿 v2.105</title>
 <style>
 /* 版面：三個區塊由上到下——座位表（彩色與黑白對照）、標籤對齊、匯入考程表。底色用專案 tokens 的 --sk-*；紙面固定淺色。 */
 :root{--bg:#F6F4EE;--surface:#FFFDF8;--line:#DDD8C8;--text:#22201B;--text-2:#5B5648;--accent:#2A5FD6;--accent-soft:#E8EDF8;--accent-ink:#1B3E94;
@@ -45,10 +45,19 @@ p{margin:4px 0;color:var(--text-2);font-size:13.5px}.small{font-size:12.5px}
 .alert{border:1px solid var(--line);background:var(--accent-soft);color:var(--text);border-radius:10px;padding:12px 14px;font-size:13.5px;display:flex;gap:12px;justify-content:space-between;flex-wrap:wrap}
 .alert .s{font-size:12px;color:var(--text-2)}
 .bar{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;align-items:center}
+
+.rc{width:132px;height:92px;border:1px solid #8E8670;background:#fff;padding:3px 4px;display:flex;flex-direction:column;gap:2px;font-size:10px;line-height:1.2;position:relative;color:#22201B}
+.rc .co{position:absolute;right:3px;top:1px;font-size:8px;color:#5B5648}
+.rc.ex{background:#E6EBF7;border-color:#274690}.rc.st{background:#DAD8D0;border:1.5px dashed #22201B}
+.rc .ln{display:flex;gap:4px;align-items:center;border-left:4px solid #8E8670;padding-left:3px;background:#fff}
+.rc .ln.e{border-left-color:#274690}.rc .ln.s{border-left-color:#8E8670;border-left-style:dashed}
+.rc .tagx{background:#22201B;color:#fff;font-weight:700;padding:0 4px;align-self:flex-start}
+.rc.big{width:150px;height:150px;font-size:12px}.rc.big b{font-size:24px;align-self:center}
+.rcs{display:flex;flex-wrap:wrap;gap:0}
 </style>
 </head>
 <body>
-<div class="top"><div><h1>座位表底色稿 稿 v2.104</h1><p>2026-11-23　D222　使用者原話第 1～7 項對照，圖例同一行</p></div><button class="tg" id="tgl" type="button">切換深淺色</button></div>
+<div class="top"><div><h1>座位表底色稿 稿 v2.105</h1><p>2026-11-23　v2.104 已發布；v2.105 新增第 4、5 節：分科底色、預備教室依用途配色（D224）</p></div><button class="tg" id="tgl" type="button">切換深淺色</button></div>
 <p>班級代表色不變，但座位表與標籤不再用它。底色只看「文理組＋加考什麼」：一般考生沒有底色。以下全是假資料。</p>
 
 <h2>1 座位表：理組三種、文組三種、一般白底，圖例在表下方</h2>
@@ -71,6 +80,27 @@ p{margin:4px 0;color:var(--text-2);font-size:13.5px}.small{font-size:12.5px}
  <p class="small">讀法：每天一欄、「時間」「科目」成對兩列；只取「測驗」那一段當開始時間，自習與休息不算；年份用月日加星期推算。你上傳的四份檔案都讀得到（含分科文組／理組同日兩欄：只取第一欄並提醒）。</p>
 </div>
 
+
+<h2>4 分科：沿用同一套邏輯，按「科類」歸類</h2>
+<div class="card"><p>理組預設考數甲、物理、化學、生物；加考數乙、歷史、地理、公民。文組預設考數乙、歷史、地理、公民；加考物理、化學、生物。歷地公合稱社會科、物化生合稱自然科。</p>
+<div class="row2" style="margin-top:8px"><div class="paper" id="a1"></div><div class="paper gray" id="a1g"></div></div>
+<p class="small">左：彩色；右：黑白模擬。理組三種（加考數乙＝藍、加考社會科＝橘、兩者＝紫），文組只有一種加考底色（加考自然科＝粉紅，文組可加考的沒有數甲）。具體加考哪一科看格內小牌。</p></div>
+
+<h2>5 預備教室：方案 A，依「這一格這一節做什麼」配色</h2>
+<div class="card"><p>同一節一間預備教室只會全考試或全自習；同一格不同節可以坐不同人。所以顏色看用途，不看班級也不看加考類型：<b>考試＝淡藍</b>、<b>自習＝淺灰＋虛線框</b>、<b>不參加＝黑底白字小牌</b>。一格各節用途不同時，格子白底，每一行左邊用色條標用途（實線藍＝考試、虛線灰＝自習）。</p>
+<div class="lbl" style="margin-top:10px">座位表（時段版）</div>
+<div class="paper"><div class="rcs">
+ <div class="rc ex"><span class="co">1-1</span><div class="ln e">第1天 時段二 社會 0103</div><div class="ln e">第1天 時段三 英文 0108</div></div>
+ <div class="rc st"><span class="co">2-1</span><div class="ln s">第1天 時段二 自習 0201</div><div class="ln s">第1天 時段三 自習 0206</div></div>
+ <div class="rc"><span class="co">3-1</span><div class="ln e">第1天 時段二 社會 0104</div><div class="ln s">第1天 時段三 自習 0104</div></div>
+ <div class="rc st"><span class="co">4-1</span><div class="ln s">第1天 時段二 自習 0301</div><span class="tagx">X 不參加</span></div>
+</div><div class="legend"><b>圖例</b><span><i class="sw" style="background:#E6EBF7;border-color:#274690"></i>考試</span><span><i class="sw" style="background:#DAD8D0;border:1.5px dashed #22201B"></i>自習</span><span><i class="sw" style="background:#fff"></i>各節用途不同（看左邊色條）</span><span><i class="sw" style="background:#22201B"></i>不參加</span></div></div>
+<div class="lbl" style="margin-top:12px">標籤（只有考試的人印；自習與不參加不印標籤）</div>
+<div class="paper"><div class="rcs">
+ <div class="rc big ex"><span class="co">1-1</span><b>0103</b><div class="ln e">時段二 社會</div><div class="ln e">時段三 英文</div></div>
+ <div class="rc big"><span class="co">3-1</span><b>0104</b><div class="ln e">時段二 社會</div></div>
+</div></div>
+<p class="small">黑白列印：淡藍與淺灰的灰階深淺不同，再加虛線框與文字，分得出。這一節只改預備教室，班級教室與前面第 1～3 節不動。</p></div>
 <h2>已定案的取捨</h2>
 <p>分科、會考、國中的座位表沒有文理組加考，一律不上色。補考座位表本來用原班色，這次沒動，等你說要不要也改。「不考」的考生不上色，只印黑底小牌。</p>
 <script>
@@ -83,6 +113,11 @@ function chart(el,list,pre,used){var h='<div class="grid">';list.forEach(functio
 ['p2','p2g'].forEach(function(i){chart(document.getElementById(i),cls2,'02',['lib-a','lib-sci','lib-both'])});
 var L=[['0101','',''],['0103','sci-b','＋數B'],['0104','sci-soc','＋社會'],['0106','sci-both','＋數B 社'],['0201','lib-a','＋數A'],['0203','lib-sci','＋自然'],['0205','lib-both','＋數A 自'],['0208','','X 自然']];
 document.getElementById('labs').innerHTML=L.map(function(c){return '<div class="lab"'+(c[1]?' data-k="'+c[1]+'" style="background:var(--bg-k)"':'')+'><span class="co">1-1</span><b>'+c[0]+'</b><small>'+(c[0]<'02'?'溫':'良')+' 甲生'+c[0].slice(-2)+'</small>'+(c[2]?'<span class="mk" style="font-size:12px;font-weight:700;border:1px solid #22201B;background:#fff;padding:0 4px;color:#22201B">'+c[2]+'</span>':'')+'</div>'}).join('');
+
+(function(){var A=[['sci-b','＋數乙'],['','' ],['sci-soc','＋歷史'],['','' ],['sci-both','＋數乙 公'],['','' ],['sci-soc','＋地理'],['sci-b','＋數乙'],['lib-sci','＋物理'],['','' ],['lib-sci','＋化 生'],['','']];
+function ch(el){var h='<div class="grid">';A.forEach(function(c,i){var n=String(i+1).padStart(2,'0');var lib=c[0]==='lib-sci'||i>=8;h+='<div class="cell"'+(c[0]?' data-k="'+c[0]+'"':'')+'><span class="co">'+(i%4+1)+'-'+(3-Math.floor(i/4))+'</span><b>'+(lib?'02':'01')+n+'</b><span>'+(lib?'文':'理')+'生'+n+'</span>'+(c[1]?'<span class="mk">'+c[1]+'</span>':'')+'</div>'});
+h+='</div><div class="pod">講臺</div><div class="legend"><b>底色</b><span><i class="sw"></i>一般考生</span><span><i class="sw" data-k="sci-b" style="background:var(--bg-k)"></i>理組加考數乙</span><span><i class="sw" data-k="sci-soc" style="background:var(--bg-k)"></i>理組加考社會科</span><span><i class="sw" data-k="sci-both" style="background:var(--bg-k)"></i>理組加考數乙＋社會科</span><span><i class="sw" data-k="lib-sci" style="background:var(--bg-k)"></i>文組加考自然科</span></div>';el.innerHTML=h}
+ch(document.getElementById('a1'));ch(document.getElementById('a1g'))})();
 document.getElementById('tgl').onclick=function(){var r=document.documentElement;r.setAttribute('data-theme',r.getAttribute('data-theme')==='dark'?'light':'dark')};
 </script>
 

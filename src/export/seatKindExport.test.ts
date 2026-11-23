@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { makeFixture } from './fixtures';
 import { buildLabelPages, buildSeatPages, renderPrintHtml } from './index';
-import { SEAT_KINDS } from '../core/seatKind';
+import { RESERVE_EXAM, SEAT_KINDS } from '../core/seatKind';
 
 /** 2026-11-23：座位表與標籤的底色＝文理組＋加考科目；班級代表色不再出現；標籤底色與座位表一致；座位表有圖例 */
 function input() {
@@ -41,7 +41,7 @@ describe('底色依文理組與加考（座位表與標籤一致）', () => {
     expect(lg.flat().join('')).not.toContain('文組加考自然');
     const plain = makeFixture();
     plain.result.marks = [];
-    expect(buildSeatPages(plain).some((p) => p.kind === 'seat' && p.legend)).toBe(false);
+    expect(buildSeatPages(plain).some((p) => p.kind === 'seat' && p.legend && !p.tag)).toBe(false);
   });
   it('輸出 HTML 不再出現班級色與淺黃，圖例進得了列印頁', () => {
     const f = input();
@@ -49,5 +49,15 @@ describe('底色依文理組與加考（座位表與標籤一致）', () => {
     expect(h).not.toMatch(/#FFE08A|#FBE7C6|#D8EFD3|#D6E6F8/);
     expect(h).toContain('pp-legend');
     expect(h).toContain(`background:#${SEAT_KINDS['sci-b'].bg}`);
+  });
+  it('預備教室：座位表與標籤的格子是考試淡藍，座位表有圖例；自習座位頁是淺灰', () => {
+    const f = makeFixture();
+    const seat = buildSeatPages(f).filter((p) => p.kind === 'seat' && p.tag && p.slotMode);
+    const cells = seat.flatMap((p) => (p.kind === 'seat' ? [...p.cells.values()] : []));
+    expect(cells.length).toBeGreaterThan(0);
+    for (const c of cells) expect(c.colorBg).toBe(RESERVE_EXAM.bg);
+    expect(seat.some((p) => p.kind === 'seat' && p.legend?.[0]?.label === RESERVE_EXAM.label)).toBe(true);
+    const lab = buildLabelPages(f).flatMap((p) => (p.kind === 'label' && p.tag ? p.cells.filter((c) => !c.empty) : []));
+    for (const c of lab) expect(c.colorBg).toBe(RESERVE_EXAM.bg);
   });
 });

@@ -5,7 +5,8 @@ import type { PlanRoom } from '../../core/astD99/contract';
 import { countHardLimits } from '../../core/astD99/hardLimits';
 import { Alert, Badge, Button, EmptyState, StepHead } from '../components';
 import { AST_STEP_BLURBS } from '../nav';
-import { useChartFit } from '../components/SeatChart';
+import { KindLegendOf, useChartFit } from '../components/SeatChart';
+import { astSeatKindOf, AST_KIND_LABEL, type SeatKind } from '../../core/seatKind';
 import { updateExam, type Doc } from '../store';
 import { examEntries } from '../seating';
 import { PhaseCard, PhaseGuard } from './AstRelease';
@@ -15,7 +16,7 @@ import { astModeOf, astPlan, awayStudy, astSlots, MODE_LABEL, slotRoster, usageC
 const KIND_TEXT: Record<string, string> = { exam: '考', study: '自習', borrow: '借用自習', pending: '待核可', home: '原班', none: '—' };
 
 /** 考場座位圖（深位 1 靠講臺在下，排由左到右）；格子沿用班級色，停用／沒有的座位畫斜線 */
-function RoomChart(p: { doc: Doc; plan: AstPlan; slot: AstSlot; roomId: string; roomName: string; room: Classroom | undefined; only: number; lockMode?: boolean; locked?: ReadonlySet<string>; onSeat?: (code: string, row: number, depth: number) => void }) {
+function RoomChart(p: { doc: Doc; exam: ExamConfig; plan: AstPlan; slot: AstSlot; roomId: string; roomName: string; room: Classroom | undefined; only: number; lockMode?: boolean; locked?: ReadonlySet<string>; onSeat?: (code: string, row: number, depth: number) => void }) {
   const fitHost = useRef<HTMLDivElement>(null);
   const fitChart = useRef<HTMLDivElement>(null);
   useChartFit(fitHost, fitChart);
@@ -28,6 +29,9 @@ function RoomChart(p: { doc: Doc; plan: AstPlan; slot: AstSlot; roomId: string; 
   const mx = Math.max(...Array.from({ length: cols }, (_, i) => rowDepthOf(room, i + 1)));
   const student = new Map(p.plan.input.students.map((s) => [`${String(s.classNo).padStart(2, '0')}${String(s.seatNo).padStart(2, '0')}`, s]));
   const classes = new Map(p.doc.settings.classes.filter((c) => c.division === 'senior').map((c) => [c.no, c]));
+  // 底色（2026-11-23）：依文理組與加考科類，不再用班級色；一般考生白底
+  const subjOf = new Map(examEntries(p.doc, p.exam).map((e) => [`${String(e.classNo).padStart(2, '0')}${String(e.seatNo).padStart(2, '0')}`, e.subjectIds]));
+  const kinds: SeatKind[] = [];
   const mixed = new Set(p.plan.out.mixedRows.filter((m) => m.slotId === p.slot.id && m.roomId === p.roomId).map((m) => m.row));
   const cells: preact.JSX.Element[] = [];
   for (let d = mx; d >= 1; d--) {
@@ -40,10 +44,12 @@ function RoomChart(p: { doc: Doc; plan: AstPlan; slot: AstSlot; roomId: string; 
       const s = student.get(e.code);
       const cls = classes.get(Number(e.code.slice(0, 2)));
       const dim = p.only > 0 && Number(e.code.slice(0, 2)) !== p.only;
+      const kind = astSeatKindOf(cls?.track, subjOf.get(e.code) ?? []);
+      kinds.push(kind);
       const lk = p.locked?.has(e.code) ?? false;
       const act = p.lockMode && p.onSeat ? { role: 'button' as const, tabIndex: 0, onClick: () => p.onSeat!(e.code, c, d), onKeyDown: (ev: KeyboardEvent) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); p.onSeat!(e.code, c, d); } } } : {};
       cells.push(
-        <div key={key} class={`cell${dim ? ' dim' : ''}${lk ? ' locked' : ''}${p.lockMode ? ' lockable' : ''}`}
+        <div key={key} class={`cell${dim ? ' dim' : ''}${lk ? ' locked' : ''}${p.lockMode ? ' lockable' : ''}`} data-k={kind === 'general' ? undefined : kind}
           aria-label={`${e.code} ${cls?.name ?? ''} ${s?.name ?? ''}，座位 ${key}${p.lockMode ? (lk ? '，已鎖定，點一下解除' : '，點一下鎖定') : lk ? '，已鎖定' : ''}`} {...(p.lockMode ? { 'aria-pressed': lk } : {})} {...act}>
           <span class="co">{key}</span><span class="no">{e.code}</span>
           <span class="meta"><span class="tg">{cls?.name ?? ''}</span>{s?.name ?? ''}</span>
@@ -62,6 +68,7 @@ function RoomChart(p: { doc: Doc; plan: AstPlan; slot: AstSlot; roomId: string; 
           <div class="axis-x" style={{ gridTemplateColumns: `repeat(${cols},var(--cw))`, marginTop: '4px' }} aria-hidden="true">{Array.from({ length: cols }, (_, i) => <span key={i}>第{i + 1}排</span>)}</div>
         </div>
         <div class="podium-bar">講　台</div>
+        <KindLegendOf kinds={kinds} labels={AST_KIND_LABEL} />
       </div></div>
     </div>
   );
@@ -239,7 +246,7 @@ export function AstStep5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
                 <button type="button" key={c} aria-pressed={only === c} onClick={() => setOnly(c)}>只看{classes.get(c) ?? c}</button>
               ))}
             </div>
-            <RoomChart doc={doc} plan={plan} slot={slot} roomId={roomId} roomName={roomName(roomId)} room={roomData.get(roomId)} only={only} lockMode={lockMode} locked={seatLockOf(exam, slot.id, roomId)}
+            <RoomChart doc={doc} exam={exam} plan={plan} slot={slot} roomId={roomId} roomName={roomName(roomId)} room={roomData.get(roomId)} only={only} lockMode={lockMode} locked={seatLockOf(exam, slot.id, roomId)}
               onSeat={(code, row, depth) => { const r = updateExam(doc, exam.id, { astLocks: toggleSeatLock(exam, { slotId: slot.id, code, roomId, row, depth }) }); if (r.ok) p.onChange(r.doc); }} />
           </>
         )}

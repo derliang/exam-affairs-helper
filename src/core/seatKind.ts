@@ -51,3 +51,27 @@ export function legendKindsOf(kinds: Iterable<SeatKind>): SeatKind[] {
   const set = new Set(kinds);
   return SEAT_KIND_ORDER.filter((k) => k !== 'general' && set.has(k));
 }
+
+/**
+ * 分科（使用者 2026-11-23）：理組預設考數甲、物理、化學、生物，可加考數乙、歷史、地理、公民；文組預設考數乙、歷史、地理、公民，可加考物理、化學、生物。
+ * 加考依科類歸類（歷地公＝社會科、物化生＝自然科），沿用學測的底色：理組加數乙＝sci-b、加社會科＝sci-soc、兩者＝sci-both；文組加自然科＝lib-sci。
+ * subjectIds＝這位考生本次實際要考的全部科目（含預設的）。
+ */
+const AST_SOCIAL = ['history', 'geography', 'civics'];
+const AST_NATURE = ['physics', 'chemistry', 'biology'];
+export function astSeatKindOf(track: Track | undefined, subjectIds: Iterable<string>): SeatKind {
+  if (!track) return 'general';
+  const ids = new Set(subjectIds);
+  if (track === 'liberal') return AST_NATURE.some((x) => ids.has(x)) ? 'lib-sci' : 'general';
+  const a = ids.has('math-yi');
+  const b = AST_SOCIAL.some((x) => ids.has(x));
+  return a && b ? 'sci-both' : a ? 'sci-b' : b ? 'sci-soc' : 'general';
+}
+/** 分科圖例文字（與學測不同：數乙、社會科、自然科） */
+export const AST_KIND_LABEL: Partial<Record<SeatKind, string>> = {
+  'sci-b': '理組加考數乙', 'sci-soc': '理組加考社會科', 'sci-both': '理組加考數乙＋社會科', 'lib-sci': '文組加考自然科',
+};
+
+/** 預備教室依「用途」配色（使用者 2026-11-23 方案 A）：考試＝淡藍；自習＝淺灰加虛線框；不參加＝黑底白字小牌（另印） */
+export const RESERVE_EXAM = { label: '考試（抽離考試）', bg: 'E6EBF7', line: '274690', fg: '274690' };
+export const RESERVE_STUDY = { label: '自習（非考試座位）', bg: 'DAD8D0', line: '22201B', fg: '22201B' };

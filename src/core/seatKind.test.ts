@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { legendKindsOf, SEAT_KIND_ORDER, SEAT_KINDS, seatKindOf, type SeatKind } from './seatKind';
+import { astSeatKindOf, legendKindsOf, RESERVE_EXAM, RESERVE_STUDY, SEAT_KIND_ORDER, SEAT_KINDS, seatKindOf, type SeatKind } from './seatKind';
 
 /** 灰階亮度（Rec.601），黑白列印時的深淺 */
 const gray = (hex: string): number => {
@@ -42,5 +42,25 @@ describe('座位表底色分類（2026-11-23）', () => {
     const bgs = SEAT_KIND_ORDER.map((k) => SEAT_KINDS[k].bg);
     expect(new Set(bgs).size).toBe(bgs.length);
     for (const k of SEAT_KIND_ORDER) expect(SEAT_KINDS[k].label.length).toBeGreaterThan(0);
+  });
+});
+
+describe('分科底色與預備教室用途色（使用者 2026-11-23）', () => {
+  it('理組：加考數乙／社會科（歷地公任一）／兩者；預設科目不算加考', () => {
+    const base = ['math-jia', 'physics', 'chemistry', 'biology'];
+    expect(astSeatKindOf('science', base)).toBe('general');
+    expect(astSeatKindOf('science', [...base, 'math-yi'])).toBe('sci-b');
+    expect(astSeatKindOf('science', [...base, 'geography'])).toBe('sci-soc');
+    expect(astSeatKindOf('science', [...base, 'history', 'civics'])).toBe('sci-soc');
+    expect(astSeatKindOf('science', [...base, 'math-yi', 'civics'])).toBe('sci-both');
+  });
+  it('文組：加考自然科（物化生任一）才有底色；沒有文理組不上色', () => {
+    const base = ['math-yi', 'history', 'geography', 'civics'];
+    expect(astSeatKindOf('liberal', base)).toBe('general');
+    expect(astSeatKindOf('liberal', [...base, 'chemistry'])).toBe('lib-sci');
+    expect(astSeatKindOf(undefined, [...base, 'chemistry'])).toBe('general');
+  });
+  it('預備教室考試淡藍與自習淺灰灰階亮度差 ≥ 15，黑白列印另有虛線框與文字', () => {
+    expect(Math.abs(gray(RESERVE_EXAM.bg) - gray(RESERVE_STUDY.bg))).toBeGreaterThanOrEqual(15);
   });
 });

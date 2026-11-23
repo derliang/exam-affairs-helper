@@ -87,7 +87,8 @@ export interface DocxOptions {
 }
 
 /** 抽離考試座位表的柔和單色（UI-23，主色 #274690 的淡底） */
-const DETACH = { bg: 'E6EBF7', line: '274690', fg: '274690' };
+// 自習座位頁（使用者 2026-11-23 方案 A）：自習＝淺灰＋虛線框；考試的預備教室才是淡藍
+const DETACH = { bg: 'ECEBE7', line: '22201B', fg: '22201B' };
 
 interface RunOpts {
   size: number; // pt
@@ -402,7 +403,7 @@ function sideParas(lines: PersonLine[], h: number, topPad: number, coord: string
 }
 
 /** 兩倍寬整合標籤（稿 v2.37／D107）：一張佔兩個實體格；單人左半編號姓名、右半科目；2 人左右各一人；3 人以上合併成一格 */
-function wideUnit(m: CellModel | undefined, o: { w: number; h: number; cellTw: number; isB4: boolean; mode: BoldMode }): TableCell[] {
+function wideUnit(m: CellModel | undefined, o: { w: number; h: number; cellTw: number; isB4: boolean; mode: BoldMode; fill?: string }): TableCell[] {
   const tw = (mm: number) => mmToTwip(mm);
   const b = bd(CUT, 8);
   const faint = bd('C8C2AE', 4);
@@ -412,7 +413,7 @@ function wideUnit(m: CellModel | undefined, o: { w: number; h: number; cellTw: n
       columnSpan: span > 1 ? span : undefined,
       verticalAlign: VerticalAlign.TOP,
       margins: { top: 0, bottom: 0, left: tw(1), right: tw(1) },
-      shading: { type: ShadingType.CLEAR, fill: 'FFFFFF', color: 'auto' },
+      shading: { type: ShadingType.CLEAR, fill: o.fill ?? 'FFFFFF', color: 'auto' },
       borders: borders as never,
       children,
     });
@@ -724,7 +725,7 @@ function labelSection(page: LabelPageModel, opts: DocxOptions): ISectionOptions 
     const cells: TableCell[] = [];
     for (let c = 0; c < ucols; c++) {
       const m = grid[r * ucols + c];
-      if (layout.wide) { cells.push(...wideUnit(m, { w: box.w, h: box.h, cellTw, isB4, mode })); continue; }
+      if (layout.wide) { cells.push(...wideUnit(m, { w: box.w, h: box.h, cellTw, isB4, mode, fill: m?.colorBg })); continue; }
       const marked = !!m && isSpecial(m);
       const b = bd(CUT, 8);
       cells.push(
