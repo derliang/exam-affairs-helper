@@ -5,6 +5,7 @@
  * 規則：標籤白底、不印鐘點；班座號＋姓名，名單有匯入「應試編號」才印；座位一律「排－深位」；
  * 考試時段列教室與座位，自習時段只列教室；不排監考人力、不列請假者。
  */
+import { RESERVE_STUDY } from '../../core/seatKind';
 import type { ExamConfig, LabelPaper } from '../../data';
 import { subjectShort } from '../../core/subjectShort';
 import { dataVersion } from '../../core/version';
@@ -272,7 +273,7 @@ function studyRefPages(c: Ctx): SeatPageModel[] {
         per.set(no, (per.get(no) ?? 0) + 1);
         cells.set(`${x.row}-${x.depth}`, {
           coord: seatText(x.row, x.depth), seat: { row: x.row, depth: x.depth }, code: x.code, classLabel: c.className(no), name: c.nameOf.get(x.code) ?? '',
-          colorBg: 'FFFFFF', colorLine: '222222', colorFg: '22201B', tags: [], marks: [], ref: true,
+          colorBg: RESERVE_STUDY.bg, colorLine: RESERVE_STUDY.line, colorFg: RESERVE_STUDY.fg, tags: [], marks: [], ref: true,
           corners: [{ kind: 'add', text: '自習' }],
         });
       }

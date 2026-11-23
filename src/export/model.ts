@@ -5,7 +5,7 @@
  */
 import { orderedRoomIds } from './classOrder';
 import { subjectShort } from '../core/subjectShort';
-import { legendKindsOf, SEAT_KINDS, seatKindOf, type SeatKind } from '../core/seatKind';
+import { legendKindsOf, RESERVE_EXAM, RESERVE_STUDY, SEAT_KINDS, seatKindOf, type SeatKind } from '../core/seatKind';
 import {
   classroomSeats,
   labelNoteLines,
@@ -896,7 +896,7 @@ export function buildSeatPages(input: ExportInput, scope: Scope = 'all'): SeatPa
         for (const m of sub.values()) {
           cells.set(`${m.seat.row}-${m.seat.depth}`, {
             coord: seatLabel(m.seat), seat: { row: m.seat.row, depth: m.seat.depth }, code: '', classLabel: '', name: '',
-            colorBg: 'FFFFFF', colorLine: '222222', colorFg: '22201B', tags: [], marks: [],
+            colorBg: RESERVE_EXAM.bg, colorLine: RESERVE_EXAM.line, colorFg: RESERVE_EXAM.fg, tags: [], marks: [],
             periodLines: [...m.lines].sort((x, y) => x.period - y.period).map(({ head, text }) => ({ head, text })),
             persons: personsOf(m, ctx),
           });
@@ -913,6 +913,7 @@ export function buildSeatPages(input: ExportInput, scope: Scope = 'all'): SeatPa
           tag: PREP_TAG,
           chips: [...(slotHead ? [slotHead] : []), `共 ${here.size} 人`, ...slotSubjectChips(sub), '抽離考試'],
           detachStyle: false,
+          legend: [{ label: RESERVE_EXAM.label, bg: RESERVE_EXAM.bg, line: RESERVE_EXAM.line }],
           slotMode: true,
           rows: room.rows,
           depth: room.depth,
@@ -966,6 +967,7 @@ function studyReferencePages(input: ExportInput, ctx: Ctx, rooms: Map<string, Cl
       tag: PREP_TAG,
       chips: ['自習座位，非考試座位', STUDY_LEGEND, `自習 ${ref.seats.size} 人`, ...(when ? [when] : []), subj],
       detachStyle: true,
+      legend: [{ label: RESERVE_STUDY.label, bg: RESERVE_STUDY.bg, line: RESERVE_STUDY.line }],
       rows: room.rows,
       depth: room.depth,
       cells,
@@ -1087,9 +1089,9 @@ export function buildLabelPages(input: ExportInput, scope: Scope = 'all'): Label
           code: '',
           classLabel: '',
           name: '',
-          colorBg: 'FFFFFF',
-          colorLine: '222222',
-          colorFg: '22201B',
+          colorBg: RESERVE_EXAM.bg,
+          colorLine: RESERVE_EXAM.line,
+          colorFg: RESERVE_EXAM.fg,
           tags: [],
           marks: [],
           periodLines: x.lines.sort((a, b) => a.period - b.period).map(({ head, text }) => ({ head, text })),
