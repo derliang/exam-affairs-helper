@@ -10,7 +10,6 @@
  */
 import { fmtTime, type MakeupOutputs, type MakeupRoster, type MakeupSchedule, type MakeupSettings, type SlotInfo } from '../core/makeup';
 import { classroomSeats, seatLabel, type Classroom } from '../data';
-import { classColor } from './colors';
 import { addSeatLegend, type CellModel, type SeatPageModel, type TablePageModel } from './model';
 
 export interface MakeupPaperInput {
@@ -269,7 +268,8 @@ export function buildSeatTablePages(i: MakeupPaperInput): SeatPageModel[] {
     for (const x of t.seats) {
       if (!x.seat) continue;
       const [r, d] = x.seat.split('-').map(Number) as [number, number];
-      const col = classColor(classes.indexOf(x.oldClass) + 1);
+      // 2026-11-23（D223）：班級色不再用在座位表，補考座位表一律白底（舊班靠格內「舊班｜學號」文字分辨）
+      const col = { bg: 'FFFFFF', line: '222222', fg: '22201B' };
       cells.set(x.seat, { coord: seatLabel({ row: r, depth: d }), seat: { row: r, depth: d }, code: pad2(x.oldSeat), classLabel: x.oldClass, name: x.studentId, colorBg: col.bg, colorLine: col.line, colorFg: col.fg, tags: [], marks: [] });
     }
     const sheet = roll.get(`${t.slotId}@@${t.roomId}`);
