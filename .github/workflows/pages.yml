@@ -27,5 +27,7 @@ jobs:
       - uses: actions/upload-pages-artifact@v5
         with:
           path: dist
+      # 2026-11-24：GitHub 的 artifact 清單在上傳後有延遲，deploy-pages 立刻查會回「Found 0 artifact(s)」而失敗；等一下再部署
+      - run: sleep 30
       - id: deployment
         uses: actions/deploy-pages@v5
