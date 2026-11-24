@@ -35,12 +35,11 @@ export function MkStep5(p: { s: MakeupSession; onChange: (s: MakeupSession) => v
       <div class="card stephead"><div><h2>⑤ 考程編排</h2><p class="small muted">系統建議節次與教室，你可以調整；每次調整即時重算全部檢核。</p></div></div>
 
       <div class="card stack">
-        <div class="row" style="justify-content:space-between">
-          <div><div class="lab">{pl.edited ? '目前用的是你調整過的考程' : '系統建議'}</div>
+        <div class="row" style="justify-content:space-between;align-items:flex-start">
+          <div><div class="lab" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">{pl.edited ? '目前用的是你調整過的考程' : <>系統建議 <Badge tone="info">未調整</Badge></>}</div>
             <p class="small muted">{pl.edited ? '名單變動時，你調整過的考程不會自動重排；想重新來過按「重新建議」。' : '人數多的科目獨立成節，其餘併入最後一節（綜合節，考完為止）；各科加總超過上限的多科生建議提前開考。'}</p></div>
           {pl.edited
-            ? <ConfirmButton kind="accent-outline" copy={{ title: '重新建議？', body: '你調整過的節次、提前開考學生與指定教室會被丟掉，改回系統依目前名單與教室的建議。', confirm: '重新建議' }} onConfirm={() => p.onChange(resetPlan(s))}>重新建議</ConfirmButton>
-            : <Badge tone="info">未調整</Badge>}
+            && <ConfirmButton kind="accent-outline" copy={{ title: '重新建議？', body: '你調整過的節次、提前開考學生與指定教室會被丟掉，改回系統依目前名單與教室的建議。', confirm: '重新建議' }} onConfirm={() => p.onChange(resetPlan(s))}>重新建議</ConfirmButton>}
         </div>
         <div class="stats">
           <div><small>應排人次</small><strong>{b.entries.length}</strong></div>

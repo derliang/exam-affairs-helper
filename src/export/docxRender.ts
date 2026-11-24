@@ -54,6 +54,7 @@ import {
   statLayout,
   statMerge,
   namePtFit,
+  threeLineFit,
   personLayout,
   wideLayout,
   type PersonLine,
@@ -298,6 +299,16 @@ function cellParas(
   fg: string,
   mode: BoldMode,
 ): Paragraph[] {
+  if (c.lines) {
+    // 補考座位表：座標在右上，下面三行「學號／班級 座號／姓名」置中，同字級（學號粗體）
+    const pt3 = threeLineFit(c.lines, g0.innerW, g0.h);
+    const lineH = pt3 * 0.3528 * 1.25;
+    const before = Math.max(0, (g0.h - g0.topPad - lineH * c.lines.length) / 2);
+    return [
+      line([run2(c.coord, { size: g0.coordPt, bold: true, color: '4A463A' }, mode)], { h: g0.topPad, align: AlignmentType.RIGHT, right: 0.6 }),
+      ...c.lines.map((t, i) => line([run2(t, { size: pt3, bold: i === 0, color: INK }, mode)], { h: lineH, align: AlignmentType.CENTER, ...(i === 0 ? { before } : {}) })),
+    ];
+  }
   // #223：座位表格高很小時（深位多、統計表長），編號、姓名、角標區整體等比縮小，才不會把右下角的角標擠出格子下緣被切掉
   // D147②：角標字多（抽離 科目 考試）時分成多行，角標區高度跟著加高再一起等比縮放
   const cLines = cornerLayout(c.corners ?? [], g0.innerW - 1.2, g0.markPt);
@@ -844,54 +855,68 @@ function tableSection(page: TablePageModel, opts: DocxOptions): ISectionOptions 
   const land = !!page.landscape;
   const pageW = land ? PAPER_MM.A4.h : PAPER_MM.A4.w;
   const contentW = mmToTwip(pageW - 2 * A4_MARGIN_MM);
-  const sum = page.widths.reduce((a, b) => a + b, 0);
-  const columnWidths = page.widths.map((f) => Math.floor((contentW * f) / sum));
-  const nHead = page.headGroups ? 2 : 1;
-  const fit = land ? landscapeFit(page.rows.length + (page.totalRow ? 1 : 0), nHead, page.emWidths ? sum : undefined) : { rowMm: 9, pt: 10.5 };
-  const flex = land && landscapeRowsFlex(page.rows.length + (page.totalRow ? 1 : 0), nHead);
-  const mk = (texts: string[], kind: 'head' | 'body' | 'total', kinds?: ('exam' | 'study' | 'multi' | undefined)[]) =>
-    new TableRow({
-      tableHeader: kind === 'head',
-      cantSplit: true,
-      height: { value: mmToTwip(kind === 'head' && !land ? 0 : fit.rowMm), rule: kind === 'head' && !land ? HeightRule.AUTO : land && !flex ? HeightRule.EXACT : HeightRule.ATLEAST },
-      children: texts.map(
-        (t, i) =>
-          new TableCell({
-            width: { size: columnWidths[i]!, type: WidthType.DXA },
+  // 補考考程表（2026-11-24 使用者：以一頁為原則）：一頁可放兩張表（學生時間表＋監考表），列高、字級依兩張表合計列數一起算
+  const both = [page, ...(page.second ? [page.second] : [])];
+  const totalRows = both.reduce((n, pg) => n + pg.rows.length + (pg.totalRow ? 1 : 0), 0);
+  const totalHead = both.reduce((n, pg) => n + (pg.headGroups ? 2 : 1), 0) + (page.second ? 3 : 0);
+  const sum0 = page.widths.reduce((a, b) => a + b, 0);
+  const fit = land ? landscapeFit(totalRows, totalHead, page.emWidths ? sum0 : undefined) : { rowMm: 9, pt: 10.5 };
+  const flex = land && landscapeRowsFlex(totalRows, totalHead);
+  const block = (pg: TablePageModel, first: boolean): (Paragraph | Table)[] => {
+    const sum = pg.widths.reduce((a, b) => a + b, 0);
+    const columnWidths = pg.widths.map((f) => Math.floor((contentW * f) / sum));
+    const mk = (texts: string[], kind: 'head' | 'body' | 'total', kinds?: ('exam' | 'study' | 'multi' | undefined)[]) =>
+      new TableRow({
+        tableHeader: kind === 'head',
+        cantSplit: true,
+        height: { value: mmToTwip(kind === 'head' && !land ? 0 : fit.rowMm), rule: kind === 'head' && !land ? HeightRule.AUTO : land && !flex ? HeightRule.EXACT : HeightRule.ATLEAST },
+        children: texts.map(
+          (t, i) =>
+            new TableCell({
+              width: { size: columnWidths[i]!, type: WidthType.DXA },
+              verticalAlign: VerticalAlign.CENTER,
+              borders: allBorders(thin('808080')),
+              shading:
+                kind === 'body'
+                  ? kinds?.[i] === 'study' ? { type: ShadingType.CLEAR, fill: 'D9D9D9', color: 'auto' } : kinds?.[i] === 'multi' ? { type: ShadingType.CLEAR, fill: 'FFF4C2', color: 'auto' } : undefined
+                  : { type: ShadingType.CLEAR, fill: kind === 'head' ? 'EEEEEE' : 'F4F4F4', color: 'auto' },
+              margins: { top: land ? 10 : 40, bottom: land ? 10 : 40, left: 60, right: 60 },
+              children: [para([run(t, { size: fit.pt, bold: kind !== 'body' || kinds?.[i] === 'exam' || kinds?.[i] === 'multi' }, mode)], land && kind !== 'body' ? AlignmentType.CENTER : AlignmentType.LEFT, land ? { spacing: { before: 0, after: 0, line: Math.round(fit.pt * 20 * 1.25), lineRule: LineRuleType.EXACT } } : {})],
+            }),
+        ),
+      });
+    const groupRow = (): TableRow | undefined => {
+      if (!pg.headGroups) return undefined;
+      let col = 0;
+      return new TableRow({
+        tableHeader: true,
+        cantSplit: true,
+        height: { value: mmToTwip(fit.rowMm), rule: HeightRule.EXACT },
+        children: pg.headGroups.map((g) => {
+          const w = columnWidths.slice(col, col + g.span).reduce((x, y) => x + y, 0);
+          col += g.span;
+          return new TableCell({
+            width: { size: w, type: WidthType.DXA },
+            columnSpan: g.span,
             verticalAlign: VerticalAlign.CENTER,
             borders: allBorders(thin('808080')),
-            shading:
-              kind === 'body'
-                ? kinds?.[i] === 'study' ? { type: ShadingType.CLEAR, fill: 'D9D9D9', color: 'auto' } : kinds?.[i] === 'multi' ? { type: ShadingType.CLEAR, fill: 'FFF4C2', color: 'auto' } : undefined
-                : { type: ShadingType.CLEAR, fill: kind === 'head' ? 'EEEEEE' : 'F4F4F4', color: 'auto' },
-            margins: { top: land ? 10 : 40, bottom: land ? 10 : 40, left: 60, right: 60 },
-            children: [para([run(t, { size: fit.pt, bold: kind !== 'body' || kinds?.[i] === 'exam' || kinds?.[i] === 'multi' }, mode)], land && kind !== 'body' ? AlignmentType.CENTER : AlignmentType.LEFT, land ? { spacing: { before: 0, after: 0, line: Math.round(fit.pt * 20 * 1.25), lineRule: LineRuleType.EXACT } } : {})],
-          }),
-      ),
-    });
-  const groupRow = (): TableRow | undefined => {
-    if (!page.headGroups) return undefined;
-    let col = 0;
-    return new TableRow({
-      tableHeader: true,
-      cantSplit: true,
-      height: { value: mmToTwip(fit.rowMm), rule: HeightRule.EXACT },
-      children: page.headGroups.map((g) => {
-        const w = columnWidths.slice(col, col + g.span).reduce((x, y) => x + y, 0);
-        col += g.span;
-        return new TableCell({
-          width: { size: w, type: WidthType.DXA },
-          columnSpan: g.span,
-          verticalAlign: VerticalAlign.CENTER,
-          borders: allBorders(thin('808080')),
-          shading: { type: ShadingType.CLEAR, fill: 'E2E2E2', color: 'auto' },
-          margins: { top: 10, bottom: 10, left: 60, right: 60 },
-          children: [para([run(g.text, { size: fit.pt, bold: true }, mode)], AlignmentType.CENTER)],
-        });
-      }),
-    });
+            shading: { type: ShadingType.CLEAR, fill: 'E2E2E2', color: 'auto' },
+            margins: { top: 10, bottom: 10, left: 60, right: 60 },
+            children: [para([run(g.text, { size: fit.pt, bold: true }, mode)], AlignmentType.CENTER)],
+          });
+        }),
+      });
+    };
+    const rows = [...(groupRow() ? [groupRow()!] : []), mk(pg.heads, 'head'), ...pg.rows.map((r, ri) => mk(r, 'body', pg.cellKinds?.[ri])), ...(pg.totalRow ? [mk(pg.totalRow, 'total')] : [])];
+    return [
+      // 橫式公告：標題與人數同一行，省下高度讓 45 人以上也擠得進一頁
+      ...(first ? [] : [line([], { h: 2 })]),
+      para([run(land && pg.subtitle ? `${pg.title}　${pg.subtitle}` : pg.title, { size: land ? 14 : 16, bold: true }, mode)], AlignmentType.CENTER, { spacing: { before: 0, after: land ? 30 : 60 } }),
+      ...(pg.subtitle && !land ? [para([run(pg.subtitle, { size: 12 }, mode)], AlignmentType.CENTER, { spacing: { before: 0, after: pg.legend ? 40 : 120 } })] : []),
+      ...(pg.legend ? [para([run(pg.legend, { size: land ? 8 : 9.5, color: GRAY }, mode)], AlignmentType.CENTER, { spacing: { before: 0, after: land ? 50 : 100 } })] : []),
+      new Table({ width: { size: columnWidths.reduce((a, b) => a + b, 0), type: WidthType.DXA }, columnWidths, layout: TableLayoutType.FIXED, rows }),
+    ];
   };
-  const rows = [...(groupRow() ? [groupRow()!] : []), mk(page.heads, 'head'), ...page.rows.map((r, ri) => mk(r, 'body', page.cellKinds?.[ri])), ...(page.totalRow ? [mk(page.totalRow, 'total')] : [])];
   return {
     properties: {
       page: {
@@ -901,11 +926,7 @@ function tableSection(page: TablePageModel, opts: DocxOptions): ISectionOptions 
     },
     footers: { default: footer(opts) },
     children: [
-      // 橫式公告：標題與人數同一行，省下高度讓 45 人以上也擠得進一頁
-      para([run(land && page.subtitle ? `${page.title}　${page.subtitle}` : page.title, { size: land ? 14 : 16, bold: true }, mode)], AlignmentType.CENTER, { spacing: { before: 0, after: land ? 30 : 60 } }),
-      ...(page.subtitle && !land ? [para([run(page.subtitle, { size: 12 }, mode)], AlignmentType.CENTER, { spacing: { before: 0, after: page.legend ? 40 : 120 } })] : []),
-      ...(page.legend ? [para([run(page.legend, { size: land ? 8 : 9.5, color: GRAY }, mode)], AlignmentType.CENTER, { spacing: { before: 0, after: land ? 50 : 100 } })] : []),
-      new Table({ width: { size: columnWidths.reduce((a, b) => a + b, 0), type: WidthType.DXA }, columnWidths, layout: TableLayoutType.FIXED, rows }),
+      ...both.flatMap((pg, k) => block(pg, k === 0)),
       // Word 表格後一定要有一個段落；橫式公告表剛好填滿一頁時，這個段落會獨自掉到下一頁，所以壓成極小
       ...(land ? [line([], { h: 0.35 })] : []),
     ],

@@ -69,6 +69,8 @@ export interface CellModel {
    * 有這個欄位的格子只印座標與這幾行。
    */
   periodLines?: { head: string; text: string }[];
+  /** 補考座位表（2026-11-24 使用者要求）：格內固定三行「學號／班級 座號／姓名」，同字級取格內放得下的最大值；有這個欄位就不印 code、班級｜姓名 */
+  lines?: string[];
   /** 預備教室／綜合教室／整合標籤格（v2.36，#221 #212 #216）：每個坐這格的人一筆，版式同一般教室標籤 */
   persons?: PersonModel[];
   /** 特殊考生單字角標（v2.36，#223）：右下角；取代整格粗框與整句小牌 */
@@ -183,6 +185,8 @@ export interface TablePageModel {
   cellKinds?: (('exam' | 'study' | 'multi' | undefined)[])[];
   /** 表頭上方一行說明（頁首右側教室牌改放在 title 之後） */
   legend?: string;
+  /** 同一頁的第二張表（補考考程表：學生時間表＋監考表放同一頁，2026-11-24 使用者要求以一頁為原則）；版面與第一張相同，只有橫式頁支援 */
+  second?: TablePageModel;
 }
 export type PageModel = SeatPageModel | LabelPageModel | ListPageModel | TablePageModel;
 
@@ -1220,6 +1224,14 @@ export function textWidthMm(text: string, pt: number, bold = false): number {
  * 格內「班級｜姓名」的字級（pt）：在格寬放得下的前提下取最大（#222、#218）。
  * 班級字粗體、與姓名以細線隔開（約 1.2em 的間隔）；maxPt 是上限（三字姓名才會用到），最小 minPt。
  */
+/** 三行座位格的字級（pt）：最寬一行要放進格寬，三行加座標列要放進格高；取 0.5pt 為單位，不小於 6、不大於 16 */
+export function threeLineFit(lines: string[], wMm: number, hMm: number): number {
+  const em = Math.max(...lines.map((t, i) => textWidthMm(t, 1, i === 0) / 0.3528));
+  const byW = (wMm - 2) / (em * 0.3528);
+  const byH = (hMm - 5) / (lines.length * 1.25 * 0.3528);
+  return Math.max(6, Math.min(16, Math.floor(Math.min(byW, byH) * 2) / 2));
+}
+
 export function namePtFit(classLabel: string, name: string, innerMm: number, maxPt: number, minPt = 7): number {
   const em = textWidthMm(classLabel, 1, true) / 0.3528 + textWidthMm(name, 1) / 0.3528 + 1.4;
   const fit = innerMm / (em * 0.3528);

@@ -98,7 +98,7 @@ export function NewExam(p: {
 
   return (
     <section>
-      <PageHead crumbs={[{ label: '模擬考列表', onClick: p.onCancel }]} title="新增模擬考" />
+      <PageHead crumbs={[{ label: '模擬考', onClick: p.onCancel }]} title="新增模擬考" />
       <div class="stack" style="max-width:860px">
         <p class="muted">先選類型，類型決定科目表、組別對照表和標示規則。</p>
 

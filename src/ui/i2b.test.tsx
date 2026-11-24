@@ -92,7 +92,7 @@ describe('預備教室與抽離子頁（H-9）', () => {
     expect(slots.map((s) => s.name)).toEqual(['社會', '自然', '英聽']);
     expect(slots.find((s) => s.name === '社會')!.studyN).toBeGreaterThan(0);
     expect(slots.find((s) => s.name === '自然')!.examN).toBeGreaterThan(0);
-    const html = renderToString(<ReservePage doc={d} examId="e1" crumbs={[{ label: '模擬考列表', onClick: noop }]} onGoStep={noop} onExams={noop} />);
+    const html = renderToString(<ReservePage doc={d} examId="e1" crumbs={[{ label: '模擬考', onClick: noop }]} onGoStep={noop} onExams={noop} />);
     for (const t of ['預備教室與抽離', '節次科目', '抽離考試', '抽離自習', '預備教室容量', '使用教室', '出座位表與標籤']) expect(html).toContain(t);
     expect(html).toContain('社會');
     expect(html).toContain('自然');
@@ -133,7 +133,7 @@ describe('步驟⑥ 合併區塊與 #147 核實', () => {
 });
 
 describe('其餘頁合併區塊（稿 v2.31）', () => {
-  it('模擬考列表：進度圖例收進「說明」', () => {
+  it('模擬考：進度圖例收進「說明」', () => {
     const html = renderToString(<Exams doc={doc()} onOpen={noop} onNew={noop} onSettings={noop} onChangeFolder={noop} />);
     expect(html).toContain('說明：進度條怎麼看');
     expect(html).toMatch(/<details class="more"><summary>說明：進度條怎麼看<\/summary><div><div class="plegend"/);

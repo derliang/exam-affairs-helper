@@ -35,7 +35,7 @@ export function Init(p: { repo: Repository; fsSupported: boolean; fs?: FsReposit
     const d = p.doc;
     return (
       <section>
-        <PageHead {...(p.onBack ? { crumbs: [{ label: '模擬考列表', onClick: p.onBack }] } : {})} title="資料夾設定" />
+        <PageHead {...(p.onBack ? { crumbs: [{ label: '模擬考', onClick: p.onBack }] } : {})} title="資料夾設定" />
         <div class="stack" style="max-width:860px">
           <FolderCard name={p.fs.folderName?.() ?? ''} missing={!!p.missing} pending={p.fs.pendingCount()} lastSaved={p.fs.lastSavedAt()} exams={d.exams.length} rosters={[d.rosters.senior, d.rosters.junior].filter((r) => r.length > 0).length} onRelink={() => p.onDialog!('relink')} onChange={() => p.onDialog!('change')} onMove={() => p.onDialog!('move')} />
         </div>

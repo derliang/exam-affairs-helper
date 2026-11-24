@@ -1,16 +1,16 @@
 import { subjectShort } from '../../core/subjectShort';
 import type { ExamConfig } from '../../data';
 import { Alert } from '../components';
-import { MarkLabelSample, sampleCellMm } from './LabelSample';
+import { MarkLabelSample, ReserveLabelSample, sampleCellMm } from './LabelSample';
 import { markRows } from '../seating';
 import { examLabel, examYear, type Doc } from '../store';
 import { mathSplit } from '../subjects';
 
 /** 右側欄（原型 v1side／v4side）：只有 ① 與 ④ 有，其餘步驟沒有右側欄（原型 stepView） */
-export function hasSide(step: number, kind?: string): boolean { return step === 1 || (step === 4 && kind !== 'ast'); }
+export function hasSide(step: number, kind?: string): boolean { return step === 1 || step === 3 || (step === 4 && kind !== 'ast'); }
 
 export function StepSide(p: { step: number; doc: Doc; exam: ExamConfig }) {
-  return p.step === 1 ? <Side1 {...p} /> : p.step === 4 ? <Side4 {...p} /> : null;
+  return p.step === 1 ? <Side1 {...p} /> : p.step === 3 ? <Side3 {...p} /> : p.step === 4 ? <Side4 {...p} /> : null;
 }
 
 /** ① 本次摘要、這一步會影響 */
@@ -34,6 +34,19 @@ function Side1(p: { exam: ExamConfig }) {
         {stale && <Alert tone="warn">次別改了，④ 已標為過期。</Alert>}
       </div>
     </>
+  );
+}
+
+/** ③ 合併標籤（範例）：與 ④ 的「範例標示」同一種做法——範例一律放右側欄，不放在頁面最下方（稿 v2.107、D226）。只有高中部學測／會考有預備教室合併標籤 */
+function Side3(p: { exam: ExamConfig }) {
+  if (p.exam.kind === 'ast' || p.exam.division !== 'senior') return null;
+  return (
+    <div class="card stack">
+      <div class="lab">合併標籤（範例）</div>
+      <p class="small muted">預備教室每個座位一張，同一座位不同節由不同人使用時合在同一張、只貼一次；用實際輸出的程式畫的（假資料，{p.exam.labelLayout.paper}）。</p>
+      <ReserveLabelSample paper={p.exam.labelLayout.paper} />
+      <p class="small muted">第 2 張：同一個人跨天坐同一格。第 3 張：兩個不同的人共用同一格。併在「標籤」檔案最後，頁首標「預備教室」；抽離自習不排座位、不印標籤，只出名單。</p>
+    </div>
   );
 }
 

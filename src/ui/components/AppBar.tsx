@@ -7,14 +7,14 @@ export const nextTheme = (t: Theme): Theme => (t === 'system' ? 'light' : t === 
 export interface AppBarItem { id: string; label: string; current?: boolean; disabled?: boolean; onClick: () => void }
 
 /**
- * 全站品牌列（稿 v2.31，DESIGN 10.18）：左＝標誌＋名稱＋版本（回模擬考列表）；中＝主導覽；右＝外觀切換。
+ * 全站品牌列（稿 v2.31，DESIGN 10.18）：左＝標誌＋名稱＋版本（回模擬考）；中＝主導覽；右＝外觀切換。
  * 目前所在頁：深色中性底＋底線（不用藍）。不黏頂；≤720px 導覽收進「選單」鈕，版本隱藏，外觀鈕只留圖示。
  */
 export function AppBar(p: { version: string; items: AppBarItem[]; theme: Theme; onTheme: (t: Theme) => void; onHome: () => void; homeDisabled?: boolean }) {
   const [open, setOpen] = useState(false);
   return (
     <header class={`appbar${open ? ' open' : ''}`} id="appbar">
-      <button type="button" class="ab-brand" disabled={p.homeDisabled} aria-label="考務小幫手，回模擬考列表" onClick={() => { setOpen(false); p.onHome(); }}>
+      <button type="button" class="ab-brand" disabled={p.homeDisabled} aria-label="考務小幫手，回模擬考" onClick={() => { setOpen(false); p.onHome(); }}>
         <span class="ab-logo" aria-hidden="true">
           <svg viewBox="0 0 34 34" fill="none">
             {[0, 1, 2].flatMap((r) => [0, 1, 2].map((c) => (

@@ -93,9 +93,9 @@ export function ReconcilePanel(p: {
           <thead><tr><th>時段</th><th>科目</th><th>名單範圍</th><th>＝ 考試</th>{r.hasStudy && <th>＋ 自習</th>}{r.hasAbsent && <th>＋ 不參加</th>}<th>座位表</th><th>標籤</th><th>教室加總</th><th>帳</th></tr></thead>
           <tbody>{r.ledger.map((l) => (
             <tr key={l.key} data-ledger-ok={l.ok} class={l.ok ? '' : 'bad rc-bad'}>
-              <td class="ti" data-label="時段">{l.when}</td><td data-label="科目">{l.subject}</td><td data-label="名單範圍">{l.scope}</td><td data-label="＝ 考試">{l.exam}</td>{r.hasStudy && <td data-label="＋ 自習">{l.study}</td>}{r.hasAbsent && <td data-label="＋ 不參加">{l.absent}</td>}
-              <td data-label="座位表" class={l.seat === ledgerWant(l).seat ? undefined : 'rc-x'}>{l.seat} {l.seat === ledgerWant(l).seat ? '✓' : '✕'}</td><td data-label="標籤" class={l.label === ledgerWant(l).label ? undefined : 'rc-x'}>{l.label} {l.label === ledgerWant(l).label ? '✓' : '✕'}</td><td data-label="教室加總" class={l.room === ledgerWant(l).room ? undefined : 'rc-x'}>{l.room} {l.room === ledgerWant(l).room ? '✓' : '✕'}</td>
-              <td data-label="帳" class={l.ok ? undefined : 'rc-x'}>{l.ok ? '✓ 平' : '✕ 不平'}</td>
+              <td class="ti" data-label="時段">{l.when}</td><td class="bx" data-label="科目">{l.subject}</td><td class="n" data-label="名單範圍">{l.scope}</td><td class="n" data-label="＝ 考試">{l.exam}</td>{r.hasStudy && <td class="n" data-label="＋ 自習">{l.study}</td>}{r.hasAbsent && <td class="n" data-label="＋ 不參加">{l.absent}</td>}
+              <td data-label="座位表" class={l.seat === ledgerWant(l).seat ? 'n' : 'n rc-x'}>{l.seat} {l.seat === ledgerWant(l).seat ? '✓' : '✕'}</td><td data-label="標籤" class={l.label === ledgerWant(l).label ? 'n' : 'n rc-x'}>{l.label} {l.label === ledgerWant(l).label ? '✓' : '✕'}</td><td data-label="教室加總" class={l.room === ledgerWant(l).room ? 'n' : 'n rc-x'}>{l.room} {l.room === ledgerWant(l).room ? '✓' : '✕'}</td>
+              <td data-label="帳" class={l.ok ? 'st' : 'st rc-x'}>{l.ok ? '✓ 平' : '✕ 不平'}</td>
             </tr>
           ))}</tbody>
         </table>

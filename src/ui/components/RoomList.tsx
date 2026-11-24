@@ -68,6 +68,8 @@ export function RoomList(p: {
   track?: 'seg' | 'badge' | 'none';
   /** 列入開關的字樣（預設 列為考場／列為預備） */
   switchLabel?: (r: Classroom) => string;
+  /** 補考：不走「勾選本次考試」的 selected，但開關一樣放在教室列最左邊（與學測、分科同位置）；刪除仍是補考自己的整間刪除 */
+  useSwitch?: { isOn: (id: string) => boolean; set: (id: string, v: boolean) => void; label?: string; onText?: string; offText?: string };
   /** 預備教室的稱呼（分科叫綜合教室） */
   reserveName?: string;
   /** 每列的額外欄（分科自習容量、共用設定所屬部別、精靈學生人數）；room＝本次生效的教室，shared＝共用清單原樣 */
@@ -132,28 +134,34 @@ export function RoomList(p: {
           const canNoSeat = !!p.noSeatToggle && r.kind === 'class';
           return (
             <div key={shared.id} class="rw">
-              <div class={`roomrow${isOpen ? ' on' : ''}${(p.selected && !on) || (noSeat && canNoSeat) ? ' off' : ''}`} aria-expanded={isOpen} onClick={() => (noSeat && canNoSeat ? undefined : openEditor(shared.id, hasOv, canOv))}>
+              <div class={`roomrow${isOpen ? ' on' : ''}${(p.selected && !on) || (p.useSwitch && !p.useSwitch.isOn(r.id)) || (noSeat && canNoSeat) ? ' off' : ''}`} aria-expanded={isOpen} onClick={() => (noSeat && canNoSeat ? undefined : openEditor(shared.id, hasOv, canOv))}>
                 <div class="swf" onClick={stop}>
                   {p.selected && p.onSelect ? (
                     <Switch label={swLabel} ariaLabel={`${swLabel}：${r.name}`} checked={on}
                       onChange={(v) => p.onSelect!(v ? [...p.selected!, r.id] : p.selected!.filter((x) => x !== r.id))} />
+                  ) : p.useSwitch ? (
+                    <Switch label={p.useSwitch.label ?? '列入本次'} ariaLabel={`${p.useSwitch.label ?? '列入本次'}：${r.name}`} checked={p.useSwitch.isOn(r.id)}
+                      {...(p.useSwitch.onText ? { onText: p.useSwitch.onText } : {})} {...(p.useSwitch.offText ? { offText: p.useSwitch.offText } : {})}
+                      onChange={(v) => p.useSwitch!.set(r.id, v)} />
                   ) : <RoomBadge room={r} index={idx} classes={p.classes} {...(p.flat ? { flat: true } : {})} />}
                 </div>
-                <div class="field"><label class="small" for={`rn-${r.id}`}>{isReserve ? reserveName : '教室'}</label>
+                <div class="field rr-nm"><label class="small" for={`rn-${r.id}`}>{isReserve ? reserveName : '教室'}</label>
                   <input id={`rn-${r.id}`} class="input" value={r.name} onClick={stop} onChange={(e) => upd(r.id, (x) => ({ ...x, name: e.currentTarget.value.trim() || x.name }))} />
                   {orphan && <span class="hint">名冊已沒有這個班</span>}
                   {noSeat && <span><Badge>不排座</Badge></span>}</div>
                 <div class="row roomcfg"><SeatThumb room={r} /><span><b>{r.rows}</b> 排×<b>{r.depth}</b> 深位{hasOv && <> <Badge tone="info">本次專用</Badge></>}{shape && <><br /><span class="small muted">{shape}</span></>}</span></div>
                 <div class="info">座位 <b>{slots}</b>・不排 <b>{slots - r.seatCount}</b>・可排 <b>{r.seatCount}</b>{isReserve && !p.flat ? <><br />{reserveName}，不計入教室座位合計</> : null}</div>
+                {(trackMode === 'seg' && r.kind === 'class') || (trackMode === 'badge' && trackOf) || p.extra ? <div class="rr-x" onClick={stop}>
                 {trackMode === 'seg' && r.kind === 'class' && (
-                  <div onClick={stop}>
+                  <div>
                     <Seg<Track> label={`${r.name}組別`} value={(r.track ?? '') as Track} options={[{ value: 'science', label: '理組' }, { value: 'liberal', label: '文組' }]}
                       onChange={(t) => upd(r.id, (x) => setRoomTrack(x, t))} />
                     {!r.track && <span class="hint">⚠ 還沒指定，高中部排座會被擋下</span>}
                   </div>
                 )}
                 {trackMode === 'badge' && trackOf && <Badge>{trackOf === 'science' ? '理組教室' : '文組教室'}</Badge>}
-                {p.extra && <div onClick={stop}>{p.extra(r, shared)}</div>}
+                {p.extra && <div>{p.extra(r, shared)}</div>}
+                </div> : null}
                 <div class="btnrow" onClick={stop}>
                   <Button small disabled={noSeat && canNoSeat} {...(isOpen ? { kind: 'primary' as const } : {})} onClick={() => openEditor(shared.id, hasOv, canOv)}>{isOpen ? '收合座位 ▴' : '編輯座位 ▾'}</Button>
                   {canNoSeat && <Button small onClick={() => { if (isOpen) setOpen(null); upd(r.id, (x) => setNoSeat(x, !x.noSeat)); }}>{noSeat ? '改回排座' : '不排座'}</Button>}

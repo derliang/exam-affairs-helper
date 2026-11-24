@@ -39,7 +39,7 @@ export function ReservePage(p: { doc: Doc; examId: string; crumbs: { label: stri
   const [sel, setSel] = useState('');
   const [allRows, setAllRows] = useState<Record<string, boolean>>({}); // 稿 v2.75 §6：預備教室名單前 10 筆，其餘按「顯示全部」
   if (!exam) {
-    return <section><PageHead crumbs={p.crumbs} title="預備教室與抽離" /><EmptyState title="找不到這個模擬考" action={<Button kind="primary" onClick={p.onExams}>回模擬考列表</Button>}>它可能已被刪除，或資料夾換了。</EmptyState></section>;
+    return <section><PageHead crumbs={p.crumbs} title="預備教室與抽離" /><EmptyState title="找不到這個模擬考" action={<Button kind="primary" onClick={p.onExams}>回模擬考</Button>}>它可能已被刪除，或資料夾換了。</EmptyState></section>;
   }
   const head = <PageHead crumbs={p.crumbs} title="預備教室與抽離" badge={exam.name} />;
   if (exam.division === 'junior') {

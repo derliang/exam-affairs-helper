@@ -109,7 +109,8 @@ export function summarizeTables(file: string, kind: MakeupDocKind, raw: RawTable
     for (const t of ts) {
       const stat: Record<string, number> = {};
       const mine: Record<string, number> = {};
-      for (const r of t) {
+      // 點名單分左右兩組並排（每組 7 欄）：兩組都讀，空白組略過
+      for (const r of t.flatMap((row) => (row.length > 7 ? [row.slice(0, 7), row.slice(7, 14)] : [row])).filter((row) => (row[0] ?? '') !== '')) {
         if (r[0] === '統計') { stat[r[4]!] = num(r[5]); continue; }
         const n = num(r[5]);
         const subs = (r[4] ?? '').split('、').filter(Boolean);

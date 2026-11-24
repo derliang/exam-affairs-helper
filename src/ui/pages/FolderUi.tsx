@@ -37,7 +37,7 @@ export function FolderLostAlert(p: { name: string; pending: number; detail?: str
   );
 }
 
-/** 模擬考列表區的錯誤狀態：讀不到資料夾，所以不顯示「還沒有模擬考」 */
+/** 模擬考區的錯誤狀態：讀不到資料夾，所以不顯示「還沒有模擬考」 */
 export function FolderListError(p: { onRelink: () => void }) {
   return (
     <div class="empty folder-lost-empty" role="alert">

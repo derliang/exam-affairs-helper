@@ -7,7 +7,7 @@ import { Privacy } from './Privacy';
 import { Copyright } from './Copyright';
 import { Footer } from '../components/Footer';
 
-const html = renderToString(<Privacy backLabel="模擬考列表" onBack={() => undefined} onCopyright={() => undefined} />);
+const html = renderToString(<Privacy backLabel="模擬考" onBack={() => undefined} onCopyright={() => undefined} />);
 const root = fileURLToPath(new URL('../../../', import.meta.url));
 
 function walk(dir: string, out: string[] = []): string[] {
@@ -22,7 +22,7 @@ const srcFiles = walk(join(root, 'src')).filter((f) => /\.(ts|tsx|css|html)$/.te
 
 describe('隱私權頁', () => {
   it('有返回鈕、H1、更新日期、English 錨點與連結、mailto', () => {
-    expect(html).toContain('← 回到 模擬考列表');
+    expect(html).toContain('← 回到 模擬考');
     expect(html).toContain('<h1 style="margin:0">隱私權政策</h1>');
     expect(html).toContain('隱私權政策｜考務小幫手');
     expect(html).toContain('最後更新日期：2026 年 11 月 8 日');

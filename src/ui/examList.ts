@@ -1,4 +1,4 @@
-/** 模擬考列表的純邏輯：六格進度、「N／M 步完成・進行中：…」、學年與人數、排序。畫面只負責畫。 */
+/** 模擬考的純邏輯：六格進度、「N／M 步完成・進行中：…」、學年與人數、排序。畫面只負責畫。 */
 import type { ExamConfig } from '../data';
 import { flowOf } from './flow';
 import { stepNamesOf } from './nav';

@@ -6,7 +6,7 @@ import { STEP_BLURBS, UNDO_HINT, type ConfirmCopy, type Flow, type NextAction } 
 import type { StepNo } from '../seating';
 
 /** accent-outline＝主色外框鈕（稿 v2.70 〈③ 還原預設〉、DESIGN §10.38）：比預設淡灰底明顯、又不跟主鈕搶 */
-type BtnKind = 'primary' | 'danger' | 'ghost' | 'default' | 'accent-outline';
+type BtnKind = 'primary' | 'danger' | 'warn' | 'ghost' | 'default' | 'accent-outline';
 
 export function Button(p: {
   kind?: BtnKind; small?: boolean; /** 大鈕（btn-lg）：空白狀態的唯一主要動作 */ large?: boolean; disabled?: boolean; onClick?: () => void; children: ComponentChildren; title?: string;
@@ -286,7 +286,7 @@ export function StepDock(p: { action: NextAction; current: StepNo; prev?: { to: 
         </div>
         <div class="dock-cell dock-next">
           {last
-            ? <><Button kind="primary" onClick={p.onExams}>完成 ✓</Button><span class="dock-sub">回模擬考列表</span></>
+            ? <><Button kind="primary" onClick={p.onExams}>完成 ✓</Button><span class="dock-sub">回模擬考</span></>
             : <><Button kind="primary" onClick={() => p.onGo(a.kind === 'go' ? a.to : p.current)}>下一步 ›</Button><span class="dock-sub">{a.kind === 'go' ? a.name : ''}</span></>}
         </div>
       </div>

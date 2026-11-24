@@ -8,7 +8,7 @@ import { dateRangeText, groupExams, todayTaipei } from '../examDates';
 import { examLabel, lastModified, examYear, type Doc } from '../store';
 import { envBanner } from '../env';
 
-/** 模擬考列表（DESIGN 10.x）：頁首 h1＋資料夾 chip，每列有六格進度條、學年與人數、最後修改；依最後修改由新到舊 */
+/** 模擬考（DESIGN 10.x）：頁首 h1＋資料夾 chip，每列有六格進度條、學年與人數、最後修改；依最後修改由新到舊 */
 /** 刪除考試前的確認（G1；#413 第 2 項、D163：標準 ConfirmModal，不輸入名稱）：單場與多場同一個視窗，寫明會刪什麼、不會動什麼 */
 export function DeleteExamModal(p: { exam?: ExamConfig; exams?: ExamConfig[]; onConfirm: () => void; onClose: () => void }) {
   const list = p.exams ?? (p.exam ? [p.exam] : []);

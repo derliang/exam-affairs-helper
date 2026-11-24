@@ -85,12 +85,12 @@ describe('G4 換步驟回頁頂', () => {
 });
 
 describe('G2 新增模擬考頁標題區不重複', () => {
-  it('「新增模擬考」只出現在 h1，路徑列只列來源「模擬考列表」', () => {
+  it('「新增模擬考」只出現在 h1，路徑列只列來源「模擬考」', () => {
     const html = renderToString(<NewExam doc={demoDoc()} onCancel={noop} onCreate={noop} />);
     expect(html).toContain('<h1>新增模擬考</h1>');
     expect(html).not.toContain('aria-current="page"');
     const nav = html.slice(html.indexOf('class="crumbs"'), html.indexOf('</nav>'));
-    expect(nav).toContain('模擬考列表');
+    expect(nav).toContain('模擬考');
     expect(nav).not.toContain('新增模擬考');
   });
 });

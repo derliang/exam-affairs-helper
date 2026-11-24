@@ -75,9 +75,8 @@ export function AstStep3(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
     const bad = capc.hasList && have < need;
     return (
       <div class={`chk${bad ? ' bad' : ''}`}>
-        <small>{label}</small><strong>{have}</strong>
+        <div class="chk-h"><small>{label}</small>{capc.hasList && <Badge tone={bad ? 'danger' : 'ok'}>{bad ? `不足 ${need - have}` : '夠用'}</Badge>}</div><strong>{have}</strong>
         {capc.hasList && <span class="sub">最多一個時段考生 {need}</span>}
-        {capc.hasList && <Badge tone={bad ? 'danger' : 'ok'}>{bad ? `不足 ${need - have}` : '夠用'}</Badge>}
       </div>
     );
   };
@@ -99,15 +98,13 @@ export function AstStep3(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
           {check('文組考場座位', capc.liberal.seats, capc.liberal.need)}
           {capc.hasList && (
             <div class={`chk${capc.everyone.seats < capc.everyone.people ? ' bad' : ''}`}>
-              <small>全體座位（含自習者）</small><strong>{capc.everyone.seats}</strong>
-              <span class="sub">全體 {capc.everyone.people} 人{capc.studyOnly > 0 ? `（其中 ${capc.studyOnly} 人不考任何科、每節自習，不排考試座位，但要有地方坐）` : ''}</span>
-              <Badge tone={capc.everyone.seats < capc.everyone.people ? 'danger' : 'ok'}>{capc.everyone.seats < capc.everyone.people ? `不足 ${capc.everyone.people - capc.everyone.seats}` : '夠用'}</Badge>
+              <div class="chk-h"><small>全體座位（含自習者）</small><Badge tone={capc.everyone.seats < capc.everyone.people ? 'danger' : 'ok'}>{capc.everyone.seats < capc.everyone.people ? `不足 ${capc.everyone.people - capc.everyone.seats}` : '夠用'}</Badge></div><strong>{capc.everyone.seats}</strong>
+              <span class="sub" title={capc.studyOnly > 0 ? `其中 ${capc.studyOnly} 人不考任何科、每節自習，不排考試座位，但要有地方坐` : undefined}>全體 {capc.everyone.people} 人{capc.studyOnly > 0 ? `・${capc.studyOnly} 人每節自習` : ''}</span>
             </div>
           )}
           <div class={`chk${capc.hasList && short > 0 ? ' warnc' : ''}`}>
-            <small>綜合教室自習容量</small><strong>{capc.study.capacity}</strong>
-            {capc.hasList && <span class="sub">最多一個時段自習 {capc.study.need}（{MODE_LABEL[astModeOf(exam)]}）・已勾 {capc.study.on}／{capc.study.total} 間</span>}
-            {capc.hasList && <Badge tone={short > 0 ? 'warn' : 'ok'}>{short > 0 ? `有 ${short} 個時段放不下` : '夠用'}</Badge>}
+            <div class="chk-h"><small>綜合教室自習容量</small>{capc.hasList && <Badge tone={short > 0 ? 'warn' : 'ok'}>{short > 0 ? `${short} 個時段放不下` : '夠用'}</Badge>}</div><strong>{capc.study.capacity}</strong>
+            {capc.hasList && <span class="sub">最多一時段自習 {capc.study.need}・已勾 {capc.study.on}／{capc.study.total} 間</span>}
           </div>
         </div>
         {capc.hasList && short > 0 && (
@@ -150,12 +147,13 @@ export function AstStep3(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
       <div class="card stack">
         <div>
           <h3>固定自習教室（自習座位）</h3>
-          <p class="small muted">不考的人就是自習，也會排自習座位（只用來檢核座位夠不夠、可照坐，<b>不印標籤</b>）。被指定為固定自習教室的教室<b>全程不當考場</b>，每個人整天只去同一間。沒指定＝程式自動讓同一個人各節盡量在同一間自習、同班盡量在一起。自習座位每節各自排，不必每節同一個位子。座位以每間教室的編制人數為準，不足不硬排、會列出未排入的人。</p>
+          <p class="small muted">不考的人就是自習，也排自習座位（只檢核夠不夠、可照坐，<b>不印標籤</b>）。指定為固定自習的教室<b>全程不當考場</b>，每人整天只去同一間；沒指定就由程式盡量讓同一人各節在同一間、同班在一起。</p>
+          <More title="更多規則">自習座位每節各自排，不必每節同一個位子。座位以每間教室的編制人數為準，不足不硬排、會列出未排入的人。</More>
         </div>
-        <div class="row" style="gap:12px;flex-wrap:wrap" role="group" aria-label="固定自習教室">
+        <div class="fixlist" role="group" aria-label="固定自習教室">
           {[...reserves, ...classRooms].filter((r) => selected.has(r.id)).map((r) => {
             const on = !!exam.astFixedStudyRooms?.includes(r.id);
-            return <div class="row" key={r.id} style="gap:8px;align-items:center"><b>{r.name}</b><Switch label="固定自習" ariaLabel={`${r.name} 設為固定自習教室`} checked={on} onChange={(v) => patchExam({ astFixedStudyRooms: v ? [...(exam.astFixedStudyRooms ?? []), r.id] : (exam.astFixedStudyRooms ?? []).filter((x) => x !== r.id) })} onText="固定自習" offText="不固定" /></div>;
+            return <div class="fixitem" key={r.id}><b>{r.name}</b><Switch label="" ariaLabel={`${r.name} 設為固定自習教室`} checked={on} onChange={(v) => patchExam({ astFixedStudyRooms: v ? [...(exam.astFixedStudyRooms ?? []), r.id] : (exam.astFixedStudyRooms ?? []).filter((x) => x !== r.id) })} onText="固定自習" offText="不固定" /></div>;
           })}
           {selected.size === 0 && <EmptyState title="先在上方勾選本次可用的教室" />}
         </div>

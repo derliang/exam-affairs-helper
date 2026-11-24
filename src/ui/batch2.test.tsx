@@ -191,12 +191,12 @@ describe('G6／G33 隨時可見的前後導覽', () => {
     expect(html).toContain('下一步 ›');
     expect(html).toContain('dock-sub">② ');
   });
-  it('最後一步（⑥）顯示「完成 ✓」與小字「回模擬考列表」', () => {
+  it('最後一步（⑥）顯示「完成 ✓」與小字「回模擬考」', () => {
     const { doc, exam } = docWith('gsat', [10, 10, 10]);
     const flow = flowOf(doc, exam, 6);
     const html = renderToString(<StepDock action={nextAction(flow, 6)} current={6} prev={prevStepOf(flow, 6)} onGo={go} onExams={go} />);
     expect(html).toContain('完成 ✓');
-    expect(html).toContain('回模擬考列表');
+    expect(html).toContain('回模擬考');
     expect(html).not.toContain('下一步');
     expect(html).toContain('‹ 上一步');
     expect(html).toContain('dock-sub">⑤ ');

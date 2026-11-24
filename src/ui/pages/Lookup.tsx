@@ -17,7 +17,7 @@ export function Lookup(p: { doc: Doc; examId?: string; onGoStep: (examId: string
   if (!exam) {
     return (
       <section><PageHead crumbs={p.crumbs ?? []} title="考生查詢" />
-        <EmptyState title="還沒有模擬考" action={<Button kind="primary" onClick={p.onExams}>到模擬考列表 ›</Button>}>先建立模擬考並完成排座，才能查詢考生在哪個座位。</EmptyState>
+        <EmptyState title="還沒有模擬考" action={<Button kind="primary" onClick={p.onExams}>到模擬考 ›</Button>}>先建立模擬考並完成排座，才能查詢考生在哪個座位。</EmptyState>
       </section>
     );
   }

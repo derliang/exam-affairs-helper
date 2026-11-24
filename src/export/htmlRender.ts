@@ -4,7 +4,7 @@
  * 座位表與標籤的樣式照設計系統成品頁「座位表與標籤」稿件（docs/design/mockups/設計系統.html #paper）：
  * 改這裡的版面要同步改稿件，反之亦然。
  */
-import { roomShown, cornerLayout, labelCornerFit, seatCellFit, statMerge, titleOf, labelTitleOf, footerText, isSpecial, LABEL_EDGE_MM, LABEL_FOOTER_MM, labelBoxMm, labelGrid, labelGridSize, labelNotePt, landscapeFit, namePtFit, PAPER_MM, periodLineFontPt, personLayout, wideLayout, type PersonLine, SEAT_PAGE, seatGeometry, statLayout, SLOT_TIP, type CellModel, type LabelPageModel, type ListPageModel, type SeatPageModel, type TablePageModel } from './model';
+import { roomShown, cornerLayout, labelCornerFit, seatCellFit, statMerge, titleOf, labelTitleOf, footerText, isSpecial, threeLineFit, LABEL_EDGE_MM, LABEL_FOOTER_MM, labelBoxMm, labelGrid, labelGridSize, labelNotePt, landscapeFit, namePtFit, PAPER_MM, periodLineFontPt, personLayout, wideLayout, type PersonLine, SEAT_PAGE, seatGeometry, statLayout, SLOT_TIP, type CellModel, type LabelPageModel, type ListPageModel, type SeatPageModel, type TablePageModel } from './model';
 
 export interface HtmlOptions {
   generatedAt: string;
@@ -65,6 +65,11 @@ function cellHtml(c: CellModel | undefined, w: number, h: number, mode: 'seat' |
     const pt = periodLineFontPt(c.periodLines, w - 3, h - 5);
     const ls = c.periodLines.map((l) => `<span class="pp-pll" style="font-size:${pt}pt"><small style="font-size:${+(pt * 0.7).toFixed(1)}pt">${esc(l.head)}</small>${esc(l.text)}</span>`).join('');
     return `<div class="pp-c pp-pl" style="${size};background:#${c.colorBg || 'FFFFFF'}"><i class="pp-co">${esc(c.coord)}</i><span class="pp-pls">${ls}</span></div>`;
+  }
+  if (c.lines) {
+    // 補考座位表：格內三行「學號／班級 座號／姓名」（學號粗體），同字級
+    const pt = threeLineFit(c.lines, w - 1.4, h);
+    return `<div class="pp-c pp-3l" style="${size};background:#${c.colorBg || 'FFFFFF'}"><i class="pp-co">${esc(c.coord)}</i>${c.lines.map((t, i) => `<span class="pp-3" style="font-size:${pt}pt${i === 0 ? ';font-weight:700' : ''}">${esc(t)}</span>`).join('')}</div>`;
   }
   if (mode !== 'label') return seatCellHtml(c, w, h, mode);
   const marked = isSpecial(c);
@@ -170,16 +175,24 @@ function listHtml(p: ListPageModel, o: HtmlOptions): string {
 }
 
 function tableHtml(p: TablePageModel, o: HtmlOptions): string {
-  const sum = p.widths.reduce((a, b) => a + b, 0);
-  const tr = (cells: string[], tag: 'td' | 'th', cls = '') =>
-    `<tr${cls}>${cells.map((c, i) => `<${tag} style="width:${(((p.widths[i] ?? 1) * 100) / sum).toFixed(1)}%">${esc(c)}</${tag}>`).join('')}</tr>`;
   const land = !!p.landscape;
-  const lf = landscapeFit(p.rows.length + (p.totalRow ? 1 : 0), p.headGroups ? 2 : 1, p.emWidths ? sum : undefined);
+  // 補考考程表：一頁兩張表（學生時間表＋監考表），列高、字級依兩張表合計列數一起算（2026-11-24 使用者：以一頁為原則）
+  const both = [p, ...(p.second ? [p.second] : [])];
+  const totalRows = both.reduce((n, pg) => n + pg.rows.length + (pg.totalRow ? 1 : 0), 0);
+  const totalHead = both.reduce((n, pg) => n + (pg.headGroups ? 2 : 1), 0) + (p.second ? 3 : 0);
+  const sum0 = p.widths.reduce((a, b) => a + b, 0);
+  const lf = landscapeFit(totalRows, totalHead, p.emWidths ? sum0 : undefined);
   const fit = land ? lf.rowMm : 9;
-  const kcls = (ri: number, ci: number) => (p.cellKinds?.[ri]?.[ci] ? ` class="k-${p.cellKinds[ri]![ci]}"` : '');
-  const rows = p.rows.map((r, ri) => `<tr>${r.map((c, ci) => `<td${kcls(ri, ci)} style="width:${(((p.widths[ci] ?? 1) * 100) / sum).toFixed(1)}%">${esc(c)}</td>`).join('')}</tr>`).join('') + (p.totalRow ? tr(p.totalRow, 'td', ' class="total"') : '');
-  const grp = p.headGroups ? `<tr>${p.headGroups.map((g) => `<th colspan="${g.span}" class="g">${esc(g.text)}</th>`).join('')}</tr>` : '';
-  return `<section class="sheet a4${land ? ' land' : ''}" style="page:${land ? 'a4l' : 'a4'}${land ? `;--rh:${+fit.toFixed(2)}mm;--rp:${lf.pt}pt` : ''}"><h1>${esc(land && p.subtitle ? `${p.title}　${p.subtitle}` : p.title)}</h1>${p.subtitle && !land ? `<p class="sub">${esc(p.subtitle)}</p>` : ''}${p.legend ? `<p class="lg">${esc(p.legend)}</p>` : ''}<table class="list tbl"><thead>${grp}${tr(p.heads, 'th')}</thead><tbody>${rows}</tbody></table>
+  const part = (pg: TablePageModel, first: boolean): string => {
+    const sum = pg.widths.reduce((a, b) => a + b, 0);
+    const tr = (cells: string[], tag: 'td' | 'th', cls = '') =>
+      `<tr${cls}>${cells.map((c, i) => `<${tag} style="width:${(((pg.widths[i] ?? 1) * 100) / sum).toFixed(1)}%">${esc(c)}</${tag}>`).join('')}</tr>`;
+    const kcls = (ri: number, ci: number) => (pg.cellKinds?.[ri]?.[ci] ? ` class="k-${pg.cellKinds[ri]![ci]}"` : '');
+    const rows = pg.rows.map((r, ri) => `<tr>${r.map((c, ci) => `<td${kcls(ri, ci)} style="width:${(((pg.widths[ci] ?? 1) * 100) / sum).toFixed(1)}%">${esc(c)}</td>`).join('')}</tr>`).join('') + (pg.totalRow ? tr(pg.totalRow, 'td', ' class="total"') : '');
+    const grp = pg.headGroups ? `<tr>${pg.headGroups.map((g) => `<th colspan="${g.span}" class="g">${esc(g.text)}</th>`).join('')}</tr>` : '';
+    return `<h1${first ? '' : ' style="margin-top:3mm"'}>${esc(land && pg.subtitle ? `${pg.title}　${pg.subtitle}` : pg.title)}</h1>${pg.subtitle && !land ? `<p class="sub">${esc(pg.subtitle)}</p>` : ''}${pg.legend ? `<p class="lg">${esc(pg.legend)}</p>` : ''}<table class="list tbl"><thead>${grp}${tr(pg.heads, 'th')}</thead><tbody>${rows}</tbody></table>`;
+  };
+  return `<section class="sheet a4${land ? ' land' : ''}" style="page:${land ? 'a4l' : 'a4'}${land ? `;--rh:${+fit.toFixed(2)}mm;--rp:${lf.pt}pt` : ''}">${both.map((pg, k) => part(pg, k === 0)).join('')}
 <footer>${esc(footerText(o.generatedAt, o.dataVersion))}</footer></section>`;
 }
 
@@ -240,6 +253,8 @@ footer { font-size: 8pt; color: #555; text-align: right; margin-top: 3mm }
 .pp .pp-pll small{font-weight:700;margin-right:1.6mm}
 .pp .pp-no{font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:.02em;line-height:1}
 .pp .pp-nm{font-weight:500;line-height:1.15;white-space:nowrap}
+.pp .pp-3{line-height:1.2;white-space:nowrap;color:var(--ink)}
+.pp .pp-c.pp-3l{gap:.2mm;padding-top:2.5mm}
 .pp .pp-nm em{font-style:normal;font-weight:700;margin-right:1.2mm;padding-right:1.2mm;border-right:.3mm solid currentColor}
 .pp .pp-nm span{color:var(--ink)}
 .pp .pp-mk{display:block;font-weight:700;line-height:1.25;padding:0 1.4mm;border-radius:.6mm;white-space:nowrap}

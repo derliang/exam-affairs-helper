@@ -164,8 +164,8 @@ export function App() {
   const stepExam = r.page === 'step' ? hist.present.exams.find((e) => e.id === r.examId) : undefined;
   // #253：考試頁讀的名單年度只看「這次考試的學年度」，不受共用設定停在哪個年度頁籤影響（新建、開啟、深連結都一樣）
   const stepDoc = stepExam ? activateForExam(hist.present, stepExam) : hist.present;
-  // 路徑列（稿 v2.29）：模擬考列表 › 考試名稱 › 來源步驟；最後一個連結＝返回
-  const listCrumb = { label: '模擬考列表', onClick: () => go({ page: 'exams' }) };
+  // 路徑列（稿 v2.29）：模擬考 › 考試名稱 › 來源步驟；最後一個連結＝返回
+  const listCrumb = { label: '模擬考', onClick: () => go({ page: 'exams' }) };
   const retCrumbs = (): { label: string; onClick: () => void }[] => {
     const last = gnav.back[gnav.back.length - 1];
     if (!last || last.route.page === 'exams') return [];
@@ -176,16 +176,16 @@ export function App() {
     return [{ label: last.label, onClick: back }];
   };
   const pathCrumbs = [listCrumb, ...retCrumbs()];
-  // 預備教室與抽離（H-9）：模擬考列表 › 考試名稱 › ⑤ 排座與預覽；最後一個連結＝返回（回到 ⑤）
+  // 預備教室與抽離（H-9）：模擬考 › 考試名稱 › ⑤ 排座與預覽；最後一個連結＝返回（回到 ⑤）
   const reserveCrumbs = (examId: string) => [listCrumb, { label: hist.present.exams.find((e) => e.id === examId)?.name ?? '模擬考', onClick: () => go({ page: 'step', examId, step: 1 }) }, { label: stepTitle(5, hist.present.exams.find((e) => e.id === examId)?.kind), onClick: () => go({ page: 'step', examId, step: 5 }) }];
-  // 全站品牌列導覽（稿 v2.31）：資料夾設定、模擬考列表、（已開啟的選用功能頁）、選用功能、共用設定
+  // 全站品牌列導覽（稿 v2.31）：資料夾設定、模擬考、（已開啟的選用功能頁）、選用功能、共用設定
   const inSettings = r.page === 'settings';
   // 已在共用設定時只換分頁，不再疊一筆「回到」
   const toSettings = (to: Route) => (inSettings ? setNav((s) => ({ ...s, route: to })) : go2(to, barFrom));
   const barFrom = { route: r, label: pageName(r, hist.present) };
   const barItems: AppBarItem[] = [
     { id: 'init', label: '資料夾設定', current: r.page === 'init', onClick: () => go({ page: 'init' }) },
-    { id: 'exams', label: '模擬考列表', current: ['exams', 'new', 'wizard', 'step', 'reconcile', 'override', 'reserve'].includes(r.page), disabled: !hasFolder, onClick: () => go({ page: 'exams' }) },
+    { id: 'exams', label: '模擬考', current: ['exams', 'new', 'wizard', 'step', 'reconcile', 'override', 'reserve'].includes(r.page), disabled: !hasFolder, onClick: () => go({ page: 'exams' }) },
     { id: 'makeup', label: '補考', current: r.page.startsWith('makeup'), disabled: !hasFolder, onClick: () => go({ page: 'makeup' }) },
     ...(hasFolder ? enabledNav({ settings: hist.present.settings }).map((n) => ({ id: n.id, label: n.label, current: r.page === n.route.page, onClick: () => go2(n.route, barFrom) })) : []),
     { id: 'features', label: '選用功能', current: inSettings && r.tab === 'features', disabled: !hasFolder, onClick: () => toSettings({ page: 'settings', tab: 'features' }) },
@@ -268,7 +268,7 @@ const SETTINGS_TAB_NAMES = { roster: '學生名單', classes: '班級資料', sc
 /** 「← 回到 …」要寫清楚是哪一頁（DESIGN 10.1；#634 D217：共用設定要寫到分頁名、不再有「上一頁」兜底的頁） */
 export function pageName(r: Route, doc: Doc): string {
   switch (r.page) {
-    case 'exams': return '模擬考列表';
+    case 'exams': return '模擬考';
     case 'new': return '新增模擬考';
     case 'wizard': { const n = r.step ?? 1; return n >= 6 ? '首次設定 總覽' : `首次設定 第 ${n} 步 ${WIZARD_STEPS[n - 1]?.name ?? ''}`; }
     case 'settings': return r.tab ? `共用設定「${SETTINGS_TAB_NAMES[r.tab]}」` : '共用設定';
@@ -299,7 +299,7 @@ function Workspace(p0: { route: Extract<Route, { page: 'step' }>; doc: Doc; onTo
   useEffect(() => { scrollPageTop(); }, [p.route.examId, p.route.step]);
   const exam = p.doc.exams.find((e) => e.id === p.route.examId);
   if (!exam) {
-    return <section><h2>{stepTitle(p.route.step)}</h2><EmptyState title="找不到這個模擬考" action={<Button kind="primary" onClick={p.onExams}>回模擬考列表</Button>}>它可能已被刪除，或資料夾換了。</EmptyState></section>;
+    return <section><h2>{stepTitle(p.route.step)}</h2><EmptyState title="找不到這個模擬考" action={<Button kind="primary" onClick={p.onExams}>回模擬考</Button>}>它可能已被刪除，或資料夾換了。</EmptyState></section>;
   }
   setPlanDefer(exam.kind === 'ast' && p.route.step === 3);
   const flow = flowOf(p.doc, exam, p.route.step);

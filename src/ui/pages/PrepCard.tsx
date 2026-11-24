@@ -1,10 +1,9 @@
 /**
  * 步驟③「預備教室排座與標籤」卡（稿 v2.22，校-56；D94-4、D94-5）：
  * 上半＝預備教室排座方式（① 同學優先〔預設〕、② 監考優先）；模式 ① 排出來同班沒有遞增時顯示警告（不擋下載）。
- * 下半＝合併標籤（範例）：每座位一張、每節一行、印節次＋科目＋班座號、不印時間。
+ * 合併標籤（範例）搬到右側欄（稿 v2.107、D226；StepSide 的 Side3），這張卡只留排座方式。
  */
 import type { ExamConfig } from '../../data';
-import { ReserveLabelSample } from './LabelSample';
 import { detachPreview, reserveModeOf } from '../seating';
 import { updateExam, type Doc } from '../store';
 
@@ -58,13 +57,6 @@ export function PrepCard(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
             <button type="button" class="btn btn-sm" onClick={() => set('proctor')}>改用模式 ②</button>
           </div>
         )}
-      </div>
-      <div class="psec">
-        <div class="stack">
-<div><h4 class="sh">合併標籤（範例）</h4><p class="small muted">預備教室每個座位一張，版式與一般標籤相同（右上角座標、格內每人一區：班級座號、姓名、第幾天考什麼科目）。同一個座位在不同節由不同人使用時，列在同一張、只貼一次。下面是用實際輸出的程式畫出的 3 張範例（假資料，{paper}）。抽離自習不排座位、不印標籤，只出名單。</p></div>
-          <ReserveLabelSample paper={paper} />
-          <p class="small muted">第 2 張：同一個人（勇班 12 號）跨天坐同一格。第 3 張：兩個不同的人共用同一格。預備教室的標籤併在「標籤」檔案的最後，頁首標「預備教室」。</p>
-        </div>
       </div>
     </div>
   );

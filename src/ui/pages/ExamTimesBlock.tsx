@@ -54,7 +54,7 @@ export function ExamTimesBlock(p: { exam: ExamConfig; table: PeriodTable; open?:
       {p.onImport && <input ref={file} type="file" accept=".docx" hidden aria-label="選擇考程表 Word 檔（.docx）" onChange={(e) => { const f = e.currentTarget.files?.[0]; e.currentTarget.value = ''; void onFile(f); }} />}
       {imp?.err && <Alert tone="danger" action={<Button small onClick={() => setImp(null)}>關閉</Button>}><b>無法匯入「{imp.name}」</b>　{imp.err}</Alert>}
       {imp?.r && (
-        <Alert tone="info" action={<><Button small kind="primary" onClick={() => { p.onImport?.({ ...(imp.r!.examDates ? { examDates: imp.r!.examDates } : {}), ...(imp.r!.dayTimes ? { dayTimes: imp.r!.dayTimes } : {}) }); setImp(null); setOpen(true); }}>套用</Button> <Button small onClick={() => setImp(null)}>取消</Button></>}>
+        <Alert tone="info" action={<><Button small kind="primary" onClick={() => { p.onImport?.({ ...(imp.r!.examDates ? { examDates: imp.r!.examDates } : {}), ...(imp.r!.dayTimes ? { dayTimes: imp.r!.dayTimes } : {}) }); setImp(null); setOpen(true); }}>套用</Button> <Button small kind="warn" onClick={() => setImp(null)}>取消</Button></>}>
           <b>讀到「{imp.name}」</b>
           {imp.r.lines.length ? imp.r.lines.map((l) => <div key={l}>{l}</div>) : <div>沒有可以套用的考試時段。</div>}
           {imp.r.notes.map((n) => <div class="small" key={n}>注意：{n}</div>)}
@@ -89,14 +89,14 @@ export function ExamTimesBlock(p: { exam: ExamConfig; table: PeriodTable; open?:
                             <tr key={t.slot} class={bad ? 'bad' : ''}>
                               <td class="ti" data-label="時段">{slotLabel(t, names)}</td>
                               <td data-label="時長">{t.minutes ? `${t.minutes} 分` : '—'}</td>
-                              <td data-label="開始">
+                              <td class="tm-start" data-label="開始"><div class="tm-sw">
                                 <input class="input tm-in" type="time" aria-label={`${dayName(day)}時段${t.slot}開始`} value={t.start ?? ''} onChange={(e) => {
                                   const v = e.currentTarget.value;
                                   p.onChange(setManual(dt, day, t.slot, v && v !== chainedStart(table, dt, day, t.slot) ? v : ''));
                                 }} />
-                                {manual !== undefined && <> <Badge tone="warn">手動</Badge> <Button small onClick={() => p.onChange(setManual(dt, day, t.slot, ''))}>取消 ✕</Button></>}
-                              </td>
-                              <td data-label="結束">{t.end ?? '—'}</td>
+                                {manual !== undefined && <> <Badge tone="warn">手動</Badge> <Button small kind="warn" onClick={() => p.onChange(setManual(dt, day, t.slot, ''))}>取消 ✕</Button></>}
+                              </div></td>
+                              <td class="tm-end" data-label="結束">{t.end ?? '—'}</td>
                             </tr>
                           );
                         })}

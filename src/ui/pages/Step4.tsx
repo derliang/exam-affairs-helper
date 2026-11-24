@@ -103,13 +103,13 @@ export function Step4(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
           : (
             <div class="rtw">
               <table class="t compact rt-t rt-wide">
-                <thead><tr><th>組</th><th>科目</th><th>考</th><th>不考</th><th>標示方式</th><th>座位表標示與狀態</th></tr></thead>
+                <thead><tr><th>科目</th><th>考</th><th>不考</th><th>標示方式</th><th>座位表標示</th><th>狀態</th></tr></thead>
                 <tbody>
                   {shown.map((r) => (
                     <tr key={`${r.track}/${r.subjectId}`}>
-                      <td data-label="組">{r.track ? TRACK[r.track] : '全部'}</td><td class="ti" data-label="科目"><b>{r.subjectName}</b></td>
+                      <td class="ti" data-label="科目"><b>{r.subjectName}</b> <span class="small muted">{r.track ? TRACK[r.track] : '全部'}</span></td>
                       <td class="n" data-label="考">{r.taking}</td><td class="n" data-label="不考">{r.notTaking}</td>
-                      <td data-label="標示方式" class="wide">
+                      <td data-label="標示方式" class="wide late">
                         <Seg<MarkMode | ''>
                           label={`${r.track ? TRACK[r.track] : ''}${r.subjectName}標示方式`}
                           value={r.mode ?? ''}
@@ -123,7 +123,7 @@ export function Step4(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
                         {r.state === 'locked' && <div><Button kind="ghost" small onClick={() => choose(r, undefined)}>改回系統建議</Button></div>}
                         {moreSide(r) && <p class="small errnote">標的是人數較多的一邊（{r.mode === 'mark-absent' ? `不考 ${r.notTaking} 人` : `考 ${r.taking} 人`}），標示會變多、抽離的人也變多；建議標少數那一邊。仍可照你的選擇。</p>}
                       </td>
-                      <td data-label="座位表標示與狀態" class="wide">{markText(r)}<br /><StateBadge r={r} /></td>
+                      <td data-label="座位表標示" class="bx">{markText(r)}</td><td data-label="狀態" class="st"><StateBadge r={r} /></td>
                     </tr>
                   ))}
                 </tbody>

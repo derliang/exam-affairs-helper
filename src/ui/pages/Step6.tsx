@@ -147,7 +147,7 @@ export function Step6(p: {
   onGoStep: (n: 2 | 3 | 5) => void;
   /** 下載後記錄「已下載」（#397，供列表進度條）；沒傳就不記錄 */
   onChange?: (d: Doc) => void;
-  /** 完成後「回模擬考列表」 */
+  /** 完成後「回模擬考」 */
   onExams?: () => void;
   /** 測試或預覽可注入字型載入；預設延遲載入真實字型 */
   loadFonts?: () => Promise<Loaded>;
@@ -323,7 +323,7 @@ export function Step6(p: {
               {afterExport(doneFmt, o.paper).map((i) => (
                 <li key={i.text}>{i.text}{' '}
                   {i.step && <Button small onClick={() => p.onGoStep(i.step as 5)}>回 ⑤ 排座</Button>}
-                  {i.nav && p.onExams && <Button small kind="primary" onClick={p.onExams}>回模擬考列表</Button>}
+                  {i.nav && p.onExams && <Button small kind="primary" onClick={p.onExams}>回模擬考</Button>}
                 </li>
               ))}
             </ol>

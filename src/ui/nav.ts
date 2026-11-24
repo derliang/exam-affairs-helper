@@ -59,7 +59,7 @@ export const AST_STEP_BLURBS = ['考科', '匯入、比對、參加者', '座位
 export const stepNamesOf = (kind?: string): readonly string[] => (kind === 'ast' ? AST_STEP_NAMES : STEP_NAMES);
 export const stepTitle = (step: number, kind?: string): string => `${'①②③④⑤⑥'[step - 1] ?? ''} ${stepNamesOf(kind)[step - 1] ?? ''}`;
 
-/** 路由防護（驗收 D-4）：已關閉的選用功能頁不可顯示，也不可出現在「← 回到」堆疊；目前頁被擋就回模擬考列表 */
+/** 路由防護（驗收 D-4）：已關閉的選用功能頁不可顯示，也不可出現在「← 回到」堆疊；目前頁被擋就回模擬考 */
 export function guardNav(s: NavState, allowed: (r: Route) => boolean): NavState {
   const back = s.back.filter((b) => allowed(b.route));
   const route: Route = allowed(s.route) ? s.route : { page: 'exams' };

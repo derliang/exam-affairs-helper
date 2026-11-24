@@ -69,7 +69,8 @@ describe('補考下載檔：產生後回讀，與排程一致', () => {
       const { tables } = await readDocxTables(f.docx);
       for (const t of tables) {
         for (const r of t.slice(1)) {
-          if (f.kind === 'O-4' && r[0] !== '統計') for (const s of r[4]!.split('、')) roll.add(`${r[0]}|${s}`);
+          // O-4 點名單分左右兩組並排（每組 7 欄，2026-11-24）：兩組都讀
+          if (f.kind === 'O-4') for (const g of [r.slice(0, 7), r.slice(7, 14)]) if (g[0] && g[0] !== '統計') for (const s of g[4]!.split('、')) roll.add(`${g[0]}|${s}`);
           if (f.kind === 'O-3') ann.add(`${r[2]}|${r[3]}`);
         }
       }

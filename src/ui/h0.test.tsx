@@ -14,7 +14,7 @@ describe('H0 程式名稱', () => {
   it('APP_NAME 是「考務小幫手」，品牌列與無障礙文字同步', () => {
     expect(APP_NAME).toBe('考務小幫手');
     const html = renderToString(<AppBar version="v1.25.0" items={[]} theme="system" onTheme={noop} onHome={noop} />);
-    expect(html).toContain('考務小幫手，回模擬考列表');
+    expect(html).toContain('考務小幫手，回模擬考');
     expect(html).not.toContain('模擬考小幫手');
   });
   it('套件名改了，但本機資料庫名稱 mock-exam-helper 不變（改了舊資料讀不到）', () => {

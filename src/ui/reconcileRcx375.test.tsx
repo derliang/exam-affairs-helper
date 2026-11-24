@@ -20,9 +20,9 @@ describe('總帳 ✕ 格子（D176）', () => {
     const l = r.ledger[0]!;
     r.ledger[0] = { ...l, seat: l.seat + 1, ok: false };
     const html = panel(r);
-    expect(html).toMatch(/data-label="座位表" class="rc-x"/);
-    expect(html).toMatch(/data-label="帳" class="rc-x"/);
-    expect(html).not.toMatch(/data-label="標籤" class="rc-x"/);
-    expect(html).not.toMatch(/data-label="教室加總" class="rc-x"/);
+    expect(html).toMatch(/data-label="座位表" class="n rc-x"/);
+    expect(html).toMatch(/data-label="帳" class="st rc-x"/);
+    expect(html).not.toMatch(/data-label="標籤" class="n rc-x"/);
+    expect(html).not.toMatch(/data-label="教室加總" class="n rc-x"/);
   });
 });

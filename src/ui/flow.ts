@@ -250,7 +250,7 @@ export function afterExport(format: 'word' | 'pdf', paper: string): AfterExportI
     { text: format === 'word' ? '打開下載資料夾，檢查每個 Word 檔的頁數與內容。' : '在新開的視窗選「列印」→ 目的地選「另存為 PDF」。' },
     { text: `列印前先確認紙張：座位表與名單用 A4，標籤用 ${paper}。` },
     { text: '考試前若名單或教室有變，回 ⑤ 重新排座，再重新下載。', step: 5 },
-    { text: '這次考完，回模擬考列表建立下一次（會帶入上一次的設定）。', nav: 'exams' },
+    { text: '這次考完，回模擬考建立下一次（會帶入上一次的設定）。', nav: 'exams' },
   ];
   return items;
 }

@@ -30,9 +30,12 @@ describe('類別撞名', () => {
 
 describe('版面溢出（fix-v3）', () => {
   const css = readFileSync('src/styles/app.css', 'utf8');
-  it('教室列最終為可換行 flex（D138：不得回到固定寬多欄 grid 或表格而撐出卡片、橫向捲動）', () => {
-    const idx = css.lastIndexOf('.roomrow{');
-    expect(css.slice(idx, idx + 60)).toMatch(/display:flex;flex-wrap:wrap/);
+  it('教室列最終為固定六位置的 grid，且依容器寬度換成兩～三列（D226 取代 D138 的可換行 flex；仍不得用表格或橫向捲動撐出卡片）', () => {
+    expect(css).toMatch(/\.roomlist\{container-type:inline-size\}/);
+    const idx = css.lastIndexOf('.roomrow{display:grid');
+    expect(idx).toBeGreaterThan(-1);
+    expect(css.slice(idx, idx + 260)).toMatch(/grid-template-areas:"sw nm cfg info x btn"/);
+    expect(css).toMatch(/@container \(max-width:480px\)\{\s*\.roomrow\{[^}]*grid-template-areas:"sw nm" "cfg info" "x x" "btn btn"/);
     expect(css).not.toMatch(/\.roomtable|\.roomscroll|\.aedgrid|\.astrow/);
   });
   it('班級卡片固定每行 3 個、窄於 560px 每行 2 個（#407）', () => {

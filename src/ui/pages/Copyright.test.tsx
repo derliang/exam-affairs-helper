@@ -4,12 +4,12 @@ import { describe, expect, it } from 'vitest';
 import { Copyright, EMBEDDED_FONTS, LICENSE_COPYRIGHT_LINE, RUNTIME_PACKAGES } from './Copyright';
 import { Footer } from '../components/Footer';
 
-const html = renderToString(<Copyright backLabel="模擬考列表" onBack={() => undefined} />);
+const html = renderToString(<Copyright backLabel="模擬考" onBack={() => undefined} />);
 const root = new URL('../../../', import.meta.url);
 
 describe('版權頁', () => {
   it('有返回按鈕、H1、版權行、頁頂名稱與頁尾版權行', () => {
-    expect(html).toContain('← 回到 模擬考列表');
+    expect(html).toContain('← 回到 模擬考');
     expect(html).toContain('使用授權與著作權聲明');
     expect(html).toContain('使用授權｜考務小幫手');
     expect(html).toContain(LICENSE_COPYRIGHT_LINE.replace('©', '©'));

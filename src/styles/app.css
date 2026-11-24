@@ -22,6 +22,8 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
 .btn-primary:hover{background:var(--accent);filter:brightness(1.12);border-color:var(--accent)}
 .btn-danger{background:var(--danger-soft);color:var(--danger-ink);border-color:var(--danger-line)}
 .btn-danger:hover{background:var(--danger-soft);border-color:var(--danger)}
+.btn-warn{background:var(--warn-soft);color:var(--warn-ink);border-color:var(--warn-line);font-weight:700}
+.btn-warn:hover{background:var(--warn-soft);border-color:var(--warn-bar)}
 .btn-accent-outline{border-color:var(--accent);color:var(--accent-ink);font-weight:700}
 .btn-ghost{background:transparent;border-color:transparent;color:var(--accent-ink);min-height:32px;padding:0 6px;text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1.5px}
 .btn-ghost:hover{background:var(--accent-soft);border-color:transparent}
@@ -110,10 +112,11 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
 .step.stale .no{background:var(--warn-soft);border-color:var(--warn-bar);color:var(--warn-ink)}
 
 /* 統計列 */
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden}
-.stats>div{background:var(--surface);padding:10px 14px}
+.stats{display:flex;flex-wrap:wrap;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden}
+/* 稿 v2.107（D226）：摘要格用 flex 換行、最後一排自動撐滿（不留單格孤兒）；大數字不拆行（「43／43」是一個單位） */
+.stats>div{background:var(--surface);padding:10px 14px;flex:1 1 104px;min-width:0}
 .stats small{display:block;font-size:13px;font-weight:700;color:var(--text-3)}
-.stats strong{font-family:var(--f-no);font-size:32px;line-height:1.2;font-weight:700;font-variant-numeric:tabular-nums}
+.stats strong{font-family:var(--f-no);font-size:clamp(24px,5.4vw,32px);line-height:1.2;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
 #statTable td.n{font-size:18px;font-weight:700}
 .stats .bad strong{color:var(--danger-ink)}
 .bar{height:6px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:6px}
@@ -815,16 +818,19 @@ table.t{border-collapse:collapse;width:100%}
 .pagehead>.btn-ghost{min-height:40px;padding:0 12px}
 
 /* 校-22、24：次別鈕四顆等寬不折行；右側「本次摘要」大字單行 */
-.stats.side-stats{grid-template-columns:1fr}
+.stats.side-stats>div{flex:1 1 100%}
 .stats.side-stats strong{white-space:nowrap}
 @media (max-width:560px){.field>.seg{width:100%}.field>.seg button{flex:1 1 0;min-width:0;white-space:nowrap;padding:0 6px}}
 
 /* 校-31：步驟③ 狀態檢核——一項一格 */
-.stats.chkgrid{grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:0;background:var(--surface)}
+.stats.chkgrid{gap:0;background:var(--surface)}
+.stats.chkgrid>div.chk{flex:1 1 150px}
 .stats.chkgrid>div.chk{border-right:1px solid var(--line);border-bottom:1px solid var(--line);margin:0 -1px -1px 0}
 .stats>div.chk{display:flex;flex-direction:column;align-items:flex-start;gap:2px}
 .stats>div.chk .sub{font-size:13px;color:var(--text-3);font-weight:500}
-.stats>div.chk .badge{margin-top:6px}
+.stats>div.chk .badge{margin:0}
+.stats>div.chk .chk-h{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 8px;width:100%}
+.stats>div.chk .chk-h small{flex:1 1 auto}
 .stats>div.chk.bad{background:var(--danger-soft)}
 .stats>div.chk.warnc::before{background:var(--warn-bar)}
 .errnote{color:var(--danger-ink)}
@@ -883,7 +889,8 @@ table.t{border-collapse:collapse;width:100%}
 .ab-nav{display:flex;gap:2px;flex:1;min-width:0;margin-left:8px}
 .ab-nav button{font:inherit;font-weight:500;font-size:14px;white-space:nowrap;min-height:40px;padding:0 12px;border-radius:var(--r-sm);border:1px solid transparent;background:transparent;color:var(--text-2);cursor:pointer}
 .ab-nav button:hover:not(:disabled){background:var(--sunken);color:var(--text)}
-.ab-nav button[aria-current="true"]{background:var(--sunken);color:var(--text);font-weight:700;box-shadow:inset 0 -2px 0 var(--text)}
+.ab-nav button[aria-current="true"]{background:var(--text);color:var(--surface);font-weight:700;border-color:var(--text)}
+.ab-nav button:not([aria-current="true"]):not(:disabled){border-color:var(--line);background:var(--surface)}
 .ab-nav button:disabled{color:var(--text-3);cursor:not-allowed;background:repeating-linear-gradient(135deg,transparent 0 5px,var(--line) 5px 10px)}
 .ab-tools{display:flex;gap:6px;align-items:center;margin-left:auto}
 .ab-menu{display:none}
@@ -1191,7 +1198,10 @@ details[open]:not(.moremenu)>summary::after{content:" ▴"}
 .tmset{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .tm-t td,.tm-t th{font-variant-numeric:tabular-nums}
 .tm-t tr.bad td{background:var(--danger-soft)}
-.tm-t .tm-in,.tmset .input[type=time]{width:120px;min-width:0;font-variant-numeric:tabular-nums}
+.tm-t .tm-in,.tmset .input[type=time]{width:9em;min-width:9em;font-variant-numeric:tabular-nums}
+.tm-t td.tm-end{font-weight:700;font-size:15px;color:var(--text);white-space:nowrap}
+.tm-t .tm-sw{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px}
+.tm-t td[data-label="時長"]{white-space:nowrap}
 
 /* #513：工作區內的短標籤、小標題、表頭、提示句只在標點處換行，不在詞中間腰斬（「最多一個時段考／生」）；整行真的放不下才逐字折（overflow-wrap），不會撐出橫向捲動 */
 .ws .main :is(small,.small,.sub,.hint,th,label,h3,h4,.lab,.badge,td[data-label]){word-break:keep-all;line-break:strict;overflow-wrap:break-word}
@@ -1242,3 +1252,58 @@ code,pre,kbd,samp,textarea,input{word-break:normal;overflow-wrap:anywhere}
 .kind-legend .kl-sw[data-k="lib-a"]{background:var(--sk-lib-a-bg);border-color:var(--sk-lib-a-line)}
 .kind-legend .kl-sw[data-k="lib-sci"]{background:var(--sk-lib-sci-bg);border-color:var(--sk-lib-sci-line)}
 .kind-legend .kl-sw[data-k="lib-both"]{background:var(--sk-lib-both-bg);border-color:var(--sk-lib-both-line)}
+
+/* 稿 v2.107（D226）資訊卡緊湊化：卡片模式下，數字（td.n）與短文字（td.bx）各用一個有框小格、標籤在格內上方；
+   狀態（td.st，徽章或「✓ 平」）移到標題列右側，不再獨佔一行。所有 rt-t 表共用，不在個別頁面另寫 */
+@container (max-width:900px){
+  .rt-t.rt-wide td.n,.rt-t.rt-wide td.bx{border:1px solid var(--line);border-radius:var(--r-sm);padding:4px 8px;background:var(--sunken);font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.25}
+  .rt-t.rt-wide td.bx{font-size:14px;grid-column:span 2}
+  .rt-t.rt-wide td.n::before,.rt-t.rt-wide td.bx::before{font-size:12px;font-weight:700}
+  .rt-t.rt-wide td.st{grid-column:-2/-1;grid-row:1;justify-self:end;align-self:center;z-index:1}
+  .rt-t.rt-wide td.st::before{content:none}
+  .rt-t.rt-wide td.ti{grid-row:1}
+  .rt-t.rt-wide tr:has(td.st) td.ti{padding-right:110px}
+  .rt-t.rt-wide td.late{order:9}
+  .rt-t.rt-wide td.rc-x{color:var(--danger-ink);border-color:var(--danger-line);background:var(--danger-soft)}
+}
+@container (max-width:480px){
+  .rt-t:not(.rt-a) td.n,.rt-t:not(.rt-a) td.bx{border:1px solid var(--line);border-radius:var(--r-sm);padding:4px 8px;background:var(--sunken);font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.25}
+  .rt-t:not(.rt-a) td.bx{font-size:14px;grid-column:span 2}
+  .rt-t:not(.rt-a) td.n::before,.rt-t:not(.rt-a) td.bx::before{font-size:12px;font-weight:700}
+  .rt-t:not(.rt-a) td.st{grid-column:-2/-1;grid-row:1;justify-self:end;align-self:center;z-index:1}
+  .rt-t:not(.rt-a) td.st::before{content:none}
+  .rt-t:not(.rt-a) td.ti{grid-row:1}
+  .rt-t:not(.rt-a) tr:has(td.st) td.ti{padding-right:110px}
+  .rt-t:not(.rt-a) td.late{order:9}
+  .rt-t:not(.rt-a) td.rc-x{color:var(--danger-ink);border-color:var(--danger-line);background:var(--danger-soft)}
+  .rt-t:not(.rt-a) td[data-label="座位表"].n{grid-column:auto;border-top:1px solid var(--line);padding-top:4px}
+  .rt-t.rt-wide tr{grid-template-columns:repeat(auto-fit,minmax(84px,1fr))}
+}
+
+/* 稿 v2.107（D226）教室清單三處一致（學測、分科、補考、共用設定、精靈）：一間一列，固定六個位置
+   〔開關／序號｜名稱｜座位縮圖與排×深位｜座位統計｜附加欄（組別、自習容量、類型）｜編輯座位與刪除〕。
+   附加欄一律放在同一個位置，不再把整列撐成三、四層；窄寬度改兩～三列，順序不變 */
+.roomlist{container-type:inline-size}
+.roomrow{display:grid;grid-template-columns:132px minmax(150px,1fr) auto minmax(150px,auto) auto auto;grid-template-areas:"sw nm cfg info x btn";align-items:center;gap:8px 14px;cursor:pointer}
+.roomrow>.swf{grid-area:sw}
+.roomrow>.rr-nm{grid-area:nm;min-width:0}
+.roomrow>.roomcfg{grid-area:cfg}
+.roomrow>.info{grid-area:info;white-space:normal}
+.roomrow>.rr-x{grid-area:x;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;min-width:0}
+.roomrow>.btnrow{grid-area:btn;margin-left:0;justify-self:end}
+.roomrow:not(:has(>.rr-x)){grid-template-areas:"sw nm cfg info . btn"}
+.swf .cap:empty{display:none}
+.roomrow .roomcfg span{white-space:nowrap}
+@container (max-width:900px){
+  .roomrow{grid-template-columns:132px minmax(0,1fr) auto;grid-template-areas:"sw nm cfg" "info info btn" "x x x"}
+  .roomrow:not(:has(>.rr-x)){grid-template-areas:"sw nm cfg" "info info btn"}
+}
+@container (max-width:480px){
+  .roomrow{grid-template-columns:auto minmax(0,1fr);grid-template-areas:"sw nm" "cfg info" "x x" "btn btn"}
+  .roomrow:not(:has(>.rr-x)){grid-template-areas:"sw nm" "cfg info" "btn btn"}
+  .roomrow>.btnrow{justify-self:stretch;justify-content:flex-end}
+}
+/* ③ 固定自習教室：一間教室一個小格，名稱在左、開關在右，不重複寫「固定自習」標題 */
+.fixlist{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}
+.fixitem{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 12px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);min-height:48px}
+.fixitem>b{white-space:nowrap}

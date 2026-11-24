@@ -177,19 +177,19 @@ describe('#646 補考考程表（O-2）兩張表：時間地點表（學生）�
     const settings = fakeSettings(roster, [room(20, 'special'), room(40), room(40), room(36)]);
     return { title: '115 學年第一學期補考', settings, roster, ...runAll(roster, settings) };
   }
-  it('每個考日兩頁：①補考時間、地點表（欄＝年級組、分高中部／初中部）②補考監考表（欄＝教室含座位數）', () => {
+  it('每個考日一頁（2026-11-24 使用者：以一頁為原則）：①補考時間、地點表（欄＝年級組、分高中部／初中部）與②補考監考表（欄＝教室含座位數）放同一頁', () => {
     const i = input();
     const pages = buildTimetablePages({ title: i.title, settings: i.settings, roster: i.roster, schedule: i.schedule, outputs: i.outputs! });
-    expect(pages.length % 2).toBe(0);
+    expect(pages.length).toBeGreaterThan(0);
     expect(pages[0]!.title).toBe('補考時間、地點表');
-    expect(pages[1]!.title).toBe('補考監考表');
+    expect(pages[0]!.second?.title).toBe('補考監考表');
     const t1 = pages[0]!;
     expect(t1.headGroups!.reduce((a, g) => a + g.span, 0)).toBe(t1.heads.length);
     expect(t1.headGroups!.map((g) => g.text)).toEqual(expect.arrayContaining(['高中部']));
     expect(t1.rows[0]![0]).toBe('第一節・時間');
     expect(t1.rows[1]![0]).toBe('第一節・科目');
     expect(t1.rows[2]![0]).toBe('第一節・補考地點');
-    const t2 = pages[1]!;
+    const t2 = pages[0]!.second!;
     expect(t2.heads[0]).toBe('監考時段');
     expect(t2.heads.slice(1).every((h) => /（\d+座位）$/.test(h))).toBe(true);
     expect(t2.rows[0]![0]).toBe('監考老師');

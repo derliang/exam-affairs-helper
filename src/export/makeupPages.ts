@@ -144,7 +144,7 @@ export function buildTimetablePages(i: MakeupPaperInput): TablePageModel[] {
       ...(hasFinal ? [`綜合節（${[...new Set(slots.filter((s) => s.kind === 'final').map(kindsOf))].join('')}）同學考完才可離場，時間可能較長，請先用餐。`] : []),
       ...(hasEarly ? [`提前開考的同學${dayLeaves.map((t) => `${t} 前不得離場`).join('、')}。`] : []),
     ];
-    pages.push({
+    const studentTable: TablePageModel = {
       kind: 'table',
       landscape: true,
       title: '補考時間、地點表',
@@ -154,7 +154,7 @@ export function buildTimetablePages(i: MakeupPaperInput): TablePageModel[] {
       headGroups,
       widths: [1.7, ...ordered.map(() => 4)],
       rows: r1,
-    });
+    };
 
     // ② 補考監考表（給監考老師）
     const dayRooms = i.settings.rooms.filter((r) => i.schedule.sittings.some((x) => x.roomId === r.id && slots.some((s) => s.id === x.slotId)));
@@ -181,7 +181,10 @@ export function buildTimetablePages(i: MakeupPaperInput): TablePageModel[] {
         }),
       ]);
     }
+    // 2026-11-24（使用者）：學生時間表與監考表放同一頁，一天一頁
     pages.push({
+      ...studentTable,
+      second: {
       kind: 'table',
       landscape: true,
       title: '補考監考表',
@@ -190,6 +193,7 @@ export function buildTimetablePages(i: MakeupPaperInput): TablePageModel[] {
       heads: ['監考時段', ...dayRooms.map((r) => `${r.name}（${seatsOf(r)}座位）`)],
       widths: [2.3, ...dayRooms.map(() => 3)],
       rows: r2,
+      },
     });
   }
   return pages;
@@ -224,6 +228,9 @@ export function buildAnnouncementPages(i: MakeupPaperInput, variant: 'public' | 
   });
 }
 
+const HEAD7 = ['學號', '舊班', '舊號', '姓名', '科目', '卷數', '註（缺考／證件）'];
+const W7 = [1.4, 1.3, 0.9, 1.5, 2.8, 0.9, 2.4];
+
 /** O-4 補考點名單：每考場每節一張；多科生一人一列列出全部科目與卷數；註欄標「HH:MM 前不得離場」；表尾各科學生統計 */
 export function buildRollCallPages(i: MakeupPaperInput): TablePageModel[] {
   const c = ctxOf(i);
@@ -235,15 +242,22 @@ export function buildRollCallPages(i: MakeupPaperInput): TablePageModel[] {
       rows.push(['統計', '', '', '', paper, String(n), '實到：　　缺考：']);
       kinds.push(Array(7).fill('exam'));
     }
+    // 2026-11-24（使用者，參考學校 107 暑假補考點名單）：一頁為原則——橫式 A4，名單分左右兩組並排（先填滿左組再右組），
+    // 每組欄位相同（學號、舊班、舊號、姓名、科目、卷數、註）；回讀驗算兩組都讀
+    const per = Math.ceil(rows.length / 2);
+    const blank = Array(7).fill('') as string[];
+    const paired = Array.from({ length: per }, (_, k) => [...rows[k]!, ...(rows[k + per] ?? blank)]);
+    const pairedKinds = Array.from({ length: per }, (_, k) => [...(kinds[k] ?? []), ...(kinds[k + per] ?? [])]);
     return {
       kind: 'table' as const,
+      landscape: true,
       title: '補考點名單',
       subtitle: `考場：${sheet.roomName}　${c.dayLabel(s.dayId)}　${slotName(s)} ${slotTime(s)}　應到 ${sheet.rows.length} 人　監考老師：＿＿＿＿＿＿`,
       legend: '註欄標「HH:MM 前不得離場」者為提前開考學生（洩題管制），監考老師請勿提前放行。多科生各科考卷合為一份。',
-      heads: ['學號', '舊班', '舊號', '姓名', '科目', '卷數', '註（缺考／證件）'],
-      widths: [1.4, 1.3, 0.9, 1.5, 2.8, 0.9, 2.4],
-      rows,
-      cellKinds: kinds,
+      heads: [...HEAD7, ...HEAD7],
+      widths: [...W7, ...W7],
+      rows: paired,
+      cellKinds: pairedKinds,
     };
   });
 }
@@ -265,14 +279,17 @@ export function buildSeatTablePages(i: MakeupPaperInput): SeatPageModel[] {
     const usable = new Set(classroomSeats(cls).map((x) => `${x.row}-${x.depth}`));
     const classes = [...new Set(t.seats.map((x) => x.oldClass))].sort((a, b) => a.localeCompare(b, 'zh-Hant', { numeric: true }));
     const cells = new Map<string, CellModel>();
+    const sheet = roll.get(`${t.slotId}@@${t.roomId}`);
+    const nameOf = new Map((sheet?.rows ?? []).map((r) => [r.studentId, r.name]));
     for (const x of t.seats) {
       if (!x.seat) continue;
       const [r, d] = x.seat.split('-').map(Number) as [number, number];
       // 2026-11-23（D223）：班級色不再用在座位表，補考座位表一律白底（舊班靠格內「舊班｜學號」文字分辨）
       const col = { bg: 'FFFFFF', line: '222222', fg: '22201B' };
-      cells.set(x.seat, { coord: seatLabel({ row: r, depth: d }), seat: { row: r, depth: d }, code: pad2(x.oldSeat), classLabel: x.oldClass, name: x.studentId, colorBg: col.bg, colorLine: col.line, colorFg: col.fg, tags: [], marks: [] });
+      // 2026-11-24（使用者）：格內三行「學號／班級 座號／姓名」
+      const lines = [x.studentId, `${x.oldClass} ${Number(x.oldSeat)}號`, nameOf.get(x.studentId) ?? ''].filter((s, k) => s !== '' || k < 2);
+      cells.set(x.seat, { coord: seatLabel({ row: r, depth: d }), seat: { row: r, depth: d }, code: pad2(x.oldSeat), classLabel: x.oldClass, name: x.studentId, lines, colorBg: col.bg, colorLine: col.line, colorFg: col.fg, tags: [], marks: [] });
     }
-    const sheet = roll.get(`${t.slotId}@@${t.roomId}`);
     const per = classes.map((k) => t.seats.filter((x) => x.oldClass === k).length);
     pages.push(addSeatLegend({
       kind: 'seat',

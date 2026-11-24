@@ -99,12 +99,12 @@ export function MkStep3(p: { s: MakeupSession; onChange: (s: MakeupSession) => v
         <RoomList flat rooms={s.rooms.map(toClassroom)} paper="B4" division="senior" track="none" reserveName="教室" addLabel="＋ 新增教室"
           onAdd={() => setRooms([...s.rooms, newRoom(s.rooms)])}
           onChange={(list) => setRooms(fromClassrooms(list, s.rooms))}
+          useSwitch={{ isOn: (id) => !s.roomOff.includes(id), set: toggle, label: '列入本次', onText: '已列入', offText: '未列入' }}
           extra={(r) => {
             const room = s.rooms.find((x) => x.id === r.id);
             if (!room) return null;
             return (
               <div class="stack" style="gap:6px">
-                <Switch label="本次使用" ariaLabel={`本次使用：${room.name}`} checked={!s.roomOff.includes(room.id)} onText="使用" offText="未使用" onChange={(v) => toggle(room.id, v)} />
                 <Seg<MakeupRoomUse> label={`${room.name}類型`} value={room.use} options={(['class', 'special'] as const).map((u) => ({ value: u, label: USE_TEXT[u] }))} onChange={(u) => setUse(room.id, u)} />
               </div>
             );

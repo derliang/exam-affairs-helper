@@ -16,7 +16,7 @@ function docWith(): ReturnType<typeof demoDoc> {
   return d;
 }
 
-describe('模擬考列表頁', () => {
+describe('模擬考頁', () => {
   it('頁首：h1、資料夾 chip、更換資料夾、設定、新增；每列有六格進度、步數、最後修改；有圖例', () => {
     const html = renderToString(<Exams doc={docWith()} folder="範例資料夾" onOpen={noop} onNew={noop} onSettings={noop} onChangeFolder={noop} />);
     expect(html).toContain('<h1>模擬考</h1>');

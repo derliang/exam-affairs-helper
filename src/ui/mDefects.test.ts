@@ -97,7 +97,7 @@ describe('D-2 匯出與 ⑤ 畫面一致（未鎖定「標少數」建議也要�
 describe('D-4 路由防護：已關閉的功能頁不可顯示，也不在「← 回到」堆疊', () => {
   const lookup: Route = { page: 'lookup' };
   const allowed = (r: Route) => r.page !== 'lookup';
-  it('目前就在已關閉頁：回模擬考列表', () => {
+  it('目前就在已關閉頁：回模擬考', () => {
     expect(guardNav(initialNav(lookup), allowed).route).toEqual({ page: 'exams' });
   });
   it('從考生查詢進設定關掉功能後，回到標籤不再指向考生查詢', () => {
