@@ -43,6 +43,39 @@ export function readHtmlTables(html: string): RawTables {
   return { tables, footers, text: strip(html.replace(/<style[\s\S]*?<\/style>/g, '')) };
 }
 
+/**
+ * 讀 O-4 點名單 Excel 版（D227，makeupXlsx.ts）：工作表一的格子還原成密集列；
+ * 每個「監考老師：」開頭的區塊是一個表格（表頭三列＋欄名列＋名單），空白列略過；頁尾讀 oddFooter（去掉 &L、&9 等控制碼）。
+ */
+export async function readXlsxTables(bytes: Uint8Array): Promise<RawTables> {
+  const z = await JSZip.loadAsync(bytes);
+  const xml = await z.file('xl/worksheets/sheet1.xml')!.async('string');
+  const shared = z.file('xl/sharedStrings.xml') ? [...(await z.file('xl/sharedStrings.xml')!.async('string')).matchAll(/<si>([\s\S]*?)<\/si>/g)].map((m) => [...m[1]!.matchAll(/<t(?:\s[^>]*)?>([^<]*)<\/t>/g)].map((t) => t[1]).join('')) : [];
+  const colIdx = (ref: string): number => [...ref.replace(/\d+/g, '')].reduce((a, ch) => a * 26 + ch.charCodeAt(0) - 64, 0) - 1;
+  const grid: string[][] = [];
+  for (const r of xml.matchAll(/<row\b[^>]*>([\s\S]*?)<\/row>/g)) {
+    const row: string[] = [];
+    for (const c of r[1]!.matchAll(/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)) {
+      const ref = /\br="([A-Z]+\d+)"/.exec(c[1]!)?.[1];
+      if (!ref) continue;
+      const inner = c[2] ?? '';
+      const t = /\bt="([^"]+)"/.exec(c[1]!)?.[1];
+      const v = t === 's' ? shared[Number(/<v>([^<]*)<\/v>/.exec(inner)?.[1])] ?? '' : [...inner.matchAll(/<(?:t|v)(?:\s[^>]*)?>([^<]*)<\/(?:t|v)>/g)].map((m) => m[1]).join('');
+      row[colIdx(ref)] = clean(v);
+    }
+    grid.push(Array.from({ length: row.length }, (_, k) => row[k] ?? ''));
+  }
+  const tables: string[][][] = [];
+  for (const row of grid) {
+    if (row.every((x) => x === '')) continue;
+    if (row[0] === '監考老師：' || tables.length === 0) tables.push([]);
+    tables[tables.length - 1]!.push(row);
+  }
+  const foot = /<oddFooter>([\s\S]*?)<\/oddFooter>/.exec(xml)?.[1] ?? '';
+  const footers = foot ? [clean(decode(foot).replace(/&&/g, '\u0000').replace(/&"[^"]*"/g, ' ').replace(/&[A-Z]/g, ' ').replace(/&\d+/g, '').replace(/\u0000/g, '&'))] : [];
+  return { tables, footers, text: grid.flat().filter(Boolean).join(' ') };
+}
+
 export interface ReadbackDetail extends ReadbackSummary {
   kind: MakeupDocKind;
   /** 回讀點出的各卷人次可與統計列互相核對 */
@@ -104,8 +137,44 @@ export function summarizeTables(file: string, kind: MakeupDocKind, raw: RawTable
       for (const m of (r[6] ?? '').matchAll(/(\d{2}:\d{2}) 前不得離場/g)) leaves.add(m[1]!);
     }
   } else if (kind === 'O-4') {
+    // Excel 版（D227）：欄名列前有表頭三列、每組 6 欄（沒有卷數欄、沒有統計列），人數在表頭「科目，人數」
+    const xs = raw.tables.flatMap((t) => {
+      const h = t.findIndex((r) => r[0] === '學號' && r[1] === '舊班');
+      return h > 0 && t[h]![5] === '註' ? [{ meta: t.slice(0, h), body: t.slice(h + 1) }] : [];
+    });
     const ts = raw.tables.filter((t) => isHead(t[0], '學號') && t[0]![1] === '舊班').map((t) => t.slice(1));
-    need(ts.length, '點名單');
+    need(ts.length + xs.length, '點名單');
+    // 同一考場同一時段超過一頁會分成幾個區塊（表頭重印）：表頭人數對整張比
+    const sheets = new Map<string, { stat: Record<string, number>; count: number; mine: Record<string, number>; people: number }>();
+    for (const { meta, body: rows6 } of xs) {
+      const key = meta.slice(1).map((r) => r.join('|')).join('/');
+      const at = meta.findIndex((r) => r.includes('科目，人數'));
+      const row = meta[at] ?? [];
+      const papersText = row.slice(row.indexOf('科目，人數') + 1).find((x) => x !== '') ?? '';
+      const count = num(/^(\d+)人$/.exec((meta[at + 1] ?? []).filter(Boolean).pop() ?? '')?.[1]);
+      const stat: Record<string, number> = {};
+      for (const part of papersText.split('、').filter(Boolean)) {
+        const m = /^(.*)\((\d+)\)$/.exec(part);
+        stat[m ? m[1]! : part] = m ? Number(m[2]) : count;
+      }
+      if (Number.isNaN(count)) problems.push(`${file}：點名單表頭人數讀不到（${meta.map((r) => r.filter(Boolean).join(' ')).join('／')}）`);
+      const acc = sheets.get(key) ?? { stat, count, mine: {}, people: 0 };
+      sheets.set(key, acc);
+      for (const r of rows6.flatMap((x) => [x.slice(0, 6), x.slice(6, 12)]).filter((x) => (x[0] ?? '') !== '')) {
+        const subs = (r[4] ?? '').split('、').filter(Boolean);
+        if (subs.length === 0) problems.push(`${file}：學號 ${r[0]} 沒有科目`);
+        acc.people++;
+        total += subs.length;
+        for (const s of subs) { add(byPaper, paperOf(r[1]!, s, gradeOfClass), 1); add(acc.mine, paperOf(r[1]!, s, gradeOfClass), 1); }
+        for (const m of (r[5] ?? '').matchAll(/(\d{2}:\d{2}) 前不得離場/g)) leaves.add(m[1]!);
+      }
+    }
+    for (const [key, a] of sheets) {
+      if (a.people !== a.count) problems.push(`${file}：表頭人數 ${a.count} 與名單 ${a.people} 人不符（${key}）`);
+      for (const k of new Set([...Object.keys(a.stat), ...Object.keys(a.mine)])) {
+        if ((a.stat[k] ?? 0) !== (a.mine[k] ?? 0)) problems.push(`${file}：表頭 ${k} ${a.stat[k] ?? 0} 與名單點出的 ${a.mine[k] ?? 0} 不符`);
+      }
+    }
     for (const t of ts) {
       const stat: Record<string, number> = {};
       const mine: Record<string, number> = {};
