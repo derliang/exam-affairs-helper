@@ -1,4 +1,5 @@
 /** 稿 v2.29 各頁共用單一頁首、校-08 步驟條文字（全部假資料） */
+import { readFileSync } from 'node:fs';
 import { renderToString } from 'preact-render-to-string';
 import { describe, expect, it } from 'vitest';
 import { PageHead, StepNav } from './components';
@@ -58,5 +59,12 @@ describe('#634 回到哪裡要寫具體名稱（D217）', () => {
     expect(pageName({ page: 'reconcile', examId: 'e1' }, doc)).toBe('「甲考」名單比對');
     expect(pageName({ page: 'override', examId: 'e1' }, doc)).toBe('「甲考」個別覆寫');
     expect(pageName({ page: 'makeup' }, doc)).toBe('補考場次列表');
+  });
+});
+describe('選用功能頁只留麵包屑（D228，使用者 2026-11-25 裁示）', () => {
+  it('返回列條件排除 settings／tab=features', () => {
+    const src = readFileSync('src/ui/App.tsx', 'utf8');
+    const line = src.split('\n').find((l) => l.includes('const retBar ='));
+    expect(line).toContain("!(r.page === 'settings' && r.tab === 'features')");
   });
 });

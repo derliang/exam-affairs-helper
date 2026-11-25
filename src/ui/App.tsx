@@ -195,7 +195,8 @@ export function App() {
   const lastBack = gnav.back[gnav.back.length - 1]?.route;
   const retStep = r.page === 'step' && lastBack?.page === 'step' && lastBack.examId === r.examId && lastBack.step !== r.step ? lastBack.step : undefined;
   const lastEntry = gnav.back[gnav.back.length - 1];
-  const retBar = lastEntry && ['settings', 'lookup', 'reconcile', 'override', 'reserve', 'wizard', 'new'].includes(r.page) && lastEntry.route.page !== 'exams' ? lastEntry : undefined;
+  // D228（使用者 2026-11-25 裁示「只留麵包屑」）：選用功能頁不顯示「↩ 回到」返回列，只留頁首麵包屑（兩者重複）
+  const retBar = lastEntry && ['settings', 'lookup', 'reconcile', 'override', 'reserve', 'wizard', 'new'].includes(r.page) && !(r.page === 'settings' && r.tab === 'features') && lastEntry.route.page !== 'exams' ? lastEntry : undefined;
   const undoCtl = <UndoGroup undoLabel={nextUndoLabelIn(hist, undoScope)} onUndo={() => { setStaleNote(undefined); onUndo(); }} steps={undoStepsIn(hist, undoScope)} onUndoTo={onUndoTo} />;
 
   useEffect(() => {
