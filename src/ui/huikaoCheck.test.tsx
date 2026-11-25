@@ -52,7 +52,7 @@ describe('會考不匯入名單：考生＝共用學生名單', () => {
     const { doc, exam } = junior([12]);
     expect(classCapacity(doc, exam)).toMatchObject({ noList: false, seats: 12 });
     const html = renderToString(<Step3 doc={doc} exam={exam} onChange={noop} />);
-    expect(html).toContain('座位</small><strong>12</strong>');
+    expect(html).toMatch(/座位<\/small><span class="badge[^"]*">[^<]*<\/span><\/div><strong>12<\/strong>/); // D228：膠囊在標題同一行
     expect(html).toContain('學生 10');
     expect(html).toContain('多 2');
     expect(html).toContain('多 2 個空位');

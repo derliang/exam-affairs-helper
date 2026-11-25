@@ -76,24 +76,24 @@ export function Step3(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => voi
         {noList && (bcct
           ? <Alert tone="info">共用學生名單是空的，沒有考生可檢核；教室座位合計 {seats}。</Alert>
           : <Alert tone="info"><b>尚未匯入考試名單：</b>教室座位合計 {seats}。匯入考試名單後檢核夠不夠。</Alert>)}
-        {/* 稿 v2.22（校-31）、H-4：一項一格，上名稱、中大數字（座位數）、下狀態徽章；高中部多一格「預備教室座位」（需要／已列入） */}
+        {/* 稿 v2.109（D228，#672）：標題列＝名稱＋狀態膠囊同一行、中大數字、下說明（取代稿 v2.22 校-31 徽章在最下）；高中部多一格「預備教室座位」（需要／已列入） */}
         {(lines.length > 0 || (senior && hasList)) && (
           <div class="stats chkgrid">
             {lines.map((l) => {
               const extra = l.seats - l.students;
               return (
                 <div key={l.label} class={`chk${l.ok ? (extra > 0 && hasList ? ' warnc' : '') : ' bad'}`}>
-                  <small>{l.label}座位</small><strong>{l.seats}</strong>
+                  <div class="chk-h"><small>{l.label}座位</small>{hasList && <Badge tone={l.ok ? (extra > 0 ? 'warn' : 'ok') : 'danger'}>{l.ok ? (extra > 0 ? `多 ${extra}` : '剛好') : `不足 ${l.students - l.seats}`}</Badge>}</div>
+                  <strong>{l.seats}</strong>
                   {hasList && <span class="sub">學生 {l.students}</span>}
-                  {hasList && <Badge tone={l.ok ? (extra > 0 ? 'warn' : 'ok') : 'danger'}>{l.ok ? (extra > 0 ? `多 ${extra}` : '剛好') : `不足 ${l.students - l.seats}`}</Badge>}
                 </div>
               );
             })}
             {senior && hasList && (
               <div class={`chk${prepBad ? ' bad' : ''}`}>
-                <small>預備教室座位</small><strong>{need.avail}</strong>
+                <div class="chk-h"><small>預備教室座位</small><Badge tone={prepBad ? 'danger' : 'ok'}>{prepBad ? `不足 ${Math.max(1, sc.worst?.short ?? 1)}` : need.need === 0 ? '不需要' : '夠用'}</Badge></div>
+                <strong>{need.avail}</strong>
                 <span class="sub">需要 {need.need}・已列入 {need.on}／{need.total} 間</span>
-                <Badge tone={prepBad ? 'danger' : 'ok'}>{prepBad ? `不足 ${Math.max(1, sc.worst?.short ?? 1)}` : need.need === 0 ? '不需要' : '夠用'}</Badge>
               </div>
             )}
           </div>

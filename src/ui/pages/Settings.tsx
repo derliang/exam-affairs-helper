@@ -18,8 +18,9 @@ import { addClass, addStudent, moveClass, nextClassNo, validateClassName, classU
 type Tab = 'roster' | 'classes' | 'school' | 'rooms' | 'sched' | 'features';
 const TABS: { value: Tab; label: string }[] = [
   { value: 'roster', label: '學生名單' }, { value: 'classes', label: '班級資料' },
-  { value: 'school', label: '學校與表頭' }, { value: 'rooms', label: '教室清單' }, { value: 'sched', label: '節次與時長' }, { value: 'features', label: '選用功能' },
+  { value: 'school', label: '學校與表頭' }, { value: 'rooms', label: '教室清單' }, { value: 'sched', label: '節次與時長' },
 ];
+// #673（D228）：「選用功能」只從品牌列進入（使用者 2026-11-24 裁示 C），不再列在共用設定分頁籤；路由仍是 settings／tab=features
 
 /** 設定頁（D61）：部別切換（UI-07/08）；改動都走 onChange，由 App 記入復原 */
 export function Settings(p: { doc: Doc; onChange: (d: Doc) => void; tab?: Tab; division?: Division; onTab?: (t: Tab) => void }) {
@@ -30,9 +31,11 @@ export function Settings(p: { doc: Doc; onChange: (d: Doc) => void; tab?: Tab; d
   const [division, setDivision] = useState<Division>(p.division ?? 'senior');
   return (
     <section>
-      <div class="utabs" role="group" aria-label="設定項目" style="margin:12px 0">
-        {TABS.map((t) => <button type="button" key={t.value} aria-pressed={tab === t.value} onClick={() => setTab(t.value)}>{t.label}</button>)}
-      </div>
+      {tab !== 'features' && (
+        <div class="utabs" role="group" aria-label="設定項目" style="margin:12px 0">
+          {TABS.map((t) => <button type="button" key={t.value} aria-pressed={tab === t.value} onClick={() => setTab(t.value)}>{t.label}</button>)}
+        </div>
+      )}
       {(tab === 'roster' || tab === 'classes') && <YearBar doc={p.doc} onChange={p.onChange} />}
       {tab !== 'school' && tab !== 'sched' && tab !== 'features' && (
         <div class="row" style="margin-bottom:12px">
@@ -49,7 +52,7 @@ export function Settings(p: { doc: Doc; onChange: (d: Doc) => void; tab?: Tab; d
       {tab === 'sched' && <ScheduleTab doc={p.doc} onChange={p.onChange} />}
       {tab === 'features' && <Features doc={p.doc} onChange={p.onChange} />}
       {tab === 'rooms' && <Rooms doc={p.doc} onChange={p.onChange} division={division} onGoSchool={() => setTab('school')} />}
-      <DangerZone doc={p.doc} onChange={p.onChange} />
+      {tab !== 'features' && <DangerZone doc={p.doc} onChange={p.onChange} />}
     </section>
   );
 }

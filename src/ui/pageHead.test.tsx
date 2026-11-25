@@ -1,4 +1,5 @@
 /** 稿 v2.29 各頁共用單一頁首、校-08 步驟條文字（全部假資料） */
+import { readFileSync } from 'node:fs';
 import { renderToString } from 'preact-render-to-string';
 import { describe, expect, it } from 'vitest';
 import { PageHead, StepNav } from './components';
@@ -53,10 +54,17 @@ describe('#634 回到哪裡要寫具體名稱（D217）', () => {
   it('pageName：共用設定寫到分頁名；名單比對、個別覆寫、補考頁都有名稱，不再是「上一頁」', async () => {
     const { pageName } = await import('./App');
     const doc = { exams: [{ id: 'e1', name: '甲考' }] } as never;
-    expect(pageName({ page: 'settings', tab: 'features' }, doc)).toBe('共用設定「選用功能」');
+    expect(pageName({ page: 'settings', tab: 'features' }, doc)).toBe('選用功能'); // D228：選用功能是品牌列的獨立入口
     expect(pageName({ page: 'settings' }, doc)).toBe('共用設定');
     expect(pageName({ page: 'reconcile', examId: 'e1' }, doc)).toBe('「甲考」名單比對');
     expect(pageName({ page: 'override', examId: 'e1' }, doc)).toBe('「甲考」個別覆寫');
     expect(pageName({ page: 'makeup' }, doc)).toBe('補考場次列表');
+  });
+});
+describe('選用功能頁只留麵包屑（D228，使用者 2026-11-25 裁示）', () => {
+  it('返回列條件排除 settings／tab=features', () => {
+    const src = readFileSync('src/ui/App.tsx', 'utf8');
+    const line = src.split('\n').find((l) => l.includes('const retBar ='));
+    expect(line).toContain("!(r.page === 'settings' && r.tab === 'features')");
   });
 });

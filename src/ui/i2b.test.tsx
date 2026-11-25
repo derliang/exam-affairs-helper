@@ -133,10 +133,10 @@ describe('步驟⑥ 合併區塊與 #147 核實', () => {
 });
 
 describe('其餘頁合併區塊（稿 v2.31）', () => {
-  it('模擬考：進度圖例收進「說明」', () => {
+  it('模擬考：進度圖例常駐，不收進「說明」（#671、D228）', () => {
     const html = renderToString(<Exams doc={doc()} onOpen={noop} onNew={noop} onSettings={noop} onChangeFolder={noop} />);
-    expect(html).toContain('說明：進度條怎麼看');
-    expect(html).toMatch(/<details class="more"><summary>說明：進度條怎麼看<\/summary><div><div class="plegend"/);
+    expect(html).not.toContain('說明：進度條怎麼看');
+    expect(html).toMatch(/<div class="plegend" aria-label="進度條圖例"><b>進度條<\/b>六格＝六個步驟/);
   });
   it('新增模擬考：三段合成一張卡', () => {
     const html = renderToString(<NewExam doc={doc()} onCancel={noop} onCreate={noop} />);
