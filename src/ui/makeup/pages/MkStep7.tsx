@@ -7,6 +7,7 @@ import { useState } from 'preact/hooks';
 import { Alert, Badge, Button, EmptyState, FormatButton, Seg, Switch } from '../../components';
 import { MAKEUP_DOC_KINDS, countMakeupPrintPages, type MakeupDocKind } from '../../../export/makeupFiles';
 import type { OutputFile } from '../../../export/plan';
+import { XLSX_MIME } from '../../download';
 import { stampNow } from '../../reconcile';
 import { download, noticeOf, openPrintPage } from '../../pages/Step6';
 import { dashboardOf, runOf, setRun, type RunRecord } from '../dashboard';
@@ -20,7 +21,7 @@ const KIND_TEXT: Record<MakeupDocKind, { name: string; desc: string }> = {
   'O-2': { name: 'O-2 考程表', desc: 'A4 橫式；時段、科目、人數、教室、離場時間、監考老師空欄' },
   'O-3': { name: 'O-3 班級公告', desc: '每班一頁；公告版只印學號、不印姓名；用舊班舊號' },
   'O-3t': { name: 'O-3 班級公告（導師存參版）', desc: '學號換成姓名，行數與公告版相同，給導師存參' },
-  'O-4': { name: 'O-4 補考點名單', desc: '每考場每節一張；多科生一人一列列出全部科目；表尾各科統計' },
+  'O-4': { name: 'O-4 補考點名單', desc: '每考場每節一張；多科生一人一列列出全部科目；表尾各科統計；另可下載 Excel 版（學校點名單格式）' },
   'O-5': { name: 'O-5 座位表（參考）', desc: '依班級座號、座標「排－深位」，供檢核用，現場自由入座' },
   'O-7': { name: 'O-7 公假名單', desc: '給學務處：補考學生名單與日期（欄位格式暫定）' },
 };
@@ -89,6 +90,22 @@ export function MkStep7(p: { s: MakeupSession; onStep: (n: MakeupStepNo) => void
     } finally { setBusy(false); }
   };
 
+  // D227：O-4 點名單另有 Excel 版（照學校點名單格式），只在勾選 O-4 時可下載
+  const goXls = async () => {
+    setBusy(true); setErr(''); setProblems([]); setNotice('');
+    try {
+      const { produceMakeupRollCallXlsx } = await import('../../../export/makeupFiles');
+      const r = await produceMakeupRollCallXlsx(makeupInputOf(s), { generatedAt: new Date().toISOString(), ...(dayId !== 'all' ? { dayId } : {}) });
+      if (!r) return;
+      if (!r.verification.ok) { setProblems(r.verification.problems.map((x) => `${r.name}：${x}`)); return; }
+      const files: OutputFile[] = [{ name: r.name, mime: XLSX_MIME, data: r.xlsx, desc: `${KIND_TEXT['O-4'].name}（Excel）`, pages: 0 }];
+      finish(files, []);
+      setNotice(noticeOf(files));
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally { setBusy(false); }
+  };
+
   return (
     <section class="stack">
       <div class="card stephead"><div><h2>⑦ 下載</h2><p class="small muted">七項產出；下載前必須通過檢核與對帳，下載時程式會回讀自己的輸出再驗算一次。</p></div></div>
@@ -116,7 +133,7 @@ export function MkStep7(p: { s: MakeupSession; onStep: (n: MakeupStepNo) => void
               </div>
             ))}
           </div>
-          <p class="small muted">座位標籤為選配，這一版尚未提供。檔案以 Word 為主、PDF 為輔（PDF 會開啟列印頁，請用瀏覽器「另存為 PDF」）。</p>
+          <p class="small muted">座位標籤為選配，這一版尚未提供。檔案以 Word 為主、PDF 為輔（PDF 會開啟列印頁，請用瀏覽器「另存為 PDF」）；O-4 點名單另有 Excel 版。</p>
           <div class="dlbtns row" style="align-items:flex-start;gap:24px;flex-wrap:wrap">
             <div class="stack" style="gap:6px">
               <FormatButton kind="word" disabled={busy || why !== ''} onClick={() => { void goWord(); }}>下載 Word</FormatButton>
@@ -125,6 +142,10 @@ export function MkStep7(p: { s: MakeupSession; onStep: (n: MakeupStepNo) => void
             <div class="stack" style="gap:6px">
               <FormatButton kind="pdf" disabled={busy || why !== ''} onClick={() => { void goPdf(); }}>下載 PDF（開啟列印頁）</FormatButton>
               <span class="small muted">{why === '' && `將開啟 1 個列印頁（共 ${pdfPages} 頁），在新視窗選「列印」→「另存為 PDF」`}</span>
+            </div>
+            <div class="stack" style="gap:6px">
+              <FormatButton kind="xls" disabled={busy || why !== '' || !sel['O-4']} onClick={() => { void goXls(); }}>下載 Excel（點名單）</FormatButton>
+              <span class="small muted">{why === '' && (sel['O-4'] ? '將下載 1 個 Excel 檔（O-4 點名單，學校點名單格式）' : '要先勾選 O-4 補考點名單')}</span>
             </div>
           </div>
           {why !== '' && <p class="small" role="status" data-why>{blocked ? '不能下載：' : ''}{why}</p>}
