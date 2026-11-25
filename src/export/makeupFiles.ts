@@ -34,7 +34,7 @@ import {
   buildTimetablePages,
   type MakeupPaperInput,
 } from './makeupPages';
-import { readDocxTables, readHtmlTables, summarizeTables, type MakeupDocKind, type RawTables } from './makeupReadback';
+import { readDocxTables, readHtmlTables, readXlsxTables, summarizeTables, type MakeupDocKind, type RawTables } from './makeupReadback';
 
 export type { MakeupDocKind } from './makeupReadback';
 
@@ -212,6 +212,16 @@ export async function produceMakeupFiles(input: ProduceMakeupInput, opts: Produc
     if (!opts.dayId && kind !== 'O-5') readback.push(rb);
   }
   return { version: sc.version, total: sc.total, files, readback, produced: files.map((f) => ({ file: f.name, version: sc.version })), verification, ok: verification.every((v) => v.ok) };
+}
+
+/** O-4 點名單 Excel 版（D227）：照學校點名單格式；同樣回讀自己的輸出並與排程驗算，不符就不交付 */
+export async function produceMakeupRollCallXlsx(input: ProduceMakeupInput, opts: { generatedAt: string; dayId?: string }): Promise<{ name: string; xlsx: Uint8Array; verification: FileVerification } | null> {
+  const sc = scope(input, opts.dayId);
+  if (sc.paper.outputs.rollCalls.length === 0) return null;
+  const { renderRollCallXlsx } = await import('./makeupXlsx');
+  const name = `補考-${FILE_LABEL['O-4']}${sc.suffix}.xlsx`;
+  const xlsx = await renderRollCallXlsx(sc.paper, { generatedAt: opts.generatedAt, dataVersion: dataVersionOf(sc) });
+  return { name, xlsx, verification: verify(name, 'O-4', await readXlsxTables(xlsx), input, sc).v };
 }
 
 /** 列印用 HTML（PDF：瀏覽器列印成 PDF）。同樣回讀自己的輸出並驗算 */
