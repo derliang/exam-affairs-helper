@@ -119,7 +119,7 @@ export function MkStep4(p: { s: MakeupSession; onChange: (s: MakeupSession) => v
         <p class="small muted">這是決定提前開考的依據：每科以 {perMin} 分計，4 科＝{4 * perMin} 分，超過你在 ① 設的 {s.early.suggestOverMin} 分就建議提前。</p>
         <div class="stats">
           {b.dist.rows.map((x) => (
-            <div key={x.subjects}><small>{x.subjects} 科{x.subjects * perMin > s.early.suggestOverMin ? ' ⚑ 建議提前' : ''}</small><strong>{x.students}</strong><small>人</small></div>
+            <div key={x.subjects}><small>{x.subjects} 科{x.subjects * perMin > s.early.suggestOverMin ? ' ⚑ 建議提前' : ''}</small><strong>{x.students}<span class="u">人</span></strong></div>
           ))}
         </div>
         <p class="small"><Badge tone={sumDist === b.dist.entries ? 'ok' : 'danger'}>{sumDist === b.dist.entries ? '✓' : '✕'}</Badge> Σ（科數 × 人數）＝ {sumDist}　＝　人次 {b.dist.entries}　　系統目前建議提前開考 {early} 位。</p>

@@ -1,7 +1,7 @@
 import type { ComponentChildren } from 'preact';
 import { useState } from 'preact/hooks';
 import type { ExamConfig } from '../../data';
-import { Alert, Badge, Button, ConfirmModal, EmptyState, More, PageHead } from '../components';
+import { Alert, Badge, Button, ConfirmModal, EmptyState, PageHead } from '../components';
 import { rosterChanged } from '../rosterIO';
 import { examHeadcount, examLevel, examProgress, formatModified, sortExams } from '../examList';
 import { dateRangeText, groupExams, todayTaipei } from '../examDates';
@@ -47,7 +47,7 @@ export function Exams(p: {
   const [envHide, setEnvHide] = useState(false);
   const banner = p.onEnv && !p.listError ? envBanner(p.doc) : 'none';
   const all = sortExams(p.doc.exams);
-  // #352、D163、D164：依考試日期分「尚未結束」「已經結束」（取代「進行中」「已封存」；封存功能拿掉）
+  // #352、D163、D164：依考試日期分「尚未完成」「已經完成」（D228 改名，原「尚未結束」「已經結束」）（取代「進行中」「已封存」；封存功能拿掉）
   const { upcoming, ended } = groupExams(all, p.today ?? todayTaipei(), lastModified);
   const canDelete = !!(p.onDelete || p.onDeleteMany);
   const toggle = (id: string) => setSel((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
@@ -89,7 +89,7 @@ export function Exams(p: {
   };
   const groupHead = (title: string, g: ExamConfig[], extra?: ComponentChildren) => (
     <div class="row" style="align-items:center;gap:12px;margin-top:20px">
-      <h2 class="exam-sec" style="margin:0">{title}<span class="muted small">（{g.length}）</span></h2>
+      <h2 class="exam-sec" style="margin:0">{title} <Badge>{g.length} 場</Badge></h2>
       {canDelete && g.length > 0 && <label class="small" style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" checked={g.every((e) => sel.includes(e.id))} onChange={() => toggleGroup(g)} />全選</label>}
       {extra}
     </div>
@@ -122,12 +122,13 @@ export function Exams(p: {
             <Button small onClick={() => setSel([])}>取消選取</Button>
             <Button small kind="danger" onClick={() => setDel(all.filter((e) => sel.includes(e.id)))}>刪除所選</Button></div>
         )}
-        {groupHead('尚未結束', upcoming)}
-        {upcoming.length === 0 && <EmptyState title="目前沒有尚未結束的模擬考">可以新增，或到下方「已經結束」查看。</EmptyState>}
+        {/* #670（D228）：分組只改名「尚未完成／已經完成」，仍依考試日期分（D163／D164／D217 不變，使用者 2026-11-24 裁示 A） */}
+        {groupHead('尚未完成', upcoming)}
+        {upcoming.length === 0 && <EmptyState title="目前沒有尚未完成的模擬考">可以新增，或到下方「已經完成」查看。</EmptyState>}
         <div class="exam-list">{upcoming.map(card)}</div>
         {ended.length > 0 && (
           <>
-            {groupHead('已經結束', ended, <button type="button" class="rc-more" aria-label="已經結束的考試（點了展開或收合）" aria-expanded={showEnded} onClick={() => setShowEnded(!showEnded)}>{showEnded ? '▴' : '▾'}</button>)}
+            {groupHead('已經完成', ended, <button type="button" class="rc-more" aria-label="已經完成的考試（點了展開或收合）" aria-expanded={showEnded} onClick={() => setShowEnded(!showEnded)}>{showEnded ? '收合 ▴' : `展開 ${ended.length} 場 ▾`}</button>)}
             {showEnded && <div class="exam-list">{ended.map(card)}</div>}
           </>
         )}
@@ -135,12 +136,11 @@ export function Exams(p: {
       )}
       {del && <DeleteExamModal exams={del} onClose={() => setDel(null)} onConfirm={() => doDelete(del)} />}
       <div style="margin-top:14px">
-        <More title="說明：進度條怎麼看">
-          <div class="plegend" aria-label="進度條圖例">
-            六格＝六個步驟
-            <span><i class="d" />完成</span><span><i class="s" />過期</span><span><i class="c" />目前</span><span><i class="n" />不需要</span><span><i />未開始</span>
-          </div>
-        </More>
+        {/* #671（D228）：讀圖必需的圖例常駐，不收合 */}
+        <div class="plegend" aria-label="進度條圖例">
+          <b>進度條</b>六格＝六個步驟
+          <span><i class="d" />完成</span><span><i class="s" />過期</span><span><i class="c" />目前</span><span><i class="n" />不需要</span><span><i />未開始</span>
+        </div>
       </div>
     </section>
   );

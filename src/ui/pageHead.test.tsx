@@ -53,7 +53,7 @@ describe('#634 回到哪裡要寫具體名稱（D217）', () => {
   it('pageName：共用設定寫到分頁名；名單比對、個別覆寫、補考頁都有名稱，不再是「上一頁」', async () => {
     const { pageName } = await import('./App');
     const doc = { exams: [{ id: 'e1', name: '甲考' }] } as never;
-    expect(pageName({ page: 'settings', tab: 'features' }, doc)).toBe('共用設定「選用功能」');
+    expect(pageName({ page: 'settings', tab: 'features' }, doc)).toBe('選用功能'); // D228：選用功能是品牌列的獨立入口
     expect(pageName({ page: 'settings' }, doc)).toBe('共用設定');
     expect(pageName({ page: 'reconcile', examId: 'e1' }, doc)).toBe('「甲考」名單比對');
     expect(pageName({ page: 'override', examId: 'e1' }, doc)).toBe('「甲考」個別覆寫');

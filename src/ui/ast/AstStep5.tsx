@@ -215,9 +215,9 @@ export function AstStep5(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) => 
       <div class="card stack">
         <div><h3>{slot.label}（{slot.subjectLabel}）</h3><p class="small muted">這個時段誰在哪間教室。</p></div>
         <div class="stats">
-          <div><small>時段</small><strong>{slot.label}</strong></div><div><small>科目</small><strong>{slot.subjectLabel}</strong></div>
-          <div><small>應考</small><strong>{examTotal} 人</strong></div><div><small>考場</small><strong>{roster.exam.size} 間</strong></div>
-          <div class={studyTotal > 0 && plan.pending.some((x) => x.slotId === slot.id) ? 'bad' : ''}><small>自習（離開原班）</small><strong>{studyTotal} 人</strong></div>
+          {/* #666（D228）：時段、科目已在卡片標題，不再放大字格（文字放大字會被截斷） */}
+          <div><small>應考</small><strong>{examTotal}<span class="u">人</span></strong></div><div><small>考場</small><strong>{roster.exam.size}<span class="u">間</span></strong></div>
+          <div class={studyTotal > 0 && plan.pending.some((x) => x.slotId === slot.id) ? 'bad' : ''}><small>自習（離開原班）</small><strong>{studyTotal}<span class="u">人</span></strong></div>
         </div>
         <div class="rtw">
           <table class="t compact rt-t">

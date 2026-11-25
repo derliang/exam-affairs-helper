@@ -36,10 +36,10 @@ export function LeaveCard(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) =>
         ? <Alert tone="info">還有名單或教室沒設好，先完成上面的設定；請假人數仍可先輸入。</Alert>
         : (
           <div class="stats">
-            <div><small>請假合計</small><strong>{total} 人</strong></div>
-            <div><small>最多一個時段自習（報名全數）</small><strong>{maxAll} 人</strong></div>
-            <div><small>扣請假後估算</small><strong>{maxEst} 人</strong></div>
-            <div class={maxAll > cap ? 'bad' : ''}><small>綜合教室自習容量</small><strong>{cap} 位</strong></div>
+            <div><small>請假合計</small><strong>{total}<span class="u">人</span></strong></div>
+            <div><small>最多一個時段自習（報名全數）</small><strong>{maxAll}<span class="u">人</span></strong></div>
+            <div><small>扣請假後估算</small><strong>{maxEst}<span class="u">人</span></strong></div>
+            <div class={maxAll > cap ? 'bad' : ''}><small>綜合教室自習容量</small><strong>{cap}<span class="u">位</span></strong></div>
           </div>
         )}
       <div class="rtw">

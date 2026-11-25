@@ -147,10 +147,10 @@ export function CarryCard(p: { doc: Doc; exam: ExamConfig; onChange: (d: Doc) =>
       {on && src && c && (
         <>
           <div class="stats">
-            <div><small>同教室同座位</small><strong>{c.same} 人</strong></div>
-            <div><small>同教室不同座位</small><strong>{c.sameRoom} 人</strong></div>
-            <div><small>不同教室</small><strong>{c.otherRoom} 人</strong></div>
-            <div class={c.none > 0 ? 'warn' : ''}><small>沒沿用（沒有紀錄）</small><strong>{c.none} 人</strong></div>
+            <div><small>同教室同座位</small><strong>{c.same}<span class="u">人</span></strong></div>
+            <div><small>同教室不同座位</small><strong>{c.sameRoom}<span class="u">人</span></strong></div>
+            <div><small>不同教室</small><strong>{c.otherRoom}<span class="u">人</span></strong></div>
+            <div class={c.none > 0 ? 'warn' : ''}><small>沒沿用（沒有紀錄）</small><strong>{c.none}<span class="u">人</span></strong></div>
           </div>
           {reasonGroups.size > 0 && <div class="small muted"><b>沒沿用到的原因：</b>{[...reasonGroups.entries()].map(([r, n]) => `${r}（${n} 人）`).join('；')}。</div>}
         </>

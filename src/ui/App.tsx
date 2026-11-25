@@ -220,7 +220,7 @@ export function App() {
           </PageHead>
         )}
         {r.page === 'settings' && (
-          <PageHead crumbs={pathCrumbs} title="共用設定" badge="資料夾層級，所有模擬考共用">
+          <PageHead crumbs={pathCrumbs} title={r.tab === 'features' ? '選用功能' : '共用設定'} badge="資料夾層級，所有模擬考共用">
             {undoCtl}
           </PageHead>
         )}
@@ -271,7 +271,7 @@ export function pageName(r: Route, doc: Doc): string {
     case 'exams': return '模擬考';
     case 'new': return '新增模擬考';
     case 'wizard': { const n = r.step ?? 1; return n >= 6 ? '首次設定 總覽' : `首次設定 第 ${n} 步 ${WIZARD_STEPS[n - 1]?.name ?? ''}`; }
-    case 'settings': return r.tab ? `共用設定「${SETTINGS_TAB_NAMES[r.tab]}」` : '共用設定';
+    case 'settings': return r.tab === 'features' ? '選用功能' : r.tab ? `共用設定「${SETTINGS_TAB_NAMES[r.tab]}」` : '共用設定';
     case 'reconcile': return `「${doc.exams.find((e) => e.id === r.examId)?.name ?? '模擬考'}」名單比對`;
     case 'override': return `「${doc.exams.find((e) => e.id === r.examId)?.name ?? '模擬考'}」個別覆寫`;
     case 'makeup': return '補考場次列表';

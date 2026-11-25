@@ -112,10 +112,22 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:13px;background:var(-
 .step.stale .no{background:var(--warn-soft);border-color:var(--warn-bar);color:var(--warn-ink)}
 
 /* 統計列 */
-.stats{display:flex;flex-wrap:wrap;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden}
-/* 稿 v2.107（D226）：摘要格用 flex 換行、最後一排自動撐滿（不留單格孤兒）；大數字不拆行（「43／43」是一個單位） */
-.stats>div{background:var(--surface);padding:10px 14px;flex:1 1 104px;min-width:0}
+/* 稿 v2.109（D228；Issue 665、666、668、669、672）統計格標準：
+   ①網格固定欄數——放得下就一列 N 格，放不下改兩欄，太窄一欄（每格至少 136px）；兩欄時奇數個的最後一格撐滿整列（承 D226 不留孤兒）；
+   ②每格三列「標題列（標題＋狀態膠囊同一行）／數字列（數字＋單位同一行）／說明列」，用 subgrid 讓同一排各格的數字落在同一水平線；
+   ③大字只給數字，文字內容不放大字（大字不換行，放文字會被截斷）。 */
+.stats{--n:4;container-type:inline-size;display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(max(clamp(calc(100% / var(--n) - .1px),(var(--n) * 136px - 100%) * 999,calc(50% - .1px)),clamp(0px,(272px - 100%) * 999,100%)),1fr));
+  gap:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden}
+.stats:has(>div:nth-child(1):last-child){--n:1}.stats:has(>div:nth-child(2):last-child){--n:2}.stats:has(>div:nth-child(3):last-child){--n:3}
+.stats:has(>div:nth-child(5):last-child){--n:5}.stats:has(>div:nth-child(6):last-child){--n:6}.stats:has(>div:nth-child(7):last-child){--n:7}
+.stats>div{background:var(--surface);padding:10px 14px;min-width:0;display:grid;grid-row:span 3;grid-template-rows:subgrid;row-gap:2px;align-content:start;box-shadow:1px 0 0 var(--line),0 1px 0 var(--line)}
+@container (width < 408px){.stats:has(>div:nth-child(3):last-child)>div:last-child{grid-column:1/-1}}
+@container (width < 680px){.stats:has(>div:nth-child(5):last-child)>div:last-child{grid-column:1/-1}}
+@container (width < 952px){.stats:has(>div:nth-child(7):last-child)>div:last-child{grid-column:1/-1}}
 .stats small{display:block;font-size:13px;font-weight:700;color:var(--text-3)}
+/* 單位與數字同一行（Issue 669）：<strong>25<span class="u">人</span></strong> */
+.stats strong .u{font-family:var(--f-ui);font-size:15px;font-weight:700;color:var(--text-2);margin-left:4px}
 .stats strong{font-family:var(--f-no);font-size:clamp(24px,5.4vw,32px);line-height:1.2;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
 #statTable td.n{font-size:18px;font-weight:700}
 .stats .bad strong{color:var(--danger-ink)}
@@ -818,19 +830,18 @@ table.t{border-collapse:collapse;width:100%}
 .pagehead>.btn-ghost{min-height:40px;padding:0 12px}
 
 /* 校-22、24：次別鈕四顆等寬不折行；右側「本次摘要」大字單行 */
-.stats.side-stats>div{flex:1 1 100%}
+.stats.side-stats{grid-template-columns:1fr}
 .stats.side-stats strong{white-space:nowrap}
 @media (max-width:560px){.field>.seg{width:100%}.field>.seg button{flex:1 1 0;min-width:0;white-space:nowrap;padding:0 6px}}
 
 /* 校-31：步驟③ 狀態檢核——一項一格 */
-.stats.chkgrid{gap:0;background:var(--surface)}
-.stats.chkgrid>div.chk{flex:1 1 150px}
-.stats.chkgrid>div.chk{border-right:1px solid var(--line);border-bottom:1px solid var(--line);margin:0 -1px -1px 0}
-.stats>div.chk{display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+.stats>div.chk{justify-items:start}
 .stats>div.chk .sub{font-size:13px;color:var(--text-3);font-weight:500}
 .stats>div.chk .badge{margin:0}
-.stats>div.chk .chk-h{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 8px;width:100%}
-.stats>div.chk .chk-h small{flex:1 1 auto}
+/* Issue 672：狀態膠囊固定在標題同一行右側，標題太長只折標題 */
+.stats>div.chk .chk-h{display:flex;flex-wrap:nowrap;align-items:flex-start;justify-content:space-between;gap:8px;width:100%}
+.stats>div.chk .chk-h small{flex:1 1 auto;min-width:0}
+.stats>div.chk .chk-h .badge{flex:none}
 .stats>div.chk.bad{background:var(--danger-soft)}
 .stats>div.chk.warnc::before{background:var(--warn-bar)}
 .errnote{color:var(--danger-ink)}
@@ -1243,6 +1254,8 @@ code,pre,kbd,samp,textarea,input{word-break:normal;overflow-wrap:anywhere}
 
 /* 座位表底色圖例（2026-11-23）：色塊＋文字綁在一起；黑白列印靠灰階深淺與格內標示文字分辨 */
 .kind-legend{display:flex;flex-wrap:nowrap;gap:6px 12px;align-items:center;font-size:12px;color:var(--text-2);margin:6px 0 2px}
+/* Issue 667：座位圖內的底色圖例只放在座位格那一欄、可換行，且不參與欄寬計算（width:0＋min-width:100%）；否則整列圖例撐寬左側軸欄，整張圖被縮得很小又偏右 */
+.chart-wrap>.kind-legend{grid-column:2;flex-wrap:wrap;width:0;min-width:100%}
 .kind-legend b{color:var(--text)}
 .kind-legend .kl-i{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
 .kind-legend .kl-sw{display:inline-block;width:22px;height:14px;border:1px solid var(--cut);border-radius:3px;background:var(--surface)}
