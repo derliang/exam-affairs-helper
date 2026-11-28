@@ -5,7 +5,7 @@ import type { PlanRoom } from '../../core/astD99/contract';
 import { countHardLimits } from '../../core/astD99/hardLimits';
 import { Alert, Badge, Button, EmptyState, StepHead } from '../components';
 import { AST_STEP_BLURBS } from '../nav';
-import { KindLegendOf, useChartFit } from '../components/SeatChart';
+import { KindLegendOf, SeatStack, useChartFit, useNarrow, type StackCell } from '../components/SeatChart';
 import { astSeatKindOf, AST_KIND_LABEL, type SeatKind } from '../../core/seatKind';
 import { updateExam, type Doc } from '../store';
 import { examEntries } from '../seating';
@@ -20,6 +20,7 @@ function RoomChart(p: { doc: Doc; exam: ExamConfig; plan: AstPlan; slot: AstSlot
   const fitHost = useRef<HTMLDivElement>(null);
   const fitChart = useRef<HTMLDivElement>(null);
   useChartFit(fitHost, fitChart);
+  const narrow = useNarrow(fitHost);
   const { room } = p;
   const cols = room ? room.rows : 0;
   if (!room || cols === 0) return <p class="small muted">找不到這間教室的座位資料。</p>;
@@ -34,19 +35,21 @@ function RoomChart(p: { doc: Doc; exam: ExamConfig; plan: AstPlan; slot: AstSlot
   const kinds: SeatKind[] = [];
   const mixed = new Set(p.plan.out.mixedRows.filter((m) => m.slotId === p.slot.id && m.roomId === p.roomId).map((m) => m.row));
   const cells: preact.JSX.Element[] = [];
+  const scells: StackCell[] = [];
   for (let d = mx; d >= 1; d--) {
     for (let c = 1; c <= cols; c++) {
       const key = `${c}-${d}`;
-      if (d > rowDepthOf(room, c)) { cells.push(<div key={key} class="cell empty-seat" aria-label={`${key} 沒有這個座位`} />); continue; }
-      if (!usable.has(key)) { cells.push(<div key={key} class="cell empty-seat" aria-label={`${key} 停用座位`} />); continue; }
+      if (d > rowDepthOf(room, c)) { scells.push({ row: c, depth: d, kind: 'empty', note: '沒有這個座位' }); cells.push(<div key={key} class="cell empty-seat" aria-label={`${key} 沒有這個座位`} />); continue; }
+      if (!usable.has(key)) { scells.push({ row: c, depth: d, kind: 'empty', note: '停用座位' }); cells.push(<div key={key} class="cell empty-seat" aria-label={`${key} 停用座位`} />); continue; }
       const e = placed.get(key);
-      if (!e) { cells.push(<div key={key} class="cell empty-seat" aria-label={`${key} 空位`}><span class="co">{key}</span></div>); continue; }
+      if (!e) { scells.push({ row: c, depth: d, kind: 'empty', note: '空位' }); cells.push(<div key={key} class="cell empty-seat" aria-label={`${key} 空位`}><span class="co">{key}</span></div>); continue; }
       const s = student.get(e.code);
       const cls = classes.get(Number(e.code.slice(0, 2)));
       const dim = p.only > 0 && Number(e.code.slice(0, 2)) !== p.only;
       const kind = astSeatKindOf(cls?.track, subjOf.get(e.code) ?? []);
       kinds.push(kind);
       const lk = p.locked?.has(e.code) ?? false;
+      scells.push({ row: c, depth: d, kind: 'seat', code: e.code, className: cls?.name ?? '', name: s?.name ?? '', seatKind: kind === 'general' ? undefined : kind, marks: [], dim, locked: lk });
       const act = p.lockMode && p.onSeat ? { role: 'button' as const, tabIndex: 0, onClick: () => p.onSeat!(e.code, c, d), onKeyDown: (ev: KeyboardEvent) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); p.onSeat!(e.code, c, d); } } } : {};
       cells.push(
         <div key={key} class={`cell${dim ? ' dim' : ''}${lk ? ' locked' : ''}${p.lockMode ? ' lockable' : ''}`} data-k={kind === 'general' ? undefined : kind}
@@ -57,6 +60,16 @@ function RoomChart(p: { doc: Doc; exam: ExamConfig; plan: AstPlan; slot: AstSlot
         </div>,
       );
     }
+  }
+  if (narrow) {
+    const sub = `${p.roomName}　考生 ${placed.size} 人${mixed.size ? `・同排混科 ${mixed.size} 排` : ''}`;
+    const onSeat = p.onSeat;
+    return (
+      <div class="chartfit" ref={fitHost}>
+        <SeatStack title={`${p.slot.label}　${p.slot.subjectLabel}`} sub={sub} rows={cols} depth={mx} cells={scells} legend={<KindLegendOf kinds={kinds} labels={AST_KIND_LABEL} />}
+          action={p.lockMode && onSeat ? (c) => <Button small onClick={() => onSeat(c.code ?? '', c.row, c.depth)}>{c.locked ? '解除鎖定這個座位' : '鎖定這個座位'}</Button> : undefined} />
+      </div>
+    );
   }
   return (
     <div class="chartfit" ref={fitHost}>
