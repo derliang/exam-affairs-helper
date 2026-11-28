@@ -844,6 +844,15 @@ table.t{border-collapse:collapse;width:100%}
 .stats>div.chk .chk-h .badge{flex:none}
 .stats>div.chk.bad{background:var(--danger-soft)}
 .stats>div.chk.warnc::before{background:var(--warn-bar)}
+/* D229（#665）：檢核格含狀態膠囊，欄寬下限 200px（一般統計格 136px）；放不下就換兩欄，膠囊與說明句不再被截 */
+.stats.chkgrid{grid-template-columns:repeat(auto-fit,minmax(max(clamp(calc(100% / var(--n) - .1px),(var(--n) * 200px - 100%) * 999,calc(50% - .1px)),clamp(0px,(272px - 100%) * 999,100%)),1fr))}
+@container (width >= 408px) and (width < 600px){.stats.chkgrid:has(>div:nth-child(3):last-child)>div:last-child{grid-column:1/-1}}
+@container (width >= 680px) and (width < 1000px){.stats.chkgrid:has(>div:nth-child(5):last-child)>div:last-child{grid-column:1/-1}}
+/* D229（#665）：檢核格含狀態膠囊，欄寬下限 200px（一般統計格 136px）；放不下就換兩欄，膠囊與說明句不再被截 */
+.stats.chkgrid{grid-template-columns:repeat(auto-fit,minmax(max(clamp(calc(100% / var(--n) - .1px),(var(--n) * 200px - 100%) * 999,calc(50% - .1px)),clamp(0px,(272px - 100%) * 999,100%)),1fr))}
+@container (width < 600px){.stats.chkgrid:has(>div:nth-child(3):last-child)>div:last-child{grid-column:1/-1}}
+@container (width >= 408px) and (width < 600px){.stats.chkgrid:has(>div:nth-child(3):last-child)>div:last-child{grid-column:1/-1}}
+@container (width < 1000px){.stats.chkgrid:has(>div:nth-child(5):last-child)>div:last-child{grid-column:1/-1}}
 .errnote{color:var(--danger-ink)}
 
 /* 校-49：選用功能列卡 */
