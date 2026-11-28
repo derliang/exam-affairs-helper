@@ -1465,7 +1465,7 @@ D135⑥ 不涉及（不動教室用途與排座）；D147 不涉及；D165 符�
 
 ## 10.67 稿 v2.109　統計格標準與 UI 缺陷 6～14 項（2026-11-25；D228）
 
-稿：`mockups/統計格與列表修正稿.html`（成品 https://claude.ai/artifact/T8VPPWdX4YvJ15bWHGodzU）。來源：`docs/design/使用者回報問題清單.md` 第 6～14 項（Issue #665～#673）。
+稿：`mockups/統計格與列表修正稿.html`（成品 https://claude.ai/artifact/M6mjwEsePvuzTWqiP38Lq6）。來源：`docs/design/使用者回報問題清單.md` 第 6～14 項（Issue #665～#673）。
 
 1. **統計格（`.stats`，全站共用）標準**——取代 §10.65（D226）的 flex 換行寫法，D226「不留孤兒」的用意保留：
    - 網格固定欄數：放得下就一列 N 格（每格至少 136px）；放不下改兩欄；容器小於 272px 一欄。兩欄時奇數個的最後一格撐滿整列。
